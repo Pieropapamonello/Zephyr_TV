@@ -1,0 +1,175 @@
+<resources>
+    <!-- App & General -->
+    <string name="app_name">Plume</string>
+    <string name="override_desc">Apre Plume ogni volta che appare la schermata iniziale di Google TV, così il tasto Home porta qui.</string>
+
+    <!-- Top bar & Accessibility descriptions -->
+    <string name="network_settings">Impostazioni di rete</string>
+    <string name="all_apps">Tutte le app</string>
+    <string name="settings">Impostazioni</string>
+    <string name="plume_settings">Impostazioni di Plume</string>
+    <string name="tv_inputs">Sorgenti TV</string>
+    <string name="toast_no_inputs">Nessun ingresso TV trovato</string>
+
+    <!-- Home screen sections -->
+    <string name="continue_watching">Continua a guardare</string>
+
+    <!-- Edit mode -->
+    <string name="edit_apps_row">Modifica riga delle app</string>
+    <string name="editing_row_instructions">Modifica riga delle app:  OK prendi / rilascia  ·  ◀ ▶ sposta  ·  Indietro fatto</string>
+    <string name="moving_app_instructions">Spostamento:  ◀ ▶ sposta  ·  OK posiziona</string>
+    <string name="tip_rearrange_row">Suggerimento: tieni premuto OK su un\'app per riordinare la riga</string>
+
+    <!-- Settings menu labels -->
+    <string name="setting_theme">Tema</string>
+    <string name="setting_theme_light">Chiaro</string>
+    <string name="setting_theme_dark">Scuro</string>
+    <string name="setting_theme_auto">Automatico</string>
+
+    <string name="setting_light_wallpaper">Sfondo tema chiaro</string>
+    <string name="setting_dark_wallpaper">Sfondo tema scuro</string>
+    <string name="setting_photo_fade">Dissolvenza foto</string>
+    <string name="setting_folder_photo_changes">Cambio foto cartella</string>
+    <string name="setting_sort_apps">Ordina app</string>
+    <string name="setting_sort_manual">Manuale</string>
+    <string name="setting_sort_usage">Più usate</string>
+
+    <string name="setting_apps_in_row">App nella riga</string>
+    <string name="apps_in_row_all">Tutte</string>
+    <string name="apps_in_row_count">%1$d di %2$d</string>
+
+    <string name="setting_app_names">Nomi delle app</string>
+    <string name="app_names_focus">Solo evidenziata</string>
+    <string name="app_names_always">Sempre</string>
+    <string name="app_names_never">Mai</string>
+
+    <string name="setting_icon_style">Stile icone</string>
+    <string name="icon_style_colour">A colori</string>
+    <string name="icon_style_monochrome">Monocromatiche</string>
+
+    <string name="setting_restore_hidden_shows">Ripristina elementi nascosti</string>
+    <string name="hidden_shows_none">Nessun elemento nascosto</string>
+    <string name="hidden_shows_count">%1$d nascosti</string>
+
+    <string name="setting_cw_apps">App Continua a guardare</string>
+    <string name="cw_apps_all_on">Tutte attive</string>
+    <string name="cw_apps_count_off">%1$d disattivate</string>
+
+    <string name="setting_weather">Meteo</string>
+    <string name="weather_off">Disattivato</string>
+
+    <string name="setting_screensaver">Salvaschermo</string>
+    <string name="setting_test_screensaver">Prova salvaschermo</string>
+    <string name="setting_screensaver_timing">Tempi salvaschermo</string>
+
+    <string name="setting_home_button">Tasto Home</string>
+    <string name="home_button_on">Attivo</string>
+    <string name="home_button_off_prompt">Disattivo: premi per attivare</string>
+
+    <string name="setting_default_launcher">Launcher predefinito</string>
+    <string name="default_launcher_set_prompt">Premi per impostare</string>
+
+    <string name="setting_updates">Aggiornamenti</string>
+    <string name="updates_updating">Aggiornamento in corso…</string>
+    <string name="updates_checking">Verifica in corso…</string>
+    <string name="updates_available_prompt">%1$s disponibile: premi per aggiornare</string>
+    <string name="updates_up_to_date">Aggiornato (%1$s)</string>
+
+    <string name="setting_lock_layout">Blocco layout</string>
+    <string name="state_on">Attivo</string>
+    <string name="state_off">Disattivo</string>
+    <string name="state_shown">Visibile</string>
+    <string name="state_hidden">Nascosta</string>
+
+    <!-- Wallpapers & Folders -->
+    <string name="wallpaper_plain_pure_black">Nero assoluto</string>
+    <string name="wallpaper_plain_soft_white">Bianco tenue</string>
+    <string name="wallpaper_rockies_day">Montagne Rocciose (giorno)</string>
+    <string name="wallpaper_rockies_dusk">Montagne Rocciose (tramonto)</string>
+    <string name="wallpaper_prefix_folder">Cartella: %1$s</string>
+    <string name="add_from_phone">Aggiungi dal telefono…</string>
+    <string name="choose_from_tv">Scegli una cartella su questa TV…</string>
+    <string name="remove_photo">Rimuovi una foto…</string>
+    <string name="choose_folder_title">Scegli una cartella</string>
+    <string name="photos_count_singular">%1$d foto</string>
+    <string name="photos_count_plural">%1$d foto</string>
+    <string name="delete_photo_confirm">Eliminare \"%1$s\"?</string>
+    <string name="dialog_cancel">Annulla</string>
+    <string name="dialog_delete">Elimina</string>
+    <string name="dialog_done">Fatto</string>
+
+    <string name="add_from_phone_title">Aggiungi dal telefono</string>
+    <string name="upload_waiting">In attesa di una foto…</string>
+    <string name="upload_added_status">Aggiunta \"%1$s\". Inviane un\'altra o premi Fatto.</string>
+    <string name="upload_qr_instructions">Scansiona con la fotocamera del telefono o apri questo indirizzo. Telefono e TV devono essere sulla stessa rete Wi-Fi.</string>
+
+    <!-- Photo interval -->
+    <string name="interval_every_minute">Ogni minuto</string>
+    <string name="interval_every_5_min">Ogni 5 min</string>
+    <string name="interval_every_10_min">Ogni 10 min</string>
+    <string name="interval_every_15_min">Ogni 15 min</string>
+    <string name="interval_every_30_min">Ogni 30 min</string>
+    <string name="interval_every_hour">Ogni ora</string>
+    <string name="interval_every_day">Ogni giorno</string>
+
+    <!-- Screensaver -->
+    <string name="screensaver_gallery_paintings">Dipinti della galleria</string>
+    <string name="screensaver_your_photos">Le tue foto</string>
+    <string name="screensaver_gallery_label">Galleria</string>
+    <string name="screensaver_downloading">Download galleria in corso…</string>
+    <string name="screensaver_system_default">Predefinito di sistema</string>
+
+    <!-- PIN & Lock -->
+    <string name="pin_enter_title">Inserisci PIN</string>
+    <string name="pin_choose_title">Scegli un PIN</string>
+    <string name="pin_enter_again_title">Inseriscilo di nuovo</string>
+    <string name="pin_wrong">PIN errato</string>
+    <string name="pin_too_many_tries_wait">Troppi tentativi. Riprova tra %1$d s.</string>
+    <string name="pin_instructions">▲ ▼ cambia  ·  ◀ ▶ sposta  ·  OK conferma. Funzionano anche i tasti numerici.</string>
+    <string name="pin_forgot_notice">Dimenticato? Impostazioni Android → App → Plume → Cancella dati rimuove il blocco, insieme al layout e alle impostazioni.</string>
+    <string name="pin_mismatch">I PIN non corrispondono. Scegline uno di nuovo.</string>
+    <string name="layout_locked_toast">Layout bloccato. Le modifiche al layout e alle impostazioni richiedono il PIN.</string>
+    <string name="unlock_to_edit">Sblocca per modificare…</string>
+
+    <!-- Context Menus (Hold OK) -->
+    <string name="menu_open">Apri</string>
+    <string name="menu_move">Sposta</string>
+    <string name="menu_remove_from_row">Rimuovi dalla riga</string>
+    <string name="menu_app_info">Info app</string>
+    <string name="menu_remove_from_cw">Rimuovi da Continua a guardare</string>
+    <string name="menu_open_app">Apri app</string>
+    <string name="removed_from_row_toast">Rossa dalla riga. È ancora presente in Tutte le app.</string>
+
+    <!-- Time left -->
+    <string name="time_left_hr_min">%1$d h e %2$d min rimanenti</string>
+    <string name="time_left_min">%1$d min rimanenti</string>
+
+    <!-- Weather conditions -->
+    <string name="weather_clear">Sereno</string>
+    <string name="weather_partly_cloudy">Poco nuvoloso</string>
+    <string name="weather_cloudy">Nuvoloso</string>
+    <string name="weather_fog">Nebbia</string>
+    <string name="weather_drizzle">Pioggerella</string>
+    <string name="weather_rain">Pioggia</string>
+    <string name="weather_snow">Neve</string>
+    <string name="weather_thunderstorm">Temporale</string>
+
+    <!-- Toasts & Notifications -->
+    <string name="toast_photo_access_needed">Plume necessita dell\'accesso alle foto per mostrare le tue cartelle</string>
+    <string name="toast_home_button_permission">Attiva \"Plume: Tasto Home\" in Impostazioni → Sistema → Accessibilità</string>
+    <string name="toast_no_photos_found">Nessuna foto trovata. Copiane qualcuna sulla TV o inserisci una chiavetta USB con foto.</string>
+    <string name="toast_connect_network">Connetti prima la TV al Wi-Fi o a Ethernet</string>
+    <string name="toast_upload_server_failed">Impossibile avviare la pagina di caricamento</string>
+    <string name="toast_screensaver_choose_gallery">Scegli \"Galleria\" come salvaschermo qui</string>
+    <string name="toast_screensaver_downloading">Download dipinti della Galleria (%1$s)…</string>
+    <string name="toast_screensaver_download_failed">Impossibile scaricare i dipinti. Controlla la connessione e riprova.</string>
+    <string name="toast_screensaver_cannot_start">Questa TV non può avviare il salvaschermo su richiesta</string>
+    <string name="toast_update_available">Plume %1$s è disponibile. Aggiornalo nelle impostazioni di Plume.</string>
+    <string name="toast_update_check_failed">Impossibile verificare gli aggiornamenti. Controlla la connessione.</string>
+    <string name="toast_update_up_to_date">Plume è aggiornato</string>
+    <string name="toast_update_permission">Abilita Plume nell\'elenco successivo, quindi premi di nuovo Aggiornamenti</string>
+    <string name="toast_update_download_failed">Impossibile scaricare l\'aggiornamento. Controlla la connessione e riprova.</string>
+    <string name="toast_update_install_failed">Installazione dell\'aggiornamento non riuscita</string>
+    <string name="toast_no_cw_apps">Nessuna app installata supporta Continua a guardare</string>
+    <string name="toast_hidden_from_cw">Nascosto da Continua a guardare</string>
+</resources>

@@ -1,3 +1,175 @@
 <resources>
+    <!-- App & General -->
+    <string name="app_name">Plume</string>
     <string name="override_desc">Opens Plume whenever the Google TV home screen appears, so the Home button lands here.</string>
+
+    <!-- Top bar & Accessibility descriptions -->
+    <string name="network_settings">Network settings</string>
+    <string name="all_apps">All apps</string>
+    <string name="settings">Settings</string>
+    <string name="plume_settings">Plume settings</string>
+    <string name="tv_inputs">TV inputs</string>
+    <string name="toast_no_inputs">No TV inputs found</string>
+
+    <!-- Home screen sections -->
+    <string name="continue_watching">Continue Watching</string>
+
+    <!-- Edit mode -->
+    <string name="edit_apps_row">Edit apps row</string>
+    <string name="editing_row_instructions">Editing apps row:  OK pick up / drop  ·  ◀ ▶ move  ·  Back done</string>
+    <string name="moving_app_instructions">Moving:  ◀ ▶ move  ·  OK place</string>
+    <string name="tip_rearrange_row">Tip: hold OK on an app to rearrange the row</string>
+
+    <!-- Settings menu labels -->
+    <string name="setting_theme">Theme</string>
+    <string name="setting_theme_light">Light</string>
+    <string name="setting_theme_dark">Dark</string>
+    <string name="setting_theme_auto">Auto</string>
+
+    <string name="setting_light_wallpaper">Light mode wallpaper</string>
+    <string name="setting_dark_wallpaper">Dark mode wallpaper</string>
+    <string name="setting_photo_fade">Photo fade</string>
+    <string name="setting_folder_photo_changes">Folder photo changes</string>
+    <string name="setting_sort_apps">Sort apps</string>
+    <string name="setting_sort_manual">Manual</string>
+    <string name="setting_sort_usage">Most used</string>
+
+    <string name="setting_apps_in_row">Apps in row</string>
+    <string name="apps_in_row_all">All</string>
+    <string name="apps_in_row_count">%1$d of %2$d</string>
+
+    <string name="setting_app_names">App names</string>
+    <string name="app_names_focus">On focus</string>
+    <string name="app_names_always">Always</string>
+    <string name="app_names_never">Never</string>
+
+    <string name="setting_icon_style">Icon style</string>
+    <string name="icon_style_colour">Colour</string>
+    <string name="icon_style_monochrome">Monochrome</string>
+
+    <string name="setting_restore_hidden_shows">Restore hidden shows</string>
+    <string name="hidden_shows_none">None hidden</string>
+    <string name="hidden_shows_count">%1$d hidden</string>
+
+    <string name="setting_cw_apps">Continue Watching apps</string>
+    <string name="cw_apps_all_on">All on</string>
+    <string name="cw_apps_count_off">%1$d off</string>
+
+    <string name="setting_weather">Weather</string>
+    <string name="weather_off">Off</string>
+
+    <string name="setting_screensaver">Screensaver</string>
+    <string name="setting_test_screensaver">Test screensaver</string>
+    <string name="setting_screensaver_timing">Screensaver timing</string>
+
+    <string name="setting_home_button">Home button</string>
+    <string name="home_button_on">On</string>
+    <string name="home_button_off_prompt">Off: press to turn on</string>
+
+    <string name="setting_default_launcher">Default launcher</string>
+    <string name="default_launcher_set_prompt">Press to set</string>
+
+    <string name="setting_updates">Updates</string>
+    <string name="updates_updating">Updating…</string>
+    <string name="updates_checking">Checking…</string>
+    <string name="updates_available_prompt">%1$s available: press to update</string>
+    <string name="updates_up_to_date">Up to date (%1$s)</string>
+
+    <string name="setting_lock_layout">Lock layout</string>
+    <string name="state_on">On</string>
+    <string name="state_off">Off</string>
+    <string name="state_shown">Shown</string>
+    <string name="state_hidden">Hidden</string>
+
+    <!-- Wallpapers & Folders -->
+    <string name="wallpaper_plain_pure_black">Pure black</string>
+    <string name="wallpaper_plain_soft_white">Soft white</string>
+    <string name="wallpaper_rockies_day">Rockies (day)</string>
+    <string name="wallpaper_rockies_dusk">Rockies (dusk)</string>
+    <string name="wallpaper_prefix_folder">Folder: %1$s</string>
+    <string name="add_from_phone">Add from phone…</string>
+    <string name="choose_from_tv">Choose a folder on this TV…</string>
+    <string name="remove_photo">Remove a photo…</string>
+    <string name="choose_folder_title">Choose a folder</string>
+    <string name="photos_count_singular">%1$d photo</string>
+    <string name="photos_count_plural">%1$d photos</string>
+    <string name="delete_photo_confirm">Delete \"%1$s\"?</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_delete">Delete</string>
+    <string name="dialog_done">Done</string>
+
+    <string name="add_from_phone_title">Add from your phone</string>
+    <string name="upload_waiting">Waiting for a photo…</string>
+    <string name="upload_added_status">Added \"%1$s\". Send another, or press Done.</string>
+    <string name="upload_qr_instructions">Scan with your phone\'s camera, or open this address. Phone and TV must be on the same Wi-Fi.</string>
+
+    <!-- Photo interval -->
+    <string name="interval_every_minute">Every minute</string>
+    <string name="interval_every_5_min">Every 5 min</string>
+    <string name="interval_every_10_min">Every 10 min</string>
+    <string name="interval_every_15_min">Every 15 min</string>
+    <string name="interval_every_30_min">Every 30 min</string>
+    <string name="interval_every_hour">Every hour</string>
+    <string name="interval_every_day">Every day</string>
+
+    <!-- Screensaver -->
+    <string name="screensaver_gallery_paintings">Gallery paintings</string>
+    <string name="screensaver_your_photos">Your photos</string>
+    <string name="screensaver_gallery_label">Gallery</string>
+    <string name="screensaver_downloading">Downloading Gallery…</string>
+    <string name="screensaver_system_default">System default</string>
+
+    <!-- PIN & Lock -->
+    <string name="pin_enter_title">Enter PIN</string>
+    <string name="pin_choose_title">Choose a PIN</string>
+    <string name="pin_enter_again_title">Enter it again</string>
+    <string name="pin_wrong">Wrong PIN</string>
+    <string name="pin_too_many_tries_wait">Too many tries. Try again in %1$d s.</string>
+    <string name="pin_instructions">▲ ▼ change  ·  ◀ ▶ move  ·  OK enter. Number keys work too.</string>
+    <string name="pin_forgot_notice">Forgot it? Android Settings → Apps → Plume → Clear data removes the lock, along with your layout and settings.</string>
+    <string name="pin_mismatch">Those PINs didn\'t match. Choose one again.</string>
+    <string name="layout_locked_toast">Layout locked. Plume settings and home screen changes now need the PIN.</string>
+    <string name="unlock_to_edit">Unlock to edit…</string>
+
+    <!-- Context Menus (Hold OK) -->
+    <string name="menu_open">Open</string>
+    <string name="menu_move">Move</string>
+    <string name="menu_remove_from_row">Remove from row</string>
+    <string name="menu_app_info">App info</string>
+    <string name="menu_remove_from_cw">Remove from Continue Watching</string>
+    <string name="menu_open_app">Open app</string>
+    <string name="removed_from_row_toast">Removed from the row. It\'s still in All apps.</string>
+
+    <!-- Time left -->
+    <string name="time_left_hr_min">%1$d hr %2$d min left</string>
+    <string name="time_left_min">%1$d min left</string>
+
+    <!-- Weather conditions -->
+    <string name="weather_clear">Clear</string>
+    <string name="weather_partly_cloudy">Partly cloudy</string>
+    <string name="weather_cloudy">Cloudy</string>
+    <string name="weather_fog">Fog</string>
+    <string name="weather_drizzle">Drizzle</string>
+    <string name="weather_rain">Rain</string>
+    <string name="weather_snow">Snow</string>
+    <string name="weather_thunderstorm">Thunderstorm</string>
+
+    <!-- Toasts & Notifications -->
+    <string name="toast_photo_access_needed">Plume needs access to photos to show your folders</string>
+    <string name="toast_home_button_permission">Turn on \"Plume: Home button\" in Settings → System → Accessibility</string>
+    <string name="toast_no_photos_found">No photos found. Copy some to the TV or plug in a USB drive with photos.</string>
+    <string name="toast_connect_network">Connect the TV to Wi-Fi or Ethernet first</string>
+    <string name="toast_upload_server_failed">Couldn\'t start the upload page</string>
+    <string name="toast_screensaver_choose_gallery">Choose \"Gallery\" as the screensaver here</string>
+    <string name="toast_screensaver_downloading">Downloading Gallery paintings (%1$s)…</string>
+    <string name="toast_screensaver_download_failed">Couldn\'t download the paintings. Check the connection and try again.</string>
+    <string name="toast_screensaver_cannot_start">This TV can\'t start the screensaver on demand</string>
+    <string name="toast_update_available">Plume %1$s is available. Update it in Plume settings.</string>
+    <string name="toast_update_check_failed">Couldn\'t check for updates. Check the connection.</string>
+    <string name="toast_update_up_to_date">Plume is up to date</string>
+    <string name="toast_update_permission">Turn on Plume in the next list, then press Updates again</string>
+    <string name="toast_update_download_failed">Couldn\'t download the update. Check the connection and try again.</string>
+    <string name="toast_update_install_failed">Update failed to install</string>
+    <string name="toast_no_cw_apps">No installed apps support Continue Watching</string>
+    <string name="toast_hidden_from_cw">Hidden from Continue Watching</string>
 </resources>
