@@ -2410,9 +2410,11 @@ class MainActivity : Activity() {
                 if (gapBefore) marginStart = gap
             }
         }
+        val isTuner = p.pkg?.contains("tuner") == true || p.pkg?.contains("tvx") == true
         val img = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            setBackgroundColor(if (dark) 0xFF111113.toInt() else 0xFFDDE1E5.toInt())
+            // FIT_CENTER ensures 16:9 tuner cards and letterboxed channels are not cropped vertically
+            scaleType = if (isTuner) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
+            setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt())
         }
         // Long titles scroll while their poster is focused instead of staying cut off.
         val title = label(p.title, 14f).apply {
@@ -2430,15 +2432,16 @@ class MainActivity : Activity() {
         frame.addView(img, MATCH_PARENT, MATCH_PARENT)
         frame.setOnClickListener { open(p) }
         frame.setTag(R.id.watchRow, p) // holding OK hides it (see onHold)
-        // 2:1 keeps logos and badges that providers bake into 16:9 art.
-        col.addView(frame, LinearLayout.LayoutParams(w, w / 2))
+        // Standard 16:9 aspect ratio prevents cutting off channel numbers and provider badges
+        val cardHeight = w * 9 / 16
+        col.addView(frame, LinearLayout.LayoutParams(w, cardHeight))
         // Thin bar under the poster, card width. Kept (invisible) when there's no progress so titles line up.
         col.addView(ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
             progress = p.progress
             progressDrawable = progressBarDrawable()
             visibility = if (p.progress > 0) View.VISIBLE else View.INVISIBLE
-        }, LinearLayout.LayoutParams(w, dp(3)).apply { topMargin = dp(8) })
+        }, LinearLayout.LayoutParams(w, dp(3)).apply { topMargin = dp(6) })
         col.addView(title)
         val icon = sourceIcon(p.pkg)
         if (p.sub.isNotEmpty() || icon != null) {
@@ -2491,7 +2494,16 @@ class MainActivity : Activity() {
                 loading.remove(uri)
             } ?: return@execute
             posters.put(uri, bmp)
-            ui.post { if (v.tag == uri) v.setImageBitmap(bmp) }
+            ui.post {
+                if (v.tag == uri) {
+                    v.setImageBitmap(bmp)
+                    // Seamless background match if bitmap has solid background
+                    try {
+                        val corner = bmp.getPixel(0, 0)
+                        v.setBackgroundColor(corner)
+                    } catch (e: Exception) {}
+                }
+            }
         }
     }
 
