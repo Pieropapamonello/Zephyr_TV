@@ -51,6 +51,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.GridLayout
 import android.widget.ImageView
@@ -157,6 +158,17 @@ class MainActivity : Activity() {
     private lateinit var allApps: View
     private lateinit var allAppsGrid: GridLayout
     private lateinit var wifi: ImageView
+    private lateinit var spotlightContainer: View
+    private lateinit var spotlightInfoBox: View
+    private lateinit var spotlightTitle: TextView
+    private lateinit var spotlightMeta: TextView
+    private lateinit var spotlightOverview: TextView
+    private lateinit var spotlightActions: LinearLayout
+
+    private var tmdbTrending: List<TmdbItem> = emptyList()
+    private var tmdbIndex = 0
+    private var tmdbLastFocusApp: String? = null
+    private val appChannelDebounce = Runnable { queryAppChannels(tmdbLastFocusApp) }
 
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
@@ -189,6 +201,13 @@ class MainActivity : Activity() {
         allApps = findViewById(R.id.allApps)
         allAppsGrid = findViewById(R.id.allAppsGrid)
         wifi = findViewById(R.id.wifi)
+        spotlightContainer = findViewById(R.id.spotlightContainer)
+        spotlightInfoBox = findViewById(R.id.spotlightInfoBox)
+        spotlightTitle = findViewById(R.id.spotlightTitle)
+        spotlightMeta = findViewById(R.id.spotlightMeta)
+        spotlightOverview = findViewById(R.id.spotlightOverview)
+        spotlightActions = findViewById(R.id.spotlightActions)
+        setupSpotlight()
         applyTheme()
         loadWallpaper()
 
@@ -417,6 +436,7 @@ class MainActivity : Activity() {
     private fun wallpaperChoices(forDark: Boolean): List<Pair<String, String>> =
         listOf(plainWallpaper(forDark).let { wallpaperName(it) to it }) +
             BUNDLED_WALLPAPERS.keys.map { wallpaperName("res:$it") to "res:$it" } +
+            (if (!prefs.getString("tmdb_api_key", null).isNullOrBlank()) listOf(wallpaperName("tmdb:trending") to "tmdb:trending") else emptyList()) +
             (wallpaperDir()?.listFiles { f -> f.extension.lowercase() in setOf("jpg", "jpeg", "png", "webp") }
                 ?.sortedBy { it.name }?.map { it.nameWithoutExtension to "file:${it.name}" } ?: emptyList()) +
             listOfNotNull(currentWallpaper(forDark).takeIf { it.startsWith("folder:") }?.let { wallpaperName(it) to it })
@@ -433,6 +453,7 @@ class MainActivity : Activity() {
     private fun wallpaperFade() = prefs.getBoolean("wp_fade", true)
 
     private fun wallpaperName(choice: String) = when {
+        choice == "tmdb:trending" -> getString(R.string.wallpaper_tmdb_trending)
         choice.startsWith("folder:") -> getString(R.string.wallpaper_prefix_folder, choice.substringAfter(':').substringAfter(':'))
         choice == "plain:Pure black" -> getString(R.string.wallpaper_plain_pure_black)
         choice == "plain:Soft white" -> getString(R.string.wallpaper_plain_soft_white)
@@ -457,12 +478,17 @@ class MainActivity : Activity() {
             } ?: decodeWallpaper(fallback)
             ui.post {
                 val old = view.drawable
-                if (old == null || bmp == null) return@post view.setImageBitmap(bmp)
+                if (old == null || bmp == null) {
+                    view.setImageBitmap(bmp)
+                    renderSpotlight()
+                    return@post
+                }
                 // Soft change from one photo to the next; then drop the old one so only one stays in memory.
                 val fade = TransitionDrawable(arrayOf(old, BitmapDrawable(resources, bmp))).apply { isCrossFadeEnabled = true }
                 view.setImageDrawable(fade)
                 fade.startTransition(800)
                 ui.postDelayed({ if (view.drawable === fade) view.setImageBitmap(bmp) }, 900)
+                renderSpotlight()
             }
         }
     }
@@ -470,6 +496,28 @@ class MainActivity : Activity() {
     private fun decodeWallpaper(choice: String): Bitmap? {
         BUNDLED_WALLPAPERS[choice.removePrefix("res:")]?.let { res ->
             return BitmapFactory.decodeResource(resources, res)
+        }
+        if (choice == "tmdb:trending") {
+            val key = prefs.getString("tmdb_api_key", null) ?: return null
+            val lang = prefs.getString("tmdb_lang", "it-IT") ?: "it-IT"
+            val type = prefs.getString("tmdb_type", "all") ?: "all"
+            if (tmdbTrending.isEmpty()) {
+                tmdbTrending = TmdbClient.fetchTrending(key, lang, type)
+            }
+            if (tmdbTrending.isEmpty()) return null
+            val item = tmdbTrending.getOrNull(tmdbIndex.coerceIn(0, tmdbTrending.size - 1)) ?: return null
+            val url = TmdbClient.backdropUrl(item.backdropPath) ?: return null
+            val bmp = fitWallpaper { openStream(url) } ?: return null
+            val h = bmp.height.toFloat()
+            val base = ground and 0x00FFFFFF
+            if (wallpaperFade()) Canvas(bmp).drawRect(0f, 0f, bmp.width.toFloat(), h, Paint().apply {
+                shader = LinearGradient(0f, h * 0.28f, 0f, h * 0.5f, base, base or 0xE6000000.toInt(), Shader.TileMode.CLAMP)
+            })
+            Canvas(bmp).drawRect(0f, 0f, bmp.width.toFloat(), h * 0.3f, Paint().apply {
+                shader = LinearGradient(0f, 0f, 0f, h * 0.3f, intArrayOf(base or 0xC0000000.toInt(), base or 0xA0000000.toInt(), base),
+                    floatArrayOf(0f, 0.6f, 1f), Shader.TileMode.CLAMP)
+            })
+            return bmp
         }
         // fitWallpaper's bitmap is mutable: the fades are painted onto it.
         val bmp = if (choice.startsWith("folder:")) {
@@ -787,6 +835,7 @@ class MainActivity : Activity() {
                 ui.post(weatherTick)
                 renderSettings(12)
             },
+            Triple(getString(R.string.setting_tmdb), if (prefs.getString("tmdb_api_key", null).isNullOrBlank()) getString(R.string.state_off) else getString(R.string.state_on)) { pickTmdbSettings() },
             Triple(getString(R.string.setting_screensaver), when {
                 downloading -> getString(R.string.screensaver_downloading)
                 !galleryOn() -> screensaverName()
@@ -809,6 +858,96 @@ class MainActivity : Activity() {
             },
         )
         showPage(getString(R.string.plume_settings), rows, focus, back = null)
+    }
+
+    private fun pickTmdbSettings() {
+        val hasKey = !prefs.getString("tmdb_api_key", null).isNullOrBlank()
+        val lang = prefs.getString("tmdb_lang", "it-IT") ?: "it-IT"
+        val type = prefs.getString("tmdb_type", "all") ?: "all"
+        val typeName = when (type) {
+            "movie" -> getString(R.string.tmdb_type_movie)
+            "tv" -> getString(R.string.tmdb_type_tv)
+            else -> getString(R.string.tmdb_type_all)
+        }
+        val defaultApps = prefs.getStringSet("tmdb_default_apps", emptySet())!!.count { pkg -> apps.any { it.pkg == pkg } }
+        val rows = listOf(
+            page(getString(R.string.setting_tmdb_api_key), if (hasKey) getString(R.string.tmdb_api_key_set) else getString(R.string.tmdb_api_key_empty)) {
+                configureTmdbApiKey()
+            },
+            page(getString(R.string.setting_tmdb_language), lang) {
+                val langs = listOf("it-IT", "en-US", "es-ES", "fr-FR", "de-DE")
+                showPage(getString(R.string.setting_tmdb_language), langs.map { l ->
+                    page(l, if (l == lang) CHOSEN else "") {
+                        prefs.edit().putString("tmdb_lang", l).apply()
+                        tmdbTrending = emptyList()
+                        loadWallpaper()
+                        pickTmdbSettings()
+                    }
+                }, langs.indexOf(lang)) { pickTmdbSettings() }
+            },
+            page(getString(R.string.setting_tmdb_media_type), typeName) {
+                val types = listOf("all" to getString(R.string.tmdb_type_all), "movie" to getString(R.string.tmdb_type_movie), "tv" to getString(R.string.tmdb_type_tv))
+                showPage(getString(R.string.setting_tmdb_media_type), types.map { (k, name) ->
+                    page(name, if (k == type) CHOSEN else "") {
+                        prefs.edit().putString("tmdb_type", k).apply()
+                        tmdbTrending = emptyList()
+                        loadWallpaper()
+                        pickTmdbSettings()
+                    }
+                }, types.indexOfFirst { it.first == type }) { pickTmdbSettings() }
+            },
+            page(getString(R.string.setting_tmdb_default_apps), if (defaultApps == 0) getString(R.string.cw_apps_all_on) else "$defaultApps") {
+                val appChoices = apps.map { it.label to it.pkg }
+                toggles(getString(R.string.setting_tmdb_default_apps), appChoices, "tmdb_default_apps", getString(R.string.state_on), getString(R.string.state_off)) {
+                    renderSpotlight()
+                    pickTmdbSettings()
+                }
+            }
+        )
+        showPage(getString(R.string.setting_tmdb), rows, back = { renderSettings(TMDB_ROW) })
+    }
+
+    private fun configureTmdbApiKey() {
+        val currentKey = prefs.getString("tmdb_api_key", "") ?: ""
+        val input = EditText(this).apply {
+            setText(currentKey)
+            hint = getString(R.string.tmdb_api_key_hint)
+            setTextColor(fg)
+            setHintTextColor(if (dark) 0x66FFFFFF else 0x66000000)
+            isSingleLine = true
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            val bg = GradientDrawable().apply {
+                cornerRadius = dp(8).toFloat()
+                setColor(if (dark) 0xFF2A2A32.toInt() else 0xFFE5E7EB.toInt())
+            }
+            background = bg
+        }
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(12), 0, dp(12))
+            addView(input)
+        }
+        val rows = listOf(
+            page(getString(R.string.dialog_save)) {
+                val key = input.text?.toString()?.trim()
+                if (!key.isNullOrBlank()) {
+                    prefs.edit().putString("tmdb_api_key", key).apply()
+                    tmdbTrending = emptyList()
+                    setWallpaper(dark, "tmdb:trending")
+                }
+                pickTmdbSettings()
+            },
+            page(getString(R.string.dialog_clear)) {
+                prefs.edit().remove("tmdb_api_key").apply()
+                tmdbTrending = emptyList()
+                if (currentWallpaper() == "tmdb:trending") {
+                    setWallpaper(dark, defaultWallpaper(dark))
+                }
+                pickTmdbSettings()
+            }
+        )
+        showPage(getString(R.string.setting_tmdb_api_key), rows, top = box, back = { pickTmdbSettings() })
+        input.requestFocus()
     }
 
     // Pages inside the settings panel (wallpaper list, app toggles…) instead of system dialogs, so they
@@ -1104,7 +1243,15 @@ class MainActivity : Activity() {
             val own = t.onFocusChangeListener
             t.setOnFocusChangeListener { v, focused ->
                 own.onFocusChange(v, focused)
-                if (focused) lastApp = v
+                if (focused) {
+                    lastApp = v
+                    val pkg = v.tag as? String
+                    if (pkg != null && !pkg.startsWith(HDMI)) {
+                        tmdbLastFocusApp = pkg
+                        ui.removeCallbacks(appChannelDebounce)
+                        ui.postDelayed(appChannelDebounce, 300)
+                    }
+                }
                 showRowLabel(v, focused)
             }
         }
@@ -1341,16 +1488,40 @@ class MainActivity : Activity() {
         val cards = if (watchScroll.visibility != View.VISIBLE) null
             else alive(lastCard) ?: (watchRow.getChildAt(0) as? ViewGroup)?.getChildAt(0)
         val top = alive(lastTop) ?: findViewById(R.id.launcherSettings)
+        val spotVis = spotlightContainer.visibility == View.VISIBLE
         return when {
             v.parent === wifi.parent -> when (key) { // top bar
-                KeyEvent.KEYCODE_DPAD_DOWN -> apps ?: cards ?: v // the apps row can be empty (all hidden)
+                KeyEvent.KEYCODE_DPAD_DOWN -> if (spotVis) spotlightInfoBox else apps ?: cards ?: v
                 KeyEvent.KEYCODE_DPAD_UP -> v
                 KeyEvent.KEYCODE_DPAD_LEFT -> if (v.id == R.id.wifi) v else null
                 KeyEvent.KEYCODE_DPAD_RIGHT -> if (v.id == R.id.launcherSettings) v else null
                 else -> null
             }
-            v.parent === appRow -> when (key) {
+            v === spotlightInfoBox -> when (key) {
+                KeyEvent.KEYCODE_DPAD_DOWN -> apps ?: cards ?: v
                 KeyEvent.KEYCODE_DPAD_UP -> top
+                KeyEvent.KEYCODE_DPAD_RIGHT -> if (spotlightActions.visibility == View.VISIBLE && spotlightActions.childCount > 0) spotlightActions.getChildAt(0) else {
+                    cycleSpotlight(1)
+                    v
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    cycleSpotlight(-1)
+                    v
+                }
+                else -> null
+            }
+            v.parent === spotlightActions -> {
+                val idx = spotlightActions.indexOfChild(v)
+                when (key) {
+                    KeyEvent.KEYCODE_DPAD_DOWN -> apps ?: cards ?: v
+                    KeyEvent.KEYCODE_DPAD_UP -> top
+                    KeyEvent.KEYCODE_DPAD_LEFT -> if (idx == 0) spotlightInfoBox else spotlightActions.getChildAt(idx - 1)
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> if (idx < spotlightActions.childCount - 1) spotlightActions.getChildAt(idx + 1) else v
+                    else -> null
+                }
+            }
+            v.parent === appRow -> when (key) {
+                KeyEvent.KEYCODE_DPAD_UP -> if (spotVis) spotlightInfoBox else top
                 KeyEvent.KEYCODE_DPAD_DOWN -> cards ?: v
                 KeyEvent.KEYCODE_DPAD_LEFT -> if (appRow.indexOfChild(v) == 0) v else null
                 KeyEvent.KEYCODE_DPAD_RIGHT -> if (appRow.indexOfChild(v) == appRow.childCount - 1) v else null
@@ -2049,6 +2220,141 @@ class MainActivity : Activity() {
         refreshWatchNext()
     }
 
+    private fun queryAppChannels(pkg: String?) {
+        if (pkg == null || checkSelfPermission(TV_LISTINGS) != PackageManager.PERMISSION_GRANTED) {
+            refreshWatchNext()
+            return
+        }
+        io.execute {
+            val hidden = prefs.getStringSet("hidden_watch", emptySet())!!
+            val appChannels = ArrayList<Pair<Long, String>>() // (id, displayName)
+            contentResolver.query(TvContract.Channels.CONTENT_URI, null, null, null, null)?.use { c ->
+                val nameIdx = c.getColumnIndex("display_name")
+                val pkgIdx = c.getColumnIndex("package_name")
+                val idIdx = c.getColumnIndex("_id")
+                while (c.moveToNext()) {
+                    if (c.getString(pkgIdx) == pkg) {
+                        val dName = c.getString(nameIdx) ?: ""
+                        appChannels += c.getLong(idIdx) to dName
+                    }
+                }
+            }
+            if (appChannels.isEmpty()) {
+                val list = try { queryWatchNext() } catch (e: Exception) { emptyList() }
+                ui.post {
+                    watchTitle.text = getString(R.string.continue_watching)
+                    showWatchNext(list)
+                }
+                return@execute
+            }
+            // Fetch preview programs from all channels for this app
+            val programs = appChannels.flatMap { (channelId, _) ->
+                readPrograms(TvContract.buildPreviewProgramsUriForChannel(channelId), hidden)
+            }.map { it.second }.distinctBy { it.intent ?: it.title }
+            if (programs.isEmpty()) {
+                val list = try { queryWatchNext() } catch (e: Exception) { emptyList() }
+                ui.post {
+                    watchTitle.text = getString(R.string.continue_watching)
+                    showWatchNext(list)
+                }
+                return@execute
+            }
+            val appLabel = apps.firstOrNull { it.pkg == pkg }?.label ?: pkg
+            ui.post {
+                watchTitle.text = getString(R.string.tmdb_app_channels, appLabel)
+                showWatchNext(programs)
+            }
+        }
+    }
+
+    private fun setupSpotlight() {
+        val bg = GradientDrawable().apply {
+            cornerRadius = dp(12).toFloat()
+            setColor(if (dark) 0x33000000 else 0x22FFFFFF)
+        }
+        spotlightInfoBox.background = bg
+        spotlightInfoBox.setPadding(dp(16), dp(12), dp(16), dp(12))
+        spotlightInfoBox.setOnFocusChangeListener { _, focused ->
+            spotlightOverview.visibility = if (focused) View.VISIBLE else View.GONE
+            spotlightActions.visibility = if (focused) View.VISIBLE else View.GONE
+            bg.setColor(if (!focused) (if (dark) 0x33000000 else 0x22FFFFFF) else (if (dark) 0x881E1E24.toInt() else 0xCCFFFFFF.toInt()))
+        }
+    }
+
+    private fun renderSpotlight() {
+        val tmdbActive = currentWallpaper() == "tmdb:trending"
+        if (!tmdbActive || tmdbTrending.isEmpty()) {
+            spotlightContainer.visibility = View.GONE
+            return
+        }
+        val item = tmdbTrending.getOrNull(tmdbIndex.coerceIn(0, tmdbTrending.size - 1)) ?: run {
+            spotlightContainer.visibility = View.GONE
+            return
+        }
+        spotlightContainer.visibility = View.VISIBLE
+        val year = item.releaseDate?.take(4)?.let { " · $it" } ?: ""
+        val rating = if (item.voteAverage > 0) "★ %.1f · ".format(item.voteAverage) else ""
+        val typeBadge = if (item.mediaType == "tv") getString(R.string.tmdb_badge_tv) else getString(R.string.tmdb_badge_movie)
+        val genre = item.genreIds.firstOrNull()?.let { TmdbClient.genreName(it) }?.let { " · $it" } ?: ""
+        spotlightMeta.text = "$rating$typeBadge$year$genre"
+        spotlightTitle.text = item.title
+        spotlightOverview.text = item.overview
+
+        // Populate action buttons for installed suggestions apps
+        spotlightActions.removeAllViews()
+        val defaultApps = prefs.getStringSet("tmdb_default_apps", emptySet())!!
+        val targetApps = (if (defaultApps.isNotEmpty()) apps.filter { it.pkg in defaultApps }
+        else apps.filter { it.pkg in setOf("com.stremio.one", "com.netflix.ninja", "com.google.android.youtube.tv", "com.amazon.amazonvideo.livingroom") }).take(4)
+
+        for (a in targetApps) {
+            val btn = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(12), dp(8), dp(12), dp(8))
+                val btnBg = GradientDrawable().apply {
+                    cornerRadius = dp(8).toFloat()
+                    setColor(if (dark) 0x55000000 else 0x44FFFFFF)
+                }
+                background = btnBg
+                isFocusable = true
+                isClickable = true
+                val ic = ImageView(this@MainActivity).apply {
+                    setImageDrawable(a.icon)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                }
+                val txt = TextView(this@MainActivity).apply {
+                    text = a.label
+                    setTextColor(fg)
+                    textSize = 12f
+                    setPadding(dp(6), 0, 0, 0)
+                }
+                addView(ic, dp(20), dp(20))
+                addView(txt)
+                setOnFocusChangeListener { _, focused ->
+                    btnBg.setColor(if (focused) (if (dark) 0xFF444450.toInt() else Color.WHITE) else (if (dark) 0x55000000 else 0x44FFFFFF))
+                    scaleX = if (focused) 1.08f else 1f
+                    scaleY = if (focused) 1.08f else 1f
+                }
+                setOnClickListener {
+                    try {
+                        startActivity(TmdbClient.searchIntent(this@MainActivity, a.pkg, item.title))
+                    } catch (e: Exception) {
+                        launch(a)
+                    }
+                }
+            }
+            spotlightActions.addView(btn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                marginStart = dp(8)
+            })
+        }
+    }
+
+    private fun cycleSpotlight(direction: Int) {
+        if (tmdbTrending.isEmpty()) return
+        tmdbIndex = (tmdbIndex + direction).mod(tmdbTrending.size)
+        loadWallpaper()
+    }
+
     /** Small source-app mark for the details line: black logo when we have one, else greyscale icon. */
     private fun sourceIcon(pkg: String?): Drawable? {
         if (pkg == null) return null
@@ -2270,11 +2576,12 @@ class MainActivity : Activity() {
         const val TV_LISTINGS = "android.permission.READ_TV_LISTINGS"
         const val WRITE_SECURE = "android.permission.WRITE_SECURE_SETTINGS"
         const val ROLE_REQUEST = 2
-        const val SCREENSAVER_ROW = 13 // positions in the settings list (see renderSettings)
-        const val HOME_BUTTON_ROW = 16
-        const val DEFAULT_HOME_ROW = 17
-        const val UPDATE_ROW = 18
-        const val LOCK_ROW = 19
+        const val TMDB_ROW = 13 // positions in the settings list (see renderSettings)
+        const val SCREENSAVER_ROW = 14
+        const val HOME_BUTTON_ROW = 17
+        const val DEFAULT_HOME_ROW = 18
+        const val UPDATE_ROW = 19
+        const val LOCK_ROW = 20
         const val PIN_TRIES = 5 // wrong PINs before a 30 s wait
         const val UNLOCKED_MS = 5 * 60_000L
         const val UNLOCK_TO_EDIT = "Unlock to edit…"
