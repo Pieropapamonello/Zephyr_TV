@@ -75,6 +75,18 @@ object TmdbClient {
         val pm = context.packageManager
         // Specialized intents where known
         when (pkg) {
+            "com.nuvio.app" -> {
+                val nuvioUri = Uri.parse("nuvio:///search?search=" + Uri.encode(query))
+                Intent(Intent.ACTION_VIEW, nuvioUri).apply {
+                    setPackage(pkg)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }.takeIf { it.resolveActivity(pm) != null }?.let { return it }
+                val stremioUri = Uri.parse("stremio:///search?search=" + Uri.encode(query))
+                Intent(Intent.ACTION_VIEW, stremioUri).apply {
+                    setPackage(pkg)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }.takeIf { it.resolveActivity(pm) != null }?.let { return it }
+            }
             "com.stremio.one" -> {
                 val stremioUri = Uri.parse("stremio:///search?search=" + Uri.encode(query))
                 Intent(Intent.ACTION_VIEW, stremioUri).apply {

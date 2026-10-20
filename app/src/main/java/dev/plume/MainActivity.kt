@@ -423,10 +423,16 @@ class MainActivity : Activity() {
         ground = if (dark) Color.BLACK else 0xFFF3F5F7.toInt()
         findViewById<View>(R.id.root).setBackgroundColor(ground)
         allApps.setBackgroundColor(ground)
-        for (id in intArrayOf(R.id.clock, R.id.date, R.id.appsTitle, R.id.watchTitle, R.id.allAppsTitle, R.id.rowLabel, R.id.weather)) {
-            findViewById<TextView>(id).setTextColor(fg)
+        val textShadow = if (dark) 0x80000000.toInt() else 0x40000000.toInt()
+        val textRadius = if (dark) 6f else 2f
+        for (id in intArrayOf(R.id.clock, R.id.date, R.id.appsTitle, R.id.watchTitle, R.id.allAppsTitle, R.id.rowLabel, R.id.weather, R.id.spotlightTitle, R.id.spotlightMeta, R.id.spotlightOverview)) {
+            findViewById<TextView>(id)?.apply {
+                setTextColor(fg)
+                setShadowLayer(textRadius, 0f, 2f, textShadow)
+            }
         }
         wifi.setColorFilter(fg)
+        renderSpotlight()
     }
 
     // ---------- wallpapers ----------
@@ -452,8 +458,14 @@ class MainActivity : Activity() {
 
     private fun defaultWallpaper(forDark: Boolean) = if (forDark) "res:Rockies (dusk)" else "res:Rockies (day)"
 
-    private fun currentWallpaper(forDark: Boolean = dark) =
-        prefs.getString(if (forDark) "wp_dark" else "wp_light", null) ?: defaultWallpaper(forDark)
+    private fun currentWallpaper(forDark: Boolean = dark): String {
+        val saved = prefs.getString(if (forDark) "wp_dark" else "wp_light", null)
+        if (saved != null) return saved
+        if (!prefs.getString("tmdb_api_key", null).isNullOrBlank()) {
+            return "tmdb:trending"
+        }
+        return defaultWallpaper(forDark)
+    }
 
     /** Fade your own photos into the background at the bottom. Bundled wallpapers have it baked in either way. */
     private fun wallpaperFade() = prefs.getBoolean("wp_fade", true)
@@ -875,7 +887,9 @@ class MainActivity : Activity() {
             "tv" -> getString(R.string.tmdb_type_tv)
             else -> getString(R.string.tmdb_type_all)
         }
-        val defaultApps = prefs.getStringSet("tmdb_default_apps", emptySet())!!.count { pkg -> apps.any { it.pkg == pkg } }
+        val offSet = prefs.getStringSet("tmdb_default_apps", emptySet()) ?: emptySet()
+        val availableApps = apps.filter { !it.pkg.startsWith(HDMI) && it.pkg != CW_PKG }
+        val activeCount = availableApps.count { it.pkg !in offSet }
         val rows = listOf(
             page(getString(R.string.setting_tmdb_api_key), if (hasKey) getString(R.string.tmdb_api_key_set) else getString(R.string.tmdb_api_key_empty)) {
                 configureTmdbApiKey()
@@ -902,8 +916,8 @@ class MainActivity : Activity() {
                     }
                 }, types.indexOfFirst { it.first == type }) { pickTmdbSettings() }
             },
-            page(getString(R.string.setting_tmdb_default_apps), if (defaultApps == 0) getString(R.string.cw_apps_all_on) else "$defaultApps") {
-                val appChoices = apps.map { it.label to it.pkg }
+            page(getString(R.string.setting_tmdb_default_apps), if (offSet.isEmpty()) getString(R.string.cw_apps_all_on) else "$activeCount") {
+                val appChoices = availableApps.map { it.label to it.pkg }
                 toggles(getString(R.string.setting_tmdb_default_apps), appChoices, "tmdb_default_apps", getString(R.string.state_on), getString(R.string.state_off)) {
                     renderSpotlight()
                     pickTmdbSettings()
@@ -939,7 +953,8 @@ class MainActivity : Activity() {
                 if (!key.isNullOrBlank()) {
                     prefs.edit().putString("tmdb_api_key", key).apply()
                     tmdbTrending = emptyList()
-                    setWallpaper(dark, "tmdb:trending")
+                    setWallpaper(false, "tmdb:trending")
+                    setWallpaper(true, "tmdb:trending")
                 }
                 pickTmdbSettings()
             },
@@ -1244,7 +1259,8 @@ class MainActivity : Activity() {
         val hidden = rowHiddenSet()
         // Fixed first tile: "Continue Watching" hub
         val cwDrawable = getDrawable(R.drawable.ic_continue_watching) ?: getDrawable(R.drawable.ic_apps)!!
-        val cwTile = tile(null, cwDrawable, true, CW_PKG) {
+        val cwTile = tile(null, cwDrawable, mono = false, CW_PKG) {
+            watchTitle.text = getString(R.string.continue_watching)
             tmdbLastFocusApp = null
             queryAppChannels(null)
         }.apply {
@@ -1263,6 +1279,7 @@ class MainActivity : Activity() {
                     lastApp = v
                     val pkg = v.tag as? String
                     if (pkg == CW_PKG) {
+                        watchTitle.text = getString(R.string.continue_watching)
                         tmdbLastFocusApp = null
                         ui.removeCallbacks(appChannelDebounce)
                         ui.postDelayed(appChannelDebounce, 200)
@@ -2156,13 +2173,17 @@ class MainActivity : Activity() {
             showWatchNext(emptyList())
             return
         }
+        ui.post { watchTitle.text = getString(R.string.continue_watching) }
         io.execute {
             val list = try {
                 queryWatchNext()
             } catch (e: Exception) {
                 emptyList()
             }
-            ui.post { showWatchNext(list) }
+            ui.post {
+                watchTitle.text = getString(R.string.continue_watching)
+                showWatchNext(list)
+            }
         }
     }
 
@@ -2271,6 +2292,7 @@ class MainActivity : Activity() {
 
     private fun queryAppChannels(pkg: String?) {
         if (pkg == null || checkSelfPermission(TV_LISTINGS) != PackageManager.PERMISSION_GRANTED) {
+            ui.post { watchTitle.text = getString(R.string.continue_watching) }
             refreshWatchNext()
             return
         }
@@ -2343,7 +2365,7 @@ class MainActivity : Activity() {
         spotlightOverview.visibility = if (inSpotlight) View.VISIBLE else View.GONE
         spotlightActions.visibility = if (inSpotlight) View.VISIBLE else View.GONE
         val bg = spotlightInfoBox.background as? GradientDrawable
-        bg?.setColor(if (inSpotlight) (if (dark) 0xAA181820.toInt() else 0xDDFFFFFF.toInt()) else Color.TRANSPARENT)
+        bg?.setColor(if (inSpotlight) (if (dark) 0xAA181820.toInt() else 0xDDEEF2F7.toInt()) else Color.TRANSPARENT)
         // Translate bottomSection downwards to give spotlight breathing room
         val targetTransY = if (inSpotlight) dp(65).toFloat() else 0f
         val targetAlpha = if (inSpotlight) 0.65f else 1f
@@ -2401,15 +2423,29 @@ class MainActivity : Activity() {
 
         // Populate action buttons for installed suggestions apps
         spotlightActions.removeAllViews()
-        val defaultApps = prefs.getStringSet("tmdb_default_apps", emptySet()) ?: emptySet()
-        val preferredPkgs = if (defaultApps.isNotEmpty()) defaultApps.toList()
-            else listOf("com.stremio.one", "com.netflix.ninja", "com.google.android.youtube.tv", "com.amazon.amazonvideo.livingroom")
-        val targetApps = mutableListOf<App>()
-        for (pkg in preferredPkgs) {
+        val offSet = prefs.getStringSet("tmdb_default_apps", emptySet()) ?: emptySet()
+        val priorityPkgs = listOf(
+            "com.nuvio.app",
+            "com.stremio.one",
+            "com.netflix.ninja",
+            "com.google.android.youtube.tv",
+            "com.amazon.amazonvideo.livingroom"
+        )
+        val candidateApps = mutableListOf<App>()
+        for (pkg in priorityPkgs) {
+            if (pkg in offSet) continue
             val app = apps.firstOrNull { it.pkg == pkg } ?: resolveAppByPkg(pkg)
-            if (app != null) targetApps.add(app)
-            if (targetApps.size >= 4) break
+            if (app != null && candidateApps.none { it.pkg == app.pkg }) {
+                candidateApps.add(app)
+            }
         }
+        for (app in apps) {
+            if (candidateApps.size >= 5) break
+            if (app.pkg !in offSet && !app.pkg.startsWith(HDMI) && app.pkg != CW_PKG && candidateApps.none { it.pkg == app.pkg }) {
+                candidateApps.add(app)
+            }
+        }
+        val targetApps = candidateApps.take(5)
 
         for (a in targetApps) {
             val btn = LinearLayout(this).apply {
@@ -2418,7 +2454,7 @@ class MainActivity : Activity() {
                 setPadding(dp(12), dp(7), dp(14), dp(7))
                 val btnBg = GradientDrawable().apply {
                     cornerRadius = dp(8).toFloat()
-                    setColor(if (dark) 0x6624242C else 0x66E0E0E0)
+                    setColor(if (dark) 0x6624242C else 0xCCDCE0E8.toInt())
                 }
                 background = btnBg
                 isFocusable = true
@@ -2429,14 +2465,15 @@ class MainActivity : Activity() {
                 }
                 val txt = TextView(this@MainActivity).apply {
                     text = a.label
-                    setTextColor(fg)
+                    setTextColor(if (dark) fg else 0xFF111214.toInt())
                     textSize = 12f
                     setPadding(dp(6), 0, 0, 0)
                 }
                 addView(ic, dp(18), dp(18))
                 addView(txt)
                 setOnFocusChangeListener { _, focused ->
-                    btnBg.setColor(if (focused) (if (dark) 0xFF4A4A58.toInt() else Color.WHITE) else (if (dark) 0x6624242C else 0x66E0E0E0))
+                    btnBg.setColor(if (focused) (if (dark) 0xFF4A4A58.toInt() else 0xFF111214.toInt()) else (if (dark) 0x6624242C else 0xCCDCE0E8.toInt()))
+                    txt.setTextColor(if (focused && !dark) Color.WHITE else (if (dark) fg else 0xFF111214.toInt()))
                     scaleX = if (focused) 1.08f else 1f
                     scaleY = if (focused) 1.08f else 1f
                 }
@@ -2516,10 +2553,8 @@ class MainActivity : Activity() {
                 if (gapBefore) marginStart = gap
             }
         }
-        val isTuner = p.pkg?.contains("tuner") == true || p.pkg?.contains("tvx") == true
         val img = ImageView(this).apply {
-            // FIT_CENTER ensures 16:9 tuner cards and letterboxed channels are not cropped vertically
-            scaleType = if (isTuner) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
+            scaleType = ImageView.ScaleType.CENTER_CROP
             setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt())
         }
         // Long titles scroll while their poster is focused instead of staying cut off.
@@ -2745,6 +2780,7 @@ class MainActivity : Activity() {
          */
         val BRAND_COLOURS = mapOf(
             "playstation" to 0xFF0070D1.toInt(),
+            "com.nuvio.app" to 0xFF6C5CE7.toInt(),
             "com.netflix.ninja" to 0xFFE50914.toInt(),
             "com.stremio.one" to 0xFF8D3DAF.toInt(),
             "io.gh.reisxd.tizentube.cobalt" to 0xFFFF0000.toInt(),
