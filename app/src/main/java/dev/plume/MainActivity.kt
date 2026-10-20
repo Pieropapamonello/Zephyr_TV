@@ -119,6 +119,8 @@ class Updated : BroadcastReceiver() {
     }
 }
 
+private const val CW_PKG = "plume:continue_watching"
+
 class MainActivity : Activity() {
 
     private class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable)
@@ -164,6 +166,8 @@ class MainActivity : Activity() {
     private lateinit var spotlightMeta: TextView
     private lateinit var spotlightOverview: TextView
     private lateinit var spotlightActions: LinearLayout
+    private lateinit var spotlightDots: LinearLayout
+    private lateinit var bottomSection: View
 
     private var tmdbTrending: List<TmdbItem> = emptyList()
     private var tmdbIndex = 0
@@ -198,6 +202,7 @@ class MainActivity : Activity() {
         watchRow = findViewById(R.id.watchRow)
         watchTitle = findViewById(R.id.watchTitle)
         watchScroll = findViewById(R.id.watchScroll)
+        bottomSection = findViewById(R.id.bottomSection)
         allApps = findViewById(R.id.allApps)
         allAppsGrid = findViewById(R.id.allAppsGrid)
         wifi = findViewById(R.id.wifi)
@@ -207,6 +212,7 @@ class MainActivity : Activity() {
         spotlightMeta = findViewById(R.id.spotlightMeta)
         spotlightOverview = findViewById(R.id.spotlightOverview)
         spotlightActions = findViewById(R.id.spotlightActions)
+        spotlightDots = findViewById(R.id.spotlightDots)
         setupSpotlight()
         applyTheme()
         loadWallpaper()
@@ -1160,6 +1166,7 @@ class MainActivity : Activity() {
                 apps = list
                 APPS = list
                 renderApps()
+                renderSpotlight()
             }
         }
     }
@@ -1235,18 +1242,31 @@ class MainActivity : Activity() {
         val width = (resources.displayMetrics.widthPixels - dp(96) - gap * (ROW_TILES - 1)) / ROW_TILES
         appRow.removeAllViews()
         val hidden = rowHiddenSet()
-        val tiles = sortedApps().filter { it.pkg !in hidden }.map { appTile(it, labeled = false) }
-        if (tiles.isEmpty()) return showNames()
+        // Fixed first tile: "Continue Watching" hub
+        val cwDrawable = getDrawable(R.drawable.ic_continue_watching) ?: getDrawable(R.drawable.ic_apps)!!
+        val cwTile = tile(null, cwDrawable, true, CW_PKG) {
+            tmdbLastFocusApp = null
+            queryAppChannels(null)
+        }.apply {
+            contentDescription = getString(R.string.continue_watching)
+        }
+
+        val appTiles = sortedApps().filter { it.pkg !in hidden }.map { appTile(it, labeled = false) }
+        val tiles = listOf(cwTile) + appTiles
         tiles.forEachIndexed { i, t ->
             t.id = View.generateViewId()
             appRow.addView(t, LinearLayout.LayoutParams(width, dp(76)).apply { if (i > 0) marginStart = gap })
             val own = t.onFocusChangeListener
             t.setOnFocusChangeListener { v, focused ->
-                own.onFocusChange(v, focused)
+                own?.onFocusChange(v, focused)
                 if (focused) {
                     lastApp = v
                     val pkg = v.tag as? String
-                    if (pkg != null && !pkg.startsWith(HDMI)) {
+                    if (pkg == CW_PKG) {
+                        tmdbLastFocusApp = null
+                        ui.removeCallbacks(appChannelDebounce)
+                        ui.postDelayed(appChannelDebounce, 200)
+                    } else if (pkg != null && !pkg.startsWith(HDMI)) {
                         tmdbLastFocusApp = pkg
                         ui.removeCallbacks(appChannelDebounce)
                         ui.postDelayed(appChannelDebounce, 300)
@@ -1302,7 +1322,7 @@ class MainActivity : Activity() {
         if (!always) return
         for (i in 0 until appRow.childCount) {
             val t = appRow.getChildAt(i)
-            row.addView(label(t.contentDescription.toString(), 13f).apply {
+            row.addView(label(t.contentDescription?.toString().orEmpty(), 13f).apply {
                 gravity = Gravity.CENTER
                 alpha = if (dark) 0.85f else 1f
             }, LinearLayout.LayoutParams(t.layoutParams as LinearLayout.LayoutParams).apply { height = MATCH_PARENT })
@@ -1312,13 +1332,33 @@ class MainActivity : Activity() {
     /** Slides the shared name label under the focused row tile; fades it out once focus leaves the row. */
     private fun showRowLabel(v: View, focused: Boolean) {
         val label = findViewById<TextView>(R.id.rowLabel)
+        val inWatchRow = currentFocus?.getTag(R.id.watchRow) is Prog
         if (focused && !editing && rowNames() == "focus") {
             label.text = v.contentDescription
             // Posted: on first render focus lands before layout, when every width is still 0.
             v.post { label.translationX = v.left + v.width / 2f - label.width / 2f }
             label.animate().alpha(if (dark) 0.85f else 1f).setDuration(160).start()
+            // Reset app tiles alpha
+            for (i in 0 until appRow.childCount) appRow.getChildAt(i).alpha = 1f
+        } else if (inWatchRow && !editing) {
+            // Keep the selected app name visible, and dim the non-selected app tiles
+            val activeTile = lastApp?.takeIf { it.parent === appRow } ?: appRow.getChildAt(0)
+            if (activeTile != null && rowNames() == "focus") {
+                label.text = activeTile.contentDescription
+                activeTile.post { label.translationX = activeTile.left + activeTile.width / 2f - label.width / 2f }
+                label.animate().alpha(if (dark) 0.85f else 1f).setDuration(160).start()
+            }
+            for (i in 0 until appRow.childCount) {
+                val child = appRow.getChildAt(i)
+                child.animate().alpha(if (child === activeTile) 1f else 0.45f).setDuration(160).start()
+            }
         } else {
-            ui.post { if (currentFocus?.parent !== appRow || editing) label.animate().alpha(0f).setDuration(120).start() }
+            ui.post {
+                if (currentFocus?.parent !== appRow && currentFocus?.getTag(R.id.watchRow) !is Prog || editing) {
+                    label.animate().alpha(0f).setDuration(120).start()
+                    for (i in 0 until appRow.childCount) appRow.getChildAt(i).animate().alpha(1f).setDuration(160).start()
+                }
+            }
         }
     }
 
@@ -1498,9 +1538,9 @@ class MainActivity : Activity() {
                 else -> null
             }
             v === spotlightInfoBox -> when (key) {
-                KeyEvent.KEYCODE_DPAD_DOWN -> apps ?: cards ?: v
+                KeyEvent.KEYCODE_DPAD_DOWN -> if (spotlightActions.childCount > 0) spotlightActions.getChildAt(0) else (apps ?: cards ?: v)
                 KeyEvent.KEYCODE_DPAD_UP -> top
-                KeyEvent.KEYCODE_DPAD_RIGHT -> if (spotlightActions.visibility == View.VISIBLE && spotlightActions.childCount > 0) spotlightActions.getChildAt(0) else {
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     cycleSpotlight(1)
                     v
                 }
@@ -1508,15 +1548,24 @@ class MainActivity : Activity() {
                     cycleSpotlight(-1)
                     v
                 }
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    if (spotlightActions.childCount > 0) {
+                        spotlightActions.getChildAt(0)
+                    } else v
+                }
                 else -> null
             }
             v.parent === spotlightActions -> {
                 val idx = spotlightActions.indexOfChild(v)
                 when (key) {
                     KeyEvent.KEYCODE_DPAD_DOWN -> apps ?: cards ?: v
-                    KeyEvent.KEYCODE_DPAD_UP -> top
-                    KeyEvent.KEYCODE_DPAD_LEFT -> if (idx == 0) spotlightInfoBox else spotlightActions.getChildAt(idx - 1)
+                    KeyEvent.KEYCODE_DPAD_UP -> spotlightInfoBox
+                    KeyEvent.KEYCODE_DPAD_LEFT -> if (idx > 0) spotlightActions.getChildAt(idx - 1) else v
                     KeyEvent.KEYCODE_DPAD_RIGHT -> if (idx < spotlightActions.childCount - 1) spotlightActions.getChildAt(idx + 1) else v
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                        v.performClick()
+                        v
+                    }
                     else -> null
                 }
             }
@@ -2267,18 +2316,47 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun isDescendantOf(child: View?, parent: View): Boolean {
+        var v = child
+        while (v != null) {
+            if (v === parent) return true
+            v = v.parent as? View
+        }
+        return false
+    }
+
     private fun setupSpotlight() {
         val bg = GradientDrawable().apply {
-            cornerRadius = dp(12).toFloat()
-            setColor(if (dark) 0x33000000 else 0x22FFFFFF)
+            cornerRadius = dp(16).toFloat()
+            setColor(Color.TRANSPARENT)
         }
         spotlightInfoBox.background = bg
-        spotlightInfoBox.setPadding(dp(16), dp(12), dp(16), dp(12))
-        spotlightInfoBox.setOnFocusChangeListener { _, focused ->
-            spotlightOverview.visibility = if (focused) View.VISIBLE else View.GONE
-            spotlightActions.visibility = if (focused) View.VISIBLE else View.GONE
-            bg.setColor(if (!focused) (if (dark) 0x33000000 else 0x22FFFFFF) else (if (dark) 0x881E1E24.toInt() else 0xCCFFFFFF.toInt()))
+        spotlightInfoBox.setPadding(dp(16), dp(10), dp(16), dp(10))
+
+        window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
+            updateSpotlightFocusState(newFocus)
         }
+    }
+
+    private fun updateSpotlightFocusState(targetFocus: View?) {
+        val inSpotlight = isDescendantOf(targetFocus, spotlightContainer)
+        spotlightOverview.visibility = if (inSpotlight) View.VISIBLE else View.GONE
+        spotlightActions.visibility = if (inSpotlight) View.VISIBLE else View.GONE
+        val bg = spotlightInfoBox.background as? GradientDrawable
+        bg?.setColor(if (inSpotlight) (if (dark) 0xAA181820.toInt() else 0xDDFFFFFF.toInt()) else Color.TRANSPARENT)
+        // Translate bottomSection downwards to give spotlight breathing room
+        val targetTransY = if (inSpotlight) dp(65).toFloat() else 0f
+        val targetAlpha = if (inSpotlight) 0.65f else 1f
+        bottomSection.animate().translationY(targetTransY).alpha(targetAlpha).setDuration(220).start()
+    }
+
+    private fun resolveAppByPkg(pkg: String): App? = try {
+        val pm = packageManager
+        val intent = pm.getLeanbackLaunchIntentForPackage(pkg) ?: pm.getLaunchIntentForPackage(pkg) ?: return null
+        val info = pm.getApplicationInfo(pkg, 0)
+        App(pkg, info.loadLabel(pm).toString(), intent, info.loadIcon(pm))
+    } catch (_: Exception) {
+        null
     }
 
     private fun renderSpotlight() {
@@ -2300,20 +2378,47 @@ class MainActivity : Activity() {
         spotlightTitle.text = item.title
         spotlightOverview.text = item.overview
 
+        // Render pagination dots
+        spotlightDots.removeAllViews()
+        val totalDots = minOf(tmdbTrending.size, 12)
+        val curIndex = tmdbIndex.mod(tmdbTrending.size)
+        for (i in 0 until totalDots) {
+            val dot = View(this).apply {
+                val isSelected = (i == curIndex.coerceAtMost(totalDots - 1))
+                val dotSize = if (isSelected) dp(8) else dp(5)
+                val dotBg = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(if (isSelected) fg else (if (dark) 0x55FFFFFF else 0x44000000))
+                }
+                background = dotBg
+                layoutParams = LinearLayout.LayoutParams(dotSize, dotSize).apply {
+                    marginStart = if (i > 0) dp(6) else 0
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+            }
+            spotlightDots.addView(dot)
+        }
+
         // Populate action buttons for installed suggestions apps
         spotlightActions.removeAllViews()
-        val defaultApps = prefs.getStringSet("tmdb_default_apps", emptySet())!!
-        val targetApps = (if (defaultApps.isNotEmpty()) apps.filter { it.pkg in defaultApps }
-        else apps.filter { it.pkg in setOf("com.stremio.one", "com.netflix.ninja", "com.google.android.youtube.tv", "com.amazon.amazonvideo.livingroom") }).take(4)
+        val defaultApps = prefs.getStringSet("tmdb_default_apps", emptySet()) ?: emptySet()
+        val preferredPkgs = if (defaultApps.isNotEmpty()) defaultApps.toList()
+            else listOf("com.stremio.one", "com.netflix.ninja", "com.google.android.youtube.tv", "com.amazon.amazonvideo.livingroom")
+        val targetApps = mutableListOf<App>()
+        for (pkg in preferredPkgs) {
+            val app = apps.firstOrNull { it.pkg == pkg } ?: resolveAppByPkg(pkg)
+            if (app != null) targetApps.add(app)
+            if (targetApps.size >= 4) break
+        }
 
         for (a in targetApps) {
             val btn = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(12), dp(8), dp(12), dp(8))
+                setPadding(dp(12), dp(7), dp(14), dp(7))
                 val btnBg = GradientDrawable().apply {
                     cornerRadius = dp(8).toFloat()
-                    setColor(if (dark) 0x55000000 else 0x44FFFFFF)
+                    setColor(if (dark) 0x6624242C else 0x66E0E0E0)
                 }
                 background = btnBg
                 isFocusable = true
@@ -2328,10 +2433,10 @@ class MainActivity : Activity() {
                     textSize = 12f
                     setPadding(dp(6), 0, 0, 0)
                 }
-                addView(ic, dp(20), dp(20))
+                addView(ic, dp(18), dp(18))
                 addView(txt)
                 setOnFocusChangeListener { _, focused ->
-                    btnBg.setColor(if (focused) (if (dark) 0xFF444450.toInt() else Color.WHITE) else (if (dark) 0x55000000 else 0x44FFFFFF))
+                    btnBg.setColor(if (focused) (if (dark) 0xFF4A4A58.toInt() else Color.WHITE) else (if (dark) 0x6624242C else 0x66E0E0E0))
                     scaleX = if (focused) 1.08f else 1f
                     scaleY = if (focused) 1.08f else 1f
                 }
@@ -2344,7 +2449,7 @@ class MainActivity : Activity() {
                 }
             }
             spotlightActions.addView(btn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                marginStart = dp(8)
+                marginStart = if (spotlightActions.childCount > 0) dp(8) else 0
             })
         }
     }
@@ -2352,6 +2457,7 @@ class MainActivity : Activity() {
     private fun cycleSpotlight(direction: Int) {
         if (tmdbTrending.isEmpty()) return
         tmdbIndex = (tmdbIndex + direction).mod(tmdbTrending.size)
+        renderSpotlight()
         loadWallpaper()
     }
 
@@ -2426,7 +2532,10 @@ class MainActivity : Activity() {
         val frame = FrameLayout(this)
         style(frame, dp(8), card = true, lift = 1.1f) { focused ->
             title.isSelected = focused
-            if (focused) lastCard = frame
+            if (focused) {
+                lastCard = frame
+                showRowLabel(frame, false)
+            }
         }
         frame.contentDescription = p.title
         frame.addView(img, MATCH_PARENT, MATCH_PARENT)

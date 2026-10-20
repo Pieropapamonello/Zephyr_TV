@@ -121,172 +121,196 @@
                 android:src="@drawable/ic_tune" />
         </LinearLayout>
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
         <!-- TMDB Spotlight hero panel: shown when enabled, expands on D-pad UP from app row -->
         <LinearLayout
             android:id="@+id/spotlightContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="36dp"
             android:layout_marginBottom="12dp"
             android:clipChildren="false"
             android:orientation="vertical"
             android:visibility="gone">
 
             <LinearLayout
+                android:id="@+id/spotlightInfoBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="bottom"
-                android:orientation="horizontal">
-
-                <LinearLayout
-                    android:id="@+id/spotlightInfoBox"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:focusable="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/spotlightMeta"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:alpha="0.8"
-                        android:fontFamily="sans-serif-medium"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/spotlightTitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:fontFamily="sans-serif-medium"
-                        android:textSize="22sp" />
-
-                    <TextView
-                        android:id="@+id/spotlightOverview"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:alpha="0.85"
-                        android:ellipsize="end"
-                        android:fontFamily="sans-serif"
-                        android:maxLines="3"
-                        android:textSize="13sp"
-                        android:visibility="gone" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/spotlightActions"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:visibility="gone" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Only shown while editing the row (it carries the instructions). -->
-        <TextView
-            android:id="@+id/appsTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:fontFamily="sans-serif-medium"
-            android:textSize="15sp"
-            android:visibility="gone" />
-
-        <!-- Both rows: the scroller reaches 16dp (one grid gap) past the content edges on each side and
-             clips there. That is room for the focus lift, while the next item, a gap away, stays hidden.
-             Same on left and right, and SnapScrollView scrolls by whole items. -->
-        <dev.plume.SnapScrollView
-            android:id="@+id/appScroll"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="-16dp"
-            android:layout_marginTop="-24dp"
-            android:layout_marginEnd="-16dp"
-            android:layout_marginBottom="-24dp"
-            android:clipToPadding="false"
-            android:paddingStart="16dp"
-            android:paddingTop="24dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="24dp"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:clipChildren="false"
+                android:focusable="true"
                 android:orientation="vertical">
 
+                <TextView
+                    android:id="@+id/spotlightMeta"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:alpha="0.8"
+                    android:fontFamily="sans-serif-medium"
+                    android:shadowColor="#80000000"
+                    android:shadowDx="0"
+                    android:shadowDy="2"
+                    android:shadowRadius="4"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/spotlightTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:shadowColor="#80000000"
+                    android:shadowDx="0"
+                    android:shadowDy="2"
+                    android:shadowRadius="6"
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:id="@+id/spotlightOverview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:alpha="0.85"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif"
+                    android:maxLines="3"
+                    android:shadowColor="#80000000"
+                    android:shadowDx="0"
+                    android:shadowDy="1"
+                    android:shadowRadius="4"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
+                <!-- Dots pagination indicator for Spotlight carousel -->
                 <LinearLayout
-                    android:id="@+id/appRow"
+                    android:id="@+id/spotlightDots"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal" />
+            </LinearLayout>
+
+            <!-- Action buttons directly under info box, independently focusable -->
+            <LinearLayout
+                android:id="@+id/spotlightActions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <LinearLayout
+            android:id="@+id/bottomSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:orientation="vertical">
+
+            <!-- Only shown while editing the row (it carries the instructions). -->
+            <TextView
+                android:id="@+id/appsTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:fontFamily="sans-serif-medium"
+                android:textSize="15sp"
+                android:visibility="gone" />
+
+            <!-- Both rows: the scroller reaches 16dp (one grid gap) past the content edges on each side and
+                 clips there. That is room for the focus lift, while the next item, a gap away, stays hidden.
+                 Same on left and right, and SnapScrollView scrolls by whole items. -->
+            <dev.plume.SnapScrollView
+                android:id="@+id/appScroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="-16dp"
+                android:layout_marginTop="-24dp"
+                android:layout_marginEnd="-16dp"
+                android:layout_marginBottom="-24dp"
+                android:clipToPadding="false"
+                android:paddingStart="16dp"
+                android:paddingTop="24dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="24dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clipChildren="false"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:id="@+id/appRow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clipChildren="false"
+                        android:orientation="horizontal" />
+
+                    <!-- Name of the focused app, slid under its tile (tvOS style). In the scroll content, so it scrolls along. -->
+                    <TextView
+                        android:id="@+id/rowLabel"
+                        android:layout_width="200dp"
+                        android:layout_height="20dp"
+                        android:layout_marginTop="8dp"
+                        android:alpha="0"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="13sp" />
+
+                    <!-- "App names: Always": every name under its tile, in place of rowLabel (same space). -->
+                    <LinearLayout
+                        android:id="@+id/nameRow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="20dp"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </dev.plume.SnapScrollView>
+
+            <TextView
+                android:id="@+id/watchTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:alpha="0.7"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/continue_watching"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <dev.plume.SnapScrollView
+                android:id="@+id/watchScroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="-16dp"
+                android:layout_marginTop="-16dp"
+                android:layout_marginEnd="-16dp"
+                android:layout_marginBottom="-24dp"
+                android:clipToPadding="false"
+                android:paddingStart="16dp"
+                android:paddingTop="24dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="24dp"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/watchRow"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:clipChildren="false"
                     android:orientation="horizontal" />
-
-                <!-- Name of the focused app, slid under its tile (tvOS style). In the scroll content, so it scrolls along. -->
-                <TextView
-                    android:id="@+id/rowLabel"
-                    android:layout_width="200dp"
-                    android:layout_height="20dp"
-                    android:layout_marginTop="8dp"
-                    android:alpha="0"
-                    android:gravity="center"
-                    android:maxLines="1"
-                    android:textSize="13sp" />
-
-                <!-- "App names: Always": every name under its tile, in place of rowLabel (same space). -->
-                <LinearLayout
-                    android:id="@+id/nameRow"
-                    android:layout_width="wrap_content"
-                    android:layout_height="20dp"
-                    android:layout_marginTop="8dp"
-                    android:orientation="horizontal"
-                    android:visibility="gone" />
-            </LinearLayout>
-        </dev.plume.SnapScrollView>
-
-        <TextView
-            android:id="@+id/watchTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:alpha="0.7"
-            android:fontFamily="sans-serif-medium"
-            android:text="@string/continue_watching"
-            android:textSize="14sp"
-            android:visibility="gone" />
-
-        <dev.plume.SnapScrollView
-            android:id="@+id/watchScroll"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="-16dp"
-            android:layout_marginTop="-16dp"
-            android:layout_marginEnd="-16dp"
-            android:layout_marginBottom="-24dp"
-            android:clipToPadding="false"
-            android:paddingStart="16dp"
-            android:paddingTop="24dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="24dp"
-            android:scrollbars="none"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:id="@+id/watchRow"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:clipChildren="false"
-                android:orientation="horizontal" />
-        </dev.plume.SnapScrollView>
+            </dev.plume.SnapScrollView>
+        </LinearLayout>
     </LinearLayout>
 
     <!-- All apps: hidden until the Apps tile is pressed; Back closes it. -->
