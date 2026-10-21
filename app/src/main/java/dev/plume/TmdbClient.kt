@@ -88,6 +88,7 @@ object TmdbClient {
     // (their stremio:// handler only installs addons).
     private val NUVIO = setOf("com.nuvio.tv", "com.nuvio.app")
     private const val STREMIO = "com.stremio.one"
+    private const val YOUTUBE = "com.google.android.youtube.tv"
 
     // TMDB id -> IMDb id (or "" when TMDB has none), so a second press doesn't ask again.
     private val imdbCache = java.util.concurrent.ConcurrentHashMap<String, String>()
@@ -112,9 +113,10 @@ object TmdbClient {
 
     /**
      * Opens [item] in [pkg]: on its own page where the app takes an id (Nuvio: TMDB id; Stremio: [imdb], from
-     * [imdbId]), otherwise through the app's search by title, otherwise the app itself.
+     * [imdbId]), on YouTube a search for the trailer in [language] (Spotlight's TMDB language), otherwise through
+     * the app's search by title, otherwise the app itself.
      */
-    fun openIntent(context: Context, pkg: String, item: TmdbItem, imdb: String?): Intent {
+    fun openIntent(context: Context, pkg: String, item: TmdbItem, imdb: String?, language: String): Intent {
         val pm = context.packageManager
         fun view(uri: String) = viewIn(pm, pkg, uri)
         val series = item.mediaType == "tv"
@@ -124,7 +126,22 @@ object TmdbClient {
             pkg == STREMIO && imdb != null ->
                 view(if (series) "stremio:///detail/series/$imdb" else "stremio:///detail/movie/$imdb/$imdb")?.let { return it }
         }
-        return searchIntent(context, pkg, item.title)
+        return searchIntent(context, pkg, if (isYouTube(pkg)) trailerQuery(item.title, language) else item.title)
+    }
+
+    /** YouTube's Spotlight button is a trailer button: it searches "<title> trailer <language>". */
+    fun isYouTube(pkg: String) = pkg == YOUTUBE
+
+    /** "Dune trailer italiano": the language named in itself, so YouTube ranks the dubbed or subtitled cut first. */
+    fun trailerQuery(title: String, language: String): String {
+        val name = when (language.substringBefore('-')) {
+            "it" -> "italiano"
+            "es" -> "español"
+            "fr" -> "français"
+            "de" -> "deutsch"
+            else -> "english"
+        }
+        return "$title trailer $name"
     }
 
     /** An ACTION_VIEW of [uri] for [pkg] only, or null when the app doesn't take that link. */
@@ -148,7 +165,7 @@ object TmdbClient {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }.takeIf { it.resolveActivity(pm) != null }?.let { return it }
             }
-            "com.google.android.youtube.tv" -> view("https://www.youtube.com/results?search_query=$q")?.let { return it }
+            YOUTUBE -> view("https://www.youtube.com/results?search_query=$q")?.let { return it }
         }
 
         // Generic search intent

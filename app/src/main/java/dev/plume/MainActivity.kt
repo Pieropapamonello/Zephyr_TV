@@ -2480,15 +2480,15 @@ class MainActivity : Activity() {
 
     private fun setupSpotlight() {
         // Feathered rather than a rounded box, so the veil melts into the backdrop instead of drawing a hard frame.
-        spotlightInfoBox.background = SoftVeil(dp(24).toFloat(), dp(220).toFloat()).apply { color = spotlightVeil() }
+        spotlightInfoBox.background = SoftVeil(dp(32).toFloat(), dp(240).toFloat()).apply { color = spotlightVeil() }
         // The arrows get a small disc in the ground colour, so they read on any backdrop.
         for (arrow in arrayOf(spotlightPrev, spotlightNext)) {
             arrow.background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor((ground and 0xFFFFFF) or 0x80000000.toInt()) }
             arrow.setPadding(dp(4), dp(4), dp(4), dp(4))
         }
-        // Text stays inside the veil's solid part: clear of the 24dp feathered edges, and ending where the long fade on
+        // Text stays inside the veil's solid part: clear of the 32dp feathered edges, and ending where the long fade on
         // the right begins.
-        spotlightInfoBox.setPadding(dp(26), dp(22), dp(180), dp(22))
+        spotlightInfoBox.setPadding(dp(34), dp(26), dp(200), dp(26))
         spotlightPrev.setOnClickListener { cycleSpotlight(-1) }
         spotlightNext.setOnClickListener { cycleSpotlight(1) }
 
@@ -2501,14 +2501,19 @@ class MainActivity : Activity() {
      * A light veil behind the Spotlight text even at rest: it sits over the backdrop's unveiled middle, where a dark
      * film still would swallow the light theme's dark text (and a bright one the dark theme's light text).
      */
-    private fun spotlightVeil() = if (dark) 0x80000000.toInt() else 0x99F3F5F7.toInt()
+    // As see-through as readability allows, or even a feathered veil looks like a solid slab. Measured on the worst
+    // backdrop for each theme (near-black under dark text, light grey under light text): at rest the title and meta
+    // stay above 3.8:1; focused, the 13sp overview above 4.5:1. The text halo adds to that.
+    private fun spotlightVeil() = if (dark) 0x73000000 else 0x66F3F5F7
+
+    private fun spotlightVeilFocused() = if (dark) 0x99181820.toInt() else 0x8CEEF2F7.toInt()
 
     private fun updateSpotlightFocusState(targetFocus: View?) {
         val inSpotlight = isDescendantOf(targetFocus, spotlightContainer)
         spotlightOverview.visibility = if (inSpotlight) View.VISIBLE else View.GONE
         spotlightActions.visibility = if (inSpotlight) View.VISIBLE else View.GONE
         for (arrow in arrayOf(spotlightPrev, spotlightNext)) arrow.animate().alpha(if (inSpotlight) 0.9f else 0.5f).setDuration(220).start()
-        (spotlightInfoBox.background as? SoftVeil)?.color = if (inSpotlight) (if (dark) 0xB3181820.toInt() else 0xE6EEF2F7.toInt()) else spotlightVeil()
+        (spotlightInfoBox.background as? SoftVeil)?.color = if (inSpotlight) spotlightVeilFocused() else spotlightVeil()
         // Translate bottomSection downwards to give spotlight breathing room
         val targetTransY = if (inSpotlight) dp(65).toFloat() else 0f
         val targetAlpha = if (inSpotlight) 0.65f else 1f
@@ -2587,7 +2592,7 @@ class MainActivity : Activity() {
                     scaleType = ImageView.ScaleType.FIT_CENTER
                 }
                 val txt = TextView(this@MainActivity).apply {
-                    text = a.label
+                    text = if (TmdbClient.isYouTube(a.pkg)) getString(R.string.spotlight_trailer) else a.label
                     setTextColor(fg)
                     textSize = 12f
                     setPadding(dp(6), 0, 0, 0)
@@ -2610,12 +2615,13 @@ class MainActivity : Activity() {
 
     /**
      * Opens the Spotlight title in [a]: straight on its page where the app takes an id (Nuvio by TMDB id, Stremio by
-     * IMDb id, looked up first), otherwise through the app's search, otherwise just the app.
+     * IMDb id, looked up first), YouTube on a search for its trailer, otherwise through the app's search, otherwise
+     * just the app.
      */
     private fun openInApp(a: App) {
         val item = spotlightItem() ?: return launch(a)
         fun start(imdb: String?) = try {
-            startActivity(TmdbClient.openIntent(this, a.pkg, item, imdb))
+            startActivity(TmdbClient.openIntent(this, a.pkg, item, imdb, tmdbLang()))
         } catch (e: Exception) {
             launch(a)
         }
