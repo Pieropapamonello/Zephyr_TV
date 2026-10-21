@@ -15,6 +15,11 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- Spotlight keeps its images on the TV. It downloads each image one time, not each time it shows the title.
+- Spotlight gets the next image before it shows it. The next title appears without a wait.
+- Spotlight shows the trending titles in a random order.
+- Spotlight stops after 15 minutes without a key press. Press a key to start it again.
+
 ## 1.4
 
 - Plume Launcher is now Piume, a fork by mccoy88f. Piume installs next to Plume and updates from its own releases.

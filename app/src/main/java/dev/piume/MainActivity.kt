@@ -148,6 +148,11 @@ class MainActivity : Activity() {
     private val io = Executors.newSingleThreadExecutor()
     // Posters get their own threads: one slow image server must not hold up the rest (or the row data).
     private val posterIo = Executors.newFixedThreadPool(3)
+    // Spotlight's own thread: downloading the next backdrop ahead mustn't hold up the rows' data on io.
+    private val spotlightIo = Executors.newSingleThreadExecutor()
+    private val backdrops by lazy { BackdropCache(File(cacheDir, "spotlight")) }
+    private var lastInput = SystemClock.elapsedRealtime() // last key press, for pausing Spotlight when nobody watches
+    private var spotlightIdle = false
     private val loading = java.util.Collections.synchronizedSet(HashSet<String>())
     private val ui = Handler(Looper.getMainLooper())
     private val posters = object : LruCache<String, Bitmap>(6 * 1024 * 1024) {
@@ -305,6 +310,8 @@ class MainActivity : Activity() {
         ui.postDelayed(themeTick, 60_000L)
         ui.removeCallbacks(wallpaperTick)
         ui.post(wallpaperTick)
+        lastInput = SystemClock.elapsedRealtime() // back from an app: someone is here
+        spotlightIdle = false
         restartSpotlightTick()
         // Gallery chosen but its paintings missing (updated from a version that bundled them): fetch them.
         if (galleryOn() && photoScreensaver() == null && !paintingsReady(this)) downloadPaintings {}
@@ -361,6 +368,7 @@ class MainActivity : Activity() {
         upload?.stop()
         io.shutdownNow()
         posterIo.shutdownNow()
+        spotlightIo.shutdownNow()
         super.onDestroy()
     }
 
@@ -727,7 +735,10 @@ class MainActivity : Activity() {
             } ?: decodeWallpaper(fallback)
             ui.post {
                 // The next title's countdown starts once this backdrop is up, so slow loads never pile up.
-                if (choice == "tmdb:trending") restartSpotlightTick()
+                if (choice == "tmdb:trending") {
+                    restartSpotlightTick()
+                    prefetchBackdrops()
+                }
                 val old = view.drawable
                 if (old == null || bmp == null) {
                     view.setImageBitmap(bmp)
@@ -755,13 +766,16 @@ class MainActivity : Activity() {
             if (tmdbTrending.isEmpty() || System.currentTimeMillis() - tmdbFetchedAt > TMDB_FRESH_MS) {
                 val fresh = TmdbClient.fetchTrending(key, tmdbLang(), type)
                 if (fresh.isNotEmpty()) {
-                    tmdbTrending = fresh
+                    // A different order each time, so the same top titles don't always open the round.
+                    tmdbTrending = fresh.shuffled()
+                    tmdbIndex = 0
                     tmdbFetchedAt = System.currentTimeMillis()
                 }
             }
             val item = spotlightItem() ?: return null
             val url = TmdbClient.backdropUrl(item.backdropPath) ?: return null
-            val bmp = fitWallpaper { openStream(url) } ?: return null
+            val file = backdrops.get(url) { openStream(it) }
+            val bmp = fitWallpaper { file.inputStream() } ?: return null
             val h = bmp.height.toFloat()
             val base = ground and 0x00FFFFFF
             // Lighter than for photos, so the backdrop shows: the Spotlight text has its own veil and the clock its
@@ -1296,6 +1310,7 @@ class MainActivity : Activity() {
             page(getString(R.string.dialog_clear)) {
                 prefs.edit().remove("tmdb_api_key").apply()
                 tmdbTrending = emptyList()
+                spotlightIo.execute { backdrops.clear() } // no Spotlight any more: give the space back
                 if (currentWallpaper() == "tmdb:trending") {
                     setWallpaper(dark, defaultWallpaper(dark))
                 }
@@ -1921,6 +1936,11 @@ class MainActivity : Activity() {
      * listener in style() is a fallback for remotes that send no repeats. [holdFired] stops both firing.
      */
     override fun dispatchKeyEvent(e: KeyEvent): Boolean {
+        lastInput = SystemClock.elapsedRealtime()
+        if (spotlightIdle) {
+            spotlightIdle = false
+            restartSpotlightTick()
+        }
         val confirm = e.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || e.keyCode == KeyEvent.KEYCODE_ENTER ||
             e.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
         if (confirm) {
@@ -3101,6 +3121,21 @@ class MainActivity : Activity() {
         loadWallpaper()
     }
 
+    /** Downloads the next and previous titles' backdrops ahead, so ◀ ▶ and the timer show them at once. */
+    private fun prefetchBackdrops() {
+        val list = tmdbTrending
+        if (list.size < 2) return
+        val urls = listOf(1, -1).mapNotNull { TmdbClient.backdropUrl(list[(tmdbIndex + it).mod(list.size)].backdropPath) }
+            .filterNot { backdrops.has(it) }
+        if (urls.isNotEmpty()) spotlightIo.execute {
+            for (url in urls) try {
+                backdrops.get(url) { openStream(it) }
+            } catch (e: Exception) {
+                android.util.Log.w("Piume", "backdrop prefetch failed ($e)") // shown later from the network instead
+            }
+        }
+    }
+
     private fun spotlightEvery() = prefs.getInt("tmdb_cycle", 5) // seconds; 0 = only by hand
 
     /**
@@ -3111,6 +3146,12 @@ class MainActivity : Activity() {
     private val spotlightTick = object : Runnable {
         override fun run() {
             if (spotlightContainer.visibility != View.VISIBLE) return // armed again when a TMDB backdrop loads
+            // Nobody has pressed a key for a while: stop turning titles (and decoding backdrops) for an empty room.
+            // The next key press starts it again.
+            if (SystemClock.elapsedRealtime() - lastInput > SPOTLIGHT_IDLE_MS) {
+                spotlightIdle = true
+                return
+            }
             val busy = currentFocus?.parent === spotlightActions || settingsScrim.visibility == View.VISIBLE ||
                 allApps.visibility == View.VISIBLE || editing || !hasWindowFocus()
             if (busy) restartSpotlightTick() else cycleSpotlight(1)
@@ -3378,6 +3419,7 @@ class MainActivity : Activity() {
         const val TV_LISTINGS = "android.permission.READ_TV_LISTINGS"
         const val WRITE_SECURE = "android.permission.WRITE_SECURE_SETTINGS"
         const val ROLE_REQUEST = 2
+        const val SPOTLIGHT_IDLE_MS = 15 * 60_000L // Spotlight stops turning after this long without a key press
         const val TMDB_FRESH_MS = 3 * 3600_000L // how long a trending list is kept before it's fetched again
         val SPOTLIGHT_PKGS = listOf("com.nuvio.tv", "com.nuvio.app", "com.stremio.one", "com.netflix.ninja", "com.google.android.youtube.tv", "com.amazon.amazonvideo.livingroom")
         // Settings sections, and each row's address in them (see renderSettings).
