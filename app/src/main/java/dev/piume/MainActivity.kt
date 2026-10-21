@@ -1735,7 +1735,8 @@ class MainActivity : Activity() {
         const val HOME_BUTTON_ROW = SYSTEM_SECTION * SECTION + 1 // after "Set up Home button"
         const val DEFAULT_HOME_ROW = HOME_BUTTON_ROW + 1
         const val UPDATE_ROW = HOME_BUTTON_ROW + 2
-        const val PROBLEMS_ROW = HOME_BUTTON_ROW + 3
+        const val BACKUP_ROW = HOME_BUTTON_ROW + 3
+        const val PROBLEMS_ROW = HOME_BUTTON_ROW + 4
         val SPOTLIGHT_EVERY = listOf(0, 5, 8, 10, 15, 30) // seconds between Spotlight titles; 0 = off
         val ROW_ALIGN = linkedMapOf( // setting -> its name, and the row's gravity in the scroller
             "left" to (R.string.align_left to Gravity.START),

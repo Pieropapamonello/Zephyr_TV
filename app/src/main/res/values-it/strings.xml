@@ -270,4 +270,17 @@
     <string name="setting_problems">Problemi recenti</string>
     <string name="problems_none">Nessuno</string>
     <string name="problems_on_phone">Leggili sul telefono…</string>
+    <!-- Backup and restore -->
+    <string name="setting_backup">Backup e ripristino</string>
+    <string name="backup_save">Salva un backup sul telefono…</string>
+    <string name="backup_restore">Ripristina dal telefono…</string>
+    <string name="backup_waiting">In attesa del file di backup…</string>
+    <string name="phone_backup_title">Backup di Piume</string>
+    <string name="phone_backup_intro">Salva questo file. Contiene le impostazioni di Piume e la chiave TMDB: tienilo privato. Non contiene le foto né il PIN di blocco.</string>
+    <string name="phone_backup_download">Scarica il backup</string>
+    <string name="phone_restore_title">Ripristina Piume</string>
+    <string name="phone_restore_intro">Scegli un file di backup di Piume. Le sue impostazioni sostituiscono quelle della TV.</string>
+    <string name="phone_choose_file">Scegli il file</string>
+    <string name="phone_restore_done">Ripristinate %1$d impostazioni. Piume si riavvia sulla TV.</string>
+    <string name="phone_restore_bad">Non è un file di backup di Piume.</string>
 </resources>

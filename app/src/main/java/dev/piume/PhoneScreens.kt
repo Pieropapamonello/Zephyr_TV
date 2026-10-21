@@ -10,6 +10,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import dev.piume.MainActivity.Companion.BACKUP_ROW
 import dev.piume.MainActivity.Companion.PROBLEMS_ROW
 import dev.piume.MainActivity.Companion.TMDB_KEY_ROW
 import java.io.IOException
@@ -130,3 +131,38 @@ internal fun MainActivity.qrBitmap(text: String, maxPx: Int): Bitmap {
     }
     return bmp
 }
+
+/** Backup and restore: both done on the phone, which is where the file is kept. */
+internal fun MainActivity.showBackup() {
+    showPage(getString(R.string.setting_backup), listOf(
+        page(getString(R.string.backup_save)) { backupToPhone() },
+        page(getString(R.string.backup_restore)) { restoreFromPhone() },
+    )) { renderSettings(BACKUP_ROW) }
+}
+
+internal fun MainActivity.backupToPhone() {
+    val page = PhonePages.download(getString(R.string.phone_backup_title), getString(R.string.phone_backup_intro),
+        getString(R.string.phone_backup_download), "piume-backup.json", Backup.export(prefs))
+    showPhoneLink(getString(R.string.backup_save), PhoneTask(page, 0) { 405 to "" }, label("", 12f)) { showBackup() }
+}
+
+internal fun MainActivity.restoreFromPhone() {
+    val status = label(getString(R.string.backup_waiting), 14f)
+    val page = PhonePages.file(phoneTexts(R.string.phone_restore_title, R.string.phone_restore_intro), getString(R.string.phone_choose_file), ".json,application/json")
+    showPhoneLink(getString(R.string.backup_restore), PhoneTask(page, 256 * 1024) { file ->
+        val n = try {
+            Backup.restore(prefs, file.readText())
+        } catch (e: Exception) {
+            warn("restore failed ($e)")
+            return@PhoneTask 400 to getString(R.string.phone_restore_bad)
+        }
+        // Restart the home screen with the restored settings once the phone has its answer, back on this row.
+        ui.post { status.text = getString(R.string.phone_restore_done, n) }
+        ui.postDelayed({
+            prefs.edit().putInt(K.REOPEN_ROW, BACKUP_ROW).apply()
+            recreate()
+        }, 2000)
+        200 to getString(R.string.phone_restore_done, n)
+    }, status) { showBackup() }
+}
+

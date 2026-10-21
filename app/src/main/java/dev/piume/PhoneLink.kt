@@ -172,6 +172,15 @@ internal object PhonePages {
         f.onchange=()=>{b.disabled=!f.files.length;n.textContent=f.files.length?f.files[0].name:'${js(choose)}';s.textContent=''};
         b.onclick=()=>send(f.files[0]);""")
 
+    /** Shows a button that saves [content] on the phone as [fileName]; nothing goes back to the TV. */
+    fun download(title: String, intro: String, button: String, fileName: String, content: String): String {
+        val data = content.replace("\\", "\\\\").replace("'", "\\'").replace("<", "\\x3c").replace("\n", "\\n")
+        return frame(PhoneTexts(title, intro, button, "", ""),
+            """<button id="b">${esc(button)}</button>""",
+            """b.onclick=()=>{const u=URL.createObjectURL(new Blob(['$data'],{type:'application/json'}));
+            const a=document.createElement('a');a.href=u;a.download='${js(fileName)}';document.body.appendChild(a);a.click();a.remove();};""")
+    }
+
     /** Type or paste some text and send it. */
     fun text(t: PhoneTexts, hint: String) = frame(t,
         """<textarea id="t" placeholder="${esc(hint)}" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>

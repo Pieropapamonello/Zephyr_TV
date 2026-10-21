@@ -270,4 +270,17 @@
     <string name="setting_problems">Recent problems</string>
     <string name="problems_none">None</string>
     <string name="problems_on_phone">Read them on your phone…</string>
+    <!-- Backup and restore -->
+    <string name="setting_backup">Backup and restore</string>
+    <string name="backup_save">Save a backup on your phone…</string>
+    <string name="backup_restore">Restore from your phone…</string>
+    <string name="backup_waiting">Waiting for the backup file…</string>
+    <string name="phone_backup_title">Piume backup</string>
+    <string name="phone_backup_intro">Save this file. It has your Piume settings and your TMDB key, so keep it private. Photos and the lock PIN are not in it.</string>
+    <string name="phone_backup_download">Download the backup</string>
+    <string name="phone_restore_title">Restore Piume</string>
+    <string name="phone_restore_intro">Choose a Piume backup file. Its settings replace the ones on the TV.</string>
+    <string name="phone_choose_file">Choose file</string>
+    <string name="phone_restore_done">Restored %1$d settings. Piume restarts on the TV.</string>
+    <string name="phone_restore_bad">That isn\'t a Piume backup file.</string>
 </resources>

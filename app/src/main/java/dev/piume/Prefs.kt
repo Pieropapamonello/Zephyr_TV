@@ -20,6 +20,10 @@ internal object K {
     const val WP_PHOTO_AT_LIGHT = "wp_photo_at_light"
     const val WP_PHOTO_AT_DARK = "wp_photo_at_dark"
     const val COLOUR_ICONS = "colour_icons"
+    const val CLOCK_24 = "clock_24" // "auto" (the TV's setting), "24" or "12"
+    const val NIGHT = "night" // night mode on
+    const val NIGHT_FROM = "night_from" // night mode window, minutes after midnight
+    const val NIGHT_TO = "night_to"
 
     // Apps row
     const val SORT = "sort"

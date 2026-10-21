@@ -233,6 +233,7 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
         page(getString(R.string.setting_home_button), toggle(homeServiceOn())) { toggleHomeButton() },
         page(getString(R.string.setting_default_launcher), if (isDefaultHome()) getString(R.string.plume_press_change) else getString(R.string.default_launcher_set_prompt)) { makeDefaultHome() },
         page(getString(R.string.setting_updates), updatesValue()) { showUpdates() },
+        page(getString(R.string.setting_backup)) { showBackup() },
         page(getString(R.string.setting_problems), Problems.recent().size.let { if (it == 0) getString(R.string.problems_none) else "$it" }) { showProblems() },
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) null
         else page(getString(R.string.preview_home_setup)) { closeLauncherSettings(); previewHomeSetup() },
