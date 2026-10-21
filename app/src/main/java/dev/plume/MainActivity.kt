@@ -121,6 +121,13 @@ internal fun <T> newestPerApp(items: List<Pair<Long, T>>, perApp: Int, app: (T) 
 internal fun hashPin(pin: String, salt: String = ByteArray(8).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }) =
     salt + ":" + MessageDigest.getInstance("SHA-256").digest((salt + pin).toByteArray()).joinToString("") { "%02x".format(it) }
 
+/** "5", "5-1", "5.1", "101" as numbers to sort by (5-1 right after 5); no number sorts last. */
+internal fun channelKey(number: String?): Double {
+    val parts = number?.split('-', '.', ' ')?.mapNotNull { it.toIntOrNull() } ?: return Double.MAX_VALUE
+    val major = parts.firstOrNull() ?: return Double.MAX_VALUE
+    return major + (parts.getOrNull(1) ?: 0) / 1000.0
+}
+
 internal fun pinMatches(stored: String, pin: String) = hashPin(pin, stored.substringBefore(':')) == stored
 
 /** Allowed to start an activity from the background because the Home button service is bound. */
@@ -135,7 +142,7 @@ private const val CW_PKG = "plume:continue_watching"
 class MainActivity : Activity() {
 
     private class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable)
-    private class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?)
+    private class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0)
 
     private val prefs by lazy { getSharedPreferences("home", MODE_PRIVATE) }
     private val io = Executors.newSingleThreadExecutor()
@@ -757,12 +764,14 @@ class MainActivity : Activity() {
             val bmp = fitWallpaper { openStream(url) } ?: return null
             val h = bmp.height.toFloat()
             val base = ground and 0x00FFFFFF
+            // Lighter than for photos, so the backdrop shows: the Spotlight text has its own veil and the clock its
+            // halo, so the top needs only a faint shade behind the icons, and the bottom fades from halfway, under
+            // the apps row, instead of from 28%.
             if (wallpaperFade()) Canvas(bmp).drawRect(0f, 0f, bmp.width.toFloat(), h, Paint().apply {
-                shader = LinearGradient(0f, h * 0.28f, 0f, h * 0.5f, base, base or 0xE6000000.toInt(), Shader.TileMode.CLAMP)
+                shader = LinearGradient(0f, h * 0.5f, 0f, h * 0.8f, base, base or 0xE6000000.toInt(), Shader.TileMode.CLAMP)
             })
-            Canvas(bmp).drawRect(0f, 0f, bmp.width.toFloat(), h * 0.3f, Paint().apply {
-                shader = LinearGradient(0f, 0f, 0f, h * 0.3f, intArrayOf(base or 0xC0000000.toInt(), base or 0xA0000000.toInt(), base),
-                    floatArrayOf(0f, 0.6f, 1f), Shader.TileMode.CLAMP)
+            Canvas(bmp).drawRect(0f, 0f, bmp.width.toFloat(), h * 0.16f, Paint().apply {
+                shader = LinearGradient(0f, 0f, 0f, h * 0.16f, base or 0x66000000, base, Shader.TileMode.CLAMP)
             })
             return bmp
         }
@@ -2805,7 +2814,7 @@ class MainActivity : Activity() {
                     if (duration > 0 && position in 1000 until duration) timeLeft(duration - position) else null,
                 ).joinToString(" - ")
                 val progress = if (duration > 0 && position >= 1000) (position * 100 / duration).toInt().coerceIn(0, 100) else 0
-                val prog = Prog(title, sub, progress, str("thumbnail_uri") ?: str("poster_art_uri"), str("intent_uri"), str("package_name"))
+                val prog = Prog(title, sub, progress, str("thumbnail_uri") ?: str("poster_art_uri"), str("intent_uri"), str("package_name"), num("weight"))
                 out += num("last_engagement_time_utc_millis") to prog
             }
         }
@@ -2845,13 +2854,9 @@ class MainActivity : Activity() {
             // Fetch preview programs from all channels for this app
             val programs = appChannels.flatMap { (channelId, _) ->
                 readPrograms(TvContract.buildPreviewProgramsUriForChannel(channelId), hidden)
-            }.map { it.second }.distinctBy { it.intent ?: it.title }
-            if (programs.isEmpty()) { // no channels, or nothing in them: back to Continue Watching
-                val list = try { queryWatchNext() } catch (e: Exception) { emptyList() }
-                ui.post {
-                    watchTitle.text = getString(R.string.continue_watching)
-                    showWatchNext(list)
-                }
+            }.map { it.second }.distinctBy { it.intent ?: it.title }.let(::inChannelOrder)
+            if (programs.isEmpty()) { // an app with nothing to recommend shows nothing under the row
+                ui.post { if (tmdbLastFocusApp == pkg) hideWatchRow() }
                 return@execute
             }
             val appLabel = apps.firstOrNull { it.pkg == pkg }?.label ?: pkg
@@ -2860,6 +2865,44 @@ class MainActivity : Activity() {
                 showWatchNext(programs)
             }
         }
+    }
+
+    /**
+     * A TV app's recommendations are usually its channels, but the database returns them in no useful order (the
+     * order they were last written). Sorted by channel number: the channel each card opens (its intent points at
+     * content://android.media.tv/channel/<id>), else the channel with the card's name, else a number the title
+     * starts with ("1 Rai 1"). Cards without a number follow, by the weight the app gave them. Runs on the io thread.
+     */
+    private fun inChannelOrder(programs: List<Prog>): List<Prog> {
+        val byId = HashMap<Long, String>()
+        val byName = HashMap<String, String>()
+        contentResolver.query(TvContract.Channels.CONTENT_URI, arrayOf("_id", "display_number", "display_name", "type"), null, null, null)?.use { c ->
+            while (c.moveToNext()) {
+                if (c.getString(3) == TvContract.Channels.TYPE_PREVIEW) continue // home-screen rows, not tuner channels
+                val number = c.getString(1)?.takeIf { it.isNotBlank() } ?: continue
+                byId[c.getLong(0)] = number
+                c.getString(2)?.let { byName[it.trim().lowercase()] = number }
+            }
+        }
+        fun number(p: Prog): String? {
+            val channel = p.intent?.let { runCatching { Intent.parseUri(it, Intent.URI_INTENT_SCHEME).data }.getOrNull() }
+                ?.takeIf { it.authority == TvContract.AUTHORITY && it.pathSegments.firstOrNull() == "channel" }
+                ?.lastPathSegment?.toLongOrNull()
+            return channel?.let(byId::get) ?: byName[p.title.trim().lowercase()]
+                ?: Regex("""^\s*(\d+(?:[.-]\d+)?)\b""").find(p.title)?.groupValues?.get(1)
+        }
+        return programs.sortedWith(compareBy<Prog>({ channelKey(number(it)) }).thenByDescending { it.weight })
+    }
+
+    /**
+     * Hides the row under the apps for an app with no recommendations. The old cards stay (invisible) so the row
+     * keeps its height and the apps row doesn't jump as focus moves along it; the next list rebuilds them.
+     */
+    private fun hideWatchRow() {
+        watchKey = null
+        if (watchScroll.visibility == View.GONE) return
+        watchTitle.visibility = View.INVISIBLE
+        watchScroll.visibility = View.INVISIBLE
     }
 
     private fun isDescendantOf(child: View?, parent: View): Boolean {
@@ -2887,6 +2930,7 @@ class MainActivity : Activity() {
 
         window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
             updateSpotlightFocusState(newFocus)
+            keepInView(newFocus)
         }
     }
 
@@ -2900,6 +2944,28 @@ class MainActivity : Activity() {
     private fun spotlightVeil() = if (dark) 0x73000000 else 0x66F3F5F7
 
     private fun spotlightVeilFocused() = if (dark) 0x99181820.toInt() else 0x8CEEF2F7.toInt()
+
+    /**
+     * The home screen doesn't scroll, but with Spotlight on top the rows under it can run past the bottom edge.
+     * Focus down there slides the whole page up just enough to show the focused item with what's under it (a
+     * card's title and details, a tile's name), and focus anywhere above slides it back.
+     */
+    private fun keepInView(v: View?) {
+        val content = findViewById<View>(R.id.content)
+        if (v == null || !isDescendantOf(v, content)) return
+        val target = if (v.getTag(R.id.watchRow) is Prog) v.parent as View else v
+        val under = if (v.parent === appRow) dp(28) else 0
+        content.post {
+            var shift = 0f
+            if (isDescendantOf(v, bottomSection)) {
+                val at = IntArray(2).also { target.getLocationInWindow(it) }
+                // Where it will sit once the page and the rows stop moving (both may be mid-animation).
+                val bottom = at[1] - content.translationY - bottomSection.translationY + target.height + under
+                shift = (bottom - (findViewById<View>(R.id.root).height - dp(16))).coerceAtLeast(0f)
+            }
+            if (shift != -content.translationY) content.animate().translationY(-shift).setDuration(200).setInterpolator(DECELERATE).start()
+        }
+    }
 
     private fun updateSpotlightFocusState(targetFocus: View?) {
         val inSpotlight = isDescendantOf(targetFocus, spotlightContainer)
@@ -3183,7 +3249,7 @@ class MainActivity : Activity() {
 
     private fun loadPoster(v: ImageView, uri: String?) {
         if (uri == null) return
-        posters.get(uri)?.let { v.setImageBitmap(it); return }
+        posters.get(uri)?.let { v.setImageBitmap(it); fitPoster(v, it); return }
         v.tag = uri
         if (!loading.add(uri)) return // already on its way
         posterIo.execute {
@@ -3199,14 +3265,33 @@ class MainActivity : Activity() {
             ui.post {
                 if (v.tag == uri) {
                     v.setImageBitmap(bmp)
-                    // Seamless background match if bitmap has solid background
-                    try {
-                        val corner = bmp.getPixel(0, 0)
-                        v.setBackgroundColor(corner)
-                    } catch (e: Exception) {}
+                    fitPoster(v, bmp)
                 }
             }
         }
+    }
+
+    /**
+     * Film and show art fills the card (cropped to 16:9). Art that isn't 16:9, or that sits on a plain background
+     * (a TV app's channel cards: logo and name on a flat colour), is shown whole instead, inset from the edges on
+     * its own background colour, so the name in it doesn't run into the card's border.
+     */
+    private fun fitPoster(v: ImageView, bmp: Bitmap) {
+        val ratio = bmp.width.toFloat() / bmp.height
+        // Plain background: the corners and the middle of each edge all the same colour (a film still rarely is).
+        val r = bmp.width - 1
+        val b = bmp.height - 1
+        val edge = listOf(0 to 0, r / 2 to 0, r to 0, 0 to b / 2, r to b / 2, 0 to b, r / 2 to b, r to b).map { (x, y) -> bmp.getPixel(x, y) }
+        fun near(c1: Int, c2: Int) = Math.abs(Color.red(c1) - Color.red(c2)) + Math.abs(Color.green(c1) - Color.green(c2)) + Math.abs(Color.blue(c1) - Color.blue(c2)) < 24
+        val flat = edge.all { Color.alpha(it) == 255 && near(it, edge[0]) }
+        if (Math.abs(ratio / (16f / 9f) - 1f) < 0.08f && !flat) {
+            v.scaleType = ImageView.ScaleType.CENTER_CROP
+            v.setPadding(0, 0, 0, 0)
+            return
+        }
+        v.scaleType = ImageView.ScaleType.FIT_CENTER
+        v.setPadding(dp(12), dp(10), dp(12), dp(10))
+        if (flat) v.setBackgroundColor(edge[0])
     }
 
     /** Cards whose poster never arrived (offline, server timeout) try again; loaded ones are left alone. */

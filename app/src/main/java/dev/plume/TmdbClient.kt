@@ -180,9 +180,10 @@ object TmdbClient {
             // Movies open on the title (the video id is the title's own id); series on their episode list.
             pkg == STREMIO && ref != null ->
                 view(if (series) "stremio:///detail/series/$ref" else "stremio:///detail/movie/$ref/$ref")?.let { return it }
-            // YouTube's own scheme first, then the plain watch link; both open the video in the TV app.
+            // The watch link: YouTube for Android TV takes a vnd.youtube: link as a plain app launch and drops the
+            // video id (it opens on its home screen), so that one is only the fallback.
             pkg == YOUTUBE && ref != null ->
-                (view("vnd.youtube:$ref") ?: view("https://www.youtube.com/watch?v=$ref"))?.let { return it }
+                (view("https://www.youtube.com/watch?v=$ref") ?: view("vnd.youtube:$ref"))?.let { return it }
         }
         return searchIntent(context, pkg, if (isYouTube(pkg)) trailerQuery(item.title, language) else item.title)
     }

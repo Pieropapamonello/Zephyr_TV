@@ -31,6 +31,11 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - Select an app under Spotlight to open the title in that app. Nuvio and Stremio open the title page.
 - **YouTube trailer** under Spotlight plays the trailer from TMDB in your TMDB language. If TMDB has no trailer, it searches YouTube.
 - Focused items are easier to see in the light theme and in the dark theme.
+- An app with no recommendations shows nothing under the apps row.
+- Recommended TV channels are in channel number order.
+- Channel cards from a TV app show all of the card. The name on the card does not touch the border.
+- When the focused item is below the bottom of the screen, the home screen moves up to show it.
+- The TMDB Spotlight image is easier to see. It has less shade at the top and at the bottom.
 ## 1.3
 
 - You can use a folder of photos as your wallpaper. The folder can be on the TV or on a USB drive. Select **Plume settings → Folder photo changes** to set how often the photo changes.
