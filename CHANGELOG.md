@@ -19,6 +19,9 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - Spotlight gets the next image before it shows it. The next title appears without a wait.
 - Spotlight shows the trending titles in a random order.
 - Spotlight stops after 15 minutes without a key press. Press a key to start it again.
+- Security: other apps cannot make Piume start their apps through the update screen.
+- Security: a card in Continue Watching can only open the app that added it.
+- Security: Android no longer copies Piume settings and your TMDB key to backups.
 
 ## 1.4
 

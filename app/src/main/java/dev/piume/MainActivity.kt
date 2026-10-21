@@ -131,6 +131,27 @@ internal fun channelKey(number: String?): Double {
 internal fun pinMatches(stored: String, pin: String) = hashPin(pin, stored.substringBefore(':')) == stored
 
 /** Allowed to start an activity from the background because the Home button service is bound. */
+/**
+ * Where the update's install session reports back. It isn't exported, so only Android (through the PendingIntent
+ * Piume handed it) can call it. That matters: the report can carry an Intent to start (Android's confirm box), and
+ * MainActivity, which every app may start, must never launch an Intent someone else put in.
+ */
+class InstallResult : BroadcastReceiver() {
+    override fun onReceive(c: Context, i: Intent) {
+        val status = i.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+        if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
+            @Suppress("DEPRECATION")
+            i.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)?.let { c.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            return
+        }
+        // The outcome only (no Intent): MainActivity resets its "Updating…" row and says if it failed.
+        c.startActivity(Intent(c, MainActivity::class.java).setAction(UPDATE_STATUS)
+            .putExtra(PackageInstaller.EXTRA_STATUS, status)
+            .putExtra(PackageInstaller.EXTRA_STATUS_MESSAGE, i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+}
+
 class Updated : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
         c.startActivity(Intent(c, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -138,6 +159,7 @@ class Updated : BroadcastReceiver() {
 }
 
 private const val CW_PKG = "piume:continue_watching"
+private const val UPDATE_STATUS = "dev.piume.UPDATE_STATUS"
 
 class MainActivity : Activity() {
 
@@ -2536,8 +2558,8 @@ class MainActivity : Activity() {
                         session.abandon()
                         throw e
                     }
-                    val done = PendingIntent.getActivity(this, 0,
-                        Intent(this, MainActivity::class.java).setAction(UPDATE_STATUS),
+                    // Mutable: the installer adds the status to it. Explicit, to a receiver only Android can reach.
+                    val done = PendingIntent.getBroadcast(this, 0, Intent(this, InstallResult::class.java),
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
                     session.commit(done.intentSender)
                 }
@@ -2556,14 +2578,13 @@ class MainActivity : Activity() {
         }
     }
 
-    /** The install session reports back here: show Android's confirm box, or say why it failed. */
+    /**
+     * The install's outcome, passed on by InstallResult (which shows Android's confirm box itself). Any app can
+     * send this action, so it only ever resets the row and may show a toast: nothing in it gets launched.
+     */
     private fun installStatus(intent: Intent) {
         val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
-        if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
-            @Suppress("DEPRECATION")
-            intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)?.let { startActivity(it) }
-            return
-        }
+        if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) return
         updating = false
         if (status != PackageInstaller.STATUS_SUCCESS) {
             val why = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
@@ -3282,10 +3303,27 @@ class MainActivity : Activity() {
     private fun open(p: Prog) {
         prefs.edit().putLong("t_${p.pkg}", System.currentTimeMillis()).apply()
         try {
-            startActivity(Intent.parseUri(p.intent, Intent.URI_INTENT_SCHEME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            startActivity(programIntent(p) ?: throw IllegalArgumentException("unsafe or missing intent"))
         } catch (e: Exception) {
             p.pkg?.let { packageManager.getLeanbackLaunchIntentForPackage(it) }?.let { startActivity(it) }
         }
+    }
+
+    /**
+     * A card's intent, written by another app into the TV listings, made safe to start as Piume. One naming its
+     * target may only name the app that published it (never Piume itself, never a third app); one that doesn't is
+     * left to Android, which won't resolve it to anything not exported (a TV input's channel link is opened by the
+     * TV's own app, not always the publisher). Either way it loses URI permission grants and any selector that
+     * would swap in a different target. Null when it names a wrong target or doesn't parse.
+     */
+    private fun programIntent(p: Prog): Intent? {
+        val intent = runCatching { Intent.parseUri(p.intent ?: return null, Intent.URI_INTENT_SCHEME) }.getOrNull() ?: return null
+        val target = intent.component?.packageName ?: intent.`package`
+        if (target == packageName || (p.pkg != null && target != null && target != p.pkg)) return null
+        intent.selector = null
+        intent.flags = intent.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+            Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or Intent.FLAG_GRANT_PREFIX_URI_PERMISSION).inv()
+        return intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
     private fun loadPoster(v: ImageView, uri: String?) {
@@ -3474,7 +3512,6 @@ class MainActivity : Activity() {
         /** Minutes between folder photos. */
         val PHOTO_EVERY = listOf(1, 5, 10, 15, 30, 60, 1440)
         const val CHOSEN = "✓"
-        const val UPDATE_STATUS = "dev.piume.UPDATE_STATUS"
         const val WRITE_EPG ="com.android.providers.tv.permission.WRITE_EPG_DATA"
         const val TV_SETTINGS = "com.android.tv.settings"
         const val HDMI = "hdmi:" // App.pkg prefix for HDMI device tiles; the rest is the TV input id
