@@ -3,6 +3,15 @@ package dev.piume
 import java.io.File
 import java.io.InputStream
 
+/** The Spotlight backdrops' folder in cacheDir. */
+internal const val BACKDROP_DIR = "spotlight"
+
+/** What each cached backdrop shows (file, title, year and genre), for the TMDB screensaver; in cacheDir. */
+internal const val BACKDROP_TITLES = "spotlight-titles.tsv"
+
+/** The screensaver choice that shows the Spotlight backdrops. */
+internal const val SS_TMDB = "tmdb:trending"
+
 /**
  * Spotlight backdrops kept on disk, so cycling through the trending titles downloads each one once instead of
  * every few seconds (and fitWallpaper's three passes over an image read the file, not the network three times).
@@ -41,11 +50,7 @@ internal class BackdropCache(private val dir: File, private val maxFiles: Int = 
         dir.listFiles()?.forEach { it.delete() }
     }
 
-    private fun fileFor(url: String): File {
-        // TMDB names its images by a unique hash ("/abc123.jpg"); anything else falls back to the URL's hash.
-        val name = url.substringAfterLast('/').substringBefore('?').filter { it.isLetterOrDigit() || it == '.' || it == '_' || it == '-' }
-        return File(dir, name.takeIf { it.length > 4 } ?: "u${url.hashCode().toUInt()}")
-    }
+    private fun fileFor(url: String) = File(dir, nameFor(url))
 
     @Synchronized
     private fun trim() {
@@ -54,7 +59,13 @@ internal class BackdropCache(private val dir: File, private val maxFiles: Int = 
         files.sortedByDescending { it.lastModified() }.drop(maxFiles).forEach { it.delete() }
     }
 
-    private companion object {
-        const val PART = ".part"
+    companion object {
+        private const val PART = ".part"
+
+        /** The file name an image is kept under. TMDB names images by a unique hash ("/abc123.jpg"). */
+        fun nameFor(url: String): String {
+            val name = url.substringAfterLast('/').substringBefore('?').filter { it.isLetterOrDigit() || it == '.' || it == '_' || it == '-' }
+            return name.takeIf { it.length > 4 } ?: "u${url.hashCode().toUInt()}"
+        }
     }
 }

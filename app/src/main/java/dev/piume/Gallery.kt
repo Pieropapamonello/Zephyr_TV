@@ -91,11 +91,29 @@ private class GalleryShow(private val context: Context) : SurfaceHolder.Callback
     private val io = Executors.newSingleThreadExecutor()
     val view = SurfaceView(context).also { it.holder.addCallback(this) }
 
-    /** A folder's photos in shuffled order if one is chosen and still has photos, else the theme's paintings. */
+    /**
+     * Spotlight's trending backdrops when that's the choice (the ones on disk, captioned), a folder's photos in
+     * shuffled order if one is chosen and still has photos, else the theme's paintings.
+     */
     private fun pictures(): List<Picture> {
         val prefs = context.getSharedPreferences(K.FILE, Context.MODE_PRIVATE)
+        val tmdb = prefs.getString(K.SS_FOLDER, null) == SS_TMDB
+        if (tmdb) {
+            val dir = File(context.cacheDir, BACKDROP_DIR)
+            val trending = try {
+                File(context.cacheDir, BACKDROP_TITLES).readLines().mapNotNull { line ->
+                    val (name, title, about) = (line.split('\t') + listOf("", "")).take(3)
+                    val file = File(dir, name)
+                    if (name.isEmpty() || file.length() == 0L) null
+                    else Picture(title, about) { fitWallpaper { file.inputStream() } }
+                }
+            } catch (e: IOException) {
+                emptyList()
+            }
+            if (trending.size >= 2) return trending.shuffled()
+        }
         val photos = try {
-            prefs.getString(K.SS_FOLDER, null)?.let { folderPhotos(context.contentResolver, it) }.orEmpty()
+            prefs.getString(K.SS_FOLDER, null)?.takeIf { !tmdb }?.let { folderPhotos(context.contentResolver, it) }.orEmpty()
         } catch (e: Exception) { // photo access taken away
             emptyList()
         }

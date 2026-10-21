@@ -11,6 +11,7 @@ import dev.piume.MainActivity.Companion.DECELERATE
 import dev.piume.MainActivity.Companion.HDMI
 import dev.piume.MainActivity.Companion.SPOTLIGHT_PKGS
 import dev.piume.MainActivity.Prog
+import java.io.File
 
 // TMDB Spotlight on the home screen: the title, its veil and arrows, the app buttons, cycling and backdrops.
 // Functions of MainActivity, kept here by topic; their state lives in MainActivity.
@@ -284,3 +285,30 @@ internal fun MainActivity.restartSpotlightTick() {
     val every = spotlightEvery()
     if (every > 0 && tmdbTrending.size > 1) ui.postDelayed(spotlightTick, every * 1000L)
 }
+
+/** Notes what each trending title's backdrop shows, so the TMDB screensaver can caption it without the network. */
+internal fun MainActivity.saveBackdropTitles(list: List<TmdbItem>) {
+    val lines = list.mapNotNull { item ->
+        val url = TmdbClient.backdropUrl(item.backdropPath) ?: return@mapNotNull null
+        val about = listOfNotNull(item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }, item.genres.firstOrNull()).joinToString(" · ")
+        listOf(BackdropCache.nameFor(url), item.title, about).joinToString("\t") { it.replace('\t', ' ').replace('\n', ' ') }
+    }
+    try {
+        File(cacheDir, BACKDROP_TITLES).writeText(lines.joinToString("\n"))
+    } catch (e: java.io.IOException) {
+        warn("backdrop titles not saved ($e)")
+    }
+}
+
+/** Downloads every trending title's backdrop ahead, for the TMDB screensaver. */
+internal fun MainActivity.prefetchAllBackdrops() {
+    val urls = tmdbTrending.mapNotNull { TmdbClient.backdropUrl(it.backdropPath) }.filterNot { backdrops.has(it) }
+    if (urls.isNotEmpty()) spotlightIo.execute {
+        for (url in urls) try {
+            backdrops.get(url) { openStream(it) }
+        } catch (e: Exception) {
+            warn("backdrop prefetch failed ($e)")
+        }
+    }
+}
+

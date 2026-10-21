@@ -116,7 +116,7 @@ class MainActivity : Activity() {
     internal val netIo = Executors.newFixedThreadPool(2)
     // Spotlight's own thread: downloading the next backdrop ahead mustn't hold up the rows' data on io.
     internal val spotlightIo = Executors.newSingleThreadExecutor()
-    internal val backdrops by lazy { BackdropCache(File(cacheDir, "spotlight")) }
+    internal val backdrops by lazy { BackdropCache(File(cacheDir, BACKDROP_DIR)) }
     internal var lastInput = SystemClock.elapsedRealtime() // last key press, for pausing Spotlight when nobody watches
     internal var spotlightIdle = false
     internal var nightShown = false // night mode's dimming is showing
@@ -525,6 +525,7 @@ class MainActivity : Activity() {
                     tmdbTrending = fresh.shuffled()
                     tmdbIndex = 0
                     tmdbFetchedAt = System.currentTimeMillis()
+                    saveBackdropTitles(fresh)
                 }
             }
             val item = spotlightItem() ?: return null
@@ -1534,7 +1535,8 @@ class MainActivity : Activity() {
 
     internal fun pickScreensaver(focus: Int = 0) {
         val paintings = galleryOn() && photoScreensaver() == null
-        val photos = galleryOn() && photoScreensaver() != null
+        val tmdb = galleryOn() && photoScreensaver() == SS_TMDB
+        val photos = galleryOn() && photoScreensaver() != null && !tmdb
         val other = if (galleryOn()) prefs.getString(K.PREV_SCREENSAVER, "").orEmpty() else currentScreensaver()
         showPage(getString(R.string.setting_screensaver), listOf(
             page(getString(R.string.screensaver_gallery_paintings), if (paintings) CHOSEN else if (downloading) getString(R.string.updates_checking) else PAINTINGS_MB) {
@@ -1551,6 +1553,13 @@ class MainActivity : Activity() {
                 if (galleryOn()) stopGallery()
                 pickScreensaver(2)
             },
+        ) + listOfNotNull(
+            // Spotlight's trending backdrops, once there is a TMDB key to get them with.
+            if (prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank()) null
+            else page(getString(R.string.screensaver_tmdb), if (tmdb) CHOSEN else "") {
+                useGallery(SS_TMDB)
+                pickScreensaver(3)
+            },
         ), focus) { renderSettings(SCREENSAVER_ROW) }
     }
 
@@ -1558,6 +1567,7 @@ class MainActivity : Activity() {
     internal fun useGallery(folder: String?) {
         prefs.edit().putString(K.SS_FOLDER, folder).apply()
         if (folder == null && !paintingsReady(this)) return downloadPaintings { useGallery(null) }
+        if (folder == SS_TMDB) prefetchAllBackdrops() // the screensaver shows what's on disk; it doesn't download
         if (folder != null) paintingsDir(this).deleteRecursively() // not needed for photos: give the space back
         if (galleryOn()) return
         if (checkSelfPermission(WRITE_SECURE) != PackageManager.PERMISSION_GRANTED) {
