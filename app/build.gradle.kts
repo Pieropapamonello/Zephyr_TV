@@ -40,6 +40,11 @@ android {
         }
     }
 
+    lint {
+        // Predictive back is a touch gesture; on a TV Back is the remote's key, which still reaches onBackPressed.
+        disable += "GestureBackNavigation"
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true

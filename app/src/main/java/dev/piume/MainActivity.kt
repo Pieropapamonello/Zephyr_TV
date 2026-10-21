@@ -443,13 +443,18 @@ class MainActivity : Activity() {
      * this alone is enough.
      */
     private fun makeDefaultHome() {
-        val roles = if (Build.VERSION.SDK_INT >= 29) getSystemService(RoleManager::class.java) else null
-        if (roles != null && roles.isRoleAvailable(RoleManager.ROLE_HOME) && !roles.isRoleHeld(RoleManager.ROLE_HOME)) {
-            @Suppress("DEPRECATION")
-            startActivityForResult(roles.createRequestRoleIntent(RoleManager.ROLE_HOME), ROLE_REQUEST)
-        } else {
-            openSettings(Settings.ACTION_HOME_SETTINGS) // Android lets apps ask for Home, not give it back
-        }
+        if (canAskForHome()) askForHome()
+        else openSettings(Settings.ACTION_HOME_SETTINGS) // Android lets apps ask for Home, not give it back
+    }
+
+    /** Android 10+ can show its own "use as home app" dialog; older versions only have the Settings screen. */
+    private fun canAskForHome() = Build.VERSION.SDK_INT >= 29 &&
+        getSystemService(RoleManager::class.java).let { it.isRoleAvailable(RoleManager.ROLE_HOME) && !it.isRoleHeld(RoleManager.ROLE_HOME) }
+
+    private fun askForHome() {
+        if (Build.VERSION.SDK_INT < 29) return
+        @Suppress("DEPRECATION")
+        startActivityForResult(getSystemService(RoleManager::class.java).createRequestRoleIntent(RoleManager.ROLE_HOME), ROLE_REQUEST)
     }
 
     // ---------- Home setup ----------
@@ -464,11 +469,7 @@ class MainActivity : Activity() {
     private var leftDuringTest = false
     private var previewAt = -1 // debug builds: which popup the preview is on, -1 when not previewing
 
-    private fun startHomeSetup() {
-        val roles = if (Build.VERSION.SDK_INT >= 29) getSystemService(RoleManager::class.java) else null
-        if (roles != null && roles.isRoleAvailable(RoleManager.ROLE_HOME) && !roles.isRoleHeld(RoleManager.ROLE_HOME)) rolePopup()
-        else afterHomeRole()
-    }
+    private fun startHomeSetup() = if (canAskForHome()) rolePopup() else afterHomeRole()
 
     private fun afterHomeRole() = if (isDefaultHome() || homeServiceOn()) testPopup(1) else tryHomeService()
 
@@ -493,8 +494,7 @@ class MainActivity : Activity() {
     private fun rolePopup() = homePopup(1, getString(R.string.setup_role_title), getString(R.string.setup_role_body), null,
         getString(R.string.setup_continue) to {
             setupStep = 1
-            @Suppress("DEPRECATION")
-            startActivityForResult(getSystemService(RoleManager::class.java).createRequestRoleIntent(RoleManager.ROLE_HOME), ROLE_REQUEST)
+            askForHome()
         },
         getString(R.string.setup_not_now) to { setupDialog?.dismiss() })
 
@@ -3344,8 +3344,11 @@ class MainActivity : Activity() {
         v.background = bg
         if (!dark) v.foreground = sheen
         v.clipToOutline = true
-        v.outlineSpotShadowColor = Color.BLACK
-        v.outlineAmbientShadowColor = Color.BLACK
+        // Android 9+ only (8.x would crash on these); black is the default shadow colour before that anyway.
+        if (Build.VERSION.SDK_INT >= 28) {
+            v.outlineSpotShadowColor = Color.BLACK
+            v.outlineAmbientShadowColor = Color.BLACK
+        }
         v.elevation = if (card) dp(2).toFloat() else 0f
         v.isFocusable = true
         v.isClickable = true

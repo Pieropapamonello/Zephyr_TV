@@ -39,6 +39,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - Channel cards from a TV app show all of the card. The name on the card does not touch the border.
 - When the focused item is below the bottom of the screen, the home screen moves up to show it.
 - The TMDB Spotlight image is easier to see. It has less shade at the top and at the bottom.
+- Fix: on Android 8.0 and 8.1, the home screen closed when it started.
 # Plume Launcher releases
 
 These are the releases of Plume Launcher by aradhyas8, before the fork.

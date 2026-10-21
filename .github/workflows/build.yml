@@ -23,9 +23,8 @@ jobs:
       - name: Build and test
         run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
 
-      # Advisory: lint flags issues worth a look (some predate the fork), it doesn't block the build.
+      # Lint errors fail the build (warnings don't); the full report goes to the log.
       - name: Lint
-        continue-on-error: true
         run: ./gradlew --no-daemon lintDebug || { cat app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt; exit 1; }
 
       - uses: actions/upload-artifact@v4
