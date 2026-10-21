@@ -264,19 +264,22 @@ object TmdbClient {
      */
     fun openIntent(context: Context, pkg: String, item: TmdbItem, ref: String?, language: String): Intent {
         val pm = context.packageManager
-        fun view(uri: String) = viewIn(pm, pkg, uri)
+        for (uri in titleLinks(pkg, item, ref)) viewIn(pm, pkg, uri)?.let { return it }
+        return searchIntent(context, pkg, if (isYouTube(pkg)) trailerQuery(item.title, language) else item.title)
+    }
+
+    /** The links that open [item] directly in [pkg], best first; empty for apps without one (they search). */
+    fun titleLinks(pkg: String, item: TmdbItem, ref: String?): List<String> {
         val series = item.mediaType == "tv"
-        when {
-            pkg in NUVIO -> view("nuvio://tmdb/${if (series) "series" else "movie"}/${item.id}")?.let { return it }
+        return when {
+            pkg in NUVIO -> listOf("nuvio://tmdb/${if (series) "series" else "movie"}/${item.id}")
             // Movies open on the title (the video id is the title's own id); series on their episode list.
-            pkg == STREMIO && ref != null ->
-                view(if (series) "stremio:///detail/series/$ref" else "stremio:///detail/movie/$ref/$ref")?.let { return it }
+            pkg == STREMIO && ref != null -> listOf(if (series) "stremio:///detail/series/$ref" else "stremio:///detail/movie/$ref/$ref")
             // The watch link: YouTube for Android TV takes a vnd.youtube: link as a plain app launch and drops the
             // video id (it opens on its home screen), so that one is only the fallback.
-            pkg == YOUTUBE && ref != null ->
-                (view("https://www.youtube.com/watch?v=$ref") ?: view("vnd.youtube:$ref"))?.let { return it }
+            pkg == YOUTUBE && ref != null -> listOf("https://www.youtube.com/watch?v=$ref", "vnd.youtube:$ref")
+            else -> emptyList()
         }
-        return searchIntent(context, pkg, if (isYouTube(pkg)) trailerQuery(item.title, language) else item.title)
     }
 
     /** YouTube's Spotlight button is a trailer button: it plays TMDB's trailer, or searches "<title> trailer <language>". */

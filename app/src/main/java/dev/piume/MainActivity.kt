@@ -69,6 +69,12 @@ internal fun prefersDark(prefs: SharedPreferences) = when (prefs.getString(K.THE
     else -> false
 }
 
+/** The wallpaper to show: the one chosen, else Spotlight once there's a TMDB key, else the bundled one for the theme. */
+internal fun chooseWallpaper(saved: String?, hasTmdbKey: Boolean, forDark: Boolean) = saved
+    ?: if (hasTmdbKey) SS_TMDB else bundledWallpaper(forDark)
+
+internal fun bundledWallpaper(forDark: Boolean) = if (forDark) "res:Rockies (dusk)" else "res:Rockies (day)"
+
 /** "external" covers every attached volume (USB drives too) from Android 10; before that only the main one. */
 internal val PHOTOS: Uri by lazy { // lazy: unit tests load this file without Android
     if (Build.VERSION.SDK_INT >= 29) MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
@@ -450,16 +456,10 @@ class MainActivity : Activity() {
     // Light gets a soft white (the light ground colour), not #FFFFFF: pure white glares on a TV.
     internal fun plainWallpaper(forDark: Boolean) = if (forDark) "plain:Pure black" else "plain:Soft white"
 
-    internal fun defaultWallpaper(forDark: Boolean) = if (forDark) "res:Rockies (dusk)" else "res:Rockies (day)"
+    internal fun defaultWallpaper(forDark: Boolean) = bundledWallpaper(forDark)
 
-    internal fun currentWallpaper(forDark: Boolean = dark): String {
-        val saved = prefs.getString(if (forDark) K.WP_DARK else K.WP_LIGHT, null)
-        if (saved != null) return saved
-        if (!prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank()) {
-            return "tmdb:trending"
-        }
-        return defaultWallpaper(forDark)
-    }
+    internal fun currentWallpaper(forDark: Boolean = dark) = chooseWallpaper(
+        prefs.getString(if (forDark) K.WP_DARK else K.WP_LIGHT, null), !prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank(), forDark)
 
     /** Fade your own photos into the background at the bottom. Bundled wallpapers have it baked in either way. */
     internal fun wallpaperFade() = prefs.getBoolean(K.WP_FADE, true)
