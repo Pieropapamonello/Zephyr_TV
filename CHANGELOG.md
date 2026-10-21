@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+## 1.5
+
 - Spotlight keeps its images on the TV. It downloads each image one time, not each time it shows the title.
 - Spotlight gets the next image before it shows it. The next title appears without a wait.
 - Spotlight shows the trending titles in a random order.
