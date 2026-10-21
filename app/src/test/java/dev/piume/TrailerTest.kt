@@ -30,3 +30,11 @@ class TrailerTest {
         assertNull(TmdbClient.bestTrailer(emptyList(), "en-US"))
     }
 }
+
+class ListIdTest {
+    @Test fun findsTheListInWhatWasPasted() {
+        assertEquals("8123456", TmdbClient.listId("https://www.themoviedb.org/list/8123456-best-films?language=it"))
+        assertEquals("42", TmdbClient.listId(" 42 "))
+        assertEquals(null, TmdbClient.listId("not a list"))
+    }
+}

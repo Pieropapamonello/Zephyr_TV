@@ -45,6 +45,8 @@ internal object K {
     const val TMDB_DEFAULT_APPS = "tmdb_default_apps"
     const val TMDB_CYCLE = "tmdb_cycle"
     const val TMDB_PROVIDERS = "tmdb_providers"
+    const val TMDB_SOURCE = "tmdb_source" // "trending" or "list"
+    const val TMDB_LIST = "tmdb_list" // a public TMDB list's id
 
     // Weather
     const val WEATHER = "weather"

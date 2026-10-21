@@ -519,7 +519,9 @@ class MainActivity : Activity() {
             val type = prefs.getString(K.TMDB_TYPE, "all") ?: "all"
             // Trending is per day: refetch now and then, or a home screen that never closes keeps last week's list.
             if (tmdbTrending.isEmpty() || System.currentTimeMillis() - tmdbFetchedAt > TMDB_FRESH_MS) {
-                val fresh = TmdbClient.fetchTrending(key, tmdbLang(), type)
+                val listId = prefs.getString(K.TMDB_LIST, null)
+                val fresh = if (prefs.getString(K.TMDB_SOURCE, "trending") == "list" && listId != null) TmdbClient.fetchList(key, listId, tmdbLang(), type)
+                    else TmdbClient.fetchTrending(key, tmdbLang(), type)
                 if (fresh.isNotEmpty()) {
                     // A different order each time, so the same top titles don't always open the round.
                     tmdbTrending = fresh.shuffled()
@@ -1773,11 +1775,13 @@ class MainActivity : Activity() {
         const val CW_APPS_ROW = WATCH_SECTION * SECTION
         const val HIDDEN_ROW = WATCH_SECTION * SECTION + 1
         const val TMDB_KEY_ROW = SPOTLIGHT_SECTION * SECTION
-        const val TMDB_LANG_ROW = TMDB_KEY_ROW + 1
-        const val TMDB_TYPE_ROW = TMDB_KEY_ROW + 2
-        const val TMDB_APPS_ROW = TMDB_KEY_ROW + 3
-        const val TMDB_PROVIDERS_ROW = TMDB_KEY_ROW + 4
-        const val TMDB_CYCLE_ROW = TMDB_KEY_ROW + 5
+        const val TMDB_SOURCE_ROW = TMDB_KEY_ROW + 1
+        const val TMDB_LIST_ROW = TMDB_KEY_ROW + 2
+        const val TMDB_LANG_ROW = TMDB_KEY_ROW + 3
+        const val TMDB_TYPE_ROW = TMDB_KEY_ROW + 4
+        const val TMDB_APPS_ROW = TMDB_KEY_ROW + 5
+        const val TMDB_PROVIDERS_ROW = TMDB_KEY_ROW + 6
+        const val TMDB_CYCLE_ROW = TMDB_KEY_ROW + 7
         const val SCREENSAVER_ROW = SCREENSAVER_SECTION * SECTION
         const val HOME_BUTTON_ROW = SYSTEM_SECTION * SECTION + 1 // after "Set up Home button"
         const val DEFAULT_HOME_ROW = HOME_BUTTON_ROW + 1

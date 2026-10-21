@@ -15,6 +15,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- Spotlight can show your own list from themoviedb.org instead of the trending titles. Make a public list there, then select **Piume settings → TMDB Spotlight → My TMDB list** and paste its link on your phone.
 - The Gallery screensaver can show the Spotlight trending images, with the title, the year and the genre. Select **Piume settings → Screensaver → Screensaver → Spotlight trending (TMDB)**.
 - The top bar has a voice search button. It opens the voice search of the TV.
 - You can show the clock in 24-hour or 12-hour format. Select **Piume settings → Appearance & wallpapers → Clock**.

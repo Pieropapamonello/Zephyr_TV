@@ -40,8 +40,40 @@ object TmdbClient {
             warn("TMDB trending failed (${redact(e)})")
             return emptyList()
         }
+        return items(json.optJSONArray("results") ?: return emptyList(), genres(apiKey, language), type)
+    }
+
+    /**
+     * The titles in a public TMDB list (a "watchlist" made on themoviedb.org), in its order, up to 5 pages.
+     * Empty when the list doesn't exist, isn't public, or TMDB can't be reached.
+     */
+    fun fetchList(apiKey: String, listId: String, language: String, mediaType: String = "all"): List<TmdbItem> {
         val genres = genres(apiKey, language)
-        val results = json.optJSONArray("results") ?: return emptyList()
+        val out = ArrayList<TmdbItem>()
+        for (page in 1..5) {
+            val json = try {
+                JSONObject(get(apiKey, "/list/$listId?language=$language&page=$page"))
+            } catch (e: Exception) {
+                warn("TMDB list failed (${redact(e)})")
+                break
+            }
+            out += items(json.optJSONArray("items") ?: break, genres, "movie")
+            if (page >= json.optInt("total_pages", 1)) break
+        }
+        return if (mediaType in setOf("movie", "tv")) out.filter { it.mediaType == mediaType } else out
+    }
+
+    /**
+     * The list id in what someone pasted: a list's address ("https://www.themoviedb.org/list/8123456-best-films")
+     * or just its number. Null when there's none.
+     */
+    fun listId(text: String): String? {
+        val t = text.trim()
+        Regex("""/list/(\d+)""").find(t)?.let { return it.groupValues[1] }
+        return t.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
+    }
+
+    private fun items(results: org.json.JSONArray, genres: Map<Int, String>, defaultType: String): List<TmdbItem> {
         val list = ArrayList<TmdbItem>()
         for (i in 0 until results.length()) {
             val obj = results.getJSONObject(i)
@@ -59,7 +91,7 @@ object TmdbClient {
                     overview = obj.optString("overview"),
                     backdropPath = obj.optString("backdrop_path").takeIf { it.isNotBlank() },
                     voteAverage = obj.optDouble("vote_average", 0.0),
-                    mediaType = obj.optString("media_type", type),
+                    mediaType = obj.optString("media_type", defaultType),
                     genres = names,
                     releaseDate = obj.optString("release_date").ifEmpty { obj.optString("first_air_date") }
                 )

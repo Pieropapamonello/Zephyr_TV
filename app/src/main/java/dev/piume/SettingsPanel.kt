@@ -42,6 +42,7 @@ import dev.piume.MainActivity.Companion.TMDB_CYCLE_ROW
 import dev.piume.MainActivity.Companion.TMDB_KEY_ROW
 import dev.piume.MainActivity.Companion.TMDB_LANG_ROW
 import dev.piume.MainActivity.Companion.TMDB_PROVIDERS_ROW
+import dev.piume.MainActivity.Companion.TMDB_SOURCE_ROW
 import dev.piume.MainActivity.Companion.TMDB_TYPE_ROW
 import dev.piume.MainActivity.Companion.TOGGLE_OFF
 import dev.piume.MainActivity.Companion.TOGGLE_ON
@@ -274,6 +275,15 @@ internal fun MainActivity.spotlightRows(): List<Triple<String, String, () -> Uni
         page(getString(R.string.setting_tmdb_api_key), if (hasKey) getString(R.string.tmdb_api_key_set) else getString(R.string.tmdb_api_key_empty)) {
             configureTmdbApiKey()
         },
+        // What Spotlight shows: TMDB's trending titles, or the user's own public TMDB list (a watchlist).
+        page(getString(R.string.setting_tmdb_source), getString(if (listSource()) R.string.tmdb_source_list else R.string.tmdb_source_trending)) {
+            prefs.edit().putString(K.TMDB_SOURCE, if (listSource()) "trending" else "list").apply()
+            if (listSource() && prefs.getString(K.TMDB_LIST, null) == null) return@page tmdbListFromPhone()
+            tmdbTrending = emptyList()
+            loadWallpaper()
+            renderSettings(TMDB_SOURCE_ROW)
+        },
+        page(getString(R.string.setting_tmdb_list), prefs.getString(K.TMDB_LIST, null) ?: getString(R.string.tmdb_list_none)) { tmdbListFromPhone() },
         page(getString(R.string.setting_tmdb_language), lang) {
             val langs = TmdbClient.LANGUAGES
             showPage(getString(R.string.setting_tmdb_language), langs.map { l ->
@@ -601,4 +611,6 @@ internal fun MainActivity.pickNightHour(key: String, title: Int, row: Int) {
         }
     }, current / 60) { renderSettings(row) }
 }
+
+internal fun MainActivity.listSource() = prefs.getString(K.TMDB_SOURCE, "trending") == "list"
 

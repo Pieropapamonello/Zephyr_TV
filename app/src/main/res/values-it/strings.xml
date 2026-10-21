@@ -293,4 +293,16 @@
     <string name="voice_search">Ricerca vocale</string>
     <string name="toast_no_voice_search">Questa TV non ha la ricerca vocale</string>
     <string name="screensaver_tmdb">Tendenze Spotlight (TMDB)</string>
+    <!-- TMDB list as Spotlight source -->
+    <string name="setting_tmdb_source">Spotlight mostra</string>
+    <string name="tmdb_source_trending">Titoli di tendenza</string>
+    <string name="tmdb_source_list">La mia lista TMDB</string>
+    <string name="setting_tmdb_list">La mia lista TMDB</string>
+    <string name="tmdb_list_none">Non impostata: premi per aggiungerla</string>
+    <string name="list_waiting">In attesa della lista…</string>
+    <string name="phone_list_title">La tua lista TMDB</string>
+    <string name="phone_list_intro">Incolla il link di una lista pubblica di themoviedb.org, o il suo numero. Spotlight mostrerà i suoi titoli, nell\'ordine della lista.</string>
+    <string name="phone_list_hint">https://www.themoviedb.org/list/…</string>
+    <string name="phone_list_saved">Lista salvata sulla TV: %1$d titoli.</string>
+    <string name="phone_list_bad">Non è una lista TMDB pubblica, oppure è vuota.</string>
 </resources>

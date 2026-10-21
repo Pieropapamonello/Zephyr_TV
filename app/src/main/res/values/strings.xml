@@ -293,4 +293,16 @@
     <string name="voice_search">Voice search</string>
     <string name="toast_no_voice_search">This TV has no voice search</string>
     <string name="screensaver_tmdb">Spotlight trending (TMDB)</string>
+    <!-- TMDB list as Spotlight source -->
+    <string name="setting_tmdb_source">Spotlight shows</string>
+    <string name="tmdb_source_trending">Trending titles</string>
+    <string name="tmdb_source_list">My TMDB list</string>
+    <string name="setting_tmdb_list">My TMDB list</string>
+    <string name="tmdb_list_none">Not set: press to add</string>
+    <string name="list_waiting">Waiting for the list…</string>
+    <string name="phone_list_title">Your TMDB list</string>
+    <string name="phone_list_intro">Paste the link of a public list from themoviedb.org, or its number. Spotlight then shows the titles in it, in the list\'s order.</string>
+    <string name="phone_list_hint">https://www.themoviedb.org/list/…</string>
+    <string name="phone_list_saved">List saved on the TV: %1$d titles.</string>
+    <string name="phone_list_bad">That isn\'t a public TMDB list, or it\'s empty.</string>
 </resources>

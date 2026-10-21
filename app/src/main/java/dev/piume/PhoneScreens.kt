@@ -13,6 +13,7 @@ import android.widget.Toast
 import dev.piume.MainActivity.Companion.BACKUP_ROW
 import dev.piume.MainActivity.Companion.PROBLEMS_ROW
 import dev.piume.MainActivity.Companion.TMDB_KEY_ROW
+import dev.piume.MainActivity.Companion.TMDB_LIST_ROW
 import java.io.IOException
 
 // Screens that hand a job to a phone over a QR code (PhoneLink): wallpapers, the TMDB key, recent problems.
@@ -164,5 +165,24 @@ internal fun MainActivity.restoreFromPhone() {
         }, 2000)
         200 to getString(R.string.phone_restore_done, n)
     }, status) { showBackup() }
+}
+
+/** The user's public TMDB list, pasted on the phone (its link or number); checked by loading it, then shown. */
+internal fun MainActivity.tmdbListFromPhone() {
+    val key = prefs.getString(K.TMDB_API_KEY, null) ?: return configureTmdbApiKey()
+    val status = label(getString(R.string.list_waiting), 14f)
+    val page = PhonePages.text(phoneTexts(R.string.phone_list_title, R.string.phone_list_intro), getString(R.string.phone_list_hint))
+    showPhoneLink(getString(R.string.setting_tmdb_list), PhoneTask(page, 2048) { file ->
+        val id = TmdbClient.listId(file.readText()) ?: return@PhoneTask 400 to getString(R.string.phone_list_bad)
+        val items = TmdbClient.fetchList(key, id, tmdbLang())
+        if (items.isEmpty()) return@PhoneTask 400 to getString(R.string.phone_list_bad)
+        ui.post {
+            prefs.edit().putString(K.TMDB_LIST, id).putString(K.TMDB_SOURCE, "list").apply()
+            tmdbTrending = emptyList()
+            loadWallpaper()
+            status.text = getString(R.string.phone_list_saved, items.size)
+        }
+        200 to getString(R.string.phone_list_saved, items.size)
+    }, status) { renderSettings(TMDB_LIST_ROW) }
 }
 
