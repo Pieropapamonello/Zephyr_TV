@@ -290,4 +290,6 @@
     <string name="setting_night">Night mode</string>
     <string name="setting_night_from">Night mode starts at</string>
     <string name="setting_night_to">Night mode ends at</string>
+    <string name="voice_search">Voice search</string>
+    <string name="toast_no_voice_search">This TV has no voice search</string>
 </resources>

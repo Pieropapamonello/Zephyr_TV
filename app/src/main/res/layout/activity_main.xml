@@ -72,6 +72,16 @@
             </LinearLayout>
 
             <ImageView
+                android:id="@+id/voiceSearch"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="@string/voice_search"
+                android:focusable="true"
+                android:padding="8dp"
+                android:src="@drawable/ic_mic" />
+
+            <ImageView
                 android:id="@+id/wifi"
                 android:layout_width="36dp"
                 android:layout_height="36dp"

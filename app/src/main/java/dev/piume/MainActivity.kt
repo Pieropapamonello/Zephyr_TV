@@ -218,6 +218,7 @@ class MainActivity : Activity() {
 
         // Top bar: network, All apps, TV inputs, Android settings, launcher settings. Round, lit on focus.
         for ((id, action) in listOf<Pair<Int, () -> Unit>>(
+            R.id.voiceSearch to { voiceSearch() },
             R.id.wifi to { openSettings(Settings.ACTION_WIFI_SETTINGS) },
             R.id.allAppsButton to { openAllApps() },
             R.id.tvInputsButton to { openInputsMenu(findViewById(R.id.tvInputsButton)) },
@@ -731,6 +732,25 @@ class MainActivity : Activity() {
         wifi.imageAlpha = if (caps == null) 90 else 255
     }
 
+    /**
+     * The TV's voice search (Google Assistant on Google TV), by the ways Android TVs offer it, most specific first.
+     * Started directly rather than looked up first: Android 11+ hides other apps' activities from lookups.
+     */
+    internal fun voiceSearch() {
+        for (intent in listOf(
+            Intent("android.intent.action.VOICE_ASSIST"),
+            Intent(Intent.ACTION_ASSIST),
+            Intent(android.speech.RecognizerIntent.ACTION_WEB_SEARCH),
+            Intent(android.app.SearchManager.INTENT_ACTION_GLOBAL_SEARCH),
+        )) {
+            try {
+                return startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (e: Exception) {
+            }
+        }
+        Toast.makeText(this, getString(R.string.toast_no_voice_search), Toast.LENGTH_SHORT).show()
+    }
+
     internal fun openSettings(action: String, data: Uri? = null) {
         try {
             startActivity(Intent(action, data))
@@ -1167,7 +1187,7 @@ class MainActivity : Activity() {
             v.parent === wifi.parent -> when (key) { // top bar
                 KeyEvent.KEYCODE_DPAD_DOWN -> if (spotVis) spotlightInfoBox else apps ?: cards ?: v
                 KeyEvent.KEYCODE_DPAD_UP -> v
-                KeyEvent.KEYCODE_DPAD_LEFT -> if (v.id == R.id.wifi) v else null
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (v.id == R.id.voiceSearch) v else null
                 KeyEvent.KEYCODE_DPAD_RIGHT -> if (v.id == R.id.launcherSettings) v else null
                 else -> null
             }
