@@ -84,18 +84,63 @@ object TmdbClient {
 
     fun backdropUrl(path: String?): String? = if (path.isNullOrBlank()) null else "$IMAGE_BASE$path"
 
-    fun searchIntent(context: Context, pkg: String, query: String): Intent {
+    // Nuvio's builds: GitHub ("full") and Play Store. Both take nuvio://tmdb/<type>/<id> and have no search link
+    // (their stremio:// handler only installs addons).
+    private val NUVIO = setOf("com.nuvio.tv", "com.nuvio.app")
+    private const val STREMIO = "com.stremio.one"
+
+    // TMDB id -> IMDb id (or "" when TMDB has none), so a second press doesn't ask again.
+    private val imdbCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** Apps whose title links need the IMDb id: Stremio's catalogue (Cinemeta) is keyed by it. */
+    fun wantsImdb(pkg: String) = pkg == STREMIO
+
+    /** The title's IMDb id ("tt…"), or null. Network: call it off the UI thread. */
+    fun imdbId(apiKey: String, item: TmdbItem): String? {
+        val key = "${item.mediaType}/${item.id}"
+        imdbCache[key]?.let { return it.ifEmpty { null } }
+        val type = if (item.mediaType == "tv") "tv" else "movie"
+        val id = try {
+            JSONObject(get(apiKey, "/$type/${item.id}/external_ids")).optString("imdb_id").takeIf { it.startsWith("tt") }
+        } catch (e: Exception) {
+            android.util.Log.w("Plume", "TMDB external ids failed ($e)")
+            return null // not cached: a network hiccup shouldn't stick
+        }
+        imdbCache[key] = id.orEmpty()
+        return id
+    }
+
+    /**
+     * Opens [item] in [pkg]: on its own page where the app takes an id (Nuvio: TMDB id; Stremio: [imdb], from
+     * [imdbId]), otherwise through the app's search by title, otherwise the app itself.
+     */
+    fun openIntent(context: Context, pkg: String, item: TmdbItem, imdb: String?): Intent {
         val pm = context.packageManager
-        fun view(uri: String) = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
+        fun view(uri: String) = viewIn(pm, pkg, uri)
+        val series = item.mediaType == "tv"
+        when {
+            pkg in NUVIO -> view("nuvio://tmdb/${if (series) "series" else "movie"}/${item.id}")?.let { return it }
+            // Movies open on the title (the video id is the title's own id); series on their episode list.
+            pkg == STREMIO && imdb != null ->
+                view(if (series) "stremio:///detail/series/$imdb" else "stremio:///detail/movie/$imdb/$imdb")?.let { return it }
+        }
+        return searchIntent(context, pkg, item.title)
+    }
+
+    /** An ACTION_VIEW of [uri] for [pkg] only, or null when the app doesn't take that link. */
+    private fun viewIn(pm: android.content.pm.PackageManager, pkg: String, uri: String) =
+        Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
             setPackage(pkg)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }.takeIf { it.resolveActivity(pm) != null }
+
+    private fun searchIntent(context: Context, pkg: String, query: String): Intent {
+        val pm = context.packageManager
+        fun view(uri: String) = viewIn(pm, pkg, uri)
         val q = Uri.encode(query)
         // Specialized intents where known
         when (pkg) {
-            // Nuvio may also answer Stremio's scheme
-            "com.nuvio.app" -> (view("nuvio:///search?search=$q") ?: view("stremio:///search?search=$q"))?.let { return it }
-            "com.stremio.one" -> view("stremio:///search?search=$q")?.let { return it }
+            STREMIO -> view("stremio:///search?search=$q")?.let { return it } // documented in Stremio's addon SDK
             "com.netflix.ninja" -> {
                 Intent("android.intent.action.SEARCH").apply {
                     setPackage(pkg)

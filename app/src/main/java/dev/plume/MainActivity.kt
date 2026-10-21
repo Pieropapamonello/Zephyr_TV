@@ -2479,17 +2479,16 @@ class MainActivity : Activity() {
     }
 
     private fun setupSpotlight() {
-        val bg = GradientDrawable().apply {
-            cornerRadius = dp(16).toFloat()
-            setColor(spotlightVeil())
-        }
-        spotlightInfoBox.background = bg
+        // Feathered rather than a rounded box, so the veil melts into the backdrop instead of drawing a hard frame.
+        spotlightInfoBox.background = SoftVeil(dp(24).toFloat(), dp(220).toFloat()).apply { color = spotlightVeil() }
         // The arrows get a small disc in the ground colour, so they read on any backdrop.
         for (arrow in arrayOf(spotlightPrev, spotlightNext)) {
             arrow.background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor((ground and 0xFFFFFF) or 0x80000000.toInt()) }
             arrow.setPadding(dp(4), dp(4), dp(4), dp(4))
         }
-        spotlightInfoBox.setPadding(dp(16), dp(10), dp(16), dp(10))
+        // Text stays inside the veil's solid part: clear of the 24dp feathered edges, and ending where the long fade on
+        // the right begins.
+        spotlightInfoBox.setPadding(dp(26), dp(22), dp(180), dp(22))
         spotlightPrev.setOnClickListener { cycleSpotlight(-1) }
         spotlightNext.setOnClickListener { cycleSpotlight(1) }
 
@@ -2509,8 +2508,7 @@ class MainActivity : Activity() {
         spotlightOverview.visibility = if (inSpotlight) View.VISIBLE else View.GONE
         spotlightActions.visibility = if (inSpotlight) View.VISIBLE else View.GONE
         for (arrow in arrayOf(spotlightPrev, spotlightNext)) arrow.animate().alpha(if (inSpotlight) 0.9f else 0.5f).setDuration(220).start()
-        val bg = spotlightInfoBox.background as? GradientDrawable
-        bg?.setColor(if (inSpotlight) (if (dark) 0xAA181820.toInt() else 0xDDEEF2F7.toInt()) else spotlightVeil())
+        (spotlightInfoBox.background as? SoftVeil)?.color = if (inSpotlight) (if (dark) 0xB3181820.toInt() else 0xE6EEF2F7.toInt()) else spotlightVeil()
         // Translate bottomSection downwards to give spotlight breathing room
         val targetTransY = if (inSpotlight) dp(65).toFloat() else 0f
         val targetAlpha = if (inSpotlight) 0.65f else 1f
@@ -2602,18 +2600,30 @@ class MainActivity : Activity() {
                     scaleX = if (focused) 1.08f else 1f
                     scaleY = if (focused) 1.08f else 1f
                 }
-                setOnClickListener {
-                    val title = spotlightItem()?.title ?: return@setOnClickListener launch(a)
-                    try {
-                        startActivity(TmdbClient.searchIntent(this@MainActivity, a.pkg, title))
-                    } catch (e: Exception) {
-                        launch(a)
-                    }
-                }
+                setOnClickListener { openInApp(a) }
             }
             spotlightActions.addView(btn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 marginStart = if (spotlightActions.childCount > 0) dp(8) else 0
             })
+        }
+    }
+
+    /**
+     * Opens the Spotlight title in [a]: straight on its page where the app takes an id (Nuvio by TMDB id, Stremio by
+     * IMDb id, looked up first), otherwise through the app's search, otherwise just the app.
+     */
+    private fun openInApp(a: App) {
+        val item = spotlightItem() ?: return launch(a)
+        fun start(imdb: String?) = try {
+            startActivity(TmdbClient.openIntent(this, a.pkg, item, imdb))
+        } catch (e: Exception) {
+            launch(a)
+        }
+        val key = prefs.getString("tmdb_api_key", null)
+        if (key == null || !TmdbClient.wantsImdb(a.pkg)) return start(null)
+        io.execute {
+            val imdb = TmdbClient.imdbId(key, item)
+            ui.post { start(imdb) }
         }
     }
 
@@ -2881,7 +2891,7 @@ class MainActivity : Activity() {
         const val WRITE_SECURE = "android.permission.WRITE_SECURE_SETTINGS"
         const val ROLE_REQUEST = 2
         const val TMDB_FRESH_MS = 3 * 3600_000L // how long a trending list is kept before it's fetched again
-        val SPOTLIGHT_PKGS = listOf("com.nuvio.app", "com.stremio.one", "com.netflix.ninja", "com.google.android.youtube.tv", "com.amazon.amazonvideo.livingroom")
+        val SPOTLIGHT_PKGS = listOf("com.nuvio.tv", "com.nuvio.app", "com.stremio.one", "com.netflix.ninja", "com.google.android.youtube.tv", "com.amazon.amazonvideo.livingroom")
         // Settings sections, and each row's address in them (see renderSettings).
         const val SECTION = 100
         const val LOOK_SECTION = 0
@@ -2954,6 +2964,7 @@ class MainActivity : Activity() {
         val BRAND_COLOURS = mapOf(
             "playstation" to 0xFF0070D1.toInt(),
             "com.nuvio.app" to 0xFF6C5CE7.toInt(),
+            "com.nuvio.tv" to 0xFF6C5CE7.toInt(), // Nuvio's GitHub build
             "com.netflix.ninja" to 0xFFE50914.toInt(),
             "com.stremio.one" to 0xFF8D3DAF.toInt(),
             "io.gh.reisxd.tizentube.cobalt" to 0xFFFF0000.toInt(),
