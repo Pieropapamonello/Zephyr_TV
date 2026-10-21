@@ -1,6 +1,8 @@
 package dev.plume
 
+import dev.plume.TmdbClient.Video
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class TrailerTest {
@@ -9,5 +11,22 @@ class TrailerTest {
         assertEquals("Dune trailer deutsch", TmdbClient.trailerQuery("Dune", "de-DE"))
         assertEquals("Dune trailer english", TmdbClient.trailerQuery("Dune", "en-US"))
         assertEquals("Dune trailer english", TmdbClient.trailerQuery("Dune", "pt-BR")) // unknown: English
+    }
+
+    private fun v(key: String, type: String = "Trailer", lang: String = "en", official: Boolean = true, site: String = "YouTube", at: String = "2026-01-01") =
+        Video(key, site, type, official, lang, at)
+
+    @Test fun picksTheBestTrailer() {
+        // The chosen language wins over English, a trailer over a teaser, official over fan-made, newer over older.
+        assertEquals("it", TmdbClient.bestTrailer(listOf(v("en"), v("it", lang = "it")), "it-IT")?.key)
+        assertEquals("en", TmdbClient.bestTrailer(listOf(v("en"), v("fr", lang = "fr")), "it-IT")?.key)
+        assertEquals("trailer", TmdbClient.bestTrailer(listOf(v("teaser", type = "Teaser", lang = "it"), v("trailer")), "it-IT")?.key)
+        assertEquals("official", TmdbClient.bestTrailer(listOf(v("fan", official = false), v("official")), "en-US")?.key)
+        assertEquals("new", TmdbClient.bestTrailer(listOf(v("old", at = "2025-01-01"), v("new", at = "2026-05-01")), "en-US")?.key)
+    }
+
+    @Test fun skipsWhatTheTvCantPlay() {
+        assertNull(TmdbClient.bestTrailer(listOf(v("vimeo", site = "Vimeo"), v("clip", type = "Clip"), v("")), "en-US"))
+        assertNull(TmdbClient.bestTrailer(emptyList(), "en-US"))
     }
 }

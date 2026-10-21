@@ -3008,21 +3008,22 @@ class MainActivity : Activity() {
 
     /**
      * Opens the Spotlight title in [a]: straight on its page where the app takes an id (Nuvio by TMDB id, Stremio by
-     * IMDb id, looked up first), YouTube on a search for its trailer, otherwise through the app's search, otherwise
-     * just the app.
+     * IMDb id, looked up first), YouTube on the trailer TMDB lists (or a search for one), otherwise through the
+     * app's search, otherwise just the app.
      */
     private fun openInApp(a: App) {
         val item = spotlightItem() ?: return launch(a)
-        fun start(imdb: String?) = try {
-            startActivity(TmdbClient.openIntent(this, a.pkg, item, imdb, tmdbLang()))
+        val lang = tmdbLang()
+        fun start(ref: String?) = try {
+            startActivity(TmdbClient.openIntent(this, a.pkg, item, ref, lang))
         } catch (e: Exception) {
             launch(a)
         }
         val key = prefs.getString("tmdb_api_key", null)
-        if (key == null || !TmdbClient.wantsImdb(a.pkg)) return start(null)
+        if (key == null || !TmdbClient.needsLookup(a.pkg)) return start(null)
         io.execute {
-            val imdb = TmdbClient.imdbId(key, item)
-            ui.post { start(imdb) }
+            val ref = TmdbClient.lookup(key, a.pkg, item, lang)
+            ui.post { start(ref) }
         }
     }
 

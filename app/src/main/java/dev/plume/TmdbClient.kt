@@ -93,11 +93,66 @@ object TmdbClient {
     // TMDB id -> IMDb id (or "" when TMDB has none), so a second press doesn't ask again.
     private val imdbCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
-    /** Apps whose title links need the IMDb id: Stremio's catalogue (Cinemeta) is keyed by it. */
-    fun wantsImdb(pkg: String) = pkg == STREMIO
+    // TMDB id -> YouTube key of its best trailer (or "" when there's none), per language.
+    private val trailerCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * Apps whose title links need something looked up first: Stremio the IMDb id (its catalogue, Cinemeta, is
+     * keyed by it), YouTube the trailer TMDB lists for the title.
+     */
+    fun needsLookup(pkg: String) = pkg == STREMIO || pkg == YOUTUBE
+
+    /** What [openIntent] needs for [pkg] as its `ref`, or null. Network: call it off the UI thread. */
+    fun lookup(apiKey: String, pkg: String, item: TmdbItem, language: String): String? = when (pkg) {
+        STREMIO -> imdbId(apiKey, item)
+        YOUTUBE -> trailerKey(apiKey, item, language)
+        else -> null
+    }
+
+    /** A video TMDB lists for a title: the same trailers and teasers its website shows. */
+    class Video(val key: String, val site: String, val type: String, val official: Boolean, val language: String, val published: String)
+
+    /**
+     * The trailer to play: YouTube only (the TV app plays those), a trailer before a teaser, in [language] before
+     * English before anything else, official before fan-made, newest first. Null when there's no trailer or teaser.
+     */
+    fun bestTrailer(videos: List<Video>, language: String): Video? {
+        val lang = language.substringBefore('-')
+        return videos.filter { it.site == "YouTube" && it.key.isNotBlank() && (it.type == "Trailer" || it.type == "Teaser") }
+            .sortedWith(compareBy<Video>(
+                { if (it.type == "Trailer") 0 else 1 },
+                { when (it.language) { lang -> 0; "en" -> 1; else -> 2 } },
+                { if (it.official) 0 else 1 },
+            ).thenByDescending { it.published })
+            .firstOrNull()
+    }
+
+    /** The YouTube key of the title's trailer, or null. Network: call it off the UI thread. */
+    private fun trailerKey(apiKey: String, item: TmdbItem, language: String): String? {
+        val key = "${item.mediaType}/${item.id}/$language"
+        trailerCache[key]?.let { return it.ifEmpty { null } }
+        val type = if (item.mediaType == "tv") "tv" else "movie"
+        val lang = language.substringBefore('-')
+        val videos = try {
+            // Videos in the chosen language plus English ones, as a fallback when there's no dubbed trailer.
+            val list = JSONObject(get(apiKey, "/$type/${item.id}/videos?language=$language&include_video_language=$lang,en"))
+                .optJSONArray("results")
+            (0 until (list?.length() ?: 0)).map { i ->
+                val v = list!!.getJSONObject(i)
+                Video(v.optString("key"), v.optString("site"), v.optString("type"), v.optBoolean("official"),
+                    v.optString("iso_639_1"), v.optString("published_at"))
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("Plume", "TMDB videos failed ($e)")
+            return null // not cached: a network hiccup shouldn't stick
+        }
+        val best = bestTrailer(videos, language)?.key
+        trailerCache[key] = best.orEmpty()
+        return best
+    }
 
     /** The title's IMDb id ("tt…"), or null. Network: call it off the UI thread. */
-    fun imdbId(apiKey: String, item: TmdbItem): String? {
+    private fun imdbId(apiKey: String, item: TmdbItem): String? {
         val key = "${item.mediaType}/${item.id}"
         imdbCache[key]?.let { return it.ifEmpty { null } }
         val type = if (item.mediaType == "tv") "tv" else "movie"
@@ -112,24 +167,27 @@ object TmdbClient {
     }
 
     /**
-     * Opens [item] in [pkg]: on its own page where the app takes an id (Nuvio: TMDB id; Stremio: [imdb], from
-     * [imdbId]), on YouTube a search for the trailer in [language] (Spotlight's TMDB language), otherwise through
-     * the app's search by title, otherwise the app itself.
+     * Opens [item] in [pkg]: on its own page where the app takes an id (Nuvio: TMDB id; Stremio: the IMDb id in
+     * [ref]); on YouTube the trailer TMDB lists ([ref], its video key), or a search for one in [language] when it
+     * lists none; otherwise through the app's search by title, otherwise the app itself. [ref] comes from [lookup].
      */
-    fun openIntent(context: Context, pkg: String, item: TmdbItem, imdb: String?, language: String): Intent {
+    fun openIntent(context: Context, pkg: String, item: TmdbItem, ref: String?, language: String): Intent {
         val pm = context.packageManager
         fun view(uri: String) = viewIn(pm, pkg, uri)
         val series = item.mediaType == "tv"
         when {
             pkg in NUVIO -> view("nuvio://tmdb/${if (series) "series" else "movie"}/${item.id}")?.let { return it }
             // Movies open on the title (the video id is the title's own id); series on their episode list.
-            pkg == STREMIO && imdb != null ->
-                view(if (series) "stremio:///detail/series/$imdb" else "stremio:///detail/movie/$imdb/$imdb")?.let { return it }
+            pkg == STREMIO && ref != null ->
+                view(if (series) "stremio:///detail/series/$ref" else "stremio:///detail/movie/$ref/$ref")?.let { return it }
+            // YouTube's own scheme first, then the plain watch link; both open the video in the TV app.
+            pkg == YOUTUBE && ref != null ->
+                (view("vnd.youtube:$ref") ?: view("https://www.youtube.com/watch?v=$ref"))?.let { return it }
         }
         return searchIntent(context, pkg, if (isYouTube(pkg)) trailerQuery(item.title, language) else item.title)
     }
 
-    /** YouTube's Spotlight button is a trailer button: it searches "<title> trailer <language>". */
+    /** YouTube's Spotlight button is a trailer button: it plays TMDB's trailer, or searches "<title> trailer <language>". */
     fun isYouTube(pkg: String) = pkg == YOUTUBE
 
     /** "Dune trailer italiano": the language named in itself, so YouTube ranks the dubbed or subtitled cut first. */

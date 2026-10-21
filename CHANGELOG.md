@@ -29,7 +29,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - Spotlight goes to the next title every 5 seconds. Select **Plume settings → TMDB Spotlight → Next title every** to change the time.
 - Use ◀ and ▶ on Spotlight to go to the previous or next title.
 - Select an app under Spotlight to open the title in that app. Nuvio and Stremio open the title page.
-- **YouTube trailer** under Spotlight searches YouTube for the trailer in your TMDB language.
+- **YouTube trailer** under Spotlight plays the trailer from TMDB in your TMDB language. If TMDB has no trailer, it searches YouTube.
 - Focused items are easier to see in the light theme and in the dark theme.
 ## 1.3
 
