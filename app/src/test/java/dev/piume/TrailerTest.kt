@@ -1,6 +1,6 @@
-package dev.plume
+package dev.piume
 
-import dev.plume.TmdbClient.Video
+import dev.piume.TmdbClient.Video
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

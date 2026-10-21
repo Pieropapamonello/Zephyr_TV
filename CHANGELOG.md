@@ -1,6 +1,6 @@
 # Changelog
 
-Plume shows the section for its own version in **Plume settings → Updates** after an update.
+Piume shows the section for its own version in **Piume settings → Updates** after an update.
 The build stops if `versionName` has no section here.
 
 Write every entry in ASD-STE100 Simplified Technical English:
@@ -8,25 +8,28 @@ Write every entry in ASD-STE100 Simplified Technical English:
 - Write one idea in each sentence. Use 20 words or fewer in each sentence.
 - Use the active voice and the present tense.
 - Write instructions as commands: "Select **Updates**", not "**Updates** can be selected".
-- Use one word for one thing. Use the names that Plume shows on the screen.
-- Start each entry with "- ". Plume shows each entry as one item. It removes `**` marks.
+- Use one word for one thing. Use the names that Piume shows on the screen.
+- Start each entry with "- ". Piume shows each entry as one item. It removes `**` marks.
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 ## Unreleased
 
-- You can set the weather location by hand. Select **Plume settings → Appearance & wallpapers → Weather location**.
-- **Plume settings → System → Home button** is now a switch. Use it to turn the Home button on or off.
-- All the text in Plume is now in one file. This makes translation easier.
-- Plume is now in Italian. It uses the language of the TV.
-- A guided setup makes the Home button open Plume. To do it again, select **Plume settings → System → Set up Home button**.
-- A red dot on the Plume settings icon tells you about a new update or new update notes.
-- **Plume settings → System → Updates** shows what is new in this version.
-- You can put a short app row on the left, in the centre or on the right. Select **Plume settings → Apps row → App row position**.
-- Plume settings are now in groups. Select a group to see its settings.
+## 1.4
+
+- Plume Launcher is now Piume, a fork by mccoy88f. Piume installs next to Plume and updates from its own releases.
+- You can set the weather location by hand. Select **Piume settings → Appearance & wallpapers → Weather location**.
+- **Piume settings → System → Home button** is now a switch. Use it to turn the Home button on or off.
+- All the text in Piume is now in one file. This makes translation easier.
+- Piume is now in Italian. It uses the language of the TV.
+- A guided setup makes the Home button open Piume. To do it again, select **Piume settings → System → Set up Home button**.
+- A red dot on the Piume settings icon tells you about a new update or new update notes.
+- **Piume settings → System → Updates** shows what is new in this version.
+- You can put a short app row on the left, in the centre or on the right. Select **Piume settings → Apps row → App row position**.
+- Piume settings are now in groups. Select a group to see its settings.
 - The top bar has a TV inputs button. Use it to change to an HDMI input.
-- **TMDB Spotlight** shows trending films and series above the apps row. Add your TMDB API key in **Plume settings → TMDB Spotlight**.
-- Spotlight goes to the next title every 5 seconds. Select **Plume settings → TMDB Spotlight → Next title every** to change the time.
+- **TMDB Spotlight** shows trending films and series above the apps row. Add your TMDB API key in **Piume settings → TMDB Spotlight**.
+- Spotlight goes to the next title every 5 seconds. Select **Piume settings → TMDB Spotlight → Next title every** to change the time.
 - Use ◀ and ▶ on Spotlight to go to the previous or next title.
 - Select an app under Spotlight to open the title in that app. Nuvio and Stremio open the title page.
 - **YouTube trailer** under Spotlight plays the trailer from TMDB in your TMDB language. If TMDB has no trailer, it searches YouTube.
@@ -36,6 +39,10 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - Channel cards from a TV app show all of the card. The name on the card does not touch the border.
 - When the focused item is below the bottom of the screen, the home screen moves up to show it.
 - The TMDB Spotlight image is easier to see. It has less shade at the top and at the bottom.
+# Plume Launcher releases
+
+These are the releases of Plume Launcher by aradhyas8, before the fork.
+
 ## 1.3
 
 - You can use a folder of photos as your wallpaper. The folder can be on the TV or on a USB drive. Select **Plume settings → Folder photo changes** to set how often the photo changes.

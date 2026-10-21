@@ -1,4 +1,4 @@
-package dev.plume
+package dev.piume
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals

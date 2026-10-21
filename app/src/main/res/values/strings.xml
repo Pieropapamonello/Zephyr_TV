@@ -1,13 +1,13 @@
 <resources>
     <!-- App & General -->
-    <string name="app_name">Plume</string>
-    <string name="override_desc">Opens Plume whenever the Google TV home screen appears, so the Home button lands here.</string>
+    <string name="app_name">Piume</string>
+    <string name="override_desc">Opens Piume whenever the Google TV home screen appears, so the Home button lands here.</string>
 
     <!-- Top bar & Accessibility descriptions -->
     <string name="network_settings">Network settings</string>
     <string name="all_apps">All apps</string>
     <string name="settings">Settings</string>
-    <string name="plume_settings">Plume settings</string>
+    <string name="plume_settings">Piume settings</string>
     <string name="tv_inputs">TV inputs</string>
     <string name="toast_no_inputs">No TV inputs found</string>
 
@@ -126,9 +126,9 @@
     <string name="pin_wrong">Wrong PIN</string>
     <string name="pin_too_many_tries_wait">Too many tries. Try again in %1$d s.</string>
     <string name="pin_instructions">▲ ▼ change  ·  ◀ ▶ move  ·  OK enter. Number keys work too.</string>
-    <string name="pin_forgot_notice">Forgot it? Android Settings → Apps → Plume → Clear data removes the lock, along with your layout and settings.</string>
+    <string name="pin_forgot_notice">Forgot it? Android Settings → Apps → Piume → Clear data removes the lock, along with your layout and settings.</string>
     <string name="pin_mismatch">Those PINs didn\'t match. Choose one again.</string>
-    <string name="layout_locked_toast">Layout locked. Plume settings and home screen changes now need the PIN.</string>
+    <string name="layout_locked_toast">Layout locked. Piume settings and home screen changes now need the PIN.</string>
     <string name="unlock_to_edit">Unlock to edit…</string>
 
     <!-- Context Menus (Hold OK) -->
@@ -155,8 +155,8 @@
     <string name="weather_thunderstorm">Thunderstorm</string>
 
     <!-- Toasts & Notifications -->
-    <string name="toast_photo_access_needed">Plume needs access to photos to show your folders</string>
-    <string name="toast_home_button_permission">Turn on \"Plume: Home button\" in Settings → System → Accessibility</string>
+    <string name="toast_photo_access_needed">Piume needs access to photos to show your folders</string>
+    <string name="toast_home_button_permission">Turn on \"Piume: Home button\" in Settings → System → Accessibility</string>
     <string name="toast_no_photos_found">No photos found. Copy some to the TV or plug in a USB drive with photos.</string>
     <string name="toast_connect_network">Connect the TV to Wi-Fi or Ethernet first</string>
     <string name="toast_upload_server_failed">Couldn\'t start the upload page</string>
@@ -164,10 +164,10 @@
     <string name="toast_screensaver_downloading">Downloading Gallery paintings (%1$s)…</string>
     <string name="toast_screensaver_download_failed">Couldn\'t download the paintings. Check the connection and try again.</string>
     <string name="toast_screensaver_cannot_start">This TV can\'t start the screensaver on demand</string>
-    <string name="toast_update_available">Plume %1$s is available. Update it in Plume settings.</string>
+    <string name="toast_update_available">Piume %1$s is available. Update it in Piume settings.</string>
     <string name="toast_update_check_failed">Couldn\'t check for updates. Check the connection.</string>
-    <string name="toast_update_up_to_date">Plume is up to date</string>
-    <string name="toast_update_permission">Turn on Plume in the next list, then press Updates again</string>
+    <string name="toast_update_up_to_date">Piume is up to date</string>
+    <string name="toast_update_permission">Turn on Piume in the next list, then press Updates again</string>
     <string name="toast_update_download_failed">Couldn\'t download the update. Check the connection and try again.</string>
     <string name="toast_update_install_failed">Update failed to install</string>
     <string name="toast_no_cw_apps">No installed apps support Continue Watching</string>
@@ -207,26 +207,26 @@
     <string name="folder_untitled">Photos</string>
     <string name="spotlight_trailer">YouTube trailer</string>
     <!-- Merged from upstream: guided Home setup, weather location, row position, update notes -->
-    <string name="home_service_label">Plume: Home button</string>
+    <string name="home_service_label">Piume: Home button</string>
     <string name="gallery">Gallery</string>
-    <string name="home_off_hint">Turn off \"Plume: Home button\" in Settings → System → Accessibility</string>
-    <string name="home_on_hint">Turn on \"Plume: Home button\" in Settings → System → Accessibility</string>
-    <string name="plume_press_change">Plume: press to change</string>
+    <string name="home_off_hint">Turn off \"Piume: Home button\" in Settings → System → Accessibility</string>
+    <string name="home_on_hint">Turn on \"Piume: Home button\" in Settings → System → Accessibility</string>
+    <string name="plume_press_change">Piume: press to change</string>
     <string name="setup_home">Set up Home button</string>
     <string name="preview_home_setup">Preview Home setup popups</string>
     <string name="setup_step">Step %1$d of 3</string>
-    <string name="setup_role_title">Make Plume your home screen</string>
-    <string name="setup_role_body">Android will ask which app to use as your home screen. Choose Plume.</string>
+    <string name="setup_role_title">Make Piume your home screen</string>
+    <string name="setup_role_body">Android will ask which app to use as your home screen. Choose Piume.</string>
     <string name="setup_test_title">Press Home on your remote</string>
-    <string name="setup_test_body">Plume checks that Home brings you back here. If another home screen opens instead, open Plume again from your apps and setup will try the next way.</string>
-    <string name="setup_service_title">Turn on Plume\'s Home button</string>
-    <string name="setup_service_body">Accessibility settings will open. Select \"Plume: Home button\", turn it on, then press Back to come back here.</string>
+    <string name="setup_test_body">Piume checks that Home brings you back here. If another home screen opens instead, open Piume again from your apps and setup will try the next way.</string>
+    <string name="setup_service_title">Turn on Piume\'s Home button</string>
+    <string name="setup_service_body">Accessibility settings will open. Select \"Piume: Home button\", turn it on, then press Back to come back here.</string>
     <string name="setup_adb_title">Unlock it once with ADB</string>
-    <string name="setup_adb_body">This TV blocks the Home button switch for apps installed outside the Play Store. Turn on network debugging in Developer options, then run these from a computer or a phone ADB app. Plume does the rest.</string>
+    <string name="setup_adb_body">This TV blocks the Home button switch for apps installed outside the Play Store. Turn on network debugging in Developer options, then run these from a computer or a phone ADB app. Piume does the rest.</string>
     <string name="setup_scan_help">Step-by-step help</string>
     <string name="setup_done_title">Home is set</string>
-    <string name="setup_done_body">Home on your remote now opens Plume.</string>
-    <string name="setup_done_body_service">Home on your remote now opens Plume. Hold Home for the Google TV dashboard.</string>
+    <string name="setup_done_body">Home on your remote now opens Piume.</string>
+    <string name="setup_done_body_service">Home on your remote now opens Piume. Hold Home for the Google TV dashboard.</string>
     <string name="setup_continue">Continue</string>
     <string name="setup_not_now">Not now</string>
     <string name="setup_skip_check">Skip this check</string>

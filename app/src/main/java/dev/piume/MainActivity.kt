@@ -1,4 +1,4 @@
-package dev.plume
+package dev.piume
 
 import android.animation.ObjectAnimator
 import android.app.Activity
@@ -137,7 +137,7 @@ class Updated : BroadcastReceiver() {
     }
 }
 
-private const val CW_PKG = "plume:continue_watching"
+private const val CW_PKG = "piume:continue_watching"
 
 class MainActivity : Activity() {
 
@@ -267,7 +267,7 @@ class MainActivity : Activity() {
             prefs.edit().remove("reopen_row").apply()
             ui.post { openLauncherSettings(row) }
         } else if (!homeServiceOn() && !prefs.getBoolean("setup_shown", false)) {
-            // Fresh install: walk through making Home land on Plume, the one step that has to happen by hand.
+            // Fresh install: walk through making Home land on Piume, the one step that has to happen by hand.
             prefs.edit().putBoolean("setup_shown", true).apply()
             ui.post { startHomeSetup() }
         }
@@ -378,7 +378,7 @@ class MainActivity : Activity() {
         Settings.Secure.putInt(contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 1)
     }
 
-    /** Compared as components: Settings may store us in short form (dev.plume/.HomeOverride). */
+    /** Compared as components: Settings may store us in short form (dev.piume/.HomeOverride). */
     private fun homeServiceOn(): Boolean {
         val me = ComponentName(this, HomeOverride::class.java)
         return Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
@@ -387,7 +387,7 @@ class MainActivity : Activity() {
 
     private fun toggleHomeButton() = if (homeServiceOn()) turnOffHomeButton() else turnOnHomeButton()
 
-    /** Off hands Home back to the TV's own launcher, and Plume leaves it off until switched on again. */
+    /** Off hands Home back to the TV's own launcher, and Piume leaves it off until switched on again. */
     private fun turnOffHomeButton() {
         prefs.edit().putBoolean("home_off", true).apply()
         HomeOverride.running?.disableSelf()
@@ -453,7 +453,7 @@ class MainActivity : Activity() {
     }
 
     // ---------- Home setup ----------
-    // Popups that try each way of making Home land on Plume, stopping at the first that works: the default-home
+    // Popups that try each way of making Home land on Piume, stopping at the first that works: the default-home
     // role, then the Home button service, then adb help for TVs that grey out the service (Android 13+
     // "restricted settings" for sideloaded apps). Each way is checked by asking for a Home press: one that
     // reaches us arrives as a Home intent; one that doesn't sends us to the background.
@@ -517,7 +517,7 @@ class MainActivity : Activity() {
         },
         getString(R.string.setup_not_now) to { setupDialog?.dismiss() })
 
-    /** The one-time grant lets Plume switch the service on itself, past the greyed-out toggle. */
+    /** The one-time grant lets Piume switch the service on itself, past the greyed-out toggle. */
     private fun adbPopup() {
         val mono = Typeface.MONOSPACE
         val code = LinearLayout(this).apply {
@@ -665,7 +665,7 @@ class MainActivity : Activity() {
     }
 
     // ---------- wallpapers ----------
-    // Bundled ones have their fade baked in. Your own go in Android/data/dev.plume/files/wallpapers/
+    // Bundled ones have their fade baked in. Your own go in Android/data/dev.piume/files/wallpapers/
     // (adb push, no permission needed) and get the fade painted once when loaded. A folder on the TV (MediaStore,
     // so USB drives too) shows its photos in shuffled turns, one decoded at a time.
     // Each theme remembers its own pick. Decoded off the UI thread, max 1080p (~8 MB). Full colour, not RGB_565:
@@ -1307,7 +1307,7 @@ class MainActivity : Activity() {
     }
 
     // Pages inside the settings panel (wallpaper list, app toggles…) instead of system dialogs, so they
-    // match Plume's look. Back goes up one page; from the main list it closes the panel.
+    // match Piume's look. Back goes up one page; from the main list it closes the panel.
 
     private var pageBack: (() -> Unit)? = null
     private var pageExit: (() -> Unit)? = null // cleanup when the page goes away (stops the upload server)
@@ -1337,7 +1337,7 @@ class MainActivity : Activity() {
     }
 
     // ---------- layout lock ----------
-    // A PIN in front of Plume settings and everything that changes the home screen; apps still open as usual.
+    // A PIN in front of Piume settings and everything that changes the home screen; apps still open as usual.
     // It keeps the layout safe from small hands, it doesn't keep apps from kids: voice search and Android
     // settings get past it, so it's called a layout lock, not parental controls.
 
@@ -1345,7 +1345,7 @@ class MainActivity : Activity() {
 
     private var unlockedUntil = 0L // one PIN covers a few minutes of changes, until the home screen is left
     private var pinFails = 0
-    private var pinWaitUntil = 0L // ponytail: in memory, so restarting Plume resets the wait; fine for kids at a remote
+    private var pinWaitUntil = 0L // ponytail: in memory, so restarting Piume resets the wait; fine for kids at a remote
     private var pinBox: View? = null
 
     private fun locked() = lockOn() && SystemClock.elapsedRealtime() > unlockedUntil
@@ -2085,7 +2085,7 @@ class MainActivity : Activity() {
         ))
     }
 
-    /** A small Plume-styled menu just above [anchor]; Back closes it. */
+    /** A small Piume-styled menu just above [anchor]; Back closes it. */
     private fun holdMenu(anchor: View, items: List<Pair<String, () -> Unit>>) {
         val list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -2339,7 +2339,7 @@ class MainActivity : Activity() {
         if (folder != null) paintingsDir(this).deleteRecursively() // not needed for photos: give the space back
         if (galleryOn()) return
         if (checkSelfPermission(WRITE_SECURE) != PackageManager.PERMISSION_GRANTED) {
-            // Without the adb permission Plume can't switch it itself; Android's own list has "Gallery".
+            // Without the adb permission Piume can't switch it itself; Android's own list has "Gallery".
             Toast.makeText(this, getString(R.string.toast_screensaver_choose_gallery), Toast.LENGTH_LONG).show()
             return openScreensaverSettings()
         }
@@ -2385,7 +2385,7 @@ class MainActivity : Activity() {
                 paintingsDir(this).deleteRecursively()
                 part.renameTo(paintingsDir(this))
             } catch (e: Exception) {
-                android.util.Log.w("Plume", "paintings download failed ($e)")
+                android.util.Log.w("Piume", "paintings download failed ($e)")
                 part.deleteRecursively()
                 false
             }
@@ -2426,7 +2426,7 @@ class MainActivity : Activity() {
             val latest = try {
                 getJson("https://api.github.com/repos/$REPO/releases/latest").getString("tag_name").removePrefix("v")
             } catch (e: Exception) {
-                android.util.Log.w("Plume", "update check failed ($e)")
+                android.util.Log.w("Piume", "update check failed ($e)")
                 null
             }
             if (latest != null) prefs.edit().putString("upd_ver", latest).putLong("upd_time", System.currentTimeMillis()).apply()
@@ -2478,7 +2478,7 @@ class MainActivity : Activity() {
 
     private val badge by lazy { GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(BADGE) } }
 
-    /** A dot on the Plume settings icon while an update waits or its notes are unread. */
+    /** A dot on the Piume settings icon while an update waits or its notes are unread. */
     private fun updateBadge() {
         val icon = findViewById<ImageView>(R.id.launcherSettings)
         icon.overlay.clear()
@@ -2506,8 +2506,8 @@ class MainActivity : Activity() {
                 val id = installer.createSession(params)
                 installer.openSession(id).use { session ->
                     try {
-                        openStream("https://github.com/$REPO/releases/download/v$ver/Plume.apk").use { input ->
-                            session.openWrite("Plume.apk", 0, -1).use { out ->
+                        openStream("https://github.com/$REPO/releases/download/v$ver/Piume.apk").use { input ->
+                            session.openWrite("Piume.apk", 0, -1).use { out ->
                                 input.copyTo(out)
                                 session.fsync(out)
                             }
@@ -2523,7 +2523,7 @@ class MainActivity : Activity() {
                 }
                 true
             } catch (e: Exception) {
-                android.util.Log.w("Plume", "update download failed ($e)")
+                android.util.Log.w("Piume", "update download failed ($e)")
                 false
             }
             ui.post {
@@ -2547,7 +2547,7 @@ class MainActivity : Activity() {
         updating = false
         if (status != PackageInstaller.STATUS_SUCCESS) {
             val why = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
-            android.util.Log.w("Plume", "update install failed: $status $why")
+            android.util.Log.w("Piume", "update install failed: $status $why")
             if (status != PackageInstaller.STATUS_FAILURE_ABORTED) {
                 Toast.makeText(this, getString(R.string.toast_update_install_failed), Toast.LENGTH_LONG).show()
             }
@@ -2589,7 +2589,7 @@ class MainActivity : Activity() {
                     .putLong("wx_time", System.currentTimeMillis()).apply()
                 ui.post { showWeather() }
             } catch (e: Exception) {
-                android.util.Log.w("Plume", "weather failed ($e)") // keep the last reading; next tick retries
+                android.util.Log.w("Piume", "weather failed ($e)") // keep the last reading; next tick retries
             }
         }
     }
@@ -2734,7 +2734,7 @@ class MainActivity : Activity() {
      * 2. Any app's own home-screen channel named "Continue Watching". Stremio publishes one (with
      *    progress and an autoPlay resume link) instead of using Watch Next, so signing in to Stremio
      *    on the TV is all it takes. Channel rows carry no timestamps, so they use the time the app was
-     *    last opened from Plume, keeping the app's own order among themselves.
+     *    last opened from Piume, keeping the app's own order among themselves.
      * Newest first across apps, at most [PER_APP] each, so one app with ten shows can't bury the others.
      */
     private fun queryWatchNext(): List<Prog> {
@@ -3256,7 +3256,7 @@ class MainActivity : Activity() {
             val bmp = try {
                 decode(uri)
             } catch (e: Exception) {
-                android.util.Log.w("Plume", "poster failed: $uri ($e)") // retried by retryPosters()
+                android.util.Log.w("Piume", "poster failed: $uri ($e)") // retried by retryPosters()
                 null
             } finally {
                 loading.remove(uri)
@@ -3417,7 +3417,8 @@ class MainActivity : Activity() {
             "right" to (R.string.align_right to Gravity.END),
         )
         const val BADGE = 0xFFFF453A.toInt()
-        const val HELP_URL = "https://github.com/aradhyas8/Plume_Launcher#home-button-on-android-13-and-newer"
+        const val REPO = "mccoy88f/Plume_Launcher" // Piume's releases; GitHub forwards this name if the repository is renamed
+        const val HELP_URL = "https://github.com/$REPO#home-button-on-android-13-and-newer"
         const val TOGGLE_ON = "\u0000on" // row values drawn as a switch instead of text
         const val TOGGLE_OFF = "\u0000off"
         const val PIN_TRIES = 5 // wrong PINs before a 30 s wait
@@ -3428,8 +3429,7 @@ class MainActivity : Activity() {
         /** Minutes between folder photos. */
         val PHOTO_EVERY = listOf(1, 5, 10, 15, 30, 60, 1440)
         const val CHOSEN = "✓"
-        const val REPO = "aradhyas8/Plume_Launcher"
-        const val UPDATE_STATUS = "dev.plume.UPDATE_STATUS"
+        const val UPDATE_STATUS = "dev.piume.UPDATE_STATUS"
         const val WRITE_EPG ="com.android.providers.tv.permission.WRITE_EPG_DATA"
         const val TV_SETTINGS = "com.android.tv.settings"
         const val HDMI = "hdmi:" // App.pkg prefix for HDMI device tiles; the rest is the TV input id

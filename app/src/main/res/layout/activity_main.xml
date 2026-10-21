@@ -248,7 +248,7 @@
             <!-- Both rows: the scroller reaches 16dp (one grid gap) past the content edges on each side and
                  clips there. That is room for the focus lift, while the next item, a gap away, stays hidden.
                  Same on left and right, and SnapScrollView scrolls by whole items. -->
-            <dev.plume.SnapScrollView
+            <dev.piume.SnapScrollView
                 android:id="@+id/appScroll"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -296,7 +296,7 @@
                         android:orientation="horizontal"
                         android:visibility="gone" />
                 </LinearLayout>
-            </dev.plume.SnapScrollView>
+            </dev.piume.SnapScrollView>
 
             <TextView
                 android:id="@+id/watchTitle"
@@ -309,7 +309,7 @@
                 android:textSize="14sp"
                 android:visibility="gone" />
 
-            <dev.plume.SnapScrollView
+            <dev.piume.SnapScrollView
                 android:id="@+id/watchScroll"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -331,7 +331,7 @@
                     android:layout_height="wrap_content"
                     android:clipChildren="false"
                     android:orientation="horizontal" />
-            </dev.plume.SnapScrollView>
+            </dev.piume.SnapScrollView>
         </LinearLayout>
     </LinearLayout>
 

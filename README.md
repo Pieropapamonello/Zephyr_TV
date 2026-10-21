@@ -1,40 +1,43 @@
-<h1 align="center">Plume Launcher</h1>
+<h1 align="center">Piume</h1>
 
 <p align="center">
-  <em>Light as a feather.</em> A minimal, ad-free home screen for Android TV and Google TV.
+  <em>Light as feathers.</em> A minimal, ad-free home screen for Android TV and Google TV.
 </p>
 
+> [!NOTE]
+> **Piume** (Italian for *feathers*) is a fork of [**Plume Launcher**](https://github.com/aradhyas8/Plume_Launcher) by [aradhyas8](https://github.com/aradhyas8). It keeps Plume's small, fast design and adds an Italian translation, a TMDB Spotlight of trending films and series, recommendations per app, grouped settings, a TV inputs menu and readability changes. Piume installs next to Plume: it has its own package name (`dev.piume`) and its own updates. See [Credits](#credits) for everyone whose work it builds on.
+
 <p align="center">
-  <a href="https://github.com/aradhyas8/Plume_Launcher/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/aradhyas8/Plume_Launcher?label=release"></a>
+  <a href="https://github.com/mccoy88f/Plume_Launcher/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mccoy88f/Plume_Launcher?label=release"></a>
   <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84">
   <img alt="APK size" src="https://img.shields.io/badge/APK-0.4%20MB-blue">
-  <a href="LICENSE"><img alt="GPL-3.0 License" src="https://img.shields.io/github/license/aradhyas8/Plume_Launcher"></a>
+  <a href="LICENSE"><img alt="GPL-3.0 License" src="https://img.shields.io/github/license/mccoy88f/Plume_Launcher"></a>
 </p>
 
 <p align="center">
-  <img src="docs/home-light.jpg" alt="Plume home screen, light theme" width="49%">
-  <img src="docs/home-dark.jpg" alt="Plume home screen, dark theme" width="49%">
+  <img src="docs/home-light.jpg" alt="Home screen, light theme (Plume 1.3, before the fork)" width="49%">
+  <img src="docs/home-dark.jpg" alt="Home screen, dark theme (Plume 1.3, before the fork)" width="49%">
 </p>
 
-Plume replaces the cluttered stock home screen with the two things you actually use: your apps and what you were watching. There are no ads, no sponsored rows, no account and no tracking, and it stays out of the way of the apps it launches.
+Piume replaces the cluttered stock home screen with the two things you actually use: your apps and what you were watching. There are no ads, no sponsored rows, no account and no tracking, and it stays out of the way of the apps it launches.
 
 ## Highlights
 
 - **Tiny and fast.** A 0.4 MB APK with no third-party libraries. It uses about 50–70 MB of RAM and has no extra background services.
-- **Home button support on Google TV.** The Home button opens Plume directly, even on devices where the system launcher can't be replaced. Holding Home still opens the Google TV dashboard.
+- **Home button support on Google TV.** The Home button opens Piume directly, even on devices where the system launcher can't be replaced. Holding Home still opens the Google TV dashboard.
 - **Continue Watching.** Resume shows and films from Android TV's Watch Next list and from apps that publish their own "Continue Watching" channel, such as Stremio.
 - **Clean apps row.** Monochrome logos (or the same logos in brand colour) in a single row, with names on focus, always or never. Rearrange it by holding OK, sort by most used, or hide apps you don't use (they stay in All apps). An optional PIN locks the layout so small hands can't rearrange it.
 - **HDMI inputs as apps.** A console or set-top box that names itself over HDMI-CEC (for example "PlayStation 5") gets its own tile, which switches the TV to that input.
 - **Light, dark or automatic theme**, each with its own wallpaper. Add your own photos from your phone by scanning a QR code, or show a folder of photos from the TV or a USB drive that changes on a timer.
 - **Optional Gallery screensaver.** Public-domain landscape paintings in 16:9, downloaded only if you choose it, or a folder of your own photos.
 - **Optional weather** under the clock.
-- **Updates itself.** Plume checks GitHub once a day and installs new versions from its settings (from 1.2 on). The first update asks you to allow installs from Plume.
+- **Updates itself.** Piume checks its GitHub releases once a day and installs new versions from its settings. The first update asks you to allow installs from Piume.
 
 ## How it compares
 
-Measured on a Hisense Google TV (Android 12, 1.8 GB RAM):
+Measured with Plume Launcher 1.3, the version Piume is based on, on a Hisense Google TV (Android 12, 1.8 GB RAM). Piume adds features, so its figures may be a little higher:
 
-| | Plume | Projectivy Launcher | Google TV launcher |
+| | Plume 1.3 | Projectivy Launcher | Google TV launcher |
 |---|---|---|---|
 | APK size | **0.4 MB** | ~10–14 MB | ~25 MB |
 | RAM while running | **~50–70 MB** | ~65–70 MB | ~93 MB, plus a ~22 MB helper process |
@@ -48,37 +51,37 @@ Measured on a Hisense Google TV (Android 12, 1.8 GB RAM):
 
 ## Installation
 
-1. Download the latest `Plume-<version>.apk` from the [Releases](https://github.com/aradhyas8/Plume_Launcher/releases/latest) page.
+1. Download the latest `Piume.apk` from the [Releases](https://github.com/mccoy88f/Plume_Launcher/releases/latest) page.
 2. Install it on your TV, using any of these:
-   - **Downloader app:** enter the code **`2125356`**. It always points to the latest release.
+   - **Downloader app:** enter the release page address above.
    - **USB drive:** copy the APK over and open it with a file manager.
-   - **adb:** `adb install Plume-<version>.apk`
-3. Open **Plume** from your apps. Its settings panel opens automatically on first launch.
+   - **adb:** `adb install Piume.apk`
+3. Open **Piume** from your apps. A guided setup makes the Home button open it.
 
 ### First-run setup
 
-Plume's settings panel includes two setup rows:
+On first launch Piume walks you through making Home open it. To run it again, open **Piume settings → System → Set up Home button**. The same section has the two rows it uses:
 
 | Setting | What to do |
 |---|---|
-| **Home button** | Press OK. In the Accessibility screen that opens, select **Plume: Home button** and turn it on. |
-| **Default launcher** | Press OK and choose **Plume** in the dialog. |
+| **Home button** | Turn the switch on. In the Accessibility screen that opens, select **Piume: Home button** and turn it on. |
+| **Default launcher** | Press OK and choose **Piume** in the dialog. |
 
 Allow the **TV listings** permission when asked; Continue Watching needs it.
 
 > [!NOTE]
-> Android shows the same generic warning for every accessibility service. Plume's service only listens for the Home key and for the system launcher appearing. It cannot read screen content.
+> Android shows the same generic warning for every accessibility service. Piume's service only listens for the Home key and for the system launcher appearing. It cannot read screen content.
 
 > [!TIP]
-> **Android 13 and newer:** Android blocks sideloaded apps from Accessibility at first. Open **Settings → Apps → Plume**, choose **Allow restricted settings** from the menu, then turn the service on.
+> **Android 13 and newer:** Android blocks sideloaded apps from Accessibility at first. Open **Settings → Apps → Piume**, choose **Allow restricted settings** from the menu, then turn the service on.
 
 ### Optional: grant one extra permission over adb
 
 ```sh
-adb shell pm grant dev.plume android.permission.WRITE_SECURE_SETTINGS
+adb shell pm grant dev.piume android.permission.WRITE_SECURE_SETTINGS
 ```
 
-This lets Plume:
+This lets Piume:
 - set the Gallery screensaver from its own settings
 - turn its Home button service back on automatically if the app is ever force-stopped
 
@@ -86,68 +89,71 @@ Everything else works without it.
 
 ### Home button on Android 13 and newer
 
-Android 13 and newer grey out the Accessibility switch for apps installed outside the Play Store, and most Google TV builds hide the **Allow restricted settings** menu that would unlock it. If Plume's setup reaches the ADB step, unlock it once from a computer (or a phone ADB app) on the same network:
+Android 13 and newer grey out the Accessibility switch for apps installed outside the Play Store, and most Google TV builds hide the **Allow restricted settings** menu that would unlock it. If Piume's setup reaches the ADB step, unlock it once from a computer (or a phone ADB app) on the same network:
 
 1. On the TV, open **Settings → System → About** and press **Android TV OS build** seven times to turn on Developer options.
 2. In **Settings → System → Developer options**, turn on **Network debugging** (called **USB debugging** on some TVs).
-3. Run these, using the address Plume shows:
+3. Run these, using the address Piume shows:
 
    ```sh
    adb connect <tv-address>:5555
-   adb shell pm grant dev.plume android.permission.WRITE_SECURE_SETTINGS
+   adb shell pm grant dev.piume android.permission.WRITE_SECURE_SETTINGS
    ```
 
-4. Accept the debugging prompt on the TV, then choose **Try again** in Plume. Plume turns its Home button service on by itself.
+4. Accept the debugging prompt on the TV, then choose **Try again** in Piume. Piume turns its Home button service on by itself.
 
-## Using Plume
+## Using Piume
 
 | Action | How |
 |---|---|
-| Rearrange apps | Hold **OK** on an app, or use **Settings → Edit apps row** |
+| Rearrange apps | Hold **OK** on an app, or use **Settings → Apps row → Edit apps row** |
 | Hide a Continue Watching item | Hold **OK** on its card, then **Remove from Continue Watching** |
 | Remove an app from the row | Hold **OK** on it, then **Remove from row** (it stays in *All apps*) |
-| Choose which apps feed Continue Watching | **Settings → Continue Watching apps** |
+| Choose which apps feed Continue Watching | **Settings → Continue Watching → Continue Watching apps** |
 | Pin an app from *All apps* to the front | Open **All apps**, hold **OK** on the app (this also unhides it) |
-| Hide apps from the row | **Settings → Apps in row** |
-| Show app names always, on focus or never | **Settings → App names** |
-| Switch between monochrome and colour icons | **Settings → Icon style** |
-| Update Plume | **Settings → Updates** |
-| Lock the layout with a PIN | **Settings → Lock layout** |
+| Hide apps from the row | **Settings → Apps row → Apps in row** |
+| Show app names always, on focus or never | **Settings → Apps row → App names** |
+| Switch between monochrome and colour icons | **Settings → Apps row → Icon style** |
+| Update Piume | **Settings → System → Updates** |
+| Lock the layout with a PIN | **Settings → Apps row → Lock layout** |
+| Show trending films and series on top (TMDB Spotlight) | **Settings → TMDB Spotlight → TMDB API Key** |
+| Switch to an HDMI input | The **TV inputs** button in the top bar |
 | Open the Google TV dashboard | Hold the **Home** button |
 
 ### Custom wallpapers
 
-Open **Light mode wallpaper** or **Dark mode wallpaper** in Plume settings and choose **Add from phone…**. Scan the QR code with your phone (it must be on the same Wi-Fi as the TV), pick a photo and upload it. It becomes the wallpaper straight away. The TV turns it upright, crops it to the screen around its centre and saves a small copy. The upload page only works while that screen is open. **Remove a photo…** in the same list deletes one.
+Open **Light mode wallpaper** or **Dark mode wallpaper** in Piume settings and choose **Add from phone…**. Scan the QR code with your phone (it must be on the same Wi-Fi as the TV), pick a photo and upload it. It becomes the wallpaper straight away. The TV turns it upright, crops it to the screen around its centre and saves a small copy. The upload page only works while that screen is open. **Remove a photo…** in the same list deletes one.
 
-You can also copy `.jpg`, `.png` or `.webp` files to `Android/data/dev.plume/files/wallpapers/` yourself:
+You can also copy `.jpg`, `.png` or `.webp` files to `Android/data/dev.piume/files/wallpapers/` yourself:
 
 ```sh
-adb push my-wallpaper.jpg /sdcard/Android/data/dev.plume/files/wallpapers/
+adb push my-wallpaper.jpg /sdcard/Android/data/dev.piume/files/wallpapers/
 ```
 
-A gentle fade is added automatically so the rows stay readable (**Settings → Photo fade** turns it off).
+A gentle fade is added automatically so the rows stay readable (**Settings → Appearance & wallpapers → Photo fade** turns it off).
 
 ### Photo folders
 
-Choose **Choose a folder on this TV…** in the wallpaper list to use a whole folder of photos, from the TV's storage or a USB drive. Plume asks for access to your photos the first time. The photos take turns in shuffled order; **Settings → Folder photo changes** sets how often, from every minute to once a day. The screensaver can show a folder too: **Settings → Screensaver → Your photos**.
+Choose **Choose a folder on this TV…** in the wallpaper list to use a whole folder of photos, from the TV's storage or a USB drive. Piume asks for access to your photos the first time. The photos take turns in shuffled order; **Settings → Appearance & wallpapers → Folder photo changes** sets how often, from every minute to once a day. The screensaver can show a folder too: **Settings → Screensaver → Your photos**.
 
 ### Lock layout
 
-**Settings → Lock layout** sets a 4-digit PIN. While it's on, Plume settings and anything that changes the home screen (moving, removing or pinning apps, hiding shows) ask for the PIN first; opening apps works as usual. One PIN unlocks changes for five minutes, until you leave the home screen. Use the arrows or the remote's number keys to enter it.
+**Settings → Apps row → Lock layout** sets a 4-digit PIN. While it's on, Piume settings and anything that changes the home screen (moving, removing or pinning apps, hiding shows) ask for the PIN first; opening apps works as usual. One PIN unlocks changes for five minutes, until you leave the home screen. Use the arrows or the remote's number keys to enter it.
 
-The lock keeps the layout safe, it isn't parental control: apps can still be opened by voice search or from Android settings. Forgot the PIN? **Android Settings → Apps → Plume → Clear data** removes it, along with your layout and settings.
+The lock keeps the layout safe, it isn't parental control: apps can still be opened by voice search or from Android settings. Forgot the PIN? **Android Settings → Apps → Piume → Clear data** removes it, along with your layout and settings.
 
 ### Gallery screensaver
 
-Select **Settings → Screensaver** to switch to Gallery. Plume downloads the paintings (4.7 MB) from this repository's releases and stores them privately. Switching back to another screensaver deletes them again, so they only take space while you use them.
+Select **Settings → Screensaver** to switch to Gallery. Piume downloads the paintings (4.7 MB) from Plume Launcher's releases and stores them privately. Switching back to another screensaver deletes them again, so they only take space while you use them.
 
 ## Privacy
 
-Plume has no analytics, no ads and no account. It only connects to the internet to:
+Piume has no analytics, no ads and no account. It only connects to the internet to:
 - load poster images for your Continue Watching items
 - check this repository's GitHub releases for a new version, once a day, and download it when you choose to update
-- download the Gallery paintings from this repository, **only if you choose that screensaver**
-- fetch the weather, **only if you turn it on**. It looks up your approximate location from your IP address via [ipwho.is](https://ipwho.is), then gets the forecast from [Open-Meteo](https://open-meteo.com).
+- download the Gallery paintings from Plume Launcher's releases, **only if you choose that screensaver**
+- fetch the weather, **only if you turn it on**. It looks up your approximate location from your IP address via [ipwho.is](https://ipwho.is), then gets the forecast from [Open-Meteo](https://open-meteo.com). A city you pick by hand is looked up with Open-Meteo's geocoding instead.
+- show TMDB Spotlight, **only if you enter a TMDB API key**. It fetches trending titles, their genres, trailers and IMDb ids from [TMDB](https://www.themoviedb.org).
 
 **Add from phone…** runs a small upload page on the TV itself, reachable only on your home network and only while that screen is open. Photos go straight from your phone to the TV and nowhere else.
 
@@ -156,25 +162,25 @@ Plume has no analytics, no ads and no account. It only connects to the internet 
 <details>
 <summary><b>The Home button still opens the old home screen</b></summary>
 
-Check that **Settings → Home button** shows **On**. If the app was force-stopped, Android turns its accessibility service off; open Plume once (or grant the optional adb permission above) to restore it.
+Check that **Settings → System → Home button** is on. If the app was force-stopped, Android turns its accessibility service off; open Piume once (or grant the optional adb permission above) to restore it.
 </details>
 
 <details>
 <summary><b>Continue Watching is empty</b></summary>
 
-Make sure the TV listings permission is allowed (**Settings → Apps → Plume → Permissions**), and that the app you watch publishes to Android TV's Watch Next list. Check **Settings → Continue Watching apps** in Plume too.
+Make sure the TV listings permission is allowed (**Settings → Apps → Piume → Permissions**), and that the app you watch publishes to Android TV's Watch Next list. Check **Settings → Continue Watching → Continue Watching apps** in Piume too.
 </details>
 
 <details>
 <summary><b>The screensaver option says it needs an adb permission</b></summary>
 
-Google TV hides third-party screensavers from its own settings, so Plume needs the one-time `WRITE_SECURE_SETTINGS` grant shown above to switch it for you.
+Google TV hides third-party screensavers from its own settings, so Piume needs the one-time `WRITE_SECURE_SETTINGS` grant shown above to switch it for you.
 </details>
 
 ## Building from source
 
 ```sh
-git clone https://github.com/aradhyas8/Plume_Launcher.git
+git clone https://github.com/mccoy88f/Plume_Launcher.git
 cd Plume_Launcher
 ./gradlew assembleRelease
 ```
@@ -183,9 +189,12 @@ The APK is written to `app/build/outputs/apk/release/`. Without a `keystore.prop
 
 ## Contributing
 
-Bug reports, translations and pull requests are welcome. Plume stays small on purpose, so please read [CONTRIBUTING.md](CONTRIBUTING.md) first: it lists what's in and out of scope and how to send a change. Open an issue before starting on a feature.
+Bug reports, translations and pull requests are welcome. Piume stays small on purpose, so please read [CONTRIBUTING.md](CONTRIBUTING.md) first: it lists what's in and out of scope and how to send a change. Open an issue before starting on a feature.
 
 ## Credits
+
+- **[Plume Launcher](https://github.com/aradhyas8/Plume_Launcher)** by [aradhyas8](https://github.com/aradhyas8): the launcher Piume is built on, its design and most of its code.
+- **Piume** fork by [mccoy88f](https://github.com/mccoy88f), with help from [Claude Code](https://claude.ai/code).
 
 - **Screensaver paintings** (public domain, scans via Wikimedia Commons; files in [`screensaver/`](screensaver)):
   - Frederic Edwin Church: *The Heart of the Andes*, *The Icebergs*, *Chimborazo*, *Cotopaxi*
@@ -197,6 +206,7 @@ Bug reports, translations and pull requests are welcome. Plume stays small on pu
 
 ## License
 
-Copyright (C) 2026 aradhyas8
+Copyright (C) 2026 aradhyas8 (Plume Launcher)
+Copyright (C) 2026 mccoy88f (Piume changes)
 
-Plume Launcher is free software, released under the [GNU General Public License v3.0](LICENSE). You may use, modify and redistribute it, but any distributed version, modified or not, must also be released under the GPL-3.0 with its full source code.
+Piume is a modified version of Plume Launcher. Its changes are listed in [CHANGELOG.md](CHANGELOG.md) and in the git history. Like Plume Launcher, it is free software, released under the [GNU General Public License v3.0](LICENSE). You may use, modify and redistribute it, but any distributed version, modified or not, must also be released under the GPL-3.0 with its full source code.

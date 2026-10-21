@@ -1,4 +1,4 @@
-package dev.plume
+package dev.piume
 
 import android.content.Context
 import android.content.Intent
@@ -38,7 +38,7 @@ object TmdbClient {
         val json = try {
             JSONObject(get(apiKey, "/trending/$type/day?language=$language"))
         } catch (e: Exception) {
-            android.util.Log.w("Plume", "TMDB trending failed ($e)")
+            android.util.Log.w("Piume", "TMDB trending failed ($e)")
             return emptyList()
         }
         val genres = genres(apiKey, language)
@@ -78,7 +78,7 @@ object TmdbClient {
         }
         map.also { genreCache[language] = it }
     } catch (e: Exception) {
-        android.util.Log.w("Plume", "TMDB genres failed ($e)")
+        android.util.Log.w("Piume", "TMDB genres failed ($e)")
         emptyMap()
     }
 
@@ -143,7 +143,7 @@ object TmdbClient {
                     v.optString("iso_639_1"), v.optString("published_at"))
             }
         } catch (e: Exception) {
-            android.util.Log.w("Plume", "TMDB videos failed ($e)")
+            android.util.Log.w("Piume", "TMDB videos failed ($e)")
             return null // not cached: a network hiccup shouldn't stick
         }
         val best = bestTrailer(videos, language)?.key
@@ -159,7 +159,7 @@ object TmdbClient {
         val id = try {
             JSONObject(get(apiKey, "/$type/${item.id}/external_ids")).optString("imdb_id").takeIf { it.startsWith("tt") }
         } catch (e: Exception) {
-            android.util.Log.w("Plume", "TMDB external ids failed ($e)")
+            android.util.Log.w("Piume", "TMDB external ids failed ($e)")
             return null // not cached: a network hiccup shouldn't stick
         }
         imdbCache[key] = id.orEmpty()
