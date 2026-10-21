@@ -3417,7 +3417,7 @@ class MainActivity : Activity() {
             "right" to (R.string.align_right to Gravity.END),
         )
         const val BADGE = 0xFFFF453A.toInt()
-        const val REPO = "mccoy88f/Plume_Launcher" // Piume's releases; GitHub forwards this name if the repository is renamed
+        const val REPO = "mccoy88f/Piume_Launcher" // where Piume's releases are published
         const val HELP_URL = "https://github.com/$REPO#home-button-on-android-13-and-newer"
         const val TOGGLE_ON = "\u0000on" // row values drawn as a switch instead of text
         const val TOGGLE_OFF = "\u0000off"

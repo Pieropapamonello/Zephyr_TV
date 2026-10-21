@@ -8,10 +8,10 @@
 > **Piume** (Italian for *feathers*) is a fork of [**Plume Launcher**](https://github.com/aradhyas8/Plume_Launcher) by [aradhyas8](https://github.com/aradhyas8). It keeps Plume's small, fast design and adds an Italian translation, a TMDB Spotlight of trending films and series, recommendations per app, grouped settings, a TV inputs menu and readability changes. Piume installs next to Plume: it has its own package name (`dev.piume`) and its own updates. See [Credits](#credits) for everyone whose work it builds on.
 
 <p align="center">
-  <a href="https://github.com/mccoy88f/Plume_Launcher/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mccoy88f/Plume_Launcher?label=release"></a>
+  <a href="https://github.com/mccoy88f/Piume_Launcher/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mccoy88f/Piume_Launcher?label=release"></a>
   <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84">
   <img alt="APK size" src="https://img.shields.io/badge/APK-0.4%20MB-blue">
-  <a href="LICENSE"><img alt="GPL-3.0 License" src="https://img.shields.io/github/license/mccoy88f/Plume_Launcher"></a>
+  <a href="LICENSE"><img alt="GPL-3.0 License" src="https://img.shields.io/github/license/mccoy88f/Piume_Launcher"></a>
 </p>
 
 <p align="center">
@@ -51,7 +51,7 @@ Measured with Plume Launcher 1.3, the version Piume is based on, on a Hisense Go
 
 ## Installation
 
-1. Download the latest `Piume.apk` from the [Releases](https://github.com/mccoy88f/Plume_Launcher/releases/latest) page.
+1. Download the latest `Piume.apk` from the [Releases](https://github.com/mccoy88f/Piume_Launcher/releases/latest) page.
 2. Install it on your TV, using any of these:
    - **Downloader app:** enter the release page address above.
    - **USB drive:** copy the APK over and open it with a file manager.
@@ -180,8 +180,8 @@ Google TV hides third-party screensavers from its own settings, so Piume needs t
 ## Building from source
 
 ```sh
-git clone https://github.com/mccoy88f/Plume_Launcher.git
-cd Plume_Launcher
+git clone https://github.com/mccoy88f/Piume_Launcher.git
+cd Piume_Launcher
 ./gradlew assembleRelease
 ```
 
