@@ -1,17 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Play disc with the triangle cut out, so the card shows through it. Drawn as one colour and tinted with the
+     theme's foreground like the other marks in the row: dark on the light theme's cards, light on the dark ones. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="48dp"
     android:height="48dp"
     android:viewportWidth="48"
     android:viewportHeight="48">
-    <!-- Key and ambient drop shadows matching Android adaptive icon standards -->
-    <path
-        android:fillColor="#18000000"
-        android:pathData="M24,6.5 C13.78,6.5 5.5,14.78 5.5,25 C5.5,35.22 13.78,43.5 24,43.5 C34.22,43.5 42.5,35.22 42.5,25 C42.5,14.78 34.22,6.5 24,6.5 Z M20,33.5 L20,16.5 L32,25 Z" />
-    <path
-        android:fillColor="#2A000000"
-        android:pathData="M24,5.5 C13.78,5.5 5.5,13.78 5.5,24 C5.5,34.22 13.78,42.5 24,42.5 C34.22,42.5 42.5,34.22 42.5,24 C42.5,13.78 34.22,5.5 24,5.5 Z M20,32.5 L20,15.5 L32,24 Z" />
-    <!-- Main white play circle icon -->
     <path
         android:fillColor="#FFFFFFFF"
         android:pathData="M24,4 C12.95,4 4,12.95 4,24 C4,35.05 12.95,44 24,44 C35.05,44 44,35.05 44,24 C44,12.95 35.05,4 24,4 Z M20,31 L20,17 L31,24 Z" />

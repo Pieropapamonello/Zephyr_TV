@@ -1355,7 +1355,8 @@ class MainActivity : Activity() {
         val hidden = rowHiddenSet()
         // Fixed first tile: "Continue Watching" hub
         val cwDrawable = getDrawable(R.drawable.ic_continue_watching) ?: getDrawable(R.drawable.ic_apps)!!
-        val cwTile = tile(null, cwDrawable, mono = false, CW_PKG) {
+        // Tinted with the theme's foreground like the other marks: a white disc vanishes on the light theme's white focused card.
+        val cwTile = tile(null, cwDrawable, mono = true, CW_PKG) {
             watchTitle.text = getString(R.string.continue_watching)
             tmdbLastFocusApp = null
             queryAppChannels(null)
