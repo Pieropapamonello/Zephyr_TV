@@ -204,4 +204,5 @@
     <string name="tmdb_cycle_seconds">%1$d secondi</string>
     <string name="spotlight_previous">Titolo precedente</string>
     <string name="spotlight_next">Titolo successivo</string>
+    <string name="folder_untitled">Foto</string>
 </resources>

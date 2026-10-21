@@ -149,6 +149,8 @@ class MainActivity : Activity() {
     private var dark = false
     private var fg = Color.BLACK
     private var ground = Color.WHITE
+    private var onFg = Color.WHITE // text and icons on an fg-coloured fill (focused small controls)
+    private var field = Color.WHITE // input boxes (PIN, API key) on the settings panel
     private var cardRest = intArrayOf(Color.WHITE, Color.WHITE)
     private var cardLit = cardRest
 
@@ -218,8 +220,8 @@ class MainActivity : Activity() {
         spotlightActions = findViewById(R.id.spotlightActions)
         spotlightPrev = findViewById(R.id.spotlightPrev)
         spotlightNext = findViewById(R.id.spotlightNext)
-        setupSpotlight()
         applyTheme()
+        setupSpotlight() // after applyTheme: its veil and arrow discs use the theme's colours
         loadWallpaper()
 
         // Top bar: network, All apps, TV inputs, Android settings, launcher settings. Round, lit on focus.
@@ -235,7 +237,8 @@ class MainActivity : Activity() {
             background = ring
             setOnFocusChangeListener { v, focused ->
                 if (focused) lastTop = v
-                ring.setColor(if (!focused) 0 else if (dark) 0xFF2A2A32.toInt() else Color.WHITE)
+                ring.setColor(if (focused) fg else 0)
+                setColorFilter(if (focused) onFg else fg)
                 animate().scaleX(if (focused) 1.15f else 1f).scaleY(if (focused) 1.15f else 1f)
                     .setDuration(160).setInterpolator(DECELERATE).start()
             }
@@ -422,6 +425,10 @@ class MainActivity : Activity() {
     private fun applyTheme() {
         dark = wantDark()
         fg = if (dark) 0xFFF5F5F7.toInt() else 0xFF111214.toInt()
+        // Small controls (top-bar icons, settings and menu rows, Spotlight buttons) show focus by inverting:
+        // an fg fill with onFg content. A white-on-near-white or grey-on-black highlight barely reads from the sofa.
+        onFg = if (dark) 0xFF111214.toInt() else Color.WHITE
+        field = if (dark) 0xFF2A2A32.toInt() else 0xFFE5E7EB.toInt()
         // Dark cards are matte black glass on a true-black ground: lit faintly from the top and fading to
         // near-black, no outline (outlines read as a grey grid). Focus brightens the glass, never to grey.
         // Light cards are frosted grey glass, so they still read on white wallpapers; focus turns them white.
@@ -431,12 +438,14 @@ class MainActivity : Activity() {
         ground = if (dark) Color.BLACK else 0xFFF3F5F7.toInt()
         findViewById<View>(R.id.root).setBackgroundColor(ground)
         allApps.setBackgroundColor(ground)
-        val textShadow = if (dark) 0x80000000.toInt() else 0x40000000.toInt()
-        val textRadius = if (dark) 6f else 2f
+        // A halo in the ground colour: dark text gets a light one, light text a dark one, so either stays readable
+        // where it crosses a photo or a TMDB backdrop.
+        val textShadow = if (dark) 0x80000000.toInt() else 0xB3FFFFFF.toInt()
+        val textRadius = if (dark) 6f else 5f
         for (id in intArrayOf(R.id.clock, R.id.date, R.id.appsTitle, R.id.watchTitle, R.id.allAppsTitle, R.id.rowLabel, R.id.weather, R.id.spotlightTitle, R.id.spotlightMeta, R.id.spotlightOverview)) {
             findViewById<TextView>(id)?.apply {
                 setTextColor(fg)
-                setShadowLayer(textRadius, 0f, 2f, textShadow)
+                setShadowLayer(textRadius, 0f, if (dark) 2f else 0f, textShadow)
             }
         }
         wifi.setColorFilter(fg)
@@ -662,7 +671,7 @@ class MainActivity : Activity() {
             null, null, "${MediaStore.Images.Media.BUCKET_DISPLAY_NAME} COLLATE NOCASE")?.use { c ->
             while (c.moveToNext()) {
                 val id = c.getString(0) ?: continue
-                found[id] = (c.getString(1) ?: "Photos") to (found[id]?.second ?: 0) + 1
+                found[id] = (c.getString(1) ?: getString(R.string.folder_untitled)) to (found[id]?.second ?: 0) + 1
             }
         }
         return found.map { (id, v) -> Triple(id, v.first, v.second) }
@@ -1032,9 +1041,12 @@ class MainActivity : Activity() {
             setPadding(dp(14), dp(10), dp(14), dp(10))
             val bg = GradientDrawable().apply {
                 cornerRadius = dp(8).toFloat()
-                setColor(if (dark) 0xFF2A2A32.toInt() else 0xFFE5E7EB.toInt())
+                setColor(field)
+                setStroke(dp(1), fieldEdge())
             }
             background = bg
+            // Same focus mark as the PIN boxes: otherwise only a blinking cursor tells you you're typing here.
+            setOnFocusChangeListener { _, focused -> bg.setStroke(if (focused) dp(2) else dp(1), if (focused) fg else fieldEdge()) }
         }
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1166,8 +1178,8 @@ class MainActivity : Activity() {
             b.text = if (digits[i] == null) "" else if (i == at) digits[i].toString() else "•"
             b.background = GradientDrawable().apply {
                 cornerRadius = dp(8).toFloat()
-                setColor(if (dark) 0xFF1C1C22.toInt() else Color.WHITE)
-                if (i == at) setStroke(dp(2), fg)
+                setColor(field)
+                setStroke(if (i == at) dp(2) else dp(1), if (i == at) fg else fieldEdge())
             }
         }
         fun submit() {
@@ -1227,6 +1239,9 @@ class MainActivity : Activity() {
         row.requestFocus()
     }
 
+    /** A faint outline for input boxes: their fill alone sits too close to the panel's colour to find at a glance. */
+    private fun fieldEdge() = (fg and 0xFFFFFF) or 0x40000000
+
     private fun settingsRow(title: String, value: String, action: () -> Unit): View {
         val bg = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0, 0)).apply { cornerRadius = dp(8).toFloat() }
         return LinearLayout(this).apply {
@@ -1237,11 +1252,16 @@ class MainActivity : Activity() {
             background = bg
             isFocusable = true
             isClickable = true
-            addView(label(title, 14f), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            addView(label(value, 13f).apply { alpha = 0.6f })
+            val name = label(title, 14f)
+            val state = label(value, 13f).apply { alpha = 0.6f }
+            addView(name, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(state)
             setOnClickListener { action() }
             setOnFocusChangeListener { _, focused ->
-                bg.colors = if (!focused) intArrayOf(0, 0) else if (dark) cardLit else intArrayOf(Color.WHITE, Color.WHITE)
+                bg.colors = if (focused) intArrayOf(fg, fg) else intArrayOf(0, 0)
+                name.setTextColor(if (focused) onFg else fg)
+                state.setTextColor(if (focused) onFg else fg)
+                state.alpha = if (focused) 0.75f else 0.6f
             }
         }
     }
@@ -1485,7 +1505,7 @@ class MainActivity : Activity() {
         val img = ImageView(this).apply {
             setImageDrawable(icon.mutate())
             scaleType = ImageView.ScaleType.FIT_CENTER
-            if (mono) setColorFilter(tint ?: fg)
+            if (mono) setColorFilter(tint?.let { readable(it) } ?: fg)
         }
         val text = label?.let {
             label(it, 13f).apply {
@@ -1554,6 +1574,28 @@ class MainActivity : Activity() {
         val x = ((l + r + 1 - side) / 2).coerceIn(0, size - side)
         val y = ((t + b + 1 - side) / 2).coerceIn(0, size - side)
         return Bitmap.createBitmap(bmp, x, y, side, side)
+    }
+
+    /**
+     * A brand colour nudged towards the theme's foreground until it stands out from the card at 3:1 (the bar for
+     * icons): Spotify green or VLC orange on the light theme's pale grey cards are only about 2:1 as they come.
+     */
+    private fun readable(c: Int): Int {
+        val card = if (dark) 0xFF0E0E11.toInt() else 0xFFE0E3E7.toInt() // the rest card, middle of its gradient
+        fun contrast(a: Int): Float {
+            val (hi, lo) = Color.luminance(a).let { la -> Color.luminance(card).let { lc -> maxOf(la, lc) to minOf(la, lc) } }
+            return (hi + 0.05f) / (lo + 0.05f)
+        }
+        var out = c
+        var mix = 0f
+        while (contrast(out) < 3f && mix < 1f) {
+            mix += 0.1f
+            out = Color.rgb(
+                (Color.red(c) * (1 - mix) + Color.red(fg) * mix).toInt(),
+                (Color.green(c) * (1 - mix) + Color.green(fg) * mix).toInt(),
+                (Color.blue(c) * (1 - mix) + Color.blue(fg) * mix).toInt())
+        }
+        return out
     }
 
     /** glyph() walks every pixel, too slow to redo on each row rebuild; kept per app until the app changes. */
@@ -2439,9 +2481,14 @@ class MainActivity : Activity() {
     private fun setupSpotlight() {
         val bg = GradientDrawable().apply {
             cornerRadius = dp(16).toFloat()
-            setColor(Color.TRANSPARENT)
+            setColor(spotlightVeil())
         }
         spotlightInfoBox.background = bg
+        // The arrows get a small disc in the ground colour, so they read on any backdrop.
+        for (arrow in arrayOf(spotlightPrev, spotlightNext)) {
+            arrow.background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor((ground and 0xFFFFFF) or 0x80000000.toInt()) }
+            arrow.setPadding(dp(4), dp(4), dp(4), dp(4))
+        }
         spotlightInfoBox.setPadding(dp(16), dp(10), dp(16), dp(10))
         spotlightPrev.setOnClickListener { cycleSpotlight(-1) }
         spotlightNext.setOnClickListener { cycleSpotlight(1) }
@@ -2451,13 +2498,19 @@ class MainActivity : Activity() {
         }
     }
 
+    /**
+     * A light veil behind the Spotlight text even at rest: it sits over the backdrop's unveiled middle, where a dark
+     * film still would swallow the light theme's dark text (and a bright one the dark theme's light text).
+     */
+    private fun spotlightVeil() = if (dark) 0x80000000.toInt() else 0x99F3F5F7.toInt()
+
     private fun updateSpotlightFocusState(targetFocus: View?) {
         val inSpotlight = isDescendantOf(targetFocus, spotlightContainer)
         spotlightOverview.visibility = if (inSpotlight) View.VISIBLE else View.GONE
         spotlightActions.visibility = if (inSpotlight) View.VISIBLE else View.GONE
-        for (arrow in arrayOf(spotlightPrev, spotlightNext)) arrow.animate().alpha(if (inSpotlight) 0.75f else 0.35f).setDuration(220).start()
+        for (arrow in arrayOf(spotlightPrev, spotlightNext)) arrow.animate().alpha(if (inSpotlight) 0.9f else 0.5f).setDuration(220).start()
         val bg = spotlightInfoBox.background as? GradientDrawable
-        bg?.setColor(if (inSpotlight) (if (dark) 0xAA181820.toInt() else 0xDDEEF2F7.toInt()) else Color.TRANSPARENT)
+        bg?.setColor(if (inSpotlight) (if (dark) 0xAA181820.toInt() else 0xDDEEF2F7.toInt()) else spotlightVeil())
         // Translate bottomSection downwards to give spotlight breathing room
         val targetTransY = if (inSpotlight) dp(65).toFloat() else 0f
         val targetAlpha = if (inSpotlight) 0.65f else 1f
@@ -2523,9 +2576,10 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(12), dp(7), dp(14), dp(7))
+                val rest = if (dark) 0xCC1C1C22.toInt() else 0xCCDCE0E8.toInt() // opaque enough for any backdrop
                 val btnBg = GradientDrawable().apply {
                     cornerRadius = dp(8).toFloat()
-                    setColor(if (dark) 0x6624242C else 0xCCDCE0E8.toInt())
+                    setColor(rest)
                 }
                 background = btnBg
                 isFocusable = true
@@ -2536,15 +2590,15 @@ class MainActivity : Activity() {
                 }
                 val txt = TextView(this@MainActivity).apply {
                     text = a.label
-                    setTextColor(if (dark) fg else 0xFF111214.toInt())
+                    setTextColor(fg)
                     textSize = 12f
                     setPadding(dp(6), 0, 0, 0)
                 }
                 addView(ic, dp(18), dp(18))
                 addView(txt)
                 setOnFocusChangeListener { _, focused ->
-                    btnBg.setColor(if (focused) (if (dark) 0xFF4A4A58.toInt() else 0xFF111214.toInt()) else (if (dark) 0x6624242C else 0xCCDCE0E8.toInt()))
-                    txt.setTextColor(if (focused && !dark) Color.WHITE else (if (dark) fg else 0xFF111214.toInt()))
+                    btnBg.setColor(if (focused) fg else rest)
+                    txt.setTextColor(if (focused) onFg else fg)
                     scaleX = if (focused) 1.08f else 1f
                     scaleY = if (focused) 1.08f else 1f
                 }
@@ -2861,14 +2915,12 @@ class MainActivity : Activity() {
         val SPOTLIGHT_EVERY = listOf(0, 5, 8, 10, 15, 30) // seconds between Spotlight titles; 0 = off
         const val PIN_TRIES = 5 // wrong PINs before a 30 s wait
         const val UNLOCKED_MS = 5 * 60_000L
-        const val UNLOCK_TO_EDIT = "Unlock to edit…"
         const val MEDIA_REQUEST = 3
         const val PER_APP = 3 // Continue Watching items per app
         val READ_PHOTOS = if (Build.VERSION.SDK_INT >= 33) "android.permission.READ_MEDIA_IMAGES" else "android.permission.READ_EXTERNAL_STORAGE"
         /** Minutes between folder photos. */
         val PHOTO_EVERY = listOf(1, 5, 10, 15, 30, 60, 1440)
         const val CHOSEN = "✓"
-        const val REMOVE_PHOTO = "Remove a photo…"
         const val REPO = "aradhyas8/Plume_Launcher"
         const val UPDATE_STATUS = "dev.plume.UPDATE_STATUS"
         const val WRITE_EPG ="com.android.providers.tv.permission.WRITE_EPG_DATA"
