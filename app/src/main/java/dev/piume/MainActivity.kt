@@ -170,6 +170,9 @@ class MainActivity : Activity() {
     private val io = Executors.newSingleThreadExecutor()
     // Posters get their own threads: one slow image server must not hold up the rest (or the row data).
     private val posterIo = Executors.newFixedThreadPool(3)
+    // Network work that can take a while (weather, update checks and downloads, city search) has its own threads,
+    // so an update download or a slow weather server never holds up the rows, which io reads from the TV.
+    private val netIo = Executors.newFixedThreadPool(2)
     // Spotlight's own thread: downloading the next backdrop ahead mustn't hold up the rows' data on io.
     private val spotlightIo = Executors.newSingleThreadExecutor()
     private val backdrops by lazy { BackdropCache(File(cacheDir, "spotlight")) }
@@ -248,6 +251,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
+        Problems.init(File(filesDir, "problems.log"))
         setContentView(R.layout.activity_main)
         appRow = findViewById(R.id.appRow)
         watchRow = findViewById(R.id.watchRow)
@@ -344,7 +348,11 @@ class MainActivity : Activity() {
     /** Auto theme flips at 7:00 and 19:00 even while the home screen just sits there. */
     private val themeTick = object : Runnable {
         override fun run() {
-            if (wantDark() != dark) recreate() else ui.postDelayed(this, 60_000L)
+            // Rebuilding the screen while someone uses it would throw them out of the panel or a half-done move.
+            // Wait until it's been left alone for a minute.
+            val busy = settingsScrim.visibility == View.VISIBLE || allApps.visibility == View.VISIBLE || editing ||
+                setupDialog != null || SystemClock.elapsedRealtime() - lastInput < 60_000L
+            if (wantDark() != dark && !busy) recreate() else ui.postDelayed(this, 60_000L)
         }
     }
 
@@ -391,6 +399,7 @@ class MainActivity : Activity() {
         io.shutdownNow()
         posterIo.shutdownNow()
         spotlightIo.shutdownNow()
+        netIo.shutdownNow()
         super.onDestroy()
     }
 
@@ -1024,6 +1033,26 @@ class MainActivity : Activity() {
         }
     }
 
+    /** The last problems (newest first), to see what went wrong; readable on a phone too, where lines fit. */
+    private fun showProblems() {
+        val recent = Problems.recent()
+        val rows = listOf(
+            page(getString(R.string.problems_on_phone)) { problemsOnPhone() },
+            page(getString(R.string.dialog_clear)) { Problems.clear(); showProblems() },
+        ) + recent.map { page(it) {} }
+        showPage(getString(R.string.setting_problems), rows) { renderSettings(PROBLEMS_ROW) }
+    }
+
+    private fun problemsOnPhone() {
+        val esc = { t: String -> t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") }
+        val list = Problems.recent().ifEmpty { listOf(getString(R.string.problems_none)) }
+        val page = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>Piume</title><style>body{font:14px ui-monospace,monospace;margin:0;padding:20px;background:#f7f8fa;color:#111214}
+            @media (prefers-color-scheme:dark){body{background:#09090b;color:#f5f5f7}} li{margin:0 0 10px;word-break:break-word}</style></head>
+            <body><h1 style="font:600 20px system-ui,sans-serif">${esc(getString(R.string.setting_problems))}</h1><ol>${list.joinToString("") { "<li>${esc(it)}</li>" }}</ol></body></html>"""
+        showPhoneLink(getString(R.string.setting_problems), PhoneTask(page, 0) { 405 to "" }, label("", 12f)) { showProblems() }
+    }
+
     /** The TMDB key typed or pasted on a phone: checked with TMDB, then saved like the Save row does. */
     private fun tmdbKeyFromPhone() {
         val status = label(getString(R.string.tmdb_phone_waiting), 14f)
@@ -1259,6 +1288,7 @@ class MainActivity : Activity() {
             page(getString(R.string.setting_home_button), toggle(homeServiceOn())) { toggleHomeButton() },
             page(getString(R.string.setting_default_launcher), if (isDefaultHome()) getString(R.string.plume_press_change) else getString(R.string.default_launcher_set_prompt)) { makeDefaultHome() },
             page(getString(R.string.setting_updates), updatesValue()) { showUpdates() },
+            page(getString(R.string.setting_problems), Problems.recent().size.let { if (it == 0) getString(R.string.problems_none) else "$it" }) { showProblems() },
             if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) null
             else page(getString(R.string.preview_home_setup)) { closeLauncherSettings(); previewHomeSetup() },
         )
@@ -2465,7 +2495,7 @@ class MainActivity : Activity() {
                 paintingsDir(this).deleteRecursively()
                 part.renameTo(paintingsDir(this))
             } catch (e: Exception) {
-                android.util.Log.w("Piume", "paintings download failed ($e)")
+                warn("paintings download failed ($e)")
                 part.deleteRecursively()
                 false
             }
@@ -2502,11 +2532,11 @@ class MainActivity : Activity() {
         if (checking || !force && System.currentTimeMillis() - prefs.getLong("upd_time", 0) < 24 * 3600_000L) return
         checking = true
         if (force) refreshSettings(UPDATE_ROW)
-        io.execute {
+        netIo.execute {
             val latest = try {
                 getJson("https://api.github.com/repos/$REPO/releases/latest").getString("tag_name").removePrefix("v")
             } catch (e: Exception) {
-                android.util.Log.w("Piume", "update check failed ($e)")
+                warn("update check failed ($e)")
                 null
             }
             if (latest != null) prefs.edit().putString("upd_ver", latest).putLong("upd_time", System.currentTimeMillis()).apply()
@@ -2577,7 +2607,7 @@ class MainActivity : Activity() {
         updating = true
         refreshSettings(UPDATE_ROW)
         val installer = packageManager.packageInstaller
-        io.execute {
+        netIo.execute {
             val ok = try {
                 val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
                 params.setAppPackageName(packageName)
@@ -2603,7 +2633,7 @@ class MainActivity : Activity() {
                 }
                 true
             } catch (e: Exception) {
-                android.util.Log.w("Piume", "update download failed ($e)")
+                warn("update download failed ($e)")
                 false
             }
             ui.post {
@@ -2626,7 +2656,7 @@ class MainActivity : Activity() {
         updating = false
         if (status != PackageInstaller.STATUS_SUCCESS) {
             val why = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
-            android.util.Log.w("Piume", "update install failed: $status $why")
+            warn("update install failed: $status $why")
             if (status != PackageInstaller.STATUS_FAILURE_ABORTED) {
                 Toast.makeText(this, getString(R.string.toast_update_install_failed), Toast.LENGTH_LONG).show()
             }
@@ -2649,7 +2679,7 @@ class MainActivity : Activity() {
     private fun refreshWeather() {
         if (prefs.getString("weather", "off") == "off") return
         if (System.currentTimeMillis() - prefs.getLong("wx_time", 0) < 25 * 60_000L) return
-        io.execute {
+        netIo.execute {
             try {
                 if (!manualCity() && System.currentTimeMillis() - prefs.getLong("geo_time", 0) > 6 * 3600_000L) {
                     val geo = getJson("https://ipwho.is/?fields=success,city,latitude,longitude")
@@ -2668,7 +2698,7 @@ class MainActivity : Activity() {
                     .putLong("wx_time", System.currentTimeMillis()).apply()
                 ui.post { showWeather() }
             } catch (e: Exception) {
-                android.util.Log.w("Piume", "weather failed ($e)") // keep the last reading; next tick retries
+                warn("weather failed ($e)") // keep the last reading; next tick retries
             }
         }
     }
@@ -2732,7 +2762,7 @@ class MainActivity : Activity() {
     private fun searchCity(query: String) {
         if (query.isEmpty()) return
         pickCity(query, status = getString(R.string.searching))
-        io.execute {
+        netIo.execute {
             val found = try {
                 val r = getJson("https://geocoding-api.open-meteo.com/v1/search?count=8&format=json" +
                     "&language=${java.util.Locale.getDefault().language}&name=${URLEncoder.encode(query, "UTF-8")}")
@@ -3215,7 +3245,7 @@ class MainActivity : Activity() {
         }
         val key = prefs.getString("tmdb_api_key", null)
         if (key == null || !TmdbClient.needsLookup(a.pkg)) return start(null)
-        io.execute {
+        spotlightIo.execute {
             val ref = TmdbClient.lookup(key, a.pkg, item, lang)
             ui.post { start(ref) }
         }
@@ -3239,7 +3269,7 @@ class MainActivity : Activity() {
             for (url in urls) try {
                 backdrops.get(url) { openStream(it) }
             } catch (e: Exception) {
-                android.util.Log.w("Piume", "backdrop prefetch failed ($e)") // shown later from the network instead
+                warn("backdrop prefetch failed ($e)") // shown later from the network instead
             }
         }
     }
@@ -3422,7 +3452,7 @@ class MainActivity : Activity() {
             val bmp = try {
                 decode(uri)
             } catch (e: Exception) {
-                android.util.Log.w("Piume", "poster failed: $uri ($e)") // retried by retryPosters()
+                warn("poster failed: $uri ($e)") // retried by retryPosters()
                 null
             } finally {
                 loading.remove(uri)
@@ -3581,6 +3611,7 @@ class MainActivity : Activity() {
         const val HOME_BUTTON_ROW = SYSTEM_SECTION * SECTION + 1 // after "Set up Home button"
         const val DEFAULT_HOME_ROW = HOME_BUTTON_ROW + 1
         const val UPDATE_ROW = HOME_BUTTON_ROW + 2
+        const val PROBLEMS_ROW = HOME_BUTTON_ROW + 3
         val SPOTLIGHT_EVERY = listOf(0, 5, 8, 10, 15, 30) // seconds between Spotlight titles; 0 = off
         val ROW_ALIGN = linkedMapOf( // setting -> its name, and the row's gravity in the scroller
             "left" to (R.string.align_left to Gravity.START),

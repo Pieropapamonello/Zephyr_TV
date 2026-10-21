@@ -38,7 +38,7 @@ object TmdbClient {
         val json = try {
             JSONObject(get(apiKey, "/trending/$type/day?language=$language"))
         } catch (e: Exception) {
-            android.util.Log.w("Piume", "TMDB trending failed (${redact(e)})")
+            warn("TMDB trending failed (${redact(e)})")
             return emptyList()
         }
         val genres = genres(apiKey, language)
@@ -78,7 +78,7 @@ object TmdbClient {
         }
         map.also { genreCache[language] = it }
     } catch (e: Exception) {
-        android.util.Log.w("Piume", "TMDB genres failed (${redact(e)})")
+        warn("TMDB genres failed (${redact(e)})")
         emptyMap()
     }
 
@@ -149,7 +149,7 @@ object TmdbClient {
             }
             apps
         } catch (e: Exception) {
-            android.util.Log.w("Piume", "TMDB providers failed (${redact(e)})")
+            warn("TMDB providers failed (${redact(e)})")
             return null
         }
         providerCache[key] = found
@@ -203,7 +203,7 @@ object TmdbClient {
                     v.optString("iso_639_1"), v.optString("published_at"))
             }
         } catch (e: Exception) {
-            android.util.Log.w("Piume", "TMDB videos failed (${redact(e)})")
+            warn("TMDB videos failed (${redact(e)})")
             return null // not cached: a network hiccup shouldn't stick
         }
         val best = bestTrailer(videos, language)?.key
@@ -219,7 +219,7 @@ object TmdbClient {
         val id = try {
             JSONObject(get(apiKey, "/$type/${item.id}/external_ids")).optString("imdb_id").takeIf { it.startsWith("tt") }
         } catch (e: Exception) {
-            android.util.Log.w("Piume", "TMDB external ids failed (${redact(e)})")
+            warn("TMDB external ids failed (${redact(e)})")
             return null // not cached: a network hiccup shouldn't stick
         }
         imdbCache[key] = id.orEmpty()
@@ -282,7 +282,7 @@ object TmdbClient {
             else -> null
         }.also { conn.disconnect() }
     } catch (e: Exception) {
-        android.util.Log.w("Piume", "TMDB key check failed (${redact(e)})")
+        warn("TMDB key check failed (${redact(e)})")
         null
     }
 
@@ -290,7 +290,7 @@ object TmdbClient {
      * An error's text without the API key: a failed request's exception names its URL, and a v3 key travels in
      * it as a parameter, so logging it plainly would put the key in the TV's log for any app with log access.
      */
-    internal fun redact(e: Throwable) = e.toString().replace(Regex("api_key=[^&\\s)]+"), "api_key=…")
+    internal fun redact(e: Throwable) = Problems.redactKeys(e.toString())
 
     private fun viewIn(pm: android.content.pm.PackageManager, pkg: String, uri: String) =
         Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {

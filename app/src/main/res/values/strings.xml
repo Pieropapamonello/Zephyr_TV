@@ -267,4 +267,7 @@
     <string name="setting_tmdb_key_phone">Enter from your phone…</string>
     <string name="tmdb_phone_waiting">Waiting for the key…</string>
     <string name="setting_tmdb_providers">Only services that have the title</string>
+    <string name="setting_problems">Recent problems</string>
+    <string name="problems_none">None</string>
+    <string name="problems_on_phone">Read them on your phone…</string>
 </resources>

@@ -59,7 +59,7 @@ internal class PhoneLink(private val tempDir: File, private val task: PhoneTask)
                     try {
                         s.use { handle(it) }
                     } catch (e: Exception) {
-                        android.util.Log.w("Piume", "phone request failed ($e)")
+                        warn("phone request failed ($e)")
                     }
                 }
             } catch (e: java.util.concurrent.RejectedExecutionException) {

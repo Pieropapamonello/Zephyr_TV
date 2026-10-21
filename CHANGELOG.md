@@ -26,6 +26,9 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - Security: the phone code for wallpapers and the TMDB key is now long and random. Other people on your Wi-Fi cannot guess it.
 - The phone pages are in the language of the TV.
 - Spotlight shows a streaming service only if the title is on it in your country. Nuvio, Stremio and YouTube trailer always show. To show all the services, turn off **Piume settings → TMDB Spotlight → Only services that have the title**.
+- **Piume settings → System → Recent problems** shows the last things that did not work, for example a failed download. You can read them on your phone too.
+- The automatic theme waits until you stop using the TV before it changes.
+- Updates and weather downloads no longer slow down the rows.
 
 ## 1.4
 
