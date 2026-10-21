@@ -205,6 +205,28 @@ object TmdbClient {
 
     /** An ACTION_VIEW of [uri] for [pkg] only, or null when the app doesn't take that link. */
     /**
+     * Whether TMDB accepts [apiKey]: true, false (it refused it), or null when TMDB couldn't be asked (no network).
+     * Network: call it off the UI thread.
+     */
+    fun check(apiKey: String): Boolean? = try {
+        val bearer = apiKey.length > 40
+        val url = if (bearer) "$BASE_URL/configuration" else "$BASE_URL/configuration?api_key=" + Uri.encode(apiKey)
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 6000
+            readTimeout = 6000
+            if (bearer) setRequestProperty("Authorization", "Bearer $apiKey")
+        }
+        when (conn.responseCode) {
+            in 200..299 -> true
+            401, 403 -> false
+            else -> null
+        }.also { conn.disconnect() }
+    } catch (e: Exception) {
+        android.util.Log.w("Piume", "TMDB key check failed (${redact(e)})")
+        null
+    }
+
+    /**
      * An error's text without the API key: a failed request's exception names its URL, and a v3 key travels in
      * it as a parameter, so logging it plainly would put the key in the TV's log for any app with log access.
      */

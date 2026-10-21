@@ -249,4 +249,21 @@
     <string name="align_left">Sinistra</string>
     <string name="align_centre">Centro</string>
     <string name="align_right">Destra</string>
+    <!-- Phone link (QR) pages -->
+    <string name="phone_send">Invia alla TV</string>
+    <string name="phone_sending">Invio in corso…</string>
+    <string name="phone_unreachable">TV non raggiungibile. La schermata è ancora aperta?</string>
+    <string name="phone_wallpaper_title">Aggiungi uno sfondo</string>
+    <string name="phone_wallpaper_intro">Scegli una foto. Compare sulla TV un attimo dopo l\'invio.</string>
+    <string name="phone_choose_photo">Scegli una foto</string>
+    <string name="phone_wallpaper_added">\"%1$s\" aggiunta alla TV. Puoi inviarne un\'altra.</string>
+    <string name="phone_not_a_photo">Non sembra una foto che la TV possa aprire.</string>
+    <string name="phone_tmdb_title">Chiave API TMDB</string>
+    <string name="phone_tmdb_intro">Incolla la chiave API o il token di accesso in lettura di TMDB. Li trovi su themoviedb.org, in Impostazioni → API.</string>
+    <string name="phone_tmdb_hint">Chiave API o token di accesso</string>
+    <string name="phone_tmdb_saved">Chiave salvata sulla TV. Spotlight attivo.</string>
+    <string name="phone_tmdb_refused">TMDB non accetta questa chiave. Controllala e riprova.</string>
+    <string name="phone_tmdb_unchecked">Chiave salvata, ma non è stato possibile verificarla con TMDB.</string>
+    <string name="setting_tmdb_key_phone">Inserisci dal telefono…</string>
+    <string name="tmdb_phone_waiting">In attesa della chiave…</string>
 </resources>

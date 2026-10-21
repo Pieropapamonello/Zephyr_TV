@@ -22,6 +22,9 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - Security: other apps cannot make Piume start their apps through the update screen.
 - Security: a card in Continue Watching can only open the app that added it.
 - Security: Android no longer copies Piume settings and your TMDB key to backups.
+- You can enter your TMDB API key from your phone. Select **Piume settings → TMDB Spotlight → TMDB API Key → Enter from your phone**, then scan the code. Piume checks the key with TMDB.
+- Security: the phone code for wallpapers and the TMDB key is now long and random. Other people on your Wi-Fi cannot guess it.
+- The phone pages are in the language of the TV.
 
 ## 1.4
 

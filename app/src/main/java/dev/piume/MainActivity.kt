@@ -967,48 +967,78 @@ class MainActivity : Activity() {
         }) { pickWallpaper(forDark) }
     }
 
-    private var upload: UploadServer? = null
+    private var upload: PhoneLink? = null
 
     /**
      * "Add from phone": a QR code for a page served from this TV. The phone posts a photo, we turn it into a
      * wallpaper and show it at once. The server runs only while this panel is open.
      */
     private fun uploadWallpaper(forDark: Boolean) {
-        val ip = lanAddress() ?: return Toast.makeText(this, getString(R.string.toast_connect_network), Toast.LENGTH_LONG).show()
         val dir = wallpaperDir() ?: return
-        val status = label(getString(R.string.upload_waiting), 14f).apply { gravity = Gravity.CENTER; maxLines = 2 }
-        val server = try {
-            UploadServer((1000..9999).random().toString(), File(cacheDir, "upload.tmp")) { file ->
-                val saved = importWallpaper(file, dir) ?: return@UploadServer null
-                ui.post {
-                    setWallpaper(forDark, "file:${saved.name}")
-                    status.text = getString(R.string.upload_added_status, saved.nameWithoutExtension)
-                }
-                saved.nameWithoutExtension
+        val status = label(getString(R.string.upload_waiting), 14f)
+        val page = PhonePages.file(phoneTexts(R.string.phone_wallpaper_title, R.string.phone_wallpaper_intro), getString(R.string.phone_choose_photo), "image/*")
+        showPhoneLink(getString(R.string.add_from_phone_title), PhoneTask(page, 25L * 1024 * 1024) { file ->
+            val saved = importWallpaper(file, dir) ?: return@PhoneTask 415 to getString(R.string.phone_not_a_photo)
+            ui.post {
+                setWallpaper(forDark, "file:${saved.name}")
+                status.text = getString(R.string.upload_added_status, saved.nameWithoutExtension)
             }
+            200 to getString(R.string.phone_wallpaper_added, saved.nameWithoutExtension)
+        }, status) { pickWallpaper(forDark) }
+    }
+
+    private fun phoneTexts(title: Int, intro: Int) = PhoneTexts(getString(title), getString(intro),
+        getString(R.string.phone_send), getString(R.string.phone_sending), getString(R.string.phone_unreachable))
+
+    /**
+     * A settings page with a QR code that opens [task] on a phone on the same Wi-Fi, for anything easier done on a
+     * phone than with a remote (a photo, a long key). The link works while the page is open; [status] shows under
+     * the code, for the task to report what arrived. [back] leaves the page.
+     */
+    private fun showPhoneLink(title: String, task: PhoneTask, status: TextView, back: () -> Unit) {
+        val ip = lanAddress() ?: return Toast.makeText(this, getString(R.string.toast_connect_network), Toast.LENGTH_LONG).show()
+        val link = try {
+            PhoneLink(cacheDir, task)
         } catch (e: IOException) {
             return Toast.makeText(this, getString(R.string.toast_upload_server_failed), Toast.LENGTH_LONG).show()
         }
-        upload = server
-        val url = "http://$ip:${server.port}/${server.code}"
+        upload = link
+        val url = link.url(ip)
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(0, dp(4), 0, dp(12))
             addView(ImageView(this@MainActivity).apply { setImageBitmap(qrBitmap(url, dp(200))) })
-            addView(label(url, 14f).apply { gravity = Gravity.CENTER; setPadding(0, dp(12), 0, dp(4)) })
+            addView(label(url, 12f).apply { gravity = Gravity.CENTER; setPadding(0, dp(12), 0, dp(4)) })
             addView(label(getString(R.string.upload_qr_instructions), 12f).apply {
                 gravity = Gravity.CENTER
                 alpha = 0.6f
                 maxLines = 3
             })
-            addView(status.apply { setPadding(0, dp(12), 0, 0) })
+            addView(status.apply { gravity = Gravity.CENTER; maxLines = 2; setPadding(0, dp(12), 0, 0) })
         }
-        showPage(getString(R.string.add_from_phone_title), listOf(page(getString(R.string.dialog_done)) { pickWallpaper(forDark) }), top = box) { pickWallpaper(forDark) }
+        showPage(title, listOf(page(getString(R.string.dialog_done)) { back() }), top = box, back = back)
         pageExit = {
-            server.stop()
-            if (upload === server) upload = null
+            link.stop()
+            if (upload === link) upload = null
         }
+    }
+
+    /** The TMDB key typed or pasted on a phone: checked with TMDB, then saved like the Save row does. */
+    private fun tmdbKeyFromPhone() {
+        val status = label(getString(R.string.tmdb_phone_waiting), 14f)
+        val page = PhonePages.text(phoneTexts(R.string.phone_tmdb_title, R.string.phone_tmdb_intro), getString(R.string.phone_tmdb_hint))
+        showPhoneLink(getString(R.string.setting_tmdb_api_key), PhoneTask(page, 2048) { file ->
+            val key = file.readText().trim()
+            if (key.length < 16 || key.any { it.isWhitespace() }) return@PhoneTask 400 to getString(R.string.phone_tmdb_refused)
+            val ok = TmdbClient.check(key)
+            if (ok == false) return@PhoneTask 400 to getString(R.string.phone_tmdb_refused)
+            ui.post {
+                saveTmdbKey(key)
+                status.text = getString(R.string.phone_tmdb_saved)
+            }
+            200 to getString(if (ok == true) R.string.phone_tmdb_saved else R.string.phone_tmdb_unchecked)
+        }, status) { renderSettings(TMDB_KEY_ROW) }
     }
 
     /** The TV's own address on the home network (IPv4: easy to read and type). */
@@ -1295,6 +1325,14 @@ class MainActivity : Activity() {
 
     private fun cycleName(seconds: Int) = if (seconds == 0) getString(R.string.tmdb_cycle_off) else getString(R.string.tmdb_cycle_seconds, seconds)
 
+    /** A new TMDB key turns Spotlight on, as both wallpapers. */
+    private fun saveTmdbKey(key: String) {
+        prefs.edit().putString("tmdb_api_key", key).apply()
+        tmdbTrending = emptyList()
+        setWallpaper(false, "tmdb:trending")
+        setWallpaper(true, "tmdb:trending")
+    }
+
     private fun configureTmdbApiKey() {
         val currentKey = prefs.getString("tmdb_api_key", "") ?: ""
         val input = EditText(this).apply {
@@ -1319,14 +1357,11 @@ class MainActivity : Activity() {
             addView(input)
         }
         val rows = listOf(
+            // Typing a 32-character key (or a 200-character token) with a remote is no fun: paste it on a phone.
+            page(getString(R.string.setting_tmdb_key_phone)) { tmdbKeyFromPhone() },
             page(getString(R.string.dialog_save)) {
                 val key = input.text?.toString()?.trim()
-                if (!key.isNullOrBlank()) {
-                    prefs.edit().putString("tmdb_api_key", key).apply()
-                    tmdbTrending = emptyList()
-                    setWallpaper(false, "tmdb:trending")
-                    setWallpaper(true, "tmdb:trending")
-                }
+                if (!key.isNullOrBlank()) saveTmdbKey(key)
                 renderSettings(TMDB_KEY_ROW)
             },
             page(getString(R.string.dialog_clear)) {

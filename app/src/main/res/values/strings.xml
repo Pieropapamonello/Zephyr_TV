@@ -249,4 +249,21 @@
     <string name="align_left">Left</string>
     <string name="align_centre">Centre</string>
     <string name="align_right">Right</string>
+    <!-- Phone link (QR) pages -->
+    <string name="phone_send">Send to TV</string>
+    <string name="phone_sending">Sending…</string>
+    <string name="phone_unreachable">Couldn\'t reach the TV. Is its screen still open?</string>
+    <string name="phone_wallpaper_title">Add a wallpaper</string>
+    <string name="phone_wallpaper_intro">Pick a photo. It shows on your TV a moment after you send it.</string>
+    <string name="phone_choose_photo">Choose photo</string>
+    <string name="phone_wallpaper_added">Added \"%1$s\" to your TV. You can send another.</string>
+    <string name="phone_not_a_photo">That doesn\'t look like a photo the TV can open.</string>
+    <string name="phone_tmdb_title">TMDB API key</string>
+    <string name="phone_tmdb_intro">Paste your TMDB API key or API read access token. You find both on themoviedb.org, in Settings → API.</string>
+    <string name="phone_tmdb_hint">API key or read access token</string>
+    <string name="phone_tmdb_saved">Key saved on the TV. Spotlight is on.</string>
+    <string name="phone_tmdb_refused">TMDB doesn\'t accept this key. Check it and try again.</string>
+    <string name="phone_tmdb_unchecked">Key saved, but TMDB couldn\'t be reached to check it.</string>
+    <string name="setting_tmdb_key_phone">Enter from your phone…</string>
+    <string name="tmdb_phone_waiting">Waiting for the key…</string>
 </resources>
