@@ -283,4 +283,11 @@
     <string name="phone_choose_file">Scegli il file</string>
     <string name="phone_restore_done">Ripristinate %1$d impostazioni. Piume si riavvia sulla TV.</string>
     <string name="phone_restore_bad">Non è un file di backup di Piume.</string>
+    <!-- Clock and night mode -->
+    <string name="setting_clock">Orologio</string>
+    <string name="clock_24">24 ore</string>
+    <string name="clock_12">12 ore</string>
+    <string name="setting_night">Modalità notte</string>
+    <string name="setting_night_from">Inizio modalità notte</string>
+    <string name="setting_night_to">Fine modalità notte</string>
 </resources>

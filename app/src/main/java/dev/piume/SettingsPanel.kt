@@ -16,6 +16,7 @@ import android.widget.Toast
 import dev.piume.MainActivity.Companion.ALIGN_ROW
 import dev.piume.MainActivity.Companion.APPS_SECTION
 import dev.piume.MainActivity.Companion.CHOSEN
+import dev.piume.MainActivity.Companion.CLOCK_ROW
 import dev.piume.MainActivity.Companion.FADE_ROW
 import dev.piume.MainActivity.Companion.HDMI
 import dev.piume.MainActivity.Companion.HIDDEN_ROW
@@ -23,6 +24,9 @@ import dev.piume.MainActivity.Companion.ICONS_ROW
 import dev.piume.MainActivity.Companion.LOCK_ROW
 import dev.piume.MainActivity.Companion.LOOK_SECTION
 import dev.piume.MainActivity.Companion.NAMES_ROW
+import dev.piume.MainActivity.Companion.NIGHT_FROM_ROW
+import dev.piume.MainActivity.Companion.NIGHT_ROW
+import dev.piume.MainActivity.Companion.NIGHT_TO_ROW
 import dev.piume.MainActivity.Companion.PIN_KEYS
 import dev.piume.MainActivity.Companion.PIN_TRIES
 import dev.piume.MainActivity.Companion.ROW_ALIGN
@@ -168,6 +172,19 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                 renderSettings(WEATHER_UNITS_ROW)
             },
             page(getString(R.string.weather_location), if (manualCity()) prefs.getString(K.GEO_CITY, null) ?: "" else getString(R.string.automatic)) { pickCity() },
+            page(getString(R.string.setting_clock), clockName(prefs.getString(K.CLOCK_24, "auto")!!)) {
+                val next = mapOf("auto" to "24", "24" to "12", "12" to "auto")[prefs.getString(K.CLOCK_24, "auto")] ?: "auto"
+                prefs.edit().putString(K.CLOCK_24, next).apply()
+                applyClock()
+                renderSettings(CLOCK_ROW)
+            },
+            page(getString(R.string.setting_night), toggle(prefs.getBoolean(K.NIGHT, false))) {
+                prefs.edit().putBoolean(K.NIGHT, !prefs.getBoolean(K.NIGHT, false)).apply()
+                applyNight()
+                renderSettings(NIGHT_ROW)
+            },
+            page(getString(R.string.setting_night_from), hourName(nightFrom())) { pickNightHour(K.NIGHT_FROM, R.string.setting_night_from, NIGHT_FROM_ROW) },
+            page(getString(R.string.setting_night_to), hourName(nightTo())) { pickNightHour(K.NIGHT_TO, R.string.setting_night_to, NIGHT_TO_ROW) },
         )
     }
     APPS_SECTION -> {
@@ -566,3 +583,22 @@ internal fun MainActivity.switch(on: Boolean, lit: Boolean = false) = FrameLayou
         marginEnd = dp(3)
     })
 }
+
+internal fun MainActivity.clockName(v: String) = getString(when (v) {
+    "24" -> R.string.clock_24
+    "12" -> R.string.clock_12
+    else -> R.string.automatic
+})
+
+/** Whole hours, for when night mode starts or ends. */
+internal fun MainActivity.pickNightHour(key: String, title: Int, row: Int) {
+    val current = if (key == K.NIGHT_FROM) nightFrom() else nightTo()
+    showPage(getString(title), (0 until 24).map { h ->
+        page(hourName(h * 60), if (h * 60 == current) CHOSEN else "") {
+            prefs.edit().putInt(key, h * 60).apply()
+            applyNight()
+            renderSettings(row)
+        }
+    }, current / 60) { renderSettings(row) }
+}
+

@@ -119,6 +119,7 @@ class MainActivity : Activity() {
     internal val backdrops by lazy { BackdropCache(File(cacheDir, "spotlight")) }
     internal var lastInput = SystemClock.elapsedRealtime() // last key press, for pausing Spotlight when nobody watches
     internal var spotlightIdle = false
+    internal var nightShown = false // night mode's dimming is showing
     internal val loading = java.util.Collections.synchronizedSet(HashSet<String>())
     internal val ui = Handler(Looper.getMainLooper())
     internal val posters = object : LruCache<String, Bitmap>(6 * 1024 * 1024) {
@@ -211,6 +212,7 @@ class MainActivity : Activity() {
         spotlightPrev = findViewById(R.id.spotlightPrev)
         spotlightNext = findViewById(R.id.spotlightNext)
         applyTheme()
+        applyClock()
         setupSpotlight() // after applyTheme: its veil and arrow discs use the theme's colours
         loadWallpaper()
 
@@ -275,6 +277,8 @@ class MainActivity : Activity() {
         ui.removeCallbacks(weatherTick)
         ui.post(weatherTick)
         ui.postDelayed(themeTick, 60_000L)
+        ui.removeCallbacks(nightTick)
+        ui.post(nightTick)
         ui.removeCallbacks(wallpaperTick)
         ui.post(wallpaperTick)
         lastInput = SystemClock.elapsedRealtime() // back from an app: someone is here
@@ -284,6 +288,14 @@ class MainActivity : Activity() {
         if (galleryOn() && photoScreensaver() == null && !paintingsReady(this)) downloadPaintings {}
         checkUpdate(force = false)
         ui.post { updateBadge() } // after layout, so the icon has its size
+    }
+
+    /** Night mode starts and ends on time even while the home screen just sits there. */
+    internal val nightTick = object : Runnable {
+        override fun run() {
+            applyNight()
+            ui.postDelayed(this, 60_000L)
+        }
     }
 
     /** Auto theme flips at 7:00 and 19:00 even while the home screen just sits there. */
@@ -317,6 +329,7 @@ class MainActivity : Activity() {
         ui.removeCallbacks(themeTick)
         ui.removeCallbacks(wallpaperTick)
         ui.removeCallbacks(spotlightTick)
+        ui.removeCallbacks(nightTick)
         if (editing) endEdit()
         super.onPause()
     }
@@ -1633,7 +1646,7 @@ class MainActivity : Activity() {
                 spotlightIdle = true
                 return
             }
-            val busy = currentFocus?.parent === spotlightActions || settingsScrim.visibility == View.VISIBLE ||
+            val busy = isNight() || currentFocus?.parent === spotlightActions || settingsScrim.visibility == View.VISIBLE ||
                 allApps.visibility == View.VISIBLE || editing || !hasWindowFocus()
             if (busy) restartSpotlightTick() else cycleSpotlight(1)
         }
@@ -1717,6 +1730,10 @@ class MainActivity : Activity() {
         const val WEATHER_ROW = THEME_ROW + 5
         const val WEATHER_UNITS_ROW = THEME_ROW + 6
         const val CITY_ROW = THEME_ROW + 7
+        const val CLOCK_ROW = THEME_ROW + 8
+        const val NIGHT_ROW = THEME_ROW + 9
+        const val NIGHT_FROM_ROW = THEME_ROW + 10
+        const val NIGHT_TO_ROW = THEME_ROW + 11
         const val SORT_ROW = APPS_SECTION * SECTION + 1
         const val ROW_APPS_ROW = APPS_SECTION * SECTION + 2
         const val ALIGN_ROW = APPS_SECTION * SECTION + 3
