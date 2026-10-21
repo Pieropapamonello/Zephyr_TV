@@ -19,7 +19,7 @@ class HomeOverride : AccessibilityService() {
     /** Turned off, from Piume's switch or Android's Accessibility settings: the app mustn't turn it back on. */
     override fun onUnbind(intent: Intent?): Boolean {
         running = null
-        getSharedPreferences("home", MODE_PRIVATE).edit().putBoolean("home_off", true).apply()
+        getSharedPreferences(K.FILE, MODE_PRIVATE).edit().putBoolean(K.HOME_OFF, true).apply()
         return super.onUnbind(intent)
     }
 

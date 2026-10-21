@@ -1,0 +1,69 @@
+package dev.piume
+
+/**
+ * Every key Piume keeps settings and state under, in one place: a mistyped key is a setting that silently never
+ * saves. They live in the "home" preferences file (Plume's name, kept so the code stays a clean fork of it).
+ * Per-app entries add the package to a prefix: "t_<package>" (when an app was last opened from a card),
+ * "n_<package>" (how often it was opened from the row).
+ */
+internal object K {
+    const val FILE = "home"
+
+    // Look
+    const val THEME = "theme"
+    const val WP_LIGHT = "wp_light"
+    const val WP_DARK = "wp_dark"
+    const val WP_FADE = "wp_fade"
+    const val WP_EVERY = "wp_every"
+    const val WP_PHOTO_LIGHT = "wp_photo_light"
+    const val WP_PHOTO_DARK = "wp_photo_dark"
+    const val WP_PHOTO_AT_LIGHT = "wp_photo_at_light"
+    const val WP_PHOTO_AT_DARK = "wp_photo_at_dark"
+    const val COLOUR_ICONS = "colour_icons"
+
+    // Apps row
+    const val SORT = "sort"
+    const val ORDER = "order"
+    const val ROW_HIDDEN = "row_hidden"
+    const val ROW_ALIGN = "row_align"
+    const val NAMES = "names"
+    const val LOCK_PIN = "lock_pin"
+    const val TIP_MOVE = "tip_move"
+
+    // Continue Watching
+    const val HIDDEN_WATCH = "hidden_watch"
+    const val CW_OFF = "cw_off"
+
+    // Spotlight
+    const val TMDB_API_KEY = "tmdb_api_key"
+    const val TMDB_LANG = "tmdb_lang"
+    const val TMDB_TYPE = "tmdb_type"
+    const val TMDB_DEFAULT_APPS = "tmdb_default_apps"
+    const val TMDB_CYCLE = "tmdb_cycle"
+    const val TMDB_PROVIDERS = "tmdb_providers"
+
+    // Weather
+    const val WEATHER = "weather"
+    const val WX_UNIT = "wx_unit"
+    const val WX_TEMP = "wx_temp"
+    const val WX_CODE = "wx_code"
+    const val WX_TIME = "wx_time"
+    const val GEO_MANUAL = "geo_manual"
+    const val GEO_CITY = "geo_city"
+    const val GEO_LAT = "geo_lat"
+    const val GEO_LON = "geo_lon"
+    const val GEO_TIME = "geo_time"
+
+    // Screensaver
+    const val SS_FOLDER = "ss_folder"
+    const val PREV_SCREENSAVER = "prev_screensaver"
+
+    // System
+    const val HOME_OFF = "home_off"
+    const val SETUP_SHOWN = "setup_shown"
+    const val REOPEN_ROW = "reopen_row"
+    const val UPD_VER = "upd_ver"
+    const val UPD_TIME = "upd_time"
+    const val UPD_TOLD = "upd_told"
+    const val SEEN_NOTES = "seen_notes"
+}

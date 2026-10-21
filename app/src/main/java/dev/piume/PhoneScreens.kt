@@ -1,0 +1,132 @@
+package dev.piume
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.net.ConnectivityManager
+import android.view.Gravity
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import dev.piume.MainActivity.Companion.PROBLEMS_ROW
+import dev.piume.MainActivity.Companion.TMDB_KEY_ROW
+import java.io.IOException
+
+// Screens that hand a job to a phone over a QR code (PhoneLink): wallpapers, the TMDB key, recent problems.
+// Functions of MainActivity, kept here by topic; their state lives in MainActivity.
+
+/**
+ * "Add from phone": a QR code for a page served from this TV. The phone posts a photo, we turn it into a
+ * wallpaper and show it at once. The server runs only while this panel is open.
+ */
+internal fun MainActivity.uploadWallpaper(forDark: Boolean) {
+    val dir = wallpaperDir() ?: return
+    val status = label(getString(R.string.upload_waiting), 14f)
+    val page = PhonePages.file(phoneTexts(R.string.phone_wallpaper_title, R.string.phone_wallpaper_intro), getString(R.string.phone_choose_photo), "image/*")
+    showPhoneLink(getString(R.string.add_from_phone_title), PhoneTask(page, 25L * 1024 * 1024) { file ->
+        val saved = importWallpaper(file, dir) ?: return@PhoneTask 415 to getString(R.string.phone_not_a_photo)
+        ui.post {
+            setWallpaper(forDark, "file:${saved.name}")
+            status.text = getString(R.string.upload_added_status, saved.nameWithoutExtension)
+        }
+        200 to getString(R.string.phone_wallpaper_added, saved.nameWithoutExtension)
+    }, status) { pickWallpaper(forDark) }
+}
+
+internal fun MainActivity.phoneTexts(title: Int, intro: Int) = PhoneTexts(getString(title), getString(intro),
+    getString(R.string.phone_send), getString(R.string.phone_sending), getString(R.string.phone_unreachable))
+
+/**
+ * A settings page with a QR code that opens [task] on a phone on the same Wi-Fi, for anything easier done on a
+ * phone than with a remote (a photo, a long key). The link works while the page is open; [status] shows under
+ * the code, for the task to report what arrived. [back] leaves the page.
+ */
+internal fun MainActivity.showPhoneLink(title: String, task: PhoneTask, status: TextView, back: () -> Unit) {
+    val ip = lanAddress() ?: return Toast.makeText(this, getString(R.string.toast_connect_network), Toast.LENGTH_LONG).show()
+    val link = try {
+        PhoneLink(cacheDir, task)
+    } catch (e: IOException) {
+        return Toast.makeText(this, getString(R.string.toast_upload_server_failed), Toast.LENGTH_LONG).show()
+    }
+    upload = link
+    val url = link.url(ip)
+    val box = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_HORIZONTAL
+        setPadding(0, dp(4), 0, dp(12))
+        addView(ImageView(this@showPhoneLink).apply { setImageBitmap(qrBitmap(url, dp(200))) })
+        addView(label(url, 12f).apply { gravity = Gravity.CENTER; setPadding(0, dp(12), 0, dp(4)) })
+        addView(label(getString(R.string.upload_qr_instructions), 12f).apply {
+            gravity = Gravity.CENTER
+            alpha = 0.6f
+            maxLines = 3
+        })
+        addView(status.apply { gravity = Gravity.CENTER; maxLines = 2; setPadding(0, dp(12), 0, 0) })
+    }
+    showPage(title, listOf(page(getString(R.string.dialog_done)) { back() }), top = box, back = back)
+    pageExit = {
+        link.stop()
+        if (upload === link) upload = null
+    }
+}
+
+/** The last problems (newest first), to see what went wrong; readable on a phone too, where lines fit. */
+internal fun MainActivity.showProblems() {
+    val recent = Problems.recent()
+    val rows = listOf(
+        page(getString(R.string.problems_on_phone)) { problemsOnPhone() },
+        page(getString(R.string.dialog_clear)) { Problems.clear(); showProblems() },
+    ) + recent.map { page(it) {} }
+    showPage(getString(R.string.setting_problems), rows) { renderSettings(PROBLEMS_ROW) }
+}
+
+internal fun MainActivity.problemsOnPhone() {
+    val esc = { t: String -> t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") }
+    val list = Problems.recent().ifEmpty { listOf(getString(R.string.problems_none)) }
+    val page = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Piume</title><style>body{font:14px ui-monospace,monospace;margin:0;padding:20px;background:#f7f8fa;color:#111214}
+        @media (prefers-color-scheme:dark){body{background:#09090b;color:#f5f5f7}} li{margin:0 0 10px;word-break:break-word}</style></head>
+        <body><h1 style="font:600 20px system-ui,sans-serif">${esc(getString(R.string.setting_problems))}</h1><ol>${list.joinToString("") { "<li>${esc(it)}</li>" }}</ol></body></html>"""
+    showPhoneLink(getString(R.string.setting_problems), PhoneTask(page, 0) { 405 to "" }, label("", 12f)) { showProblems() }
+}
+
+/** The TMDB key typed or pasted on a phone: checked with TMDB, then saved like the Save row does. */
+internal fun MainActivity.tmdbKeyFromPhone() {
+    val status = label(getString(R.string.tmdb_phone_waiting), 14f)
+    val page = PhonePages.text(phoneTexts(R.string.phone_tmdb_title, R.string.phone_tmdb_intro), getString(R.string.phone_tmdb_hint))
+    showPhoneLink(getString(R.string.setting_tmdb_api_key), PhoneTask(page, 2048) { file ->
+        val key = file.readText().trim()
+        if (key.length < 16 || key.any { it.isWhitespace() }) return@PhoneTask 400 to getString(R.string.phone_tmdb_refused)
+        val ok = TmdbClient.check(key)
+        if (ok == false) return@PhoneTask 400 to getString(R.string.phone_tmdb_refused)
+        ui.post {
+            saveTmdbKey(key)
+            status.text = getString(R.string.phone_tmdb_saved)
+        }
+        200 to getString(if (ok == true) R.string.phone_tmdb_saved else R.string.phone_tmdb_unchecked)
+    }, status) { renderSettings(TMDB_KEY_ROW) }
+}
+
+/** The TV's own address on the home network (IPv4: easy to read and type). */
+internal fun MainActivity.lanAddress(): String? {
+    val cm = getSystemService(ConnectivityManager::class.java)
+    return cm.getLinkProperties(cm.activeNetwork)?.linkAddresses?.map { it.address }
+        ?.firstOrNull { it is java.net.Inet4Address && !it.isLoopbackAddress }?.hostAddress
+}
+
+/** Black on white with the standard 4-module quiet zone, whole pixels per module so it stays sharp. */
+internal fun MainActivity.qrBitmap(text: String, maxPx: Int): Bitmap {
+    val m = Qr.encode(text)
+    val n = m.size + 8
+    val px = maxOf(1, maxPx / n)
+    val bmp = Bitmap.createBitmap(n * px, n * px, Bitmap.Config.RGB_565)
+    bmp.eraseColor(Color.WHITE)
+    val canvas = Canvas(bmp)
+    val paint = Paint().apply { color = Color.BLACK }
+    for (r in m.indices) for (c in m.indices) if (m[r][c]) {
+        canvas.drawRect(((c + 4) * px).toFloat(), ((r + 4) * px).toFloat(), ((c + 5) * px).toFloat(), ((r + 5) * px).toFloat(), paint)
+    }
+    return bmp
+}

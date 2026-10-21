@@ -1,0 +1,86 @@
+package dev.piume
+
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageInstaller
+import android.os.Build
+
+/** The action MainActivity gets an install's outcome under (from InstallResult). */
+internal const val UPDATE_STATUS = "dev.piume.UPDATE_STATUS"
+
+/** "1.10" > "1.9" > "1.2.1" > "1.2": compared number by number, missing parts count as 0. */
+internal fun newerVersion(a: String, b: String): Boolean {
+    val x = a.split('.').map { it.toIntOrNull() ?: 0 }
+    val y = b.split('.').map { it.toIntOrNull() ?: 0 }
+    for (i in 0 until maxOf(x.size, y.size)) {
+        val d = x.getOrElse(i) { 0 } - y.getOrElse(i) { 0 }
+        if (d != 0) return d > 0
+    }
+    return false
+}
+
+/**
+ * Updates from this fork's GitHub releases: [latest] finds the newest version, [install] downloads its Piume.apk
+ * into an install session. Android checks the APK is signed like the installed app, so only Piume's own key can
+ * update it. Network: call both off the UI thread.
+ */
+internal object Updater {
+    /** The newest release's version ("1.4"), from its tag ("v1.4"). Throws when GitHub can't be asked. */
+    fun latest(repo: String): String = Http.json("https://api.github.com/repos/$repo/releases/latest").getString("tag_name").removePrefix("v")
+
+    /** Downloads release [ver] and hands it to Android, which reports to InstallResult. Throws if the download fails. */
+    fun install(context: Context, repo: String, ver: String) {
+        val installer = context.packageManager.packageInstaller
+        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+        params.setAppPackageName(context.packageName)
+        // Android 12+ can skip the confirm box when we're the app's installer; otherwise Android asks.
+        if (Build.VERSION.SDK_INT >= 31) params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+        val id = installer.createSession(params)
+        installer.openSession(id).use { session ->
+            try {
+                Http.open("https://github.com/$repo/releases/download/v$ver/Piume.apk").use { input ->
+                    session.openWrite("Piume.apk", 0, -1).use { out ->
+                        input.copyTo(out)
+                        session.fsync(out)
+                    }
+                }
+            } catch (e: Exception) {
+                session.abandon()
+                throw e
+            }
+            // Mutable: the installer adds the status to it. Explicit, to a receiver only Android can reach.
+            val done = PendingIntent.getBroadcast(context, 0, Intent(context, InstallResult::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+            session.commit(done.intentSender)
+        }
+    }
+}
+
+/**
+ * Where the update's install session reports back. It isn't exported, so only Android (through the PendingIntent
+ * Piume handed it) can call it. That matters: the report can carry an Intent to start (Android's confirm box), and
+ * MainActivity, which every app may start, must never launch an Intent someone else put in.
+ */
+class InstallResult : BroadcastReceiver() {
+    override fun onReceive(c: Context, i: Intent) {
+        val status = i.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+        if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
+            @Suppress("DEPRECATION")
+            i.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)?.let { c.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            return
+        }
+        // The outcome only (no Intent): MainActivity resets its "Updating…" row and says if it failed.
+        c.startActivity(Intent(c, MainActivity::class.java).setAction(UPDATE_STATUS)
+            .putExtra(PackageInstaller.EXTRA_STATUS, status)
+            .putExtra(PackageInstaller.EXTRA_STATUS_MESSAGE, i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+}
+
+class Updated : BroadcastReceiver() {
+    override fun onReceive(c: Context, i: Intent) {
+        c.startActivity(Intent(c, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+}

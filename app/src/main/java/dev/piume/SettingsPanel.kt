@@ -1,0 +1,567 @@
+package dev.piume
+
+import android.animation.ObjectAnimator
+import android.content.pm.ApplicationInfo
+import android.graphics.drawable.GradientDrawable
+import android.os.SystemClock
+import android.view.Gravity
+import android.view.KeyEvent
+import android.view.View
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import dev.piume.MainActivity.Companion.ALIGN_ROW
+import dev.piume.MainActivity.Companion.APPS_SECTION
+import dev.piume.MainActivity.Companion.CHOSEN
+import dev.piume.MainActivity.Companion.FADE_ROW
+import dev.piume.MainActivity.Companion.HDMI
+import dev.piume.MainActivity.Companion.HIDDEN_ROW
+import dev.piume.MainActivity.Companion.ICONS_ROW
+import dev.piume.MainActivity.Companion.LOCK_ROW
+import dev.piume.MainActivity.Companion.LOOK_SECTION
+import dev.piume.MainActivity.Companion.NAMES_ROW
+import dev.piume.MainActivity.Companion.PIN_KEYS
+import dev.piume.MainActivity.Companion.PIN_TRIES
+import dev.piume.MainActivity.Companion.ROW_ALIGN
+import dev.piume.MainActivity.Companion.SCREENSAVER_SECTION
+import dev.piume.MainActivity.Companion.SECTION
+import dev.piume.MainActivity.Companion.SORT_ROW
+import dev.piume.MainActivity.Companion.SPOTLIGHT_EVERY
+import dev.piume.MainActivity.Companion.SPOTLIGHT_SECTION
+import dev.piume.MainActivity.Companion.SYSTEM_SECTION
+import dev.piume.MainActivity.Companion.THEME_ROW
+import dev.piume.MainActivity.Companion.TMDB_APPS_ROW
+import dev.piume.MainActivity.Companion.TMDB_CYCLE_ROW
+import dev.piume.MainActivity.Companion.TMDB_KEY_ROW
+import dev.piume.MainActivity.Companion.TMDB_LANG_ROW
+import dev.piume.MainActivity.Companion.TMDB_PROVIDERS_ROW
+import dev.piume.MainActivity.Companion.TMDB_TYPE_ROW
+import dev.piume.MainActivity.Companion.TOGGLE_OFF
+import dev.piume.MainActivity.Companion.TOGGLE_ON
+import dev.piume.MainActivity.Companion.UNLOCKED_MS
+import dev.piume.MainActivity.Companion.WATCH_SECTION
+import dev.piume.MainActivity.Companion.WEATHER_ROW
+import dev.piume.MainActivity.Companion.WEATHER_UNITS_ROW
+
+// Piume settings: the side panel, its sections and pages, the on/off rows and the layout lock PIN.
+// Functions of MainActivity, kept here by topic; their state lives in MainActivity.
+
+/** Opens the panel on its list of sections, or straight on the section page holding [row]. */
+internal fun MainActivity.openLauncherSettings(row: Int? = null) {
+    showPanel()
+    if (row == null) renderSettingsHome() else renderSettings(row)
+}
+
+internal fun MainActivity.showPanel() {
+    panelFrom = currentFocus
+    findViewById<View>(R.id.settingsPanel).setBackgroundColor(if (dark) 0xFF09090B.toInt() else 0xFFF7F8FA.toInt())
+    findViewById<TextView>(R.id.settingsTitle).setTextColor(fg)
+    settingsScrim.visibility = View.VISIBLE
+    homeFocusable(false)
+}
+
+internal fun MainActivity.closeLauncherSettings() {
+    pageExit?.invoke()
+    pageExit = null
+    pageBack = null
+    settingsScrim.visibility = View.GONE
+    homeFocusable(allApps.visibility != View.VISIBLE) // the PIN can open over All apps
+    (panelFrom?.takeIf { it.isAttachedToWindow } ?: findViewById(R.id.launcherSettings)).requestFocus()
+    panelFrom = null
+}
+
+internal fun MainActivity.sectionTitle(section: Int) = getString(when (section) {
+    LOOK_SECTION -> R.string.settings_section_look
+    APPS_SECTION -> R.string.settings_section_apps
+    WATCH_SECTION -> R.string.continue_watching
+    SPOTLIGHT_SECTION -> R.string.setting_tmdb
+    SCREENSAVER_SECTION -> R.string.setting_screensaver
+    else -> R.string.settings_section_system
+})
+
+internal fun MainActivity.renderSettingsHome(focus: Int = 0) {
+    val cwOff = prefs.getStringSet(K.CW_OFF, emptySet())!!.count { pkg -> apps.any { it.pkg == pkg } }
+    val summaries = mapOf(
+        LOOK_SECTION to themeName(),
+        APPS_SECTION to if (lockOn()) getString(R.string.settings_summary_locked) else "",
+        WATCH_SECTION to if (cwOff == 0) getString(R.string.cw_apps_all_on) else getString(R.string.cw_apps_count_off, cwOff),
+        SPOTLIGHT_SECTION to if (prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank()) getString(R.string.state_off) else getString(R.string.state_on),
+        SCREENSAVER_SECTION to screensaverValue(),
+        // The one thing here that needs doing by hand comes first; otherwise the version.
+        SYSTEM_SECTION to if (!homeServiceOn()) getString(R.string.settings_summary_setup) else updatesValue(),
+    )
+    showPage(getString(R.string.plume_settings), summaries.map { (section, value) ->
+        page(sectionTitle(section), value) { renderSettings(section * SECTION) }
+    }, focus, back = null)
+}
+
+/** Shows the section page holding [row], focused on it. */
+internal fun MainActivity.renderSettings(row: Int) {
+    val section = row / SECTION
+    showPage(sectionTitle(section), sectionRows(section), row % SECTION) { renderSettingsHome(section) }
+    shownSection = section
+}
+
+/** Redraws the section page holding [row] for news that arrives later (a download, an update), only if it's on screen. */
+internal fun MainActivity.refreshSettings(row: Int) {
+    if (settingsScrim.visibility != View.VISIBLE || shownSection != row / SECTION) return
+    val at = (0 until settingsList.childCount).firstOrNull { settingsList.getChildAt(it).hasFocus() } ?: (row % SECTION)
+    renderSettings(row / SECTION * SECTION + at)
+}
+
+internal fun MainActivity.themeName() = when (prefs.getString(K.THEME, "light")) {
+    "light" -> getString(R.string.setting_theme_light)
+    "dark" -> getString(R.string.setting_theme_dark)
+    else -> getString(R.string.setting_theme_auto)
+}
+
+internal fun MainActivity.screensaverValue() = when {
+    downloading -> getString(R.string.screensaver_downloading)
+    !galleryOn() -> screensaverName()
+    else -> photoScreensaver()?.let { wallpaperName(it) } ?: getString(R.string.screensaver_gallery_label)
+}
+
+internal fun MainActivity.updatesValue() = when {
+    updating -> getString(R.string.updates_updating)
+    checking -> getString(R.string.updates_checking)
+    availableUpdate() != null -> getString(R.string.updates_available_prompt, availableUpdate()!!)
+    notesUnseen() -> getString(R.string.whats_new_title, myVersion())
+    else -> getString(R.string.updates_up_to_date, myVersion())
+}
+
+/** Each section's rows, in the order of its *_ROW constants. */
+internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String, () -> Unit>> = when (section) {
+    LOOK_SECTION -> {
+        val theme = prefs.getString(K.THEME, "light")!!
+        val weather = prefs.getString(K.WEATHER, "off")!!
+        val unit = if (weather == "off") prefs.getString(K.WX_UNIT, "c")!! else weather
+        listOf(
+            page(getString(R.string.setting_theme), themeName()) {
+                prefs.edit().putString(K.THEME, mapOf("light" to "dark", "dark" to "auto", "auto" to "light")[theme])
+                    .putInt(K.REOPEN_ROW, THEME_ROW).apply()
+                recreate() // colours are applied once per activity; reopen the panel after
+            },
+            page(getString(R.string.setting_light_wallpaper), wallpaperName(currentWallpaper(false))) { pickWallpaper(false) },
+            page(getString(R.string.setting_dark_wallpaper), wallpaperName(currentWallpaper(true))) { pickWallpaper(true) },
+            page(getString(R.string.setting_photo_fade), toggle(wallpaperFade())) {
+                prefs.edit().putBoolean(K.WP_FADE, !wallpaperFade()).apply()
+                loadWallpaper()
+                renderSettings(FADE_ROW)
+            },
+            page(getString(R.string.setting_folder_photo_changes), photoEveryName(photoEvery())) { pickPhotoEvery() },
+            // "weather" is off/c/f as before; "wx_unit" keeps the unit while it's off.
+            page(getString(R.string.setting_weather), toggle(weather != "off")) {
+                if (weather == "off") prefs.edit().putString(K.WEATHER, unit).apply()
+                else prefs.edit().putString(K.WX_UNIT, weather).putString(K.WEATHER, "off").apply()
+                showWeather()
+                ui.removeCallbacks(weatherTick)
+                ui.post(weatherTick)
+                renderSettings(WEATHER_ROW)
+            },
+            page(getString(R.string.weather_units), if (unit == "f") "°F" else "°C") {
+                val next = if (unit == "f") "c" else "f"
+                prefs.edit().putString(K.WX_UNIT, next).putString(K.WEATHER, if (weather == "off") "off" else next).apply()
+                showWeather()
+                renderSettings(WEATHER_UNITS_ROW)
+            },
+            page(getString(R.string.weather_location), if (manualCity()) prefs.getString(K.GEO_CITY, null) ?: "" else getString(R.string.automatic)) { pickCity() },
+        )
+    }
+    APPS_SECTION -> {
+        val sort = prefs.getString(K.SORT, "manual")!!
+        val rowHidden = rowHiddenSet().count { pkg -> apps.any { it.pkg == pkg } } // uninstalled ones don't count
+        val names = rowNames()
+        val colour = colourIcons()
+        listOf(
+            page(getString(R.string.edit_apps_row)) { closeLauncherSettings(); startEdit(grab = null) },
+            page(getString(R.string.setting_sort_apps), if (sort == "manual") getString(R.string.setting_sort_manual) else getString(R.string.setting_sort_usage)) {
+                prefs.edit().putString(K.SORT, if (sort == "manual") "usage" else "manual").apply()
+                renderApps()
+                renderSettings(SORT_ROW)
+            },
+            page(getString(R.string.setting_apps_in_row), if (rowHidden == 0) getString(R.string.apps_in_row_all) else getString(R.string.apps_in_row_count, apps.size - rowHidden, apps.size)) { pickRowApps() },
+            page(getString(R.string.row_position), getString(ROW_ALIGN[rowAlign()]!!.first)) {
+                prefs.edit().putString(K.ROW_ALIGN, ROW_ALIGN.keys.let { it.elementAt((it.indexOf(rowAlign()) + 1) % it.size) }).apply()
+                alignRow()
+                renderSettings(ALIGN_ROW)
+            },
+            page(getString(R.string.setting_app_names), when (names) {
+                "always" -> getString(R.string.app_names_always)
+                "never" -> getString(R.string.app_names_never)
+                else -> getString(R.string.app_names_focus)
+            }) {
+                prefs.edit().putString(K.NAMES, mapOf("focus" to "always", "always" to "never", "never" to "focus")[names]).apply()
+                renderApps()
+                renderSettings(NAMES_ROW)
+            },
+            page(getString(R.string.setting_icon_style), if (colour) getString(R.string.icon_style_colour) else getString(R.string.icon_style_monochrome)) {
+                prefs.edit().putBoolean(K.COLOUR_ICONS, !colour).apply()
+                renderApps()
+                renderSettings(ICONS_ROW)
+            },
+            page(getString(R.string.setting_lock_layout), toggle(lockOn())) {
+                if (!lockOn()) return@page setLock()
+                prefs.edit().remove(K.LOCK_PIN).apply()
+                renderSettings(LOCK_ROW)
+            },
+        )
+    }
+    WATCH_SECTION -> {
+        val hidden = prefs.getStringSet(K.HIDDEN_WATCH, emptySet())!!.size
+        val cwOff = prefs.getStringSet(K.CW_OFF, emptySet())!!.count { pkg -> apps.any { it.pkg == pkg } }
+        listOf(
+            page(getString(R.string.setting_cw_apps), if (cwOff == 0) getString(R.string.cw_apps_all_on) else getString(R.string.cw_apps_count_off, cwOff)) { pickWatchSources() },
+            page(getString(R.string.setting_restore_hidden_shows), if (hidden == 0) getString(R.string.hidden_shows_none) else getString(R.string.hidden_shows_count, hidden)) {
+                prefs.edit().remove(K.HIDDEN_WATCH).apply()
+                watchKey = null
+                refreshWatchNext()
+                renderSettings(HIDDEN_ROW)
+            },
+        )
+    }
+    SPOTLIGHT_SECTION -> spotlightRows()
+    SCREENSAVER_SECTION -> listOf(
+        page(getString(R.string.setting_screensaver), screensaverValue()) { pickScreensaver() },
+        page(getString(R.string.setting_test_screensaver)) { testScreensaver() },
+        page(getString(R.string.setting_screensaver_timing)) { openScreensaverSettings() },
+    )
+    else -> listOfNotNull(
+        page(getString(R.string.setup_home)) { closeLauncherSettings(); startHomeSetup() },
+        page(getString(R.string.setting_home_button), toggle(homeServiceOn())) { toggleHomeButton() },
+        page(getString(R.string.setting_default_launcher), if (isDefaultHome()) getString(R.string.plume_press_change) else getString(R.string.default_launcher_set_prompt)) { makeDefaultHome() },
+        page(getString(R.string.setting_updates), updatesValue()) { showUpdates() },
+        page(getString(R.string.setting_problems), Problems.recent().size.let { if (it == 0) getString(R.string.problems_none) else "$it" }) { showProblems() },
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) null
+        else page(getString(R.string.preview_home_setup)) { closeLauncherSettings(); previewHomeSetup() },
+    )
+}
+
+internal fun MainActivity.spotlightRows(): List<Triple<String, String, () -> Unit>> {
+    val hasKey = !prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank()
+    val lang = tmdbLang()
+    val type = prefs.getString(K.TMDB_TYPE, "all") ?: "all"
+    val typeName = when (type) {
+        "movie" -> getString(R.string.tmdb_type_movie)
+        "tv" -> getString(R.string.tmdb_type_tv)
+        else -> getString(R.string.tmdb_type_all)
+    }
+    val offSet = prefs.getStringSet(K.TMDB_DEFAULT_APPS, emptySet()) ?: emptySet()
+    val availableApps = apps.filter { !it.pkg.startsWith(HDMI) && it.pkg != CW_PKG }
+    val activeCount = availableApps.count { it.pkg !in offSet }
+    val every = spotlightEvery()
+    return listOf(
+        page(getString(R.string.setting_tmdb_api_key), if (hasKey) getString(R.string.tmdb_api_key_set) else getString(R.string.tmdb_api_key_empty)) {
+            configureTmdbApiKey()
+        },
+        page(getString(R.string.setting_tmdb_language), lang) {
+            val langs = TmdbClient.LANGUAGES
+            showPage(getString(R.string.setting_tmdb_language), langs.map { l ->
+                page(l, if (l == lang) CHOSEN else "") {
+                    prefs.edit().putString(K.TMDB_LANG, l).apply()
+                    tmdbTrending = emptyList()
+                    loadWallpaper()
+                    renderSettings(TMDB_LANG_ROW)
+                }
+            }, langs.indexOf(lang)) { renderSettings(TMDB_LANG_ROW) }
+        },
+        page(getString(R.string.setting_tmdb_media_type), typeName) {
+            val types = listOf("all" to getString(R.string.tmdb_type_all), "movie" to getString(R.string.tmdb_type_movie), "tv" to getString(R.string.tmdb_type_tv))
+            showPage(getString(R.string.setting_tmdb_media_type), types.map { (k, name) ->
+                page(name, if (k == type) CHOSEN else "") {
+                    prefs.edit().putString(K.TMDB_TYPE, k).apply()
+                    tmdbTrending = emptyList()
+                    loadWallpaper()
+                    renderSettings(TMDB_TYPE_ROW)
+                }
+            }, types.indexOfFirst { it.first == type }) { renderSettings(TMDB_TYPE_ROW) }
+        },
+        page(getString(R.string.setting_tmdb_default_apps), if (offSet.isEmpty()) getString(R.string.cw_apps_all_on) else "$activeCount") {
+            val appChoices = availableApps.map { it.label to it.pkg }
+            toggles(getString(R.string.setting_tmdb_default_apps), appChoices, K.TMDB_DEFAULT_APPS, getString(R.string.state_on), getString(R.string.state_off)) {
+                spotlightApps = null
+                renderSpotlight()
+                renderSettings(TMDB_APPS_ROW)
+            }
+        },
+        page(getString(R.string.setting_tmdb_providers), toggle(providersOn())) {
+            prefs.edit().putBoolean(K.TMDB_PROVIDERS, !providersOn()).apply()
+            spotlightItem()?.let { showProviders(it) }
+            renderSettings(TMDB_PROVIDERS_ROW)
+        },
+        page(getString(R.string.setting_tmdb_cycle), cycleName(every)) {
+            showPage(getString(R.string.setting_tmdb_cycle), SPOTLIGHT_EVERY.map { n ->
+                page(cycleName(n), if (n == every) CHOSEN else "") {
+                    prefs.edit().putInt(K.TMDB_CYCLE, n).apply()
+                    restartSpotlightTick()
+                    renderSettings(TMDB_CYCLE_ROW)
+                }
+            }, SPOTLIGHT_EVERY.indexOf(every)) { renderSettings(TMDB_CYCLE_ROW) }
+        },
+    )
+}
+
+internal fun MainActivity.cycleName(seconds: Int) = if (seconds == 0) getString(R.string.tmdb_cycle_off) else getString(R.string.tmdb_cycle_seconds, seconds)
+
+/** A new TMDB key turns Spotlight on, as both wallpapers. */
+internal fun MainActivity.saveTmdbKey(key: String) {
+    prefs.edit().putString(K.TMDB_API_KEY, key).apply()
+    tmdbTrending = emptyList()
+    setWallpaper(false, "tmdb:trending")
+    setWallpaper(true, "tmdb:trending")
+}
+
+internal fun MainActivity.configureTmdbApiKey() {
+    val currentKey = prefs.getString(K.TMDB_API_KEY, "") ?: ""
+    val input = EditText(this).apply {
+        setText(currentKey)
+        hint = getString(R.string.tmdb_api_key_hint)
+        setTextColor(fg)
+        setHintTextColor(if (dark) 0x66FFFFFF else 0x66000000)
+        isSingleLine = true
+        setPadding(dp(14), dp(10), dp(14), dp(10))
+        val bg = GradientDrawable().apply {
+            cornerRadius = dp(8).toFloat()
+            setColor(field)
+            setStroke(dp(1), fieldEdge())
+        }
+        background = bg
+        // Same focus mark as the PIN boxes: otherwise only a blinking cursor tells you you're typing here.
+        setOnFocusChangeListener { _, focused -> bg.setStroke(if (focused) dp(2) else dp(1), if (focused) fg else fieldEdge()) }
+    }
+    val box = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(0, dp(12), 0, dp(12))
+        addView(input)
+    }
+    val rows = listOf(
+        // Typing a 32-character key (or a 200-character token) with a remote is no fun: paste it on a phone.
+        page(getString(R.string.setting_tmdb_key_phone)) { tmdbKeyFromPhone() },
+        page(getString(R.string.dialog_save)) {
+            val key = input.text?.toString()?.trim()
+            if (!key.isNullOrBlank()) saveTmdbKey(key)
+            renderSettings(TMDB_KEY_ROW)
+        },
+        page(getString(R.string.dialog_clear)) {
+            prefs.edit().remove(K.TMDB_API_KEY).apply()
+            tmdbTrending = emptyList()
+            spotlightIo.execute { backdrops.clear() } // no Spotlight any more: give the space back
+            if (currentWallpaper() == "tmdb:trending") {
+                setWallpaper(dark, defaultWallpaper(dark))
+            }
+            renderSettings(TMDB_KEY_ROW)
+        }
+    )
+    showPage(getString(R.string.setting_tmdb_api_key), rows, top = box, back = { renderSettings(TMDB_KEY_ROW) })
+    input.requestFocus()
+}
+
+internal fun MainActivity.page(title: String, value: String = "", action: () -> Unit) = Triple(title, value, action)
+
+internal fun MainActivity.showPage(title: String, rows: List<Triple<String, String, () -> Unit>>, focus: Int = 0, top: View? = null, back: (() -> Unit)?) {
+    pageExit?.invoke()
+    pageExit = null
+    pageBack = back
+    shownSection = -1 // renderSettings sets it again for section pages
+    findViewById<TextView>(R.id.settingsTitle).text = title
+    settingsList.removeAllViews()
+    top?.let { settingsList.addView(it) }
+    val first = settingsList.childCount
+    rows.forEach { (name, value, action) ->
+        settingsList.addView(settingsRow(name, value, action), LinearLayout.LayoutParams(MATCH_PARENT, dp(44)).apply {
+            topMargin = dp(4)
+        })
+    }
+    // Keep focus inside the panel: Up from the first row and Down from the last go nowhere.
+    (settingsList.parent as View).scrollTo(0, 0)
+    if (rows.isEmpty()) return // a page that's all [top], like the PIN boxes, focuses itself
+    settingsList.getChildAt(first).let { it.nextFocusUpId = it.id }
+    settingsList.getChildAt(first + rows.size - 1).let { it.nextFocusDownId = it.id }
+    settingsList.getChildAt(first + focus.coerceIn(0, rows.size - 1)).requestFocus()
+}
+
+// ---------- layout lock ----------
+// A PIN in front of Piume settings and everything that changes the home screen; apps still open as usual.
+// It keeps the layout safe from small hands, it doesn't keep apps from kids: voice search and Android
+// settings get past it, so it's called a layout lock, not parental controls.
+
+internal fun MainActivity.lockOn() = prefs.contains(K.LOCK_PIN)
+
+internal fun MainActivity.locked() = lockOn() && SystemClock.elapsedRealtime() > unlockedUntil
+
+/** Runs [then] at once when unlocked, otherwise after the right PIN. */
+internal fun MainActivity.unlock(then: () -> Unit) {
+    if (!locked()) return then()
+    showPanel()
+    pinPage(getString(R.string.pin_enter_title), back = null) { pin ->
+        val now = SystemClock.elapsedRealtime()
+        if (now < pinWaitUntil) return@pinPage getString(R.string.pin_too_many_tries_wait, (pinWaitUntil - now) / 1000 + 1)
+        if (!pinMatches(prefs.getString(K.LOCK_PIN, null)!!, pin)) {
+            if (++pinFails < PIN_TRIES) return@pinPage getString(R.string.pin_wrong)
+            pinFails = 0
+            pinWaitUntil = now + 30_000L
+            return@pinPage getString(R.string.pin_too_many_tries_wait, 30)
+        }
+        pinFails = 0
+        unlockedUntil = now + UNLOCKED_MS
+        closeLauncherSettings()
+        then()
+        null
+    }
+}
+
+internal fun MainActivity.setLock(): Unit = pinPage(getString(R.string.pin_choose_title), { renderSettings(LOCK_ROW) }) { first ->
+    pinPage(getString(R.string.pin_enter_again_title), { renderSettings(LOCK_ROW) }) { again ->
+        if (again != first) {
+            Toast.makeText(this, getString(R.string.pin_mismatch), Toast.LENGTH_LONG).show()
+            setLock()
+            return@pinPage null
+        }
+        prefs.edit().putString(K.LOCK_PIN, hashPin(first)).apply()
+        unlockedUntil = SystemClock.elapsedRealtime() + UNLOCKED_MS // no PIN straight away for the one who set it
+        renderSettings(LOCK_ROW)
+        Toast.makeText(this, getString(R.string.layout_locked_toast), Toast.LENGTH_LONG).show()
+        null
+    }
+    null
+}
+
+/**
+ * Four digit boxes: ▲ ▼ change a digit, ◀ ▶ move between boxes, number keys type, OK enters.
+ * [done] gets the PIN and returns null when it's accepted, or a message to show before trying again.
+ */
+internal fun MainActivity.pinPage(title: String, back: (() -> Unit)?, done: (String) -> String?) {
+    val digits = arrayOfNulls<Int>(4)
+    var at = 0
+    val boxes = List(4) { label("", 24f).apply { gravity = Gravity.CENTER } }
+    val status = label("", 13f).apply { gravity = Gravity.CENTER; alpha = 0.6f }
+    val row = LinearLayout(this).apply {
+        id = View.generateViewId()
+        gravity = Gravity.CENTER
+        isFocusable = true
+        boxes.forEach { addView(it, LinearLayout.LayoutParams(dp(48), dp(56)).apply { marginStart = dp(6); marginEnd = dp(6) }) }
+    }
+    fun draw() = boxes.forEachIndexed { i, b ->
+        // Only the box being changed shows its digit.
+        b.text = if (digits[i] == null) "" else if (i == at) digits[i].toString() else "•"
+        b.background = GradientDrawable().apply {
+            cornerRadius = dp(8).toFloat()
+            setColor(field)
+            setStroke(if (i == at) dp(2) else dp(1), if (i == at) fg else fieldEdge())
+        }
+    }
+    fun submit() {
+        val error = done(digits.joinToString("")) ?: return
+        digits.fill(null)
+        at = 0
+        draw()
+        status.text = error
+        ObjectAnimator.ofFloat(row, View.TRANSLATION_X, 0f, -dp(12).toFloat(), dp(12).toFloat(), -dp(8).toFloat(), dp(8).toFloat(), 0f).setDuration(300).start()
+    }
+    row.setOnKeyListener { _, code, e ->
+        val digit = when (code) {
+            in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> code - KeyEvent.KEYCODE_0
+            in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9 -> code - KeyEvent.KEYCODE_NUMPAD_0
+            else -> null
+        }
+        if (digit == null && code !in PIN_KEYS) return@setOnKeyListener false // Back still leaves
+        if (e.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener true
+        when (code) {
+            KeyEvent.KEYCODE_DPAD_UP -> digits[at] = ((digits[at] ?: 0) + 1) % 10
+            KeyEvent.KEYCODE_DPAD_DOWN -> digits[at] = ((digits[at] ?: 0) + 9) % 10
+            KeyEvent.KEYCODE_DPAD_LEFT -> at = maxOf(0, at - 1)
+            KeyEvent.KEYCODE_DPAD_RIGHT -> if (digits[at] != null) at = minOf(3, at + 1)
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER ->
+                if (digits.all { it != null }) return@setOnKeyListener true.also { submit() }
+                else if (digits[at] != null) at = minOf(3, at + 1)
+            else -> {
+                digits[at] = digit
+                if (at == 3) return@setOnKeyListener true.also { draw(); submit() }
+                at++
+            }
+        }
+        draw()
+        true
+    }
+    draw()
+    val box = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(0, dp(16), 0, dp(8))
+        addView(row)
+        addView(status.apply { setPadding(0, dp(12), 0, 0) })
+        addView(label(getString(R.string.pin_instructions), 12f).apply {
+            maxLines = 2
+            gravity = Gravity.CENTER
+            alpha = 0.6f
+            setPadding(0, dp(8), 0, 0)
+        })
+        if (lockOn()) addView(label(getString(R.string.pin_forgot_notice), 12f).apply {
+            gravity = Gravity.CENTER
+            alpha = 0.6f
+            maxLines = 3
+            setPadding(0, dp(24), 0, 0)
+        })
+    }
+    showPage(title, emptyList(), top = box, back = back)
+    pinBox = row
+    row.requestFocus()
+}
+
+/** A faint outline for input boxes: their fill alone sits too close to the panel's colour to find at a glance. */
+internal fun MainActivity.fieldEdge() = (fg and 0xFFFFFF) or 0x40000000
+
+internal fun MainActivity.settingsRow(title: String, value: String, action: () -> Unit): View {
+    val bg = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0, 0)).apply { cornerRadius = dp(8).toFloat() }
+    return LinearLayout(this).apply {
+        id = View.generateViewId()
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(14), 0, dp(14), 0)
+        background = bg
+        isFocusable = true
+        isClickable = true
+        val name = label(title, 14f)
+        val toggled = value == TOGGLE_ON || value == TOGGLE_OFF
+        val state = label(if (toggled) "" else value, 13f).apply { alpha = 0.6f }
+        addView(name, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        fun showSwitch(lit: Boolean) {
+            if (childCount > 1) removeViewAt(1)
+            addView(switch(value == TOGGLE_ON, lit), LinearLayout.LayoutParams(dp(36), dp(20)))
+        }
+        if (toggled) showSwitch(false) else addView(state)
+        setOnClickListener { action() }
+        setOnFocusChangeListener { _, focused ->
+            bg.colors = if (focused) intArrayOf(fg, fg) else intArrayOf(0, 0)
+            name.setTextColor(if (focused) onFg else fg)
+            state.setTextColor(if (focused) onFg else fg)
+            state.alpha = if (focused) 0.75f else 0.6f
+            if (toggled) showSwitch(focused) // redrawn in the inverted colours on the lit row
+        }
+    }
+}
+
+internal fun MainActivity.toggle(on: Boolean) = if (on) TOGGLE_ON else TOGGLE_OFF
+
+/**
+ * A mono switch for on/off rows: filled track with the knob right when on, outlined and left when off.
+ * [lit] draws it for a focused row, whose fill is fg: then onFg is the ink and the knob takes the row's colour.
+ */
+internal fun MainActivity.switch(on: Boolean, lit: Boolean = false) = FrameLayout(this).apply {
+    val ink = if (lit) onFg else fg
+    val faint = ink and 0xFFFFFF or 0x66000000
+    background = GradientDrawable().apply {
+        cornerRadius = dp(10).toFloat()
+        if (on) setColor(ink) else setStroke(dp(2), faint)
+    }
+    addView(View(context).apply {
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(if (!on) faint else if (lit) fg else if (dark) 0xFF09090B.toInt() else 0xFFF7F8FA.toInt())
+        }
+    }, FrameLayout.LayoutParams(dp(14), dp(14), Gravity.CENTER_VERTICAL or if (on) Gravity.END else Gravity.START).apply {
+        marginStart = dp(3)
+        marginEnd = dp(3)
+    })
+}

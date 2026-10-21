@@ -3,7 +3,6 @@ package dev.piume
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import java.net.HttpURLConnection
 import java.net.URL
 import org.json.JSONObject
 
@@ -271,11 +270,7 @@ object TmdbClient {
     fun check(apiKey: String): Boolean? = try {
         val bearer = apiKey.length > 40
         val url = if (bearer) "$BASE_URL/configuration" else "$BASE_URL/configuration?api_key=" + Uri.encode(apiKey)
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 6000
-            readTimeout = 6000
-            if (bearer) setRequestProperty("Authorization", "Bearer $apiKey")
-        }
+        val conn = Http.connect(url, if (bearer) mapOf("Authorization" to "Bearer $apiKey") else emptyMap())
         when (conn.responseCode) {
             in 200..299 -> true
             401, 403 -> false
@@ -337,12 +332,7 @@ object TmdbClient {
         val bearer = apiKey.length > 40
         val url = if (bearer) BASE_URL + path
             else BASE_URL + path + (if ('?' in path) "&" else "?") + "api_key=" + Uri.encode(apiKey)
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 6000
-            readTimeout = 6000
-            setRequestProperty("Accept", "application/json")
-            if (bearer) setRequestProperty("Authorization", "Bearer $apiKey")
-        }
-        return conn.inputStream.use { it.readBytes().decodeToString() }
+        return Http.text(url, if (bearer) mapOf("Accept" to "application/json", "Authorization" to "Bearer $apiKey")
+            else mapOf("Accept" to "application/json"))
     }
 }

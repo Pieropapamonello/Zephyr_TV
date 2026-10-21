@@ -93,9 +93,9 @@ private class GalleryShow(private val context: Context) : SurfaceHolder.Callback
 
     /** A folder's photos in shuffled order if one is chosen and still has photos, else the theme's paintings. */
     private fun pictures(): List<Picture> {
-        val prefs = context.getSharedPreferences("home", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences(K.FILE, Context.MODE_PRIVATE)
         val photos = try {
-            prefs.getString("ss_folder", null)?.let { folderPhotos(context.contentResolver, it) }.orEmpty()
+            prefs.getString(K.SS_FOLDER, null)?.let { folderPhotos(context.contentResolver, it) }.orEmpty()
         } catch (e: Exception) { // photo access taken away
             emptyList()
         }

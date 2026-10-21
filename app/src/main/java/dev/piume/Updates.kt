@@ -1,0 +1,133 @@
+package dev.piume
+
+import android.content.Intent
+import android.content.pm.PackageInstaller
+import android.net.Uri
+import android.provider.Settings
+import android.text.SpannableString
+import android.text.style.BulletSpan
+import android.view.View
+import android.widget.ImageView
+import android.widget.Toast
+import dev.piume.MainActivity.Companion.REPO
+import dev.piume.MainActivity.Companion.UPDATE_ROW
+
+// Updates from GitHub releases as the settings show them: checking, installing, what's new, the badge.
+// Functions of MainActivity, kept here by topic; their state lives in MainActivity.
+
+internal fun MainActivity.myVersion() = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
+
+/** The newer version a check found, if any (null again once it's installed). */
+internal fun MainActivity.availableUpdate() = prefs.getString(K.UPD_VER, null)?.takeIf { newerVersion(it, myVersion()) }
+
+internal fun MainActivity.checkUpdate(force: Boolean) {
+    if (checking || !force && System.currentTimeMillis() - prefs.getLong(K.UPD_TIME, 0) < 24 * 3600_000L) return
+    checking = true
+    if (force) refreshSettings(UPDATE_ROW)
+    netIo.execute {
+        val latest = try {
+            Updater.latest(REPO)
+        } catch (e: Exception) {
+            warn("update check failed ($e)")
+            null
+        }
+        if (latest != null) prefs.edit().putString(K.UPD_VER, latest).putLong(K.UPD_TIME, System.currentTimeMillis()).apply()
+        ui.post {
+            checking = false
+            val ver = availableUpdate()
+            if (ver != null && (force || prefs.getString(K.UPD_TOLD, null) != ver)) {
+                prefs.edit().putString(K.UPD_TOLD, ver).apply()
+                if (!force) Toast.makeText(this, getString(R.string.toast_update_available, ver), Toast.LENGTH_LONG).show()
+            } else if (force) {
+                Toast.makeText(this, if (latest == null) getString(R.string.toast_update_check_failed) else getString(R.string.toast_update_up_to_date), Toast.LENGTH_SHORT).show()
+            }
+            refreshSettings(UPDATE_ROW)
+            updateBadge()
+        }
+    }
+}
+
+/** What's new in this version (the CHANGELOG.md section the build put in), with check or install on top. */
+internal fun MainActivity.showUpdates() {
+    prefs.edit().putString(K.SEEN_NOTES, myVersion()).apply()
+    updateBadge()
+    val ver = availableUpdate()
+    showPage(getString(R.string.whats_new_title, myVersion()), listOf(
+        if (ver != null) page(getString(R.string.install_update, ver)) { installUpdate(ver) }
+        else page(getString(R.string.check_updates)) { checkUpdate(force = true) },
+    ), back = { renderSettings(UPDATE_ROW) })
+    // Focusable, lit on focus, so Down walks through notes longer than the panel and it scrolls along.
+    getString(R.string.whats_new).split('\n').forEach {
+        settingsList.addView(label("", 13f).apply {
+            text = SpannableString(it).apply { setSpan(BulletSpan(dp(10), fg), 0, it.length, 0) }
+            maxLines = Int.MAX_VALUE
+            ellipsize = null
+            alpha = 0.7f
+            isFocusable = true
+            setOnFocusChangeListener { v, focused -> v.alpha = if (focused) 1f else 0.7f }
+            setPadding(dp(14), dp(10), dp(14), dp(2))
+        })
+    }
+    settingsList.getChildAt(0).nextFocusDownId = View.NO_ID // showPage stops Down at its last row
+    settingsList.getChildAt(settingsList.childCount - 1).let { it.id = View.generateViewId(); it.nextFocusDownId = it.id }
+}
+
+/** Notes the user hasn't opened since updating. A fresh install has nothing new to tell. */
+internal fun MainActivity.notesUnseen(): Boolean {
+    val info = packageManager.getPackageInfo(packageName, 0)
+    return info.firstInstallTime != info.lastUpdateTime && prefs.getString(K.SEEN_NOTES, null) != info.versionName
+}
+
+/** A dot on the Piume settings icon while an update waits or its notes are unread. */
+internal fun MainActivity.updateBadge() {
+    val icon = findViewById<ImageView>(R.id.launcherSettings)
+    icon.overlay.clear()
+    if (availableUpdate() == null && !notesUnseen()) return
+    val size = dp(9)
+    badge.setBounds(icon.width - size - dp(3), dp(3), icon.width - dp(3), dp(3) + size)
+    icon.overlay.add(badge)
+}
+
+internal fun MainActivity.installUpdate(ver: String) {
+    if (updating) return
+    if (!packageManager.canRequestPackageInstalls()) {
+        Toast.makeText(this, getString(R.string.toast_update_permission), Toast.LENGTH_LONG).show()
+        return openSettings(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
+    }
+    updating = true
+    refreshSettings(UPDATE_ROW)
+    netIo.execute {
+        val ok = try {
+            Updater.install(this, REPO, ver)
+            true
+        } catch (e: Exception) {
+            warn("update download failed ($e)")
+            false
+        }
+        ui.post {
+            if (!ok) {
+                updating = false
+                Toast.makeText(this, getString(R.string.toast_update_download_failed), Toast.LENGTH_LONG).show()
+            }
+            refreshSettings(UPDATE_ROW)
+        }
+    }
+}
+
+/**
+ * The install's outcome, passed on by InstallResult (which shows Android's confirm box itself). Any app can
+ * send this action, so it only ever resets the row and may show a toast: nothing in it gets launched.
+ */
+internal fun MainActivity.installStatus(intent: Intent) {
+    val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+    if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) return
+    updating = false
+    if (status != PackageInstaller.STATUS_SUCCESS) {
+        val why = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
+        warn("update install failed: $status $why")
+        if (status != PackageInstaller.STATUS_FAILURE_ABORTED) {
+            Toast.makeText(this, getString(R.string.toast_update_install_failed), Toast.LENGTH_LONG).show()
+        }
+    }
+    refreshSettings(UPDATE_ROW)
+}

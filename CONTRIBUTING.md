@@ -11,6 +11,26 @@ Piume is a minimal home screen for Android TV and Google TV. Every change is wei
 - **Yours, not ours.** No ads, no sponsored or recommended content, no analytics, no account.
 - **Quiet on the network.** Piume only goes online for the things listed under [Privacy](README.md#privacy). Anything new that connects to the internet must be optional and off until the user turns it on.
 
+## Code map
+
+All the code is in `app/src/main/java/dev/piume/`. The home screen is one activity; its state lives in `MainActivity.kt` and its functions are kept by topic in the files next to it:
+
+| File | What it does |
+|---|---|
+| `MainActivity.kt` | Start-up, theme, wallpapers, apps row, All apps, screensaver, remote navigation |
+| `SettingsPanel.kt` | Piume settings: sections, pages, on/off rows, layout lock |
+| `Spotlight.kt` | TMDB Spotlight: title, veil, arrows, app buttons, cycling |
+| `WatchRow.kt` | Continue Watching, recommendations per app, cards and posters |
+| `HomeSetup.kt` | Home button service, default launcher, guided setup |
+| `Updates.kt`, `Updater.kt` | Update checks and installs (screen, then GitHub and the installer) |
+| `WeatherView.kt`, `Weather.kt` | Weather under the clock (screen, then the services) |
+| `PhoneScreens.kt`, `PhoneLink.kt` | Jobs done on a phone through a QR code (screens, then the small web server) |
+| `TmdbClient.kt`, `BackdropCache.kt` | TMDB: trending, genres, trailers, providers, app links; backdrops on disk |
+| `Http.kt`, `Prefs.kt`, `Problems.kt` | Network access, every settings key, the recent problems log |
+| `Gallery.kt`, `HomeOverride.kt`, `Qr.kt`, `SoftVeil.kt`, `WallpaperUpload.kt` | Screensaver, Home key service, QR encoder, feathered veil, photo import |
+
+New settings keys go in `Prefs.kt`. Anything that goes online uses `Http`, runs off the UI thread and reports failures with `warn()`.
+
 ## What's out of scope
 
 These will be declined, however well they're built:
