@@ -28,16 +28,16 @@ internal fun MainActivity.isDescendantOf(child: View?, parent: View): Boolean {
 }
 
 internal fun MainActivity.setupSpotlight() {
-    // Feathered rather than a rounded box, so the veil melts into the backdrop instead of drawing a hard frame.
-    spotlightInfoBox.background = SoftVeil(dp(32).toFloat(), dp(240).toFloat()).apply { color = spotlightVeil() }
+    // Feathered rather than a rounded box, so the veil melts into the backdrop instead of drawing a hard frame. It is
+    // on the text only, not across the whole row: the backdrop stays clear around it.
+    spotlightText.background = SoftVeil(dp(28).toFloat(), dp(28).toFloat()).apply { color = spotlightVeil() }
     // The arrows get a small disc in the ground colour, so they read on any backdrop.
     for (arrow in arrayOf(spotlightPrev, spotlightNext)) {
         arrow.background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor((ground and 0xFFFFFF) or 0x80000000.toInt()) }
         arrow.setPadding(dp(4), dp(4), dp(4), dp(4))
     }
-    // Text stays inside the veil's solid part: clear of the 32dp feathered edges, and ending where the long fade on
-    // the right begins.
-    spotlightInfoBox.setPadding(dp(34), dp(26), dp(200), dp(26))
+    // Text stays inside the veil's solid part, clear of the 28dp feathered edges.
+    spotlightText.setPadding(dp(34), dp(20), dp(34), dp(20))
     spotlightPrev.setOnClickListener { cycleSpotlight(-1) }
     spotlightNext.setOnClickListener { cycleSpotlight(1) }
 
@@ -51,12 +51,11 @@ internal fun MainActivity.setupSpotlight() {
  * A light veil behind the Spotlight text even at rest: it sits over the backdrop's unveiled middle, where a dark
  * film still would swallow the light theme's dark text (and a bright one the dark theme's light text).
  */
-// As see-through as readability allows, or even a feathered veil looks like a solid slab. Measured on the worst
-// backdrop for each theme (near-black under dark text, light grey under light text): at rest the title and meta
-// stay above 3.8:1; focused, the 13sp overview above 4.5:1. The text halo adds to that.
-internal fun MainActivity.spotlightVeil() = if (dark) 0x73000000 else 0x66F3F5F7
+// Light: just enough to lift the text off a busy backdrop. The text halo does the rest; focused, the veil is a
+// little stronger for the 13sp overview.
+internal fun MainActivity.spotlightVeil() = if (dark) 0x4D000000 else 0x4DF3F5F7
 
-internal fun MainActivity.spotlightVeilFocused() = if (dark) 0x99181820.toInt() else 0x8CEEF2F7.toInt()
+internal fun MainActivity.spotlightVeilFocused() = if (dark) 0x73000000 else 0x73F3F5F7
 
 /**
  * The home screen doesn't scroll, but with Spotlight on top the rows under it can run past the bottom edge.
@@ -85,7 +84,7 @@ internal fun MainActivity.updateSpotlightFocusState(targetFocus: View?) {
     spotlightOverview.visibility = if (inSpotlight) View.VISIBLE else View.GONE
     spotlightActions.visibility = if (inSpotlight) View.VISIBLE else View.GONE
     for (arrow in arrayOf(spotlightPrev, spotlightNext)) arrow.animate().alpha(if (inSpotlight) 0.9f else 0.5f).setDuration(220).start()
-    (spotlightInfoBox.background as? SoftVeil)?.color = if (inSpotlight) spotlightVeilFocused() else spotlightVeil()
+    (spotlightText.background as? SoftVeil)?.color = if (inSpotlight) spotlightVeilFocused() else spotlightVeil()
     // Translate bottomSection downwards to give spotlight breathing room
     val targetTransY = if (inSpotlight) dp(65).toFloat() else 0f
     val targetAlpha = if (inSpotlight) 0.65f else 1f
