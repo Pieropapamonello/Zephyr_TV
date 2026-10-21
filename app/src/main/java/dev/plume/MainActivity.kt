@@ -2,6 +2,7 @@ package dev.plume
 
 import android.animation.ObjectAnimator
 import android.app.Activity
+import android.app.Dialog
 import android.app.PendingIntent
 import android.app.role.RoleManager
 import android.content.BroadcastReceiver
@@ -12,6 +13,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -21,10 +23,12 @@ import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Shader
+import android.graphics.Typeface
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -44,13 +48,19 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.MediaStore
 import android.provider.Settings
+import android.text.InputType
+import android.text.SpannableString
 import android.text.TextUtils
+import android.text.style.BulletSpan
 import android.util.LruCache
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.Window
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.GridLayout
@@ -65,6 +75,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Calendar
@@ -249,9 +260,9 @@ class MainActivity : Activity() {
             prefs.edit().remove("reopen_row").apply()
             ui.post { openLauncherSettings(row) }
         } else if (!homeServiceOn() && !prefs.getBoolean("setup_shown", false)) {
-            // Fresh install: open settings on the Home button row, the one step that has to happen by hand.
+            // Fresh install: walk through making Home land on Plume, the one step that has to happen by hand.
             prefs.edit().putBoolean("setup_shown", true).apply()
-            ui.post { openLauncherSettings(HOME_BUTTON_ROW) }
+            ui.post { startHomeSetup() }
         }
 
         registerReceiver(packageReceiver, IntentFilter().apply {
@@ -273,6 +284,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         ensureHomeService()
+        homeSetupResumed()
         if (wantDark() != dark) {
             recreate()
             return
@@ -290,6 +302,7 @@ class MainActivity : Activity() {
         // Gallery chosen but its paintings missing (updated from a version that bundled them): fetch them.
         if (galleryOn() && photoScreensaver() == null && !paintingsReady(this)) downloadPaintings {}
         checkUpdate(force = false)
+        ui.post { updateBadge() } // after layout, so the icon has its size
     }
 
     /** Auto theme flips at 7:00 and 19:00 even while the home screen just sits there. */
@@ -308,6 +321,10 @@ class MainActivity : Activity() {
     @Deprecated("Only used for the default-home role request")
     override fun onActivityResult(code: Int, result: Int, data: Intent?) {
         if (code == ROLE_REQUEST) refreshSettings(DEFAULT_HOME_ROW)
+        if (code == ROLE_REQUEST && setupStep == 1) {
+            setupStep = 0
+            afterHomeRole()
+        }
     }
 
     override fun onPause() {
@@ -321,6 +338,7 @@ class MainActivity : Activity() {
 
     override fun onStop() {
         unlockedUntil = 0L // leaving the home screen locks it again (onPause would also fire for permission dialogs)
+        if (homeTest != 0) leftDuringTest = true
         super.onStop()
     }
 
@@ -341,10 +359,12 @@ class MainActivity : Activity() {
 
     /**
      * Android drops our Home service from the enabled accessibility services whenever the app is
-     * force-stopped, and then Home lands on Google TV. Put it back (needs the adb-granted permission).
+     * force-stopped, and then Home lands on Google TV. Put it back (needs the adb-granted permission),
+     * unless the user turned it off.
      */
     private fun ensureHomeService() {
-        if (checkSelfPermission(WRITE_SECURE) != PackageManager.PERMISSION_GRANTED || homeServiceOn()) return
+        if (homeServiceOn()) return prefs.edit().remove("home_off").apply() // what Android says wins
+        if (prefs.getBoolean("home_off", false) || checkSelfPermission(WRITE_SECURE) != PackageManager.PERMISSION_GRANTED) return
         val me = ComponentName(this, HomeOverride::class.java).flattenToString()
         val on = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
         Settings.Secure.putString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, if (on.isEmpty()) me else "$on:$me")
@@ -358,14 +378,38 @@ class MainActivity : Activity() {
             .split(':').any { ComponentName.unflattenFromString(it) == me }
     }
 
+    private fun toggleHomeButton() = if (homeServiceOn()) turnOffHomeButton() else turnOnHomeButton()
+
+    /** Off hands Home back to the TV's own launcher, and Plume leaves it off until switched on again. */
+    private fun turnOffHomeButton() {
+        prefs.edit().putBoolean("home_off", true).apply()
+        HomeOverride.running?.disableSelf()
+        if (homeServiceOn() && checkSelfPermission(WRITE_SECURE) == PackageManager.PERMISSION_GRANTED) {
+            val me = ComponentName(this, HomeOverride::class.java)
+            val on = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
+            Settings.Secure.putString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+                on.split(':').filter { ComponentName.unflattenFromString(it) != me }.joinToString(":"))
+        }
+        if (homeServiceOn()) {
+            Toast.makeText(this, getString(R.string.home_off_hint), Toast.LENGTH_LONG).show()
+            openSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        }
+        renderSettings(HOME_BUTTON_ROW)
+    }
+
     /** The Home key service is an accessibility service, which Android only lets the user switch on. */
     private fun turnOnHomeButton() {
-        if (homeServiceOn()) return
+        prefs.edit().remove("home_off").apply()
         ensureHomeService() // works where the adb permission was granted
         if (homeServiceOn()) return renderSettings(HOME_BUTTON_ROW)
         // The written path is the safety net: some Google TVs (a Xiaomi stick) answer the Accessibility link
         // with "You don't have an app that can do this", which we can't detect from here.
-        Toast.makeText(this, getString(R.string.toast_home_button_permission), Toast.LENGTH_LONG).show()
+        Toast.makeText(this, getString(R.string.home_on_hint), Toast.LENGTH_LONG).show()
+        openHomeServiceSettings()
+    }
+
+    /** False when no Settings screen opened at all. */
+    private fun openHomeServiceSettings(): Boolean {
         val service = ComponentName(this, HomeOverride::class.java).flattenToString()
         val tries = listOf(
             // Straight to our own toggle (Android 12+, where the TV supports it), then the list, then Settings.
@@ -375,10 +419,12 @@ class MainActivity : Activity() {
         )
         for (intent in tries) {
             try {
-                return startActivity(intent) // not resolveActivity(): Android 11+ hides other apps from that
+                startActivity(intent) // not resolveActivity(): Android 11+ hides other apps from that
+                return true
             } catch (e: Exception) {
             }
         }
+        return false
     }
 
     private fun isDefaultHome() = Build.VERSION.SDK_INT >= 29 &&
@@ -394,8 +440,161 @@ class MainActivity : Activity() {
         if (roles != null && roles.isRoleAvailable(RoleManager.ROLE_HOME) && !roles.isRoleHeld(RoleManager.ROLE_HOME)) {
             @Suppress("DEPRECATION")
             startActivityForResult(roles.createRequestRoleIntent(RoleManager.ROLE_HOME), ROLE_REQUEST)
-        } else if (!isDefaultHome()) {
-            openSettings(Settings.ACTION_HOME_SETTINGS)
+        } else {
+            openSettings(Settings.ACTION_HOME_SETTINGS) // Android lets apps ask for Home, not give it back
+        }
+    }
+
+    // ---------- Home setup ----------
+    // Popups that try each way of making Home land on Plume, stopping at the first that works: the default-home
+    // role, then the Home button service, then adb help for TVs that grey out the service (Android 13+
+    // "restricted settings" for sideloaded apps). Each way is checked by asking for a Home press: one that
+    // reaches us arrives as a Home intent; one that doesn't sends us to the background.
+
+    private var setupDialog: Dialog? = null
+    private var setupStep = 0 // 1 role dialog open, 2 Accessibility settings open
+    private var homeTest = 0 // the way being checked (1 role, 2 service) while waiting for a Home press
+    private var leftDuringTest = false
+    private var previewAt = -1 // debug builds: which popup the preview is on, -1 when not previewing
+
+    private fun startHomeSetup() {
+        val roles = if (Build.VERSION.SDK_INT >= 29) getSystemService(RoleManager::class.java) else null
+        if (roles != null && roles.isRoleAvailable(RoleManager.ROLE_HOME) && !roles.isRoleHeld(RoleManager.ROLE_HOME)) rolePopup()
+        else afterHomeRole()
+    }
+
+    private fun afterHomeRole() = if (isDefaultHome() || homeServiceOn()) testPopup(1) else tryHomeService()
+
+    private fun tryHomeService() {
+        prefs.edit().remove("home_off").apply()
+        ensureHomeService() // works where the adb permission was granted
+        if (homeServiceOn()) testPopup(2) else servicePopup()
+    }
+
+    /** Back from the role dialog, Accessibility settings, or another home screen after a Home press. */
+    private fun homeSetupResumed() {
+        if (setupStep == 2) {
+            setupStep = 0
+            if (homeServiceOn()) testPopup(2) else adbPopup()
+        } else if (homeTest != 0 && leftDuringTest) {
+            val failed = homeTest
+            homeTest = 0
+            if (failed == 1) tryHomeService() else adbPopup()
+        }
+    }
+
+    private fun rolePopup() = homePopup(1, getString(R.string.setup_role_title), getString(R.string.setup_role_body), null,
+        getString(R.string.setup_continue) to {
+            setupStep = 1
+            @Suppress("DEPRECATION")
+            startActivityForResult(getSystemService(RoleManager::class.java).createRequestRoleIntent(RoleManager.ROLE_HOME), ROLE_REQUEST)
+        },
+        getString(R.string.setup_not_now) to { setupDialog?.dismiss() })
+
+    private fun testPopup(way: Int) {
+        if (previewAt < 0) {
+            homeTest = way
+            leftDuringTest = false
+        }
+        homePopup(way, getString(R.string.setup_test_title), getString(R.string.setup_test_body), null,
+            getString(R.string.setup_skip_check) to { homeTest = 0; if (way == 1) tryHomeService() else adbPopup() })
+    }
+
+    private fun servicePopup() = homePopup(2, getString(R.string.setup_service_title), getString(R.string.setup_service_body), null,
+        getString(R.string.setup_open_accessibility) to {
+            setupStep = 2
+            if (!openHomeServiceSettings()) {
+                setupStep = 0
+                adbPopup()
+            }
+        },
+        getString(R.string.setup_not_now) to { setupDialog?.dismiss() })
+
+    /** The one-time grant lets Plume switch the service on itself, past the greyed-out toggle. */
+    private fun adbPopup() {
+        val mono = Typeface.MONOSPACE
+        val code = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(10).toFloat()
+                setColor(if (dark) 0xFF09090B.toInt() else 0xFFE9EBEF.toInt())
+            }
+            listOfNotNull(lanAddress()?.let { "adb connect $it:5555" }, "adb shell pm grant $packageName $WRITE_SECURE").forEach {
+                addView(label(it, 12f).apply { typeface = mono; maxLines = 2; ellipsize = null; setPadding(0, dp(2), 0, dp(2)) })
+            }
+        }
+        val qr = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            addView(ImageView(context).apply { setImageBitmap(qrBitmap(HELP_URL, dp(108))) }, LinearLayout.LayoutParams(dp(108), dp(108)))
+            addView(label(getString(R.string.setup_scan_help), 11f).apply { alpha = 0.6f; setPadding(0, dp(6), 0, 0) })
+        }
+        val extra = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(12), 0, 0)
+            addView(code, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(qr, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(20) })
+        }
+        homePopup(3, getString(R.string.setup_adb_title), getString(R.string.setup_adb_body), extra,
+            getString(R.string.setup_try_again) to { tryHomeService() },
+            getString(R.string.setup_close) to { setupDialog?.dismiss() })
+    }
+
+    private fun donePopup() = homePopup(0, getString(R.string.setup_done_title),
+        getString(if (homeServiceOn()) R.string.setup_done_body_service else R.string.setup_done_body), null,
+        getString(R.string.setup_done) to { setupDialog?.dismiss() })
+
+    /** A card in the middle of the screen over the dimmed home screen, in the hold menus' colours. */
+    private fun homePopup(step: Int, title: String, body: String, extra: View?, vararg buttons: Pair<String, () -> Unit>) {
+        setupDialog?.let { setupDialog = null; it.dismiss() } // replaced, not closed: the dismiss listener leaves the flow alone
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(28), dp(24), dp(28), dp(20))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(16).toFloat()
+                setColor(if (dark) 0xFF141418.toInt() else 0xFFF7F8FA.toInt())
+            }
+            if (step > 0) addView(label(getString(R.string.setup_step, step), 12f).apply { alpha = 0.6f })
+            addView(label(title, 22f).apply { setTypeface(typeface, Typeface.BOLD); setPadding(0, dp(4), 0, 0) })
+            addView(label(body, 14f).apply { maxLines = 6; alpha = 0.8f; setLineSpacing(0f, 1.15f); setPadding(0, dp(10), 0, 0) })
+            extra?.let { addView(it) }
+            buttons.forEachIndexed { i, (name, action) ->
+                addView(settingsRow(name, "") { if (previewAt >= 0) previewHomeSetup(previewAt + 1) else action() },
+                    LinearLayout.LayoutParams(MATCH_PARENT, dp(44)).apply { topMargin = if (i == 0) dp(20) else dp(4) })
+            }
+        }
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(card)
+        dialog.window?.run {
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setLayout(dp(if (extra != null) 600 else 480), ViewGroup.LayoutParams.WRAP_CONTENT)
+            setDimAmount(0.6f)
+        }
+        dialog.setOnDismissListener {
+            if (setupDialog !== dialog) return@setOnDismissListener
+            setupDialog = null // closed with Back or a button: setup stops here, and Settings can start it again
+            setupStep = 0
+            homeTest = 0
+            previewAt = -1
+        }
+        setupDialog = dialog
+        dialog.show()
+        card.getChildAt(card.childCount - buttons.size).requestFocus()
+    }
+
+    /** Debug builds: every popup in turn, with buttons that only move on, to check the look on a TV. */
+    private fun previewHomeSetup(at: Int = 0) {
+        previewAt = at
+        when (at) {
+            0 -> rolePopup()
+            1 -> testPopup(1)
+            2 -> servicePopup()
+            3 -> adbPopup()
+            4 -> donePopup()
+            else -> setupDialog?.dismiss()
         }
     }
 
@@ -403,6 +602,10 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.action == UPDATE_STATUS) return installStatus(intent)
+        if (homeTest != 0 && intent.hasCategory(Intent.CATEGORY_HOME)) { // the Home press reached us: setup works
+            homeTest = 0
+            return donePopup()
+        }
         if (editing) endEdit()
         if (settingsScrim.visibility == View.VISIBLE) closeLauncherSettings()
         if (allApps.visibility == View.VISIBLE) closeAllApps()
@@ -876,16 +1079,16 @@ class MainActivity : Activity() {
         updating -> getString(R.string.updates_updating)
         checking -> getString(R.string.updates_checking)
         availableUpdate() != null -> getString(R.string.updates_available_prompt, availableUpdate()!!)
+        notesUnseen() -> getString(R.string.whats_new_title, myVersion())
         else -> getString(R.string.updates_up_to_date, myVersion())
     }
-
-    private fun onOff(on: Boolean) = getString(if (on) R.string.state_on else R.string.state_off)
 
     /** Each section's rows, in the order of its *_ROW constants. */
     private fun sectionRows(section: Int): List<Triple<String, String, () -> Unit>> = when (section) {
         LOOK_SECTION -> {
             val theme = prefs.getString("theme", "light")!!
             val weather = prefs.getString("weather", "off")!!
+            val unit = if (weather == "off") prefs.getString("wx_unit", "c")!! else weather
             listOf(
                 page(getString(R.string.setting_theme), themeName()) {
                     prefs.edit().putString("theme", mapOf("light" to "dark", "dark" to "auto", "auto" to "light")[theme])
@@ -894,19 +1097,28 @@ class MainActivity : Activity() {
                 },
                 page(getString(R.string.setting_light_wallpaper), wallpaperName(currentWallpaper(false))) { pickWallpaper(false) },
                 page(getString(R.string.setting_dark_wallpaper), wallpaperName(currentWallpaper(true))) { pickWallpaper(true) },
-                page(getString(R.string.setting_photo_fade), onOff(wallpaperFade())) {
+                page(getString(R.string.setting_photo_fade), toggle(wallpaperFade())) {
                     prefs.edit().putBoolean("wp_fade", !wallpaperFade()).apply()
                     loadWallpaper()
                     renderSettings(FADE_ROW)
                 },
                 page(getString(R.string.setting_folder_photo_changes), photoEveryName(photoEvery())) { pickPhotoEvery() },
-                page(getString(R.string.setting_weather), when (weather) { "c" -> "°C"; "f" -> "°F"; else -> getString(R.string.weather_off) }) {
-                    prefs.edit().putString("weather", mapOf("off" to "c", "c" to "f", "f" to "off")[weather]).apply()
+                // "weather" is off/c/f as before; "wx_unit" keeps the unit while it's off.
+                page(getString(R.string.setting_weather), toggle(weather != "off")) {
+                    if (weather == "off") prefs.edit().putString("weather", unit).apply()
+                    else prefs.edit().putString("wx_unit", weather).putString("weather", "off").apply()
                     showWeather()
                     ui.removeCallbacks(weatherTick)
                     ui.post(weatherTick)
                     renderSettings(WEATHER_ROW)
                 },
+                page(getString(R.string.weather_units), if (unit == "f") "°F" else "°C") {
+                    val next = if (unit == "f") "c" else "f"
+                    prefs.edit().putString("wx_unit", next).putString("weather", if (weather == "off") "off" else next).apply()
+                    showWeather()
+                    renderSettings(WEATHER_UNITS_ROW)
+                },
+                page(getString(R.string.weather_location), if (manualCity()) prefs.getString("geo_city", null) ?: "" else getString(R.string.automatic)) { pickCity() },
             )
         }
         APPS_SECTION -> {
@@ -922,6 +1134,11 @@ class MainActivity : Activity() {
                     renderSettings(SORT_ROW)
                 },
                 page(getString(R.string.setting_apps_in_row), if (rowHidden == 0) getString(R.string.apps_in_row_all) else getString(R.string.apps_in_row_count, apps.size - rowHidden, apps.size)) { pickRowApps() },
+                page(getString(R.string.row_position), getString(ROW_ALIGN[rowAlign()]!!.first)) {
+                    prefs.edit().putString("row_align", ROW_ALIGN.keys.let { it.elementAt((it.indexOf(rowAlign()) + 1) % it.size) }).apply()
+                    alignRow()
+                    renderSettings(ALIGN_ROW)
+                },
                 page(getString(R.string.setting_app_names), when (names) {
                     "always" -> getString(R.string.app_names_always)
                     "never" -> getString(R.string.app_names_never)
@@ -936,7 +1153,7 @@ class MainActivity : Activity() {
                     renderApps()
                     renderSettings(ICONS_ROW)
                 },
-                page(getString(R.string.setting_lock_layout), onOff(lockOn())) {
+                page(getString(R.string.setting_lock_layout), toggle(lockOn())) {
                     if (!lockOn()) return@page setLock()
                     prefs.edit().remove("lock_pin").apply()
                     renderSettings(LOCK_ROW)
@@ -962,10 +1179,13 @@ class MainActivity : Activity() {
             page(getString(R.string.setting_test_screensaver)) { testScreensaver() },
             page(getString(R.string.setting_screensaver_timing)) { openScreensaverSettings() },
         )
-        else -> listOf(
-            page(getString(R.string.setting_home_button), if (homeServiceOn()) getString(R.string.home_button_on) else getString(R.string.home_button_off_prompt)) { turnOnHomeButton() },
-            page(getString(R.string.setting_default_launcher), if (isDefaultHome()) getString(R.string.app_name) else getString(R.string.default_launcher_set_prompt)) { makeDefaultHome() },
-            page(getString(R.string.setting_updates), updatesValue()) { availableUpdate()?.let { installUpdate(it) } ?: checkUpdate(force = true) },
+        else -> listOfNotNull(
+            page(getString(R.string.setup_home)) { closeLauncherSettings(); startHomeSetup() },
+            page(getString(R.string.setting_home_button), toggle(homeServiceOn())) { toggleHomeButton() },
+            page(getString(R.string.setting_default_launcher), if (isDefaultHome()) getString(R.string.plume_press_change) else getString(R.string.default_launcher_set_prompt)) { makeDefaultHome() },
+            page(getString(R.string.setting_updates), updatesValue()) { showUpdates() },
+            if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) null
+            else page(getString(R.string.preview_home_setup)) { closeLauncherSettings(); previewHomeSetup() },
         )
     }
 
@@ -1253,17 +1473,47 @@ class MainActivity : Activity() {
             isFocusable = true
             isClickable = true
             val name = label(title, 14f)
-            val state = label(value, 13f).apply { alpha = 0.6f }
+            val toggled = value == TOGGLE_ON || value == TOGGLE_OFF
+            val state = label(if (toggled) "" else value, 13f).apply { alpha = 0.6f }
             addView(name, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            addView(state)
+            fun showSwitch(lit: Boolean) {
+                if (childCount > 1) removeViewAt(1)
+                addView(switch(value == TOGGLE_ON, lit), LinearLayout.LayoutParams(dp(36), dp(20)))
+            }
+            if (toggled) showSwitch(false) else addView(state)
             setOnClickListener { action() }
             setOnFocusChangeListener { _, focused ->
                 bg.colors = if (focused) intArrayOf(fg, fg) else intArrayOf(0, 0)
                 name.setTextColor(if (focused) onFg else fg)
                 state.setTextColor(if (focused) onFg else fg)
                 state.alpha = if (focused) 0.75f else 0.6f
+                if (toggled) showSwitch(focused) // redrawn in the inverted colours on the lit row
             }
         }
+    }
+
+    private fun toggle(on: Boolean) = if (on) TOGGLE_ON else TOGGLE_OFF
+
+    /**
+     * A mono switch for on/off rows: filled track with the knob right when on, outlined and left when off.
+     * [lit] draws it for a focused row, whose fill is fg: then onFg is the ink and the knob takes the row's colour.
+     */
+    private fun switch(on: Boolean, lit: Boolean = false) = FrameLayout(this).apply {
+        val ink = if (lit) onFg else fg
+        val faint = ink and 0xFFFFFF or 0x66000000
+        background = GradientDrawable().apply {
+            cornerRadius = dp(10).toFloat()
+            if (on) setColor(ink) else setStroke(dp(2), faint)
+        }
+        addView(View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(if (!on) faint else if (lit) fg else if (dark) 0xFF09090B.toInt() else 0xFFF7F8FA.toInt())
+            }
+        }, FrameLayout.LayoutParams(dp(14), dp(14), Gravity.CENTER_VERTICAL or if (on) Gravity.END else Gravity.START).apply {
+            marginStart = dp(3)
+            marginEnd = dp(3)
+        })
     }
 
     private fun showNet(caps: NetworkCapabilities?) {
@@ -1365,6 +1615,19 @@ class MainActivity : Activity() {
      * Every app, logo only, on the same 8-column grid as the Continue Watching cards (one card = two
      * tiles), so 8 show at once and the row scrolls for the rest. All apps and Settings are in the top bar.
      */
+    private fun rowAlign() = prefs.getString("row_align", "left")!!.takeIf { it in ROW_ALIGN } ?: "left"
+
+    /**
+     * A row shorter than the screen sits left, centred or right. A longer row always starts at the left:
+     * centred, the scroller would push its first tiles out of reach.
+     */
+    private fun alignRow() {
+        val content = appRow.parent as View
+        (content.layoutParams as FrameLayout.LayoutParams).gravity =
+            if (appTileCount() > ROW_TILES) Gravity.START else ROW_ALIGN[rowAlign()]!!.second
+        content.requestLayout()
+    }
+
     private fun renderApps() {
         val focusedTag = currentFocus?.tag
         // Rebuilds can happen in the background (an app or HDMI device added); only take focus if the row had it.
@@ -1410,6 +1673,7 @@ class MainActivity : Activity() {
             }
         }
         showNames()
+        alignRow()
         if (takeFocus) (tiles.firstOrNull { it.tag == focusedTag } ?: tiles[0]).requestFocus()
         if (!prefs.getBoolean("tip_move", false)) {
             prefs.edit().putBoolean("tip_move", true).apply()
@@ -1662,7 +1926,8 @@ class MainActivity : Activity() {
             }
         }
         // The settings panel is a vertical list: don't let Left/Right leak focus to the home screen behind it.
-        if (settingsScrim.visibility == View.VISIBLE && currentFocus !== pinBox &&
+        // The PIN boxes and the text fields (city search, API key) use them themselves.
+        if (settingsScrim.visibility == View.VISIBLE && currentFocus !== pinBox && currentFocus !is EditText &&
             (e.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || e.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
         ) return true
         if (editing && editKey(e, confirm)) return true
@@ -2166,8 +2431,52 @@ class MainActivity : Activity() {
                     Toast.makeText(this, if (latest == null) getString(R.string.toast_update_check_failed) else getString(R.string.toast_update_up_to_date), Toast.LENGTH_SHORT).show()
                 }
                 refreshSettings(UPDATE_ROW)
+                updateBadge()
             }
         }
+    }
+
+    /** What's new in this version (the CHANGELOG.md section the build put in), with check or install on top. */
+    private fun showUpdates() {
+        prefs.edit().putString("seen_notes", myVersion()).apply()
+        updateBadge()
+        val ver = availableUpdate()
+        showPage(getString(R.string.whats_new_title, myVersion()), listOf(
+            if (ver != null) page(getString(R.string.install_update, ver)) { installUpdate(ver) }
+            else page(getString(R.string.check_updates)) { checkUpdate(force = true) },
+        ), back = { renderSettings(UPDATE_ROW) })
+        // Focusable, lit on focus, so Down walks through notes longer than the panel and it scrolls along.
+        getString(R.string.whats_new).split('\n').forEach {
+            settingsList.addView(label("", 13f).apply {
+                text = SpannableString(it).apply { setSpan(BulletSpan(dp(10), fg), 0, it.length, 0) }
+                maxLines = Int.MAX_VALUE
+                ellipsize = null
+                alpha = 0.7f
+                isFocusable = true
+                setOnFocusChangeListener { v, focused -> v.alpha = if (focused) 1f else 0.7f }
+                setPadding(dp(14), dp(10), dp(14), dp(2))
+            })
+        }
+        settingsList.getChildAt(0).nextFocusDownId = View.NO_ID // showPage stops Down at its last row
+        settingsList.getChildAt(settingsList.childCount - 1).let { it.id = View.generateViewId(); it.nextFocusDownId = it.id }
+    }
+
+    /** Notes the user hasn't opened since updating. A fresh install has nothing new to tell. */
+    private fun notesUnseen(): Boolean {
+        val info = packageManager.getPackageInfo(packageName, 0)
+        return info.firstInstallTime != info.lastUpdateTime && prefs.getString("seen_notes", null) != info.versionName
+    }
+
+    private val badge by lazy { GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(BADGE) } }
+
+    /** A dot on the Plume settings icon while an update waits or its notes are unread. */
+    private fun updateBadge() {
+        val icon = findViewById<ImageView>(R.id.launcherSettings)
+        icon.overlay.clear()
+        if (availableUpdate() == null && !notesUnseen()) return
+        val size = dp(9)
+        badge.setBounds(icon.width - size - dp(3), dp(3), icon.width - dp(3), dp(3) + size)
+        icon.overlay.add(badge)
     }
 
     private fun installUpdate(ver: String) {
@@ -2254,7 +2563,7 @@ class MainActivity : Activity() {
         if (System.currentTimeMillis() - prefs.getLong("wx_time", 0) < 25 * 60_000L) return
         io.execute {
             try {
-                if (System.currentTimeMillis() - prefs.getLong("geo_time", 0) > 6 * 3600_000L) {
+                if (!manualCity() && System.currentTimeMillis() - prefs.getLong("geo_time", 0) > 6 * 3600_000L) {
                     val geo = getJson("https://ipwho.is/?fields=success,city,latitude,longitude")
                     if (geo.optBoolean("success")) prefs.edit()
                         .putString("geo_city", geo.getString("city"))
@@ -2272,6 +2581,90 @@ class MainActivity : Activity() {
                 ui.post { showWeather() }
             } catch (e: Exception) {
                 android.util.Log.w("Plume", "weather failed ($e)") // keep the last reading; next tick retries
+            }
+        }
+    }
+
+    // An IP's location is wherever the provider routes it, sometimes a whole region off (Rome showing as
+    // Sicily), so you can pick the city instead. Open-Meteo's geocoding, also free and keyless.
+
+    private fun manualCity() = prefs.getBoolean("geo_manual", false)
+
+    private class City(val name: String, val where: String, val lat: Float, val lon: Float)
+
+    /** Automatic first, then the search box; a search lists what it found under them. */
+    private fun pickCity(query: String = "", found: List<City>? = null, status: String = "") {
+        val search = EditText(this).apply {
+            id = View.generateViewId()
+            setText(query)
+            setSelection(query.length)
+            hint = getString(R.string.city_hint)
+            textSize = 14f
+            setTextColor(fg)
+            setHintTextColor(Color.argb(120, Color.red(fg), Color.green(fg), Color.blue(fg)))
+            isSingleLine = true
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            imeOptions = EditorInfo.IME_ACTION_SEARCH
+            setPadding(dp(14), 0, dp(14), 0)
+            val bg = GradientDrawable().apply {
+                cornerRadius = dp(8).toFloat()
+                setColor(field)
+                setStroke(dp(1), fieldEdge())
+            }
+            background = bg
+            setOnFocusChangeListener { _, focused -> bg.setStroke(if (focused) dp(2) else dp(1), if (focused) fg else fieldEdge()) }
+            setOnEditorActionListener { v, _, _ -> searchCity(v.text.toString().trim()); true }
+        }
+        val top = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(4), 0, 0)
+            addView(search, LinearLayout.LayoutParams(MATCH_PARENT, dp(44)))
+            if (status.isNotEmpty()) addView(label(status, 12f).apply { alpha = 0.6f; setPadding(dp(14), dp(8), 0, 0) })
+        }
+        val rows = listOf(page(getString(R.string.automatic_ip), if (manualCity()) "" else CHOSEN) {
+            prefs.edit().remove("geo_manual").remove("geo_time").remove("wx_time").apply()
+            refreshWeather()
+            renderSettings(CITY_ROW)
+        }) + found.orEmpty().map { c ->
+            page(c.name, c.where) {
+                prefs.edit().putBoolean("geo_manual", true).putString("geo_city", c.name)
+                    .putFloat("geo_lat", c.lat).putFloat("geo_lon", c.lon).remove("wx_time").apply()
+                refreshWeather()
+                renderSettings(CITY_ROW)
+            }
+        }
+        showPage(getString(R.string.weather_location), rows, if (found.isNullOrEmpty()) 0 else 1, top = top) { renderSettings(CITY_ROW) }
+        // showPage pins Up on the first row to itself; here Up goes to the search box.
+        settingsList.getChildAt(1).nextFocusUpId = search.id
+        if (found.isNullOrEmpty()) search.requestFocus()
+        // Results in: put the keyboard away, it would cover them.
+        else getSystemService(InputMethodManager::class.java).hideSoftInputFromWindow(search.windowToken, 0)
+    }
+
+    private fun searchCity(query: String) {
+        if (query.isEmpty()) return
+        pickCity(query, status = getString(R.string.searching))
+        io.execute {
+            val found = try {
+                val r = getJson("https://geocoding-api.open-meteo.com/v1/search?count=8&format=json" +
+                    "&language=${java.util.Locale.getDefault().language}&name=${URLEncoder.encode(query, "UTF-8")}")
+                val list = r.optJSONArray("results")
+                (0 until (list?.length() ?: 0)).map { i ->
+                    val c = list!!.getJSONObject(i)
+                    City(c.getString("name"), listOf(c.optString("admin1"), c.optString("country")).filter { it.isNotEmpty() }.joinToString(", "),
+                        c.getDouble("latitude").toFloat(), c.getDouble("longitude").toFloat())
+                }
+            } catch (e: Exception) {
+                null
+            }
+            ui.post {
+                // Only if the page is still open: Back may have left it while the search ran.
+                if (settingsScrim.visibility != View.VISIBLE || findViewById<TextView>(R.id.settingsTitle).text.toString() != getString(R.string.weather_location)) return@post
+                when {
+                    found == null -> pickCity(query, status = getString(R.string.search_failed))
+                    found.isEmpty() -> pickCity(query, status = getString(R.string.no_places, query))
+                    else -> pickCity(query, found)
+                }
             }
         }
     }
@@ -2912,11 +3305,14 @@ class MainActivity : Activity() {
         const val FADE_ROW = THEME_ROW + 3
         const val PHOTO_EVERY_ROW = THEME_ROW + 4
         const val WEATHER_ROW = THEME_ROW + 5
+        const val WEATHER_UNITS_ROW = THEME_ROW + 6
+        const val CITY_ROW = THEME_ROW + 7
         const val SORT_ROW = APPS_SECTION * SECTION + 1
         const val ROW_APPS_ROW = APPS_SECTION * SECTION + 2
-        const val NAMES_ROW = APPS_SECTION * SECTION + 3
-        const val ICONS_ROW = APPS_SECTION * SECTION + 4
-        const val LOCK_ROW = APPS_SECTION * SECTION + 5
+        const val ALIGN_ROW = APPS_SECTION * SECTION + 3
+        const val NAMES_ROW = APPS_SECTION * SECTION + 4
+        const val ICONS_ROW = APPS_SECTION * SECTION + 5
+        const val LOCK_ROW = APPS_SECTION * SECTION + 6
         const val CW_APPS_ROW = WATCH_SECTION * SECTION
         const val HIDDEN_ROW = WATCH_SECTION * SECTION + 1
         const val TMDB_KEY_ROW = SPOTLIGHT_SECTION * SECTION
@@ -2925,10 +3321,19 @@ class MainActivity : Activity() {
         const val TMDB_APPS_ROW = TMDB_KEY_ROW + 3
         const val TMDB_CYCLE_ROW = TMDB_KEY_ROW + 4
         const val SCREENSAVER_ROW = SCREENSAVER_SECTION * SECTION
-        const val HOME_BUTTON_ROW = SYSTEM_SECTION * SECTION
+        const val HOME_BUTTON_ROW = SYSTEM_SECTION * SECTION + 1 // after "Set up Home button"
         const val DEFAULT_HOME_ROW = HOME_BUTTON_ROW + 1
         const val UPDATE_ROW = HOME_BUTTON_ROW + 2
         val SPOTLIGHT_EVERY = listOf(0, 5, 8, 10, 15, 30) // seconds between Spotlight titles; 0 = off
+        val ROW_ALIGN = linkedMapOf( // setting -> its name, and the row's gravity in the scroller
+            "left" to (R.string.align_left to Gravity.START),
+            "centre" to (R.string.align_centre to Gravity.CENTER_HORIZONTAL),
+            "right" to (R.string.align_right to Gravity.END),
+        )
+        const val BADGE = 0xFFFF453A.toInt()
+        const val HELP_URL = "https://github.com/aradhyas8/Plume_Launcher#home-button-on-android-13-and-newer"
+        const val TOGGLE_ON = "\u0000on" // row values drawn as a switch instead of text
+        const val TOGGLE_OFF = "\u0000off"
         const val PIN_TRIES = 5 // wrong PINs before a 30 s wait
         const val UNLOCKED_MS = 5 * 60_000L
         const val MEDIA_REQUEST = 3
