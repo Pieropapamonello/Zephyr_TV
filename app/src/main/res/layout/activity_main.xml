@@ -169,13 +169,6 @@
                     android:focusable="true"
                     android:orientation="vertical">
 
-                    <!-- Only as wide as the text, so its veil sits behind the words and nowhere else. -->
-                    <LinearLayout
-                        android:id="@+id/spotlightText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
                     <TextView
                         android:id="@+id/spotlightMeta"
                         android:layout_width="wrap_content"
@@ -216,7 +209,6 @@
                         android:shadowRadius="4"
                         android:textSize="13sp"
                         android:visibility="gone" />
-                    </LinearLayout>
                 </LinearLayout>
 
                 <ImageView

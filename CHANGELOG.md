@@ -15,13 +15,16 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
-- The Spotlight image is clearer. It has a fade only under the apps row. The light panel is only behind the Spotlight text.
+## 2.0
+
+- The Spotlight image is clearer. It has a fade only under the apps row. The Spotlight text has no panel behind it. It has the same soft shadow as the clock.
 - Spotlight can show your own list from themoviedb.org instead of the trending titles. Make a public list there, then select **Piume settings → TMDB Spotlight → My TMDB list** and paste its link on your phone.
 - The Gallery screensaver can show the Spotlight trending images, with the title, the year and the genre. Select **Piume settings → Screensaver → Screensaver → Spotlight trending (TMDB)**.
 - The top bar has a voice search button. It opens the voice search of the TV.
 - You can show the clock in 24-hour or 12-hour format. Select **Piume settings → Appearance & wallpapers → Clock**.
 - **Night mode** makes the home screen darker and stops Spotlight between the hours you choose. Turn it on in **Piume settings → Appearance & wallpapers → Night mode**.
 - You can save a backup of your Piume settings on your phone and restore it later. Select **Piume settings → System → Backup and restore**. The backup has your TMDB key, but not your photos or the lock PIN.
+
 ## 1.5
 
 - Spotlight keeps its images on the TV. It downloads each image one time, not each time it shows the title.

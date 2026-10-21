@@ -19,7 +19,7 @@ All the code is in `app/src/main/java/dev/piume/`. The home screen is one activi
 |---|---|
 | `MainActivity.kt` | Start-up, theme, wallpapers, apps row, All apps, screensaver, remote navigation |
 | `SettingsPanel.kt` | Piume settings: sections, pages, on/off rows, layout lock |
-| `Spotlight.kt` | TMDB Spotlight: title, veil, arrows, app buttons, cycling |
+| `Spotlight.kt` | TMDB Spotlight: title, arrows, app buttons, cycling |
 | `WatchRow.kt` | Continue Watching, recommendations per app, cards and posters |
 | `HomeSetup.kt` | Home button service, default launcher, guided setup |
 | `Updates.kt`, `Updater.kt` | Update checks and installs (screen, then GitHub and the installer) |
@@ -27,7 +27,7 @@ All the code is in `app/src/main/java/dev/piume/`. The home screen is one activi
 | `PhoneScreens.kt`, `PhoneLink.kt` | Jobs done on a phone through a QR code (screens, then the small web server) |
 | `TmdbClient.kt`, `BackdropCache.kt` | TMDB: trending, genres, trailers, providers, app links; backdrops on disk |
 | `Http.kt`, `Prefs.kt`, `Problems.kt` | Network access, every settings key, the recent problems log |
-| `Gallery.kt`, `HomeOverride.kt`, `Qr.kt`, `SoftVeil.kt`, `WallpaperUpload.kt` | Screensaver, Home key service, QR encoder, feathered veil, photo import |
+| `Gallery.kt`, `HomeOverride.kt`, `Qr.kt`, `WallpaperUpload.kt` | Screensaver, Home key service, QR encoder, photo import |
 
 New settings keys go in `Prefs.kt`. Anything that goes online uses `Http`, runs off the UI thread and reports failures with `warn()`.
 

@@ -160,7 +160,6 @@ class MainActivity : Activity() {
     internal lateinit var wifi: ImageView
     internal lateinit var spotlightContainer: View
     internal lateinit var spotlightInfoBox: View
-    internal lateinit var spotlightText: View
     internal lateinit var spotlightTitle: TextView
     internal lateinit var spotlightMeta: TextView
     internal lateinit var spotlightOverview: TextView
@@ -212,7 +211,6 @@ class MainActivity : Activity() {
         wifi = findViewById(R.id.wifi)
         spotlightContainer = findViewById(R.id.spotlightContainer)
         spotlightInfoBox = findViewById(R.id.spotlightInfoBox)
-        spotlightText = findViewById(R.id.spotlightText)
         spotlightTitle = findViewById(R.id.spotlightTitle)
         spotlightMeta = findViewById(R.id.spotlightMeta)
         spotlightOverview = findViewById(R.id.spotlightOverview)
@@ -539,7 +537,7 @@ class MainActivity : Activity() {
             val h = bmp.height.toFloat()
             val base = ground and 0x00FFFFFF
             // Only the fade under the apps row, from halfway down: the backdrop shows clear everywhere else. The
-            // Spotlight text has its own light veil, and the clock and icons their halo.
+            // clock, the icons and the Spotlight text read by their halo.
             if (wallpaperFade()) Canvas(bmp).drawRect(0f, 0f, bmp.width.toFloat(), h, Paint().apply {
                 shader = LinearGradient(0f, h * 0.5f, 0f, h * 0.8f, base, base or 0xE6000000.toInt(), Shader.TileMode.CLAMP)
             })
