@@ -166,11 +166,15 @@ class MainActivity : Activity() {
     private lateinit var spotlightMeta: TextView
     private lateinit var spotlightOverview: TextView
     private lateinit var spotlightActions: LinearLayout
-    private lateinit var spotlightDots: LinearLayout
+    private lateinit var spotlightPrev: ImageView
+    private lateinit var spotlightNext: ImageView
     private lateinit var bottomSection: View
 
-    private var tmdbTrending: List<TmdbItem> = emptyList()
-    private var tmdbIndex = 0
+    // Written on the io thread (decodeWallpaper), read on the UI thread.
+    @Volatile private var tmdbTrending: List<TmdbItem> = emptyList()
+    @Volatile private var tmdbIndex = 0
+    @Volatile private var tmdbFetchedAt = 0L
+    private var spotlightApps: List<App>? = null // apps behind the Spotlight buttons; null rebuilds them
     private var tmdbLastFocusApp: String? = null
     private val appChannelDebounce = Runnable { queryAppChannels(tmdbLastFocusApp) }
 
@@ -212,7 +216,8 @@ class MainActivity : Activity() {
         spotlightMeta = findViewById(R.id.spotlightMeta)
         spotlightOverview = findViewById(R.id.spotlightOverview)
         spotlightActions = findViewById(R.id.spotlightActions)
-        spotlightDots = findViewById(R.id.spotlightDots)
+        spotlightPrev = findViewById(R.id.spotlightPrev)
+        spotlightNext = findViewById(R.id.spotlightNext)
         setupSpotlight()
         applyTheme()
         loadWallpaper()
@@ -236,13 +241,14 @@ class MainActivity : Activity() {
             }
             setOnClickListener { action() }
         }
-        if (prefs.getBoolean("reopen_settings", false)) {
-            prefs.edit().remove("reopen_settings").apply()
-            ui.post { openLauncherSettings(focus = 1) }
+        if (prefs.contains("reopen_row")) {
+            val row = prefs.getInt("reopen_row", THEME_ROW)
+            prefs.edit().remove("reopen_row").apply()
+            ui.post { openLauncherSettings(row) }
         } else if (!homeServiceOn() && !prefs.getBoolean("setup_shown", false)) {
             // Fresh install: open settings on the Home button row, the one step that has to happen by hand.
             prefs.edit().putBoolean("setup_shown", true).apply()
-            ui.post { openLauncherSettings(focus = HOME_BUTTON_ROW) }
+            ui.post { openLauncherSettings(HOME_BUTTON_ROW) }
         }
 
         registerReceiver(packageReceiver, IntentFilter().apply {
@@ -277,6 +283,7 @@ class MainActivity : Activity() {
         ui.postDelayed(themeTick, 60_000L)
         ui.removeCallbacks(wallpaperTick)
         ui.post(wallpaperTick)
+        restartSpotlightTick()
         // Gallery chosen but its paintings missing (updated from a version that bundled them): fetch them.
         if (galleryOn() && photoScreensaver() == null && !paintingsReady(this)) downloadPaintings {}
         checkUpdate(force = false)
@@ -297,13 +304,14 @@ class MainActivity : Activity() {
 
     @Deprecated("Only used for the default-home role request")
     override fun onActivityResult(code: Int, result: Int, data: Intent?) {
-        if (code == ROLE_REQUEST && settingsScrim.visibility == View.VISIBLE) renderSettings(DEFAULT_HOME_ROW)
+        if (code == ROLE_REQUEST) refreshSettings(DEFAULT_HOME_ROW)
     }
 
     override fun onPause() {
         ui.removeCallbacks(weatherTick)
         ui.removeCallbacks(themeTick)
         ui.removeCallbacks(wallpaperTick)
+        ui.removeCallbacks(spotlightTick)
         if (editing) endEdit()
         super.onPause()
     }
@@ -432,6 +440,8 @@ class MainActivity : Activity() {
             }
         }
         wifi.setColorFilter(fg)
+        spotlightPrev.setColorFilter(fg)
+        spotlightNext.setColorFilter(fg)
         renderSpotlight()
     }
 
@@ -457,6 +467,8 @@ class MainActivity : Activity() {
     private fun plainWallpaper(forDark: Boolean) = if (forDark) "plain:Pure black" else "plain:Soft white"
 
     private fun defaultWallpaper(forDark: Boolean) = if (forDark) "res:Rockies (dusk)" else "res:Rockies (day)"
+
+    private fun tmdbLang() = prefs.getString("tmdb_lang", null) ?: TmdbClient.defaultLanguage()
 
     private fun currentWallpaper(forDark: Boolean = dark): String {
         val saved = prefs.getString(if (forDark) "wp_dark" else "wp_light", null)
@@ -495,6 +507,8 @@ class MainActivity : Activity() {
                 null
             } ?: decodeWallpaper(fallback)
             ui.post {
+                // The next title's countdown starts once this backdrop is up, so slow loads never pile up.
+                if (choice == "tmdb:trending") restartSpotlightTick()
                 val old = view.drawable
                 if (old == null || bmp == null) {
                     view.setImageBitmap(bmp)
@@ -517,13 +531,16 @@ class MainActivity : Activity() {
         }
         if (choice == "tmdb:trending") {
             val key = prefs.getString("tmdb_api_key", null) ?: return null
-            val lang = prefs.getString("tmdb_lang", "it-IT") ?: "it-IT"
             val type = prefs.getString("tmdb_type", "all") ?: "all"
-            if (tmdbTrending.isEmpty()) {
-                tmdbTrending = TmdbClient.fetchTrending(key, lang, type)
+            // Trending is per day: refetch now and then, or a home screen that never closes keeps last week's list.
+            if (tmdbTrending.isEmpty() || System.currentTimeMillis() - tmdbFetchedAt > TMDB_FRESH_MS) {
+                val fresh = TmdbClient.fetchTrending(key, tmdbLang(), type)
+                if (fresh.isNotEmpty()) {
+                    tmdbTrending = fresh
+                    tmdbFetchedAt = System.currentTimeMillis()
+                }
             }
-            if (tmdbTrending.isEmpty()) return null
-            val item = tmdbTrending.getOrNull(tmdbIndex.coerceIn(0, tmdbTrending.size - 1)) ?: return null
+            val item = spotlightItem() ?: return null
             val url = TmdbClient.backdropUrl(item.backdropPath) ?: return null
             val bmp = fitWallpaper { openStream(url) } ?: return null
             val h = bmp.height.toFloat()
@@ -562,7 +579,7 @@ class MainActivity : Activity() {
 
     /** Wallpapers page, framed by "Add from phone…" first and, once there are photos, "Remove a photo…" last. */
     private fun pickWallpaper(forDark: Boolean) {
-        val row = if (forDark) 3 else 2
+        val row = if (forDark) DARK_WP_ROW else LIGHT_WP_ROW
         val choices = wallpaperChoices(forDark)
         val own = choices.filter { it.second.startsWith("file:") }
         val current = currentWallpaper(forDark)
@@ -606,10 +623,10 @@ class MainActivity : Activity() {
                 prefs.edit().putInt("wp_every", minutes).apply()
                 ui.removeCallbacks(wallpaperTick)
                 ui.post(wallpaperTick)
-                renderSettings(5)
+                renderSettings(PHOTO_EVERY_ROW)
             }
         }
-        showPage(getString(R.string.setting_folder_photo_changes), rows, PHOTO_EVERY.indexOf(photoEvery())) { renderSettings(5) }
+        showPage(getString(R.string.setting_folder_photo_changes), rows, PHOTO_EVERY.indexOf(photoEvery())) { renderSettings(PHOTO_EVERY_ROW) }
     }
 
     /** While the home screen shows, a folder wallpaper moves on to its next photo when its time is up. */
@@ -653,7 +670,7 @@ class MainActivity : Activity() {
 
     private fun pickFolder(forDark: Boolean) = pickFolder({ pickWallpaper(forDark) }) { choice ->
         setWallpaper(forDark, choice)
-        renderSettings(if (forDark) 3 else 2)
+        renderSettings(if (forDark) DARK_WP_ROW else LIGHT_WP_ROW)
     }
 
     /** Folders page for wallpapers and the screensaver; [onPick] gets "folder:<bucket id>:<name>". */
@@ -764,9 +781,10 @@ class MainActivity : Activity() {
     private val settingsScrim by lazy { findViewById<View>(R.id.settingsScrim) }
     private val settingsList by lazy { findViewById<LinearLayout>(R.id.settingsList) }
 
-    private fun openLauncherSettings(focus: Int = 0) {
+    /** Opens the panel on its list of sections, or straight on the section page holding [row]. */
+    private fun openLauncherSettings(row: Int? = null) {
         showPanel()
-        renderSettings(focus)
+        if (row == null) renderSettingsHome() else renderSettings(row)
     }
 
     private fun showPanel() {
@@ -789,98 +807,162 @@ class MainActivity : Activity() {
 
     private var panelFrom: View? = null // focus to go back to when the panel closes
 
-    private fun renderSettings(focus: Int) {
-        val theme = prefs.getString("theme", "light")!!
-        val sort = prefs.getString("sort", "manual")!!
-        val hidden = prefs.getStringSet("hidden_watch", emptySet())!!.size
-        val weather = prefs.getString("weather", "off")!!
-        val cwOff = prefs.getStringSet("cw_off", emptySet())!!.count { pkg -> apps.any { it.pkg == pkg } } // uninstalled ones don't count
-        val rowHidden = rowHiddenSet().count { pkg -> apps.any { it.pkg == pkg } }
-        val names = rowNames()
-        val colour = colourIcons()
-        val themeName = when (theme) {
-            "light" -> getString(R.string.setting_theme_light)
-            "dark" -> getString(R.string.setting_theme_dark)
-            else -> getString(R.string.setting_theme_auto)
-        }
-        val appNamesVal = when (names) {
-            "always" -> getString(R.string.app_names_always)
-            "never" -> getString(R.string.app_names_never)
-            else -> getString(R.string.app_names_focus)
-        }
-        val rows = listOf<Triple<String, String, () -> Unit>>(
-            Triple(getString(R.string.edit_apps_row), "") { closeLauncherSettings(); startEdit(grab = null) },
-            Triple(getString(R.string.setting_theme), themeName) {
-                prefs.edit().putString("theme", mapOf("light" to "dark", "dark" to "auto", "auto" to "light")[theme])
-                    .putBoolean("reopen_settings", true).apply()
-                recreate() // colours are applied once per activity; reopen the panel after
-            },
-            Triple(getString(R.string.setting_light_wallpaper), wallpaperName(currentWallpaper(false))) { pickWallpaper(false) },
-            Triple(getString(R.string.setting_dark_wallpaper), wallpaperName(currentWallpaper(true))) { pickWallpaper(true) },
-            Triple(getString(R.string.setting_photo_fade), if (wallpaperFade()) getString(R.string.state_on) else getString(R.string.state_off)) {
-                prefs.edit().putBoolean("wp_fade", !wallpaperFade()).apply()
-                loadWallpaper()
-                renderSettings(4)
-            },
-            Triple(getString(R.string.setting_folder_photo_changes), photoEveryName(photoEvery())) { pickPhotoEvery() },
-            Triple(getString(R.string.setting_sort_apps), if (sort == "manual") getString(R.string.setting_sort_manual) else getString(R.string.setting_sort_usage)) {
-                prefs.edit().putString("sort", if (sort == "manual") "usage" else "manual").apply()
-                renderApps()
-                renderSettings(6)
-            },
-            Triple(getString(R.string.setting_apps_in_row), if (rowHidden == 0) getString(R.string.apps_in_row_all) else getString(R.string.apps_in_row_count, apps.size - rowHidden, apps.size)) { pickRowApps() },
-            Triple(getString(R.string.setting_app_names), appNamesVal) {
-                prefs.edit().putString("names", mapOf("focus" to "always", "always" to "never", "never" to "focus")[names]).apply()
-                renderApps()
-                renderSettings(8)
-            },
-            Triple(getString(R.string.setting_icon_style), if (colour) getString(R.string.icon_style_colour) else getString(R.string.icon_style_monochrome)) {
-                prefs.edit().putBoolean("colour_icons", !colour).apply()
-                renderApps()
-                renderSettings(9)
-            },
-            Triple(getString(R.string.setting_restore_hidden_shows), if (hidden == 0) getString(R.string.hidden_shows_none) else getString(R.string.hidden_shows_count, hidden)) {
-                prefs.edit().remove("hidden_watch").apply()
-                watchKey = null
-                refreshWatchNext()
-                renderSettings(10)
-            },
-            Triple(getString(R.string.setting_cw_apps), if (cwOff == 0) getString(R.string.cw_apps_all_on) else getString(R.string.cw_apps_count_off, cwOff)) { pickWatchSources() },
-            Triple(getString(R.string.setting_weather), when (weather) { "c" -> "°C"; "f" -> "°F"; else -> getString(R.string.weather_off) }) {
-                prefs.edit().putString("weather", mapOf("off" to "c", "c" to "f", "f" to "off")[weather]).apply()
-                showWeather()
-                ui.removeCallbacks(weatherTick)
-                ui.post(weatherTick)
-                renderSettings(12)
-            },
-            Triple(getString(R.string.setting_tmdb), if (prefs.getString("tmdb_api_key", null).isNullOrBlank()) getString(R.string.state_off) else getString(R.string.state_on)) { pickTmdbSettings() },
-            Triple(getString(R.string.setting_screensaver), when {
-                downloading -> getString(R.string.screensaver_downloading)
-                !galleryOn() -> screensaverName()
-                else -> photoScreensaver()?.let { wallpaperName(it) } ?: getString(R.string.screensaver_gallery_label)
-            }) { pickScreensaver() },
-            Triple(getString(R.string.setting_test_screensaver), "") { testScreensaver() },
-            Triple(getString(R.string.setting_screensaver_timing), "") { openScreensaverSettings() },
-            Triple(getString(R.string.setting_home_button), if (homeServiceOn()) getString(R.string.home_button_on) else getString(R.string.home_button_off_prompt)) { turnOnHomeButton() },
-            Triple(getString(R.string.setting_default_launcher), if (isDefaultHome()) getString(R.string.app_name) else getString(R.string.default_launcher_set_prompt)) { makeDefaultHome() },
-            Triple(getString(R.string.setting_updates), when {
-                updating -> getString(R.string.updates_updating)
-                checking -> getString(R.string.updates_checking)
-                availableUpdate() != null -> getString(R.string.updates_available_prompt, availableUpdate()!!)
-                else -> getString(R.string.updates_up_to_date, myVersion())
-            }) { availableUpdate()?.let { installUpdate(it) } ?: checkUpdate(force = true) },
-            Triple(getString(R.string.setting_lock_layout), if (lockOn()) getString(R.string.state_on) else getString(R.string.state_off)) {
-                if (!lockOn()) return@Triple setLock()
-                prefs.edit().remove("lock_pin").apply()
-                renderSettings(LOCK_ROW)
-            },
+    // The main page lists sections; each opens a page of its own. A row is addressed as section * SECTION + its
+    // position on that page (the *_ROW constants), so whatever a row opens can come back to that row.
+
+    private var shownSection = -1 // section page on screen, -1 for the main list or any other page
+
+    private fun sectionTitle(section: Int) = getString(when (section) {
+        LOOK_SECTION -> R.string.settings_section_look
+        APPS_SECTION -> R.string.settings_section_apps
+        WATCH_SECTION -> R.string.continue_watching
+        SPOTLIGHT_SECTION -> R.string.setting_tmdb
+        SCREENSAVER_SECTION -> R.string.setting_screensaver
+        else -> R.string.settings_section_system
+    })
+
+    private fun renderSettingsHome(focus: Int = 0) {
+        val cwOff = prefs.getStringSet("cw_off", emptySet())!!.count { pkg -> apps.any { it.pkg == pkg } }
+        val summaries = mapOf(
+            LOOK_SECTION to themeName(),
+            APPS_SECTION to if (lockOn()) getString(R.string.settings_summary_locked) else "",
+            WATCH_SECTION to if (cwOff == 0) getString(R.string.cw_apps_all_on) else getString(R.string.cw_apps_count_off, cwOff),
+            SPOTLIGHT_SECTION to if (prefs.getString("tmdb_api_key", null).isNullOrBlank()) getString(R.string.state_off) else getString(R.string.state_on),
+            SCREENSAVER_SECTION to screensaverValue(),
+            // The one thing here that needs doing by hand comes first; otherwise the version.
+            SYSTEM_SECTION to if (!homeServiceOn()) getString(R.string.settings_summary_setup) else updatesValue(),
         )
-        showPage(getString(R.string.plume_settings), rows, focus, back = null)
+        showPage(getString(R.string.plume_settings), summaries.map { (section, value) ->
+            page(sectionTitle(section), value) { renderSettings(section * SECTION) }
+        }, focus, back = null)
     }
 
-    private fun pickTmdbSettings() {
+    /** Shows the section page holding [row], focused on it. */
+    private fun renderSettings(row: Int) {
+        val section = row / SECTION
+        showPage(sectionTitle(section), sectionRows(section), row % SECTION) { renderSettingsHome(section) }
+        shownSection = section
+    }
+
+    /** Redraws the section page holding [row] for news that arrives later (a download, an update), only if it's on screen. */
+    private fun refreshSettings(row: Int) {
+        if (settingsScrim.visibility != View.VISIBLE || shownSection != row / SECTION) return
+        val at = (0 until settingsList.childCount).firstOrNull { settingsList.getChildAt(it).hasFocus() } ?: (row % SECTION)
+        renderSettings(row / SECTION * SECTION + at)
+    }
+
+    private fun themeName() = when (prefs.getString("theme", "light")) {
+        "light" -> getString(R.string.setting_theme_light)
+        "dark" -> getString(R.string.setting_theme_dark)
+        else -> getString(R.string.setting_theme_auto)
+    }
+
+    private fun screensaverValue() = when {
+        downloading -> getString(R.string.screensaver_downloading)
+        !galleryOn() -> screensaverName()
+        else -> photoScreensaver()?.let { wallpaperName(it) } ?: getString(R.string.screensaver_gallery_label)
+    }
+
+    private fun updatesValue() = when {
+        updating -> getString(R.string.updates_updating)
+        checking -> getString(R.string.updates_checking)
+        availableUpdate() != null -> getString(R.string.updates_available_prompt, availableUpdate()!!)
+        else -> getString(R.string.updates_up_to_date, myVersion())
+    }
+
+    private fun onOff(on: Boolean) = getString(if (on) R.string.state_on else R.string.state_off)
+
+    /** Each section's rows, in the order of its *_ROW constants. */
+    private fun sectionRows(section: Int): List<Triple<String, String, () -> Unit>> = when (section) {
+        LOOK_SECTION -> {
+            val theme = prefs.getString("theme", "light")!!
+            val weather = prefs.getString("weather", "off")!!
+            listOf(
+                page(getString(R.string.setting_theme), themeName()) {
+                    prefs.edit().putString("theme", mapOf("light" to "dark", "dark" to "auto", "auto" to "light")[theme])
+                        .putInt("reopen_row", THEME_ROW).apply()
+                    recreate() // colours are applied once per activity; reopen the panel after
+                },
+                page(getString(R.string.setting_light_wallpaper), wallpaperName(currentWallpaper(false))) { pickWallpaper(false) },
+                page(getString(R.string.setting_dark_wallpaper), wallpaperName(currentWallpaper(true))) { pickWallpaper(true) },
+                page(getString(R.string.setting_photo_fade), onOff(wallpaperFade())) {
+                    prefs.edit().putBoolean("wp_fade", !wallpaperFade()).apply()
+                    loadWallpaper()
+                    renderSettings(FADE_ROW)
+                },
+                page(getString(R.string.setting_folder_photo_changes), photoEveryName(photoEvery())) { pickPhotoEvery() },
+                page(getString(R.string.setting_weather), when (weather) { "c" -> "°C"; "f" -> "°F"; else -> getString(R.string.weather_off) }) {
+                    prefs.edit().putString("weather", mapOf("off" to "c", "c" to "f", "f" to "off")[weather]).apply()
+                    showWeather()
+                    ui.removeCallbacks(weatherTick)
+                    ui.post(weatherTick)
+                    renderSettings(WEATHER_ROW)
+                },
+            )
+        }
+        APPS_SECTION -> {
+            val sort = prefs.getString("sort", "manual")!!
+            val rowHidden = rowHiddenSet().count { pkg -> apps.any { it.pkg == pkg } } // uninstalled ones don't count
+            val names = rowNames()
+            val colour = colourIcons()
+            listOf(
+                page(getString(R.string.edit_apps_row)) { closeLauncherSettings(); startEdit(grab = null) },
+                page(getString(R.string.setting_sort_apps), if (sort == "manual") getString(R.string.setting_sort_manual) else getString(R.string.setting_sort_usage)) {
+                    prefs.edit().putString("sort", if (sort == "manual") "usage" else "manual").apply()
+                    renderApps()
+                    renderSettings(SORT_ROW)
+                },
+                page(getString(R.string.setting_apps_in_row), if (rowHidden == 0) getString(R.string.apps_in_row_all) else getString(R.string.apps_in_row_count, apps.size - rowHidden, apps.size)) { pickRowApps() },
+                page(getString(R.string.setting_app_names), when (names) {
+                    "always" -> getString(R.string.app_names_always)
+                    "never" -> getString(R.string.app_names_never)
+                    else -> getString(R.string.app_names_focus)
+                }) {
+                    prefs.edit().putString("names", mapOf("focus" to "always", "always" to "never", "never" to "focus")[names]).apply()
+                    renderApps()
+                    renderSettings(NAMES_ROW)
+                },
+                page(getString(R.string.setting_icon_style), if (colour) getString(R.string.icon_style_colour) else getString(R.string.icon_style_monochrome)) {
+                    prefs.edit().putBoolean("colour_icons", !colour).apply()
+                    renderApps()
+                    renderSettings(ICONS_ROW)
+                },
+                page(getString(R.string.setting_lock_layout), onOff(lockOn())) {
+                    if (!lockOn()) return@page setLock()
+                    prefs.edit().remove("lock_pin").apply()
+                    renderSettings(LOCK_ROW)
+                },
+            )
+        }
+        WATCH_SECTION -> {
+            val hidden = prefs.getStringSet("hidden_watch", emptySet())!!.size
+            val cwOff = prefs.getStringSet("cw_off", emptySet())!!.count { pkg -> apps.any { it.pkg == pkg } }
+            listOf(
+                page(getString(R.string.setting_cw_apps), if (cwOff == 0) getString(R.string.cw_apps_all_on) else getString(R.string.cw_apps_count_off, cwOff)) { pickWatchSources() },
+                page(getString(R.string.setting_restore_hidden_shows), if (hidden == 0) getString(R.string.hidden_shows_none) else getString(R.string.hidden_shows_count, hidden)) {
+                    prefs.edit().remove("hidden_watch").apply()
+                    watchKey = null
+                    refreshWatchNext()
+                    renderSettings(HIDDEN_ROW)
+                },
+            )
+        }
+        SPOTLIGHT_SECTION -> spotlightRows()
+        SCREENSAVER_SECTION -> listOf(
+            page(getString(R.string.setting_screensaver), screensaverValue()) { pickScreensaver() },
+            page(getString(R.string.setting_test_screensaver)) { testScreensaver() },
+            page(getString(R.string.setting_screensaver_timing)) { openScreensaverSettings() },
+        )
+        else -> listOf(
+            page(getString(R.string.setting_home_button), if (homeServiceOn()) getString(R.string.home_button_on) else getString(R.string.home_button_off_prompt)) { turnOnHomeButton() },
+            page(getString(R.string.setting_default_launcher), if (isDefaultHome()) getString(R.string.app_name) else getString(R.string.default_launcher_set_prompt)) { makeDefaultHome() },
+            page(getString(R.string.setting_updates), updatesValue()) { availableUpdate()?.let { installUpdate(it) } ?: checkUpdate(force = true) },
+        )
+    }
+
+    private fun spotlightRows(): List<Triple<String, String, () -> Unit>> {
         val hasKey = !prefs.getString("tmdb_api_key", null).isNullOrBlank()
-        val lang = prefs.getString("tmdb_lang", "it-IT") ?: "it-IT"
+        val lang = tmdbLang()
         val type = prefs.getString("tmdb_type", "all") ?: "all"
         val typeName = when (type) {
             "movie" -> getString(R.string.tmdb_type_movie)
@@ -890,20 +972,21 @@ class MainActivity : Activity() {
         val offSet = prefs.getStringSet("tmdb_default_apps", emptySet()) ?: emptySet()
         val availableApps = apps.filter { !it.pkg.startsWith(HDMI) && it.pkg != CW_PKG }
         val activeCount = availableApps.count { it.pkg !in offSet }
-        val rows = listOf(
+        val every = spotlightEvery()
+        return listOf(
             page(getString(R.string.setting_tmdb_api_key), if (hasKey) getString(R.string.tmdb_api_key_set) else getString(R.string.tmdb_api_key_empty)) {
                 configureTmdbApiKey()
             },
             page(getString(R.string.setting_tmdb_language), lang) {
-                val langs = listOf("it-IT", "en-US", "es-ES", "fr-FR", "de-DE")
+                val langs = TmdbClient.LANGUAGES
                 showPage(getString(R.string.setting_tmdb_language), langs.map { l ->
                     page(l, if (l == lang) CHOSEN else "") {
                         prefs.edit().putString("tmdb_lang", l).apply()
                         tmdbTrending = emptyList()
                         loadWallpaper()
-                        pickTmdbSettings()
+                        renderSettings(TMDB_LANG_ROW)
                     }
-                }, langs.indexOf(lang)) { pickTmdbSettings() }
+                }, langs.indexOf(lang)) { renderSettings(TMDB_LANG_ROW) }
             },
             page(getString(R.string.setting_tmdb_media_type), typeName) {
                 val types = listOf("all" to getString(R.string.tmdb_type_all), "movie" to getString(R.string.tmdb_type_movie), "tv" to getString(R.string.tmdb_type_tv))
@@ -912,20 +995,31 @@ class MainActivity : Activity() {
                         prefs.edit().putString("tmdb_type", k).apply()
                         tmdbTrending = emptyList()
                         loadWallpaper()
-                        pickTmdbSettings()
+                        renderSettings(TMDB_TYPE_ROW)
                     }
-                }, types.indexOfFirst { it.first == type }) { pickTmdbSettings() }
+                }, types.indexOfFirst { it.first == type }) { renderSettings(TMDB_TYPE_ROW) }
             },
             page(getString(R.string.setting_tmdb_default_apps), if (offSet.isEmpty()) getString(R.string.cw_apps_all_on) else "$activeCount") {
                 val appChoices = availableApps.map { it.label to it.pkg }
                 toggles(getString(R.string.setting_tmdb_default_apps), appChoices, "tmdb_default_apps", getString(R.string.state_on), getString(R.string.state_off)) {
+                    spotlightApps = null
                     renderSpotlight()
-                    pickTmdbSettings()
+                    renderSettings(TMDB_APPS_ROW)
                 }
-            }
+            },
+            page(getString(R.string.setting_tmdb_cycle), cycleName(every)) {
+                showPage(getString(R.string.setting_tmdb_cycle), SPOTLIGHT_EVERY.map { n ->
+                    page(cycleName(n), if (n == every) CHOSEN else "") {
+                        prefs.edit().putInt("tmdb_cycle", n).apply()
+                        restartSpotlightTick()
+                        renderSettings(TMDB_CYCLE_ROW)
+                    }
+                }, SPOTLIGHT_EVERY.indexOf(every)) { renderSettings(TMDB_CYCLE_ROW) }
+            },
         )
-        showPage(getString(R.string.setting_tmdb), rows, back = { renderSettings(TMDB_ROW) })
     }
+
+    private fun cycleName(seconds: Int) = if (seconds == 0) getString(R.string.tmdb_cycle_off) else getString(R.string.tmdb_cycle_seconds, seconds)
 
     private fun configureTmdbApiKey() {
         val currentKey = prefs.getString("tmdb_api_key", "") ?: ""
@@ -956,7 +1050,7 @@ class MainActivity : Activity() {
                     setWallpaper(false, "tmdb:trending")
                     setWallpaper(true, "tmdb:trending")
                 }
-                pickTmdbSettings()
+                renderSettings(TMDB_KEY_ROW)
             },
             page(getString(R.string.dialog_clear)) {
                 prefs.edit().remove("tmdb_api_key").apply()
@@ -964,10 +1058,10 @@ class MainActivity : Activity() {
                 if (currentWallpaper() == "tmdb:trending") {
                     setWallpaper(dark, defaultWallpaper(dark))
                 }
-                pickTmdbSettings()
+                renderSettings(TMDB_KEY_ROW)
             }
         )
-        showPage(getString(R.string.setting_tmdb_api_key), rows, top = box, back = { pickTmdbSettings() })
+        showPage(getString(R.string.setting_tmdb_api_key), rows, top = box, back = { renderSettings(TMDB_KEY_ROW) })
         input.requestFocus()
     }
 
@@ -983,6 +1077,7 @@ class MainActivity : Activity() {
         pageExit?.invoke()
         pageExit = null
         pageBack = back
+        shownSection = -1 // renderSettings sets it again for section pages
         findViewById<TextView>(R.id.settingsTitle).text = title
         settingsList.removeAllViews()
         top?.let { settingsList.addView(it) }
@@ -1181,6 +1276,7 @@ class MainActivity : Activity() {
                 apps = list
                 APPS = list
                 renderApps()
+                spotlightApps = null
                 renderSpotlight()
             }
         }
@@ -1820,7 +1916,7 @@ class MainActivity : Activity() {
         val list = sortedApps()
         toggles(getString(R.string.setting_apps_in_row), list.map { it.label to it.pkg }, "row_hidden", getString(R.string.state_shown), getString(R.string.state_hidden)) {
             renderApps()
-            renderSettings(7)
+            renderSettings(ROW_APPS_ROW)
         }
     }
 
@@ -1979,7 +2075,7 @@ class MainActivity : Activity() {
             ui.post {
                 downloading = false
                 if (ok) then() else Toast.makeText(this, getString(R.string.toast_screensaver_download_failed), Toast.LENGTH_LONG).show()
-                if (settingsScrim.visibility == View.VISIBLE) renderSettings(SCREENSAVER_ROW)
+                refreshSettings(SCREENSAVER_ROW)
             }
         }.start()
     }
@@ -2008,7 +2104,7 @@ class MainActivity : Activity() {
     private fun checkUpdate(force: Boolean) {
         if (checking || !force && System.currentTimeMillis() - prefs.getLong("upd_time", 0) < 24 * 3600_000L) return
         checking = true
-        if (force) renderSettings(UPDATE_ROW)
+        if (force) refreshSettings(UPDATE_ROW)
         io.execute {
             val latest = try {
                 getJson("https://api.github.com/repos/$REPO/releases/latest").getString("tag_name").removePrefix("v")
@@ -2026,7 +2122,7 @@ class MainActivity : Activity() {
                 } else if (force) {
                     Toast.makeText(this, if (latest == null) getString(R.string.toast_update_check_failed) else getString(R.string.toast_update_up_to_date), Toast.LENGTH_SHORT).show()
                 }
-                if (settingsScrim.visibility == View.VISIBLE) renderSettings(UPDATE_ROW)
+                refreshSettings(UPDATE_ROW)
             }
         }
     }
@@ -2038,7 +2134,7 @@ class MainActivity : Activity() {
             return openSettings(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
         }
         updating = true
-        renderSettings(UPDATE_ROW)
+        refreshSettings(UPDATE_ROW)
         val installer = packageManager.packageInstaller
         io.execute {
             val ok = try {
@@ -2074,7 +2170,7 @@ class MainActivity : Activity() {
                     updating = false
                     Toast.makeText(this, getString(R.string.toast_update_download_failed), Toast.LENGTH_LONG).show()
                 }
-                if (settingsScrim.visibility == View.VISIBLE) renderSettings(UPDATE_ROW)
+                refreshSettings(UPDATE_ROW)
             }
         }
     }
@@ -2095,7 +2191,7 @@ class MainActivity : Activity() {
                 Toast.makeText(this, getString(R.string.toast_update_install_failed), Toast.LENGTH_LONG).show()
             }
         }
-        if (settingsScrim.visibility == View.VISIBLE) renderSettings(UPDATE_ROW)
+        refreshSettings(UPDATE_ROW)
     }
 
     // ---------- weather (under the date) ----------
@@ -2132,7 +2228,7 @@ class MainActivity : Activity() {
                     .putLong("wx_time", System.currentTimeMillis()).apply()
                 ui.post { showWeather() }
             } catch (e: Exception) {
-                android.util.Log.w("TvHome", "weather failed ($e)") // keep the last reading; next tick retries
+                android.util.Log.w("Plume", "weather failed ($e)") // keep the last reading; next tick retries
             }
         }
     }
@@ -2234,7 +2330,7 @@ class MainActivity : Activity() {
         toggles(getString(R.string.setting_cw_apps), sources.map { it.label to it.pkg }, "cw_off", getString(R.string.state_on), getString(R.string.state_off)) {
             watchKey = null
             refreshWatchNext()
-            renderSettings(11)
+            renderSettings(CW_APPS_ROW)
         }
     }
 
@@ -2310,19 +2406,11 @@ class MainActivity : Activity() {
                     }
                 }
             }
-            if (appChannels.isEmpty()) {
-                val list = try { queryWatchNext() } catch (e: Exception) { emptyList() }
-                ui.post {
-                    watchTitle.text = getString(R.string.continue_watching)
-                    showWatchNext(list)
-                }
-                return@execute
-            }
             // Fetch preview programs from all channels for this app
             val programs = appChannels.flatMap { (channelId, _) ->
                 readPrograms(TvContract.buildPreviewProgramsUriForChannel(channelId), hidden)
             }.map { it.second }.distinctBy { it.intent ?: it.title }
-            if (programs.isEmpty()) {
+            if (programs.isEmpty()) { // no channels, or nothing in them: back to Continue Watching
                 val list = try { queryWatchNext() } catch (e: Exception) { emptyList() }
                 ui.post {
                     watchTitle.text = getString(R.string.continue_watching)
@@ -2354,6 +2442,8 @@ class MainActivity : Activity() {
         }
         spotlightInfoBox.background = bg
         spotlightInfoBox.setPadding(dp(16), dp(10), dp(16), dp(10))
+        spotlightPrev.setOnClickListener { cycleSpotlight(-1) }
+        spotlightNext.setOnClickListener { cycleSpotlight(1) }
 
         window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
             updateSpotlightFocusState(newFocus)
@@ -2364,6 +2454,7 @@ class MainActivity : Activity() {
         val inSpotlight = isDescendantOf(targetFocus, spotlightContainer)
         spotlightOverview.visibility = if (inSpotlight) View.VISIBLE else View.GONE
         spotlightActions.visibility = if (inSpotlight) View.VISIBLE else View.GONE
+        for (arrow in arrayOf(spotlightPrev, spotlightNext)) arrow.animate().alpha(if (inSpotlight) 0.75f else 0.35f).setDuration(220).start()
         val bg = spotlightInfoBox.background as? GradientDrawable
         bg?.setColor(if (inSpotlight) (if (dark) 0xAA181820.toInt() else 0xDDEEF2F7.toInt()) else Color.TRANSPARENT)
         // Translate bottomSection downwards to give spotlight breathing room
@@ -2381,58 +2472,36 @@ class MainActivity : Activity() {
         null
     }
 
+    private fun spotlightItem(): TmdbItem? = tmdbTrending.let { list -> if (list.isEmpty()) null else list[tmdbIndex.mod(list.size)] }
+
     private fun renderSpotlight() {
-        val tmdbActive = currentWallpaper() == "tmdb:trending"
-        if (!tmdbActive || tmdbTrending.isEmpty()) {
-            spotlightContainer.visibility = View.GONE
-            return
-        }
-        val item = tmdbTrending.getOrNull(tmdbIndex.coerceIn(0, tmdbTrending.size - 1)) ?: run {
+        val item = spotlightItem()
+        if (currentWallpaper() != "tmdb:trending" || item == null) {
             spotlightContainer.visibility = View.GONE
             return
         }
         spotlightContainer.visibility = View.VISIBLE
-        val year = item.releaseDate?.take(4)?.let { " · $it" } ?: ""
+        val year = item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""
         val rating = if (item.voteAverage > 0) "★ %.1f · ".format(item.voteAverage) else ""
         val typeBadge = if (item.mediaType == "tv") getString(R.string.tmdb_badge_tv) else getString(R.string.tmdb_badge_movie)
-        val genre = item.genreIds.firstOrNull()?.let { TmdbClient.genreName(it) }?.let { " · $it" } ?: ""
+        val genre = item.genres.firstOrNull()?.let { " · $it" } ?: ""
         spotlightMeta.text = "$rating$typeBadge$year$genre"
         spotlightTitle.text = item.title
         spotlightOverview.text = item.overview
+        val more = if (tmdbTrending.size > 1) View.VISIBLE else View.INVISIBLE
+        spotlightPrev.visibility = more
+        spotlightNext.visibility = more
+        // The buttons search for whichever title shows when pressed, so they're only rebuilt when the apps change
+        // (rebuilding them on every title would also drop the focus off them).
+        if (spotlightApps == null) renderSpotlightActions()
+    }
 
-        // Render pagination dots
-        spotlightDots.removeAllViews()
-        val totalDots = minOf(tmdbTrending.size, 12)
-        val curIndex = tmdbIndex.mod(tmdbTrending.size)
-        for (i in 0 until totalDots) {
-            val dot = View(this).apply {
-                val isSelected = (i == curIndex.coerceAtMost(totalDots - 1))
-                val dotSize = if (isSelected) dp(8) else dp(5)
-                val dotBg = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(if (isSelected) fg else (if (dark) 0x55FFFFFF else 0x44000000))
-                }
-                background = dotBg
-                layoutParams = LinearLayout.LayoutParams(dotSize, dotSize).apply {
-                    marginStart = if (i > 0) dp(6) else 0
-                    gravity = Gravity.CENTER_VERTICAL
-                }
-            }
-            spotlightDots.addView(dot)
-        }
-
-        // Populate action buttons for installed suggestions apps
+    /** Up to five search buttons: the known streaming apps first, then other installed apps, minus those turned off. */
+    private fun renderSpotlightActions() {
         spotlightActions.removeAllViews()
         val offSet = prefs.getStringSet("tmdb_default_apps", emptySet()) ?: emptySet()
-        val priorityPkgs = listOf(
-            "com.nuvio.app",
-            "com.stremio.one",
-            "com.netflix.ninja",
-            "com.google.android.youtube.tv",
-            "com.amazon.amazonvideo.livingroom"
-        )
         val candidateApps = mutableListOf<App>()
-        for (pkg in priorityPkgs) {
+        for (pkg in SPOTLIGHT_PKGS) {
             if (pkg in offSet) continue
             val app = apps.firstOrNull { it.pkg == pkg } ?: resolveAppByPkg(pkg)
             if (app != null && candidateApps.none { it.pkg == app.pkg }) {
@@ -2446,6 +2515,7 @@ class MainActivity : Activity() {
             }
         }
         val targetApps = candidateApps.take(5)
+        spotlightApps = targetApps
 
         for (a in targetApps) {
             val btn = LinearLayout(this).apply {
@@ -2478,8 +2548,9 @@ class MainActivity : Activity() {
                     scaleY = if (focused) 1.08f else 1f
                 }
                 setOnClickListener {
+                    val title = spotlightItem()?.title ?: return@setOnClickListener launch(a)
                     try {
-                        startActivity(TmdbClient.searchIntent(this@MainActivity, a.pkg, item.title))
+                        startActivity(TmdbClient.searchIntent(this@MainActivity, a.pkg, title))
                     } catch (e: Exception) {
                         launch(a)
                     }
@@ -2493,12 +2564,34 @@ class MainActivity : Activity() {
 
     private fun cycleSpotlight(direction: Int) {
         if (tmdbTrending.isEmpty()) return
+        ui.removeCallbacks(spotlightTick) // restarted once the new backdrop is up
         tmdbIndex = (tmdbIndex + direction).mod(tmdbTrending.size)
         renderSpotlight()
         loadWallpaper()
     }
 
-    /** Small source-app mark for the details line: black logo when we have one, else greyscale icon. */
+    private fun spotlightEvery() = prefs.getInt("tmdb_cycle", 5) // seconds; 0 = only by hand
+
+    /**
+     * Spotlight moves on to the next title by itself every few seconds while the home screen shows. It waits
+     * while you're on one of its buttons (the title shouldn't change under you), while the panel or All apps is
+     * open, and while something covers the home screen (a screensaver, a dialog), so it doesn't fetch backdrops unseen.
+     */
+    private val spotlightTick = object : Runnable {
+        override fun run() {
+            if (spotlightContainer.visibility != View.VISIBLE) return // armed again when a TMDB backdrop loads
+            val busy = currentFocus?.parent === spotlightActions || settingsScrim.visibility == View.VISIBLE ||
+                allApps.visibility == View.VISIBLE || editing || !hasWindowFocus()
+            if (busy) restartSpotlightTick() else cycleSpotlight(1)
+        }
+    }
+
+    private fun restartSpotlightTick() {
+        ui.removeCallbacks(spotlightTick)
+        val every = spotlightEvery()
+        if (every > 0 && tmdbTrending.size > 1) ui.postDelayed(spotlightTick, every * 1000L)
+    }
+
     private fun sourceIcon(pkg: String?): Drawable? {
         if (pkg == null) return null
         LOGOS[pkg]?.takeIf { !it.second }?.let { return getDrawable(it.first)!!.mutate().apply { setTint(fg) } }
@@ -2632,7 +2725,7 @@ class MainActivity : Activity() {
             val bmp = try {
                 decode(uri)
             } catch (e: Exception) {
-                android.util.Log.w("TvHome", "poster failed: $uri ($e)") // retried by retryPosters()
+                android.util.Log.w("Plume", "poster failed: $uri ($e)") // retried by retryPosters()
                 null
             } finally {
                 loading.remove(uri)
@@ -2732,12 +2825,39 @@ class MainActivity : Activity() {
         const val TV_LISTINGS = "android.permission.READ_TV_LISTINGS"
         const val WRITE_SECURE = "android.permission.WRITE_SECURE_SETTINGS"
         const val ROLE_REQUEST = 2
-        const val TMDB_ROW = 13 // positions in the settings list (see renderSettings)
-        const val SCREENSAVER_ROW = 14
-        const val HOME_BUTTON_ROW = 17
-        const val DEFAULT_HOME_ROW = 18
-        const val UPDATE_ROW = 19
-        const val LOCK_ROW = 20
+        const val TMDB_FRESH_MS = 3 * 3600_000L // how long a trending list is kept before it's fetched again
+        val SPOTLIGHT_PKGS = listOf("com.nuvio.app", "com.stremio.one", "com.netflix.ninja", "com.google.android.youtube.tv", "com.amazon.amazonvideo.livingroom")
+        // Settings sections, and each row's address in them (see renderSettings).
+        const val SECTION = 100
+        const val LOOK_SECTION = 0
+        const val APPS_SECTION = 1
+        const val WATCH_SECTION = 2
+        const val SPOTLIGHT_SECTION = 3
+        const val SCREENSAVER_SECTION = 4
+        const val SYSTEM_SECTION = 5
+        const val THEME_ROW = LOOK_SECTION * SECTION
+        const val LIGHT_WP_ROW = THEME_ROW + 1
+        const val DARK_WP_ROW = THEME_ROW + 2
+        const val FADE_ROW = THEME_ROW + 3
+        const val PHOTO_EVERY_ROW = THEME_ROW + 4
+        const val WEATHER_ROW = THEME_ROW + 5
+        const val SORT_ROW = APPS_SECTION * SECTION + 1
+        const val ROW_APPS_ROW = APPS_SECTION * SECTION + 2
+        const val NAMES_ROW = APPS_SECTION * SECTION + 3
+        const val ICONS_ROW = APPS_SECTION * SECTION + 4
+        const val LOCK_ROW = APPS_SECTION * SECTION + 5
+        const val CW_APPS_ROW = WATCH_SECTION * SECTION
+        const val HIDDEN_ROW = WATCH_SECTION * SECTION + 1
+        const val TMDB_KEY_ROW = SPOTLIGHT_SECTION * SECTION
+        const val TMDB_LANG_ROW = TMDB_KEY_ROW + 1
+        const val TMDB_TYPE_ROW = TMDB_KEY_ROW + 2
+        const val TMDB_APPS_ROW = TMDB_KEY_ROW + 3
+        const val TMDB_CYCLE_ROW = TMDB_KEY_ROW + 4
+        const val SCREENSAVER_ROW = SCREENSAVER_SECTION * SECTION
+        const val HOME_BUTTON_ROW = SYSTEM_SECTION * SECTION
+        const val DEFAULT_HOME_ROW = HOME_BUTTON_ROW + 1
+        const val UPDATE_ROW = HOME_BUTTON_ROW + 2
+        val SPOTLIGHT_EVERY = listOf(0, 5, 8, 10, 15, 30) // seconds between Spotlight titles; 0 = off
         const val PIN_TRIES = 5 // wrong PINs before a 30 s wait
         const val UNLOCKED_MS = 5 * 60_000L
         const val UNLOCK_TO_EDIT = "Unlock to edit…"

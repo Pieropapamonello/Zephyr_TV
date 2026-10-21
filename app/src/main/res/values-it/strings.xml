@@ -194,4 +194,14 @@
     <string name="dialog_save">Salva</string>
     <string name="dialog_clear">Rimuovi</string>
     <string name="tmdb_api_key_hint">Incolla o inserisci la tua API Key v3 di TMDB</string>
+    <string name="settings_section_look">Aspetto e sfondi</string>
+    <string name="settings_section_apps">Riga delle app</string>
+    <string name="settings_section_system">Sistema</string>
+    <string name="settings_summary_locked">Bloccata</string>
+    <string name="settings_summary_setup">Tasto Home da attivare</string>
+    <string name="setting_tmdb_cycle">Titolo successivo ogni</string>
+    <string name="tmdb_cycle_off">Disattivo (solo con ◀ ▶)</string>
+    <string name="tmdb_cycle_seconds">%1$d secondi</string>
+    <string name="spotlight_previous">Titolo precedente</string>
+    <string name="spotlight_next">Titolo successivo</string>
 </resources>

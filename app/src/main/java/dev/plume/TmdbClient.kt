@@ -3,7 +3,6 @@ package dev.plume
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import org.json.JSONObject
@@ -15,7 +14,7 @@ data class TmdbItem(
     val backdropPath: String?,
     val voteAverage: Double,
     val mediaType: String, // "movie" or "tv"
-    val genreIds: List<Int>,
+    val genres: List<String>, // names in the language the list was fetched in
     val releaseDate: String?,
 )
 
@@ -23,23 +22,26 @@ object TmdbClient {
     private const val BASE_URL = "https://api.themoviedb.org/3"
     private const val IMAGE_BASE = "https://image.tmdb.org/t/p/w1280"
 
-    private val GENRES = mapOf(
-        28 to "Azione", 12 to "Avventura", 16 to "Animazione", 35 to "Commedia", 80 to "Crime",
-        99 to "Documentario", 18 to "Dramma", 10751 to "Famiglia", 14 to "Fantasy", 36 to "Storia",
-        27 to "Horror", 10402 to "Musica", 9648 to "Mistero", 10749 to "Romance", 878 to "Fantascienza",
-        10770 to "Film TV", 53 to "Thriller", 10752 to "Guerra", 37 to "Western",
-        10759 to "Azione & Avventura", 10762 to "Bambini", 10763 to "News", 10764 to "Reality",
-        10765 to "Sci-Fi & Fantasy", 10766 to "Soap", 10767 to "Talk", 10768 to "Guerra & Politica"
-    )
+    /** Languages offered in settings; the device's own one is picked when it's among them. */
+    val LANGUAGES = listOf("it-IT", "en-US", "es-ES", "fr-FR", "de-DE")
 
-    fun fetchTrending(apiKey: String, language: String = "it-IT", mediaType: String = "all"): List<TmdbItem> {
+    fun defaultLanguage(): String {
+        val device = java.util.Locale.getDefault().language
+        return LANGUAGES.firstOrNull { it.substringBefore('-') == device } ?: "en-US"
+    }
+
+    // Genre names per language ("it-IT" -> id -> name), fetched once: TMDB only sends ids with each title.
+    private val genreCache = java.util.concurrent.ConcurrentHashMap<String, Map<Int, String>>()
+
+    fun fetchTrending(apiKey: String, language: String, mediaType: String = "all"): List<TmdbItem> {
         val type = if (mediaType in setOf("movie", "tv")) mediaType else "all"
-        val endpoint = "$BASE_URL/trending/$type/day?api_key=$apiKey&language=$language"
         val json = try {
-            JSONObject(get(endpoint))
+            JSONObject(get(apiKey, "/trending/$type/day?language=$language"))
         } catch (e: Exception) {
+            android.util.Log.w("Plume", "TMDB trending failed ($e)")
             return emptyList()
         }
+        val genres = genres(apiKey, language)
         val results = json.optJSONArray("results") ?: return emptyList()
         val list = ArrayList<TmdbItem>()
         for (i in 0 until results.length()) {
@@ -47,9 +49,9 @@ object TmdbClient {
             val title = obj.optString("title").ifEmpty { obj.optString("name") }
             if (title.isBlank()) continue
             val genreArray = obj.optJSONArray("genre_ids")
-            val genreIds = ArrayList<Int>()
+            val names = ArrayList<String>()
             if (genreArray != null) {
-                for (g in 0 until genreArray.length()) genreIds.add(genreArray.getInt(g))
+                for (g in 0 until genreArray.length()) genres[genreArray.getInt(g)]?.let { names.add(it) }
             }
             list.add(
                 TmdbItem(
@@ -59,7 +61,7 @@ object TmdbClient {
                     backdropPath = obj.optString("backdrop_path").takeIf { it.isNotBlank() },
                     voteAverage = obj.optDouble("vote_average", 0.0),
                     mediaType = obj.optString("media_type", type),
-                    genreIds = genreIds,
+                    genres = names,
                     releaseDate = obj.optString("release_date").ifEmpty { obj.optString("first_air_date") }
                 )
             )
@@ -67,33 +69,33 @@ object TmdbClient {
         return list
     }
 
-    fun backdropUrl(path: String?): String? = if (path.isNullOrBlank()) null else "$IMAGE_BASE$path"
+    /** Movie and TV genres together (their ids don't clash). Empty on failure, so titles just show no genre. */
+    private fun genres(apiKey: String, language: String): Map<Int, String> = genreCache[language] ?: try {
+        val map = HashMap<Int, String>()
+        for (kind in listOf("movie", "tv")) {
+            val arr = JSONObject(get(apiKey, "/genre/$kind/list?language=$language")).getJSONArray("genres")
+            for (i in 0 until arr.length()) arr.getJSONObject(i).let { map[it.getInt("id")] = it.getString("name") }
+        }
+        map.also { genreCache[language] = it }
+    } catch (e: Exception) {
+        android.util.Log.w("Plume", "TMDB genres failed ($e)")
+        emptyMap()
+    }
 
-    fun genreName(id: Int): String? = GENRES[id]
+    fun backdropUrl(path: String?): String? = if (path.isNullOrBlank()) null else "$IMAGE_BASE$path"
 
     fun searchIntent(context: Context, pkg: String, query: String): Intent {
         val pm = context.packageManager
+        fun view(uri: String) = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
+            setPackage(pkg)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }.takeIf { it.resolveActivity(pm) != null }
+        val q = Uri.encode(query)
         // Specialized intents where known
         when (pkg) {
-            "com.nuvio.app" -> {
-                val nuvioUri = Uri.parse("nuvio:///search?search=" + Uri.encode(query))
-                Intent(Intent.ACTION_VIEW, nuvioUri).apply {
-                    setPackage(pkg)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }.takeIf { it.resolveActivity(pm) != null }?.let { return it }
-                val stremioUri = Uri.parse("stremio:///search?search=" + Uri.encode(query))
-                Intent(Intent.ACTION_VIEW, stremioUri).apply {
-                    setPackage(pkg)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }.takeIf { it.resolveActivity(pm) != null }?.let { return it }
-            }
-            "com.stremio.one" -> {
-                val stremioUri = Uri.parse("stremio:///search?search=" + Uri.encode(query))
-                Intent(Intent.ACTION_VIEW, stremioUri).apply {
-                    setPackage(pkg)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }.takeIf { it.resolveActivity(pm) != null }?.let { return it }
-            }
+            // Nuvio may also answer Stremio's scheme
+            "com.nuvio.app" -> (view("nuvio:///search?search=$q") ?: view("stremio:///search?search=$q"))?.let { return it }
+            "com.stremio.one" -> view("stremio:///search?search=$q")?.let { return it }
             "com.netflix.ninja" -> {
                 Intent("android.intent.action.SEARCH").apply {
                     setPackage(pkg)
@@ -101,13 +103,7 @@ object TmdbClient {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }.takeIf { it.resolveActivity(pm) != null }?.let { return it }
             }
-            "com.google.android.youtube.tv" -> {
-                val ytUri = Uri.parse("https://www.youtube.com/results?search_query=" + Uri.encode(query))
-                Intent(Intent.ACTION_VIEW, ytUri).apply {
-                    setPackage(pkg)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }.takeIf { it.resolveActivity(pm) != null }?.let { return it }
-            }
+            "com.google.android.youtube.tv" -> view("https://www.youtube.com/results?search_query=$q")?.let { return it }
         }
 
         // Generic search intent
@@ -124,11 +120,19 @@ object TmdbClient {
             ?: Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
-    private fun get(urlStr: String): String {
-        val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+    /**
+     * Accepts either kind of TMDB credential: a v4 read access token (a long JWT, sent as a Bearer header,
+     * so it stays out of the URL) or a classic 32-character v3 API key (which TMDB only takes as a parameter).
+     */
+    private fun get(apiKey: String, path: String): String {
+        val bearer = apiKey.length > 40
+        val url = if (bearer) BASE_URL + path
+            else BASE_URL + path + (if ('?' in path) "&" else "?") + "api_key=" + Uri.encode(apiKey)
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 6000
             readTimeout = 6000
             setRequestProperty("Accept", "application/json")
+            if (bearer) setRequestProperty("Authorization", "Bearer $apiKey")
         }
         return conn.inputStream.use { it.readBytes().decodeToString() }
     }

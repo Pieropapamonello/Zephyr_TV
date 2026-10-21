@@ -132,61 +132,83 @@
             android:orientation="vertical"
             android:visibility="gone">
 
+            <!-- Faint arrows either side say there are more titles; they sit in the page margins so the
+                 text stays lined up with the apps row. -->
             <LinearLayout
-                android:id="@+id/spotlightInfoBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:focusable="true"
-                android:orientation="vertical">
+                android:clipChildren="false"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/spotlightMeta"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:alpha="0.8"
-                    android:fontFamily="sans-serif-medium"
-                    android:shadowColor="#80000000"
-                    android:shadowDx="0"
-                    android:shadowDy="2"
-                    android:shadowRadius="4"
-                    android:textSize="13sp" />
+                <ImageView
+                    android:id="@+id/spotlightPrev"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginStart="-36dp"
+                    android:layout_marginEnd="8dp"
+                    android:alpha="0.35"
+                    android:contentDescription="@string/spotlight_previous"
+                    android:src="@drawable/ic_chevron_left" />
 
-                <TextView
-                    android:id="@+id/spotlightTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:fontFamily="sans-serif-medium"
-                    android:shadowColor="#80000000"
-                    android:shadowDx="0"
-                    android:shadowDy="2"
-                    android:shadowRadius="6"
-                    android:textSize="24sp" />
-
-                <TextView
-                    android:id="@+id/spotlightOverview"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:alpha="0.85"
-                    android:ellipsize="end"
-                    android:fontFamily="sans-serif"
-                    android:maxLines="3"
-                    android:shadowColor="#80000000"
-                    android:shadowDx="0"
-                    android:shadowDy="1"
-                    android:shadowRadius="4"
-                    android:textSize="13sp"
-                    android:visibility="gone" />
-
-                <!-- Dots pagination indicator for Spotlight carousel -->
                 <LinearLayout
-                    android:id="@+id/spotlightDots"
-                    android:layout_width="wrap_content"
+                    android:id="@+id/spotlightInfoBox"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal" />
+                    android:layout_weight="1"
+                    android:focusable="true"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/spotlightMeta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:alpha="0.8"
+                        android:fontFamily="sans-serif-medium"
+                        android:shadowColor="#80000000"
+                        android:shadowDx="0"
+                        android:shadowDy="2"
+                        android:shadowRadius="4"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/spotlightTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:shadowColor="#80000000"
+                        android:shadowDx="0"
+                        android:shadowDy="2"
+                        android:shadowRadius="6"
+                        android:textSize="24sp" />
+
+                    <TextView
+                        android:id="@+id/spotlightOverview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:alpha="0.85"
+                        android:ellipsize="end"
+                        android:fontFamily="sans-serif"
+                        android:maxLines="3"
+                        android:shadowColor="#80000000"
+                        android:shadowDx="0"
+                        android:shadowDy="1"
+                        android:shadowRadius="4"
+                        android:textSize="13sp"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/spotlightNext"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="-36dp"
+                    android:alpha="0.35"
+                    android:contentDescription="@string/spotlight_next"
+                    android:src="@drawable/ic_chevron_right" />
             </LinearLayout>
 
             <!-- Action buttons directly under info box, independently focusable -->
