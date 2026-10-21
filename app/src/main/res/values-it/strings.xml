@@ -266,4 +266,5 @@
     <string name="phone_tmdb_unchecked">Chiave salvata, ma non è stato possibile verificarla con TMDB.</string>
     <string name="setting_tmdb_key_phone">Inserisci dal telefono…</string>
     <string name="tmdb_phone_waiting">In attesa della chiave…</string>
+    <string name="setting_tmdb_providers">Solo i servizi che hanno il titolo</string>
 </resources>

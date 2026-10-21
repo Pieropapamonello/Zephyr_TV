@@ -97,6 +97,66 @@ object TmdbClient {
     private val trailerCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     /**
+     * Streaming services TMDB lists for a title (its "watch providers", by provider id) and their Android TV apps.
+     * Only well-known services: an app missing here is simply always offered, like any app TMDB doesn't know.
+     */
+    private val PROVIDER_APPS: Map<Int, String> = mapOf(
+        8 to "com.netflix.ninja", 1796 to "com.netflix.ninja", // Netflix, Netflix with ads
+        9 to "com.amazon.amazonvideo.livingroom", 119 to "com.amazon.amazonvideo.livingroom", // Prime Video
+        337 to "com.disney.disneyplus",
+        2 to "com.apple.atve.androidtv.appletv", 350 to "com.apple.atve.androidtv.appletv", // Apple TV store, Apple TV+
+        531 to "com.cbs.ott", // Paramount+
+        283 to "com.crunchyroll.crunchyroid",
+        384 to "com.wbd.stream", 1899 to "com.wbd.stream", // HBO Max, Max
+    )
+    private val providerPkgs = PROVIDER_APPS.values.toSet()
+
+    /** The services' apps, for Spotlight to offer when they're installed. */
+    val providerApps: Set<String> get() = providerPkgs
+
+    /**
+     * Whether Spotlight offers [pkg] for a title that TMDB lists on the apps in [available]. A standard service's
+     * app only when the title is on it; everything else always: Nuvio and Stremio find titles through their addons
+     * wherever they are, YouTube is the trailer button, and other apps TMDB doesn't know about. [available] null
+     * means not known (yet, or offline): then every app is offered, as before.
+     */
+    fun offers(pkg: String, available: Set<String>?) = available == null || pkg !in providerPkgs || pkg in available
+
+    // "movie/123/IT" -> apps of the services that have it there.
+    private val providerCache = java.util.concurrent.ConcurrentHashMap<String, Set<String>>()
+
+    /** The country whose services count: the TV's, else the one in the TMDB language ("it-IT" -> IT). */
+    fun region(language: String) = java.util.Locale.getDefault().country.takeIf { it.length == 2 }
+        ?: language.substringAfter('-', "US").uppercase()
+
+    /** Already-known [providers] for [item] in [region], without asking TMDB. */
+    fun cachedProviders(item: TmdbItem, region: String) = providerCache["${item.mediaType}/${item.id}/$region"]
+
+    /**
+     * The apps of the services TMDB lists for [item] in [region], to stream, rent or buy; null when TMDB couldn't be
+     * asked. Network: call it off the UI thread.
+     */
+    fun providers(apiKey: String, item: TmdbItem, region: String): Set<String>? {
+        val key = "${item.mediaType}/${item.id}/$region"
+        providerCache[key]?.let { return it }
+        val type = if (item.mediaType == "tv") "tv" else "movie"
+        val found = try {
+            val here = JSONObject(get(apiKey, "/$type/${item.id}/watch/providers")).optJSONObject("results")?.optJSONObject(region)
+            val apps = HashSet<String>()
+            for (kind in listOf("flatrate", "free", "ads", "rent", "buy")) {
+                val list = here?.optJSONArray(kind) ?: continue
+                for (i in 0 until list.length()) PROVIDER_APPS[list.getJSONObject(i).optInt("provider_id")]?.let { apps.add(it) }
+            }
+            apps
+        } catch (e: Exception) {
+            android.util.Log.w("Piume", "TMDB providers failed (${redact(e)})")
+            return null
+        }
+        providerCache[key] = found
+        return found
+    }
+
+    /**
      * Apps whose title links need something looked up first: Stremio the IMDb id (its catalogue, Cinemeta, is
      * keyed by it), YouTube the trailer TMDB lists for the title.
      */

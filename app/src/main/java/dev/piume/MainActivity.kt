@@ -1311,6 +1311,11 @@ class MainActivity : Activity() {
                     renderSettings(TMDB_APPS_ROW)
                 }
             },
+            page(getString(R.string.setting_tmdb_providers), toggle(providersOn())) {
+                prefs.edit().putBoolean("tmdb_providers", !providersOn()).apply()
+                spotlightItem()?.let { showProviders(it) }
+                renderSettings(TMDB_PROVIDERS_ROW)
+            },
             page(getString(R.string.setting_tmdb_cycle), cycleName(every)) {
                 showPage(getString(R.string.setting_tmdb_cycle), SPOTLIGHT_EVERY.map { n ->
                     page(cycleName(n), if (n == every) CHOSEN else "") {
@@ -2045,7 +2050,7 @@ class MainActivity : Activity() {
                 else -> null
             }
             v === spotlightInfoBox -> when (key) {
-                KeyEvent.KEYCODE_DPAD_DOWN -> if (spotlightActions.childCount > 0) spotlightActions.getChildAt(0) else (apps ?: cards ?: v)
+                KeyEvent.KEYCODE_DPAD_DOWN -> spotlightAction(-1, 1) ?: apps ?: cards ?: v
                 KeyEvent.KEYCODE_DPAD_UP -> top
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     cycleSpotlight(1)
@@ -2056,9 +2061,7 @@ class MainActivity : Activity() {
                     v
                 }
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    if (spotlightActions.childCount > 0) {
-                        spotlightActions.getChildAt(0)
-                    } else v
+                    spotlightAction(-1, 1) ?: v
                 }
                 else -> null
             }
@@ -2067,8 +2070,8 @@ class MainActivity : Activity() {
                 when (key) {
                     KeyEvent.KEYCODE_DPAD_DOWN -> apps ?: cards ?: v
                     KeyEvent.KEYCODE_DPAD_UP -> spotlightInfoBox
-                    KeyEvent.KEYCODE_DPAD_LEFT -> if (idx > 0) spotlightActions.getChildAt(idx - 1) else v
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> if (idx < spotlightActions.childCount - 1) spotlightActions.getChildAt(idx + 1) else v
+                    KeyEvent.KEYCODE_DPAD_LEFT -> spotlightAction(idx, -1) ?: v
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> spotlightAction(idx, 1) ?: v
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                         v.performClick()
                         v
@@ -3086,6 +3089,52 @@ class MainActivity : Activity() {
         // The buttons search for whichever title shows when pressed, so they're only rebuilt when the apps change
         // (rebuilding them on every title would also drop the focus off them).
         if (spotlightApps == null) renderSpotlightActions()
+        showProviders(item)
+    }
+
+    private fun providersOn() = prefs.getBoolean("tmdb_providers", true)
+
+    /**
+     * Shows the buttons of the services that have [item] (TMDB's watch providers for this country) and hides the
+     * other services' ones; aggregators, YouTube and unknown apps always stay. Known answers apply at once, others
+     * once TMDB answers (until then, and offline, every button shows).
+     */
+    private fun showProviders(item: TmdbItem) {
+        val key = prefs.getString("tmdb_api_key", null)
+        if (!providersOn() || key == null) return applyProviders(null)
+        val region = TmdbClient.region(tmdbLang())
+        val known = TmdbClient.cachedProviders(item, region)
+        applyProviders(known)
+        if (known == null) spotlightIo.execute {
+            val found = TmdbClient.providers(key, item, region) ?: return@execute
+            ui.post { if (spotlightItem() == item) applyProviders(found) }
+        }
+    }
+
+    private fun applyProviders(available: Set<String>?) {
+        var first = true
+        for (i in 0 until spotlightActions.childCount) {
+            val b = spotlightActions.getChildAt(i)
+            val show = TmdbClient.offers(b.tag as? String ?: continue, available)
+            b.visibility = if (show) View.VISIBLE else View.GONE
+            // Gaps only between visible buttons, so the first one lines up with the text above.
+            (b.layoutParams as LinearLayout.LayoutParams).marginStart = if (show && !first) dp(8) else 0
+            if (show) first = false
+        }
+        spotlightActions.requestLayout()
+        if (currentFocus?.parent === spotlightActions && currentFocus?.visibility != View.VISIBLE) {
+            (spotlightAction(-1, 1) ?: spotlightInfoBox).requestFocus()
+        }
+    }
+
+    /** The next visible Spotlight button after index [from] going [step] (±1), or null at the end. */
+    private fun spotlightAction(from: Int, step: Int): View? {
+        var i = from + step
+        while (i in 0 until spotlightActions.childCount) {
+            spotlightActions.getChildAt(i).takeIf { it.visibility == View.VISIBLE }?.let { return it }
+            i += step
+        }
+        return null
     }
 
     /** Up to five search buttons: the known streaming apps first, then other installed apps, minus those turned off. */
@@ -3093,7 +3142,8 @@ class MainActivity : Activity() {
         spotlightActions.removeAllViews()
         val offSet = prefs.getStringSet("tmdb_default_apps", emptySet()) ?: emptySet()
         val candidateApps = mutableListOf<App>()
-        for (pkg in SPOTLIGHT_PKGS) {
+        // The known services' apps join whenever installed: each shows only for titles TMDB lists on it.
+        for (pkg in SPOTLIGHT_PKGS + TmdbClient.providerApps) {
             if (pkg in offSet) continue
             val app = apps.firstOrNull { it.pkg == pkg } ?: resolveAppByPkg(pkg)
             if (app != null && candidateApps.none { it.pkg == app.pkg }) {
@@ -3106,7 +3156,8 @@ class MainActivity : Activity() {
                 candidateApps.add(app)
             }
         }
-        val targetApps = candidateApps.take(5)
+        // Five at most, not counting services' apps beyond that: those hide for titles they don't have.
+        val targetApps = candidateApps.filterIndexed { i, a -> i < 5 || a.pkg in TmdbClient.providerApps }
         spotlightApps = targetApps
 
         for (a in targetApps) {
@@ -3122,6 +3173,7 @@ class MainActivity : Activity() {
                 background = btnBg
                 isFocusable = true
                 isClickable = true
+                tag = a.pkg
                 val ic = ImageView(this@MainActivity).apply {
                     setImageDrawable(a.icon)
                     scaleType = ImageView.ScaleType.FIT_CENTER
@@ -3523,7 +3575,8 @@ class MainActivity : Activity() {
         const val TMDB_LANG_ROW = TMDB_KEY_ROW + 1
         const val TMDB_TYPE_ROW = TMDB_KEY_ROW + 2
         const val TMDB_APPS_ROW = TMDB_KEY_ROW + 3
-        const val TMDB_CYCLE_ROW = TMDB_KEY_ROW + 4
+        const val TMDB_PROVIDERS_ROW = TMDB_KEY_ROW + 4
+        const val TMDB_CYCLE_ROW = TMDB_KEY_ROW + 5
         const val SCREENSAVER_ROW = SCREENSAVER_SECTION * SECTION
         const val HOME_BUTTON_ROW = SYSTEM_SECTION * SECTION + 1 // after "Set up Home button"
         const val DEFAULT_HOME_ROW = HOME_BUTTON_ROW + 1
