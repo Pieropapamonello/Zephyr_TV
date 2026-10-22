@@ -1,6 +1,10 @@
 <h1 align="center">Piume</h1>
 
 <p align="center">
+  <b>English</b> · <a href="README.it.md">Italiano</a>
+</p>
+
+<p align="center">
   <em>Light as feathers.</em> A minimal, ad-free home screen for Android TV and Google TV.
 </p>
 
