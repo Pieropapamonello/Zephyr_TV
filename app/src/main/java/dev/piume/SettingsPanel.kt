@@ -552,7 +552,12 @@ internal fun MainActivity.settingsRow(title: String, value: String, action: () -
         isClickable = true
         val name = label(title, 14f)
         val toggled = value == TOGGLE_ON || value == TOGGLE_OFF
-        val state = label(if (toggled) "" else value, 13f).apply { alpha = 0.6f }
+        // The value gives way to the name: capped, so a long one ("Not set: press to enter") is shortened, not the name.
+        val state = label(if (toggled) "" else value, 13f).apply {
+            alpha = 0.6f
+            maxWidth = dp(170)
+            setPadding(dp(12), 0, 0, 0)
+        }
         addView(name, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         fun showSwitch(lit: Boolean) {
             if (childCount > 1) removeViewAt(1)

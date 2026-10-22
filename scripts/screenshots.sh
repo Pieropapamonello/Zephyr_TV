@@ -16,20 +16,26 @@ shot() { # shot <name>: the screen as a 1280x720 JPEG
 
 key() { for k in "$@"; do adb shell input keyevent "$k"; sleep 0.6; done; }
 
-tap() { # tap <resource id or text>: taps the middle of the first view that has it
+tap() { # tap <id, text or description>... [@x,y]: taps the middle of the first view found, else the point given
     adb shell uiautomator dump /sdcard/ui.xml > /dev/null
-    local xy
-    xy=$(adb exec-out cat /sdcard/ui.xml | python3 -c '
+    adb exec-out cat /sdcard/ui.xml > /tmp/ui.xml
+    local want xy
+    for want in "$@"; do
+        case $want in @*) xy=${want#@}; xy=${xy/,/ }; break ;; esac
+        xy=$(python3 - "$want" <<'PY'
 import re, sys
 want = sys.argv[1]
-for node in re.findall(r"<node [^>]*>", sys.stdin.read()):
-    attrs = dict(re.findall(r"(\w[\w-]*)=\"([^\"]*)\"", node))
-    if want in (attrs.get("resource-id"), "'$PKG':id/" + want, attrs.get("text"), attrs.get("content-desc")):
+for node in re.findall(r"<node [^>]*>", open("/tmp/ui.xml").read()):
+    attrs = dict(re.findall(r'([\w-]+)="([^"]*)"', node))
+    if want in (attrs.get("resource-id"), "dev.piume:id/" + want, attrs.get("text"), attrs.get("content-desc")):
         x1, y1, x2, y2 = map(int, re.findall(r"\d+", attrs["bounds"]))
         print((x1 + x2) // 2, (y1 + y2) // 2)
         break
-' "$1")
-    if [ -z "$xy" ]; then echo "not found: $1"; return 1; fi
+PY
+)
+        [ -n "$xy" ] && break
+    done
+    if [ -z "$xy" ]; then echo "not found: $*"; return 1; fi
     adb shell input tap $xy
     sleep 1
 }
@@ -50,6 +56,8 @@ prefs() { # prefs <theme> [extra xml]: Piume's settings, with the setup and note
 
 start() { adb shell am start -W -n $PKG/.MainActivity > /dev/null; sleep "${SETTLE:-12}"; }
 
+home() { start; key KEYCODE_DPAD_DOWN KEYCODE_DPAD_DOWN; } # the home screen with an app focused
+
 VERSION=$(aapt dump badging "$APK" 2>/dev/null | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
 [ -z "$VERSION" ] && VERSION=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
 
@@ -65,17 +73,18 @@ for lang in en it; do
     adb shell cmd locale set-app-locales $PKG --locales $loc || echo "couldn't set the app language"
 
     # Home, dark: Spotlight at rest above the apps row, then focused with its buttons.
-    prefs dark; start
+    prefs dark; home
     shot $lang-home-dark
     key KEYCODE_DPAD_UP; WAIT=2 shot $lang-spotlight
 
     # Home, light.
-    prefs light; start
+    prefs light; home
     shot $lang-home-light
 
     # Settings, grouped in sections; then the TMDB Spotlight section.
     prefs dark; start
-    tap launcherSettings && WAIT=2 shot $lang-settings
+    if [ $lang = it ]; then d="Impostazioni di Piume"; else d="Piume settings"; fi
+    tap launcherSettings "$d" @1788,90 && WAIT=2 shot $lang-settings
     prefs dark '<int name="reopen_row" value="300" />'; start
     WAIT=1 shot $lang-settings-tmdb
 
@@ -87,7 +96,8 @@ for lang in en it; do
 
     # All apps.
     prefs dark; start
-    tap allAppsButton && WAIT=2 shot $lang-all-apps
+    if [ $lang = it ]; then d="Tutte le app"; else d="All apps"; fi
+    tap allAppsButton "$d" @1524,90 && WAIT=2 shot $lang-all-apps
 done
 
 # Gallery screensaver from the Spotlight backdrops: let Spotlight turn for a while so a few are on disk first.
