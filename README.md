@@ -5,12 +5,12 @@
 </p>
 
 > [!NOTE]
-> **Piume** (Italian for *feathers*) is a fork of [**Plume Launcher**](https://github.com/aradhyas8/Plume_Launcher) by [aradhyas8](https://github.com/aradhyas8). It keeps Plume's small, fast design and adds an Italian translation, a TMDB Spotlight of trending films and series, recommendations per app, grouped settings, a TV inputs menu and readability changes. Piume installs next to Plume: it has its own package name (`dev.piume`) and its own updates. See [Credits](#credits) for everyone whose work it builds on.
+> **Piume** (Italian for *feathers*) is a fork of [**Plume Launcher**](https://github.com/aradhyas8/Plume_Launcher) by [aradhyas8](https://github.com/aradhyas8). It keeps Plume's small, fast design and adds an Italian translation, a TMDB Spotlight of trending films and series (or your own TMDB list), recommendations per app, grouped settings, a TV inputs menu, voice search, night mode, settings backup and readability changes. Piume installs next to Plume: it has its own package name (`dev.piume`) and its own updates. See [Credits](#credits) for everyone whose work it builds on.
 
 <p align="center">
   <a href="https://github.com/mccoy88f/Piume_Launcher/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mccoy88f/Piume_Launcher?label=release"></a>
   <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84">
-  <img alt="APK size" src="https://img.shields.io/badge/APK-0.4%20MB-blue">
+  <img alt="APK size" src="https://img.shields.io/badge/APK-0.5%20MB-blue">
   <a href="LICENSE"><img alt="GPL-3.0 License" src="https://img.shields.io/github/license/mccoy88f/Piume_Launcher"></a>
 </p>
 
@@ -23,14 +23,18 @@ Piume replaces the cluttered stock home screen with the two things you actually 
 
 ## Highlights
 
-- **Tiny and fast.** A 0.4 MB APK with no third-party libraries. It uses about 50–70 MB of RAM and has no extra background services.
+- **Tiny and fast.** A 0.5 MB APK with no third-party libraries. It uses about 50–70 MB of RAM and has no extra background services.
 - **Home button support on Google TV.** The Home button opens Piume directly, even on devices where the system launcher can't be replaced. Holding Home still opens the Google TV dashboard.
 - **Continue Watching.** Resume shows and films from Android TV's Watch Next list and from apps that publish their own "Continue Watching" channel, such as Stremio.
 - **Clean apps row.** Monochrome logos (or the same logos in brand colour) in a single row, with names on focus, always or never. Rearrange it by holding OK, sort by most used, or hide apps you don't use (they stay in All apps). An optional PIN locks the layout so small hands can't rearrange it.
 - **HDMI inputs as apps.** A console or set-top box that names itself over HDMI-CEC (for example "PlayStation 5") gets its own tile, which switches the TV to that input.
 - **Light, dark or automatic theme**, each with its own wallpaper. Add your own photos from your phone by scanning a QR code, or show a folder of photos from the TV or a USB drive that changes on a timer.
-- **Optional Gallery screensaver.** Public-domain landscape paintings in 16:9, downloaded only if you choose it, or a folder of your own photos.
-- **Optional weather** under the clock.
+- **Optional TMDB Spotlight.** Trending films and series, or your own public TMDB list, above the apps row, with their backdrop as the wallpaper. It changes title every few seconds, in a random order. Buttons open the title in Nuvio (by TMDB id) or Stremio (by IMDb id), play its YouTube trailer, or open a streaming app that has it in your country.
+- **Optional Gallery screensaver.** Public-domain landscape paintings in 16:9, downloaded only if you choose it, a folder of your own photos, or the Spotlight backdrops with their titles.
+- **Optional weather** under the clock, and a 12- or 24-hour clock.
+- **Night mode.** Between the hours you choose, the home screen goes darker and Spotlight stops.
+- **Voice search** from the top bar.
+- **Your phone as a keyboard.** Scan a QR code to send a wallpaper, type the TMDB key or list, save a settings backup, or restore one.
 - **Updates itself.** Piume checks its GitHub releases once a day and installs new versions from its settings. The first update asks you to allow installs from Piume.
 
 ## How it compares
@@ -116,7 +120,13 @@ Android 13 and newer grey out the Accessibility switch for apps installed outsid
 | Switch between monochrome and colour icons | **Settings → Apps row → Icon style** |
 | Update Piume | **Settings → System → Updates** |
 | Lock the layout with a PIN | **Settings → Apps row → Lock layout** |
-| Show trending films and series on top (TMDB Spotlight) | **Settings → TMDB Spotlight → TMDB API Key** |
+| Show trending films and series on top (TMDB Spotlight) | **Settings → TMDB Spotlight → TMDB API Key** (type it on the TV or from your phone) |
+| Show your own TMDB list in Spotlight | **Settings → TMDB Spotlight → Spotlight shows → My TMDB list** |
+| Clock in 12 or 24 hours | **Settings → Appearance & wallpapers → Clock** |
+| Night mode | **Settings → Appearance & wallpapers → Night mode** |
+| Back up or restore your settings | **Settings → System → Backup and restore** |
+| See what did not work recently | **Settings → System → Recent problems** |
+| Search by voice | The **microphone** button in the top bar |
 | Switch to an HDMI input | The **TV inputs** button in the top bar |
 | Open the Google TV dashboard | Hold the **Home** button |
 
@@ -142,9 +152,19 @@ Choose **Choose a folder on this TV…** in the wallpaper list to use a whole fo
 
 The lock keeps the layout safe, it isn't parental control: apps can still be opened by voice search or from Android settings. Forgot the PIN? **Android Settings → Apps → Piume → Clear data** removes it, along with your layout and settings.
 
+### TMDB Spotlight
+
+Spotlight needs a free TMDB API key (v3 key or v4 read token) from [themoviedb.org](https://www.themoviedb.org/settings/api). Enter it in **Settings → TMDB Spotlight → TMDB API Key**, or choose **Enter from your phone** and scan the code; Piume checks the key with TMDB. Spotlight then shows the trending titles; **Spotlight shows → My TMDB list** shows a public list you made on themoviedb.org instead, in its own order. Paste its link on your phone.
+
+Each title has buttons for Nuvio and Stremio (always shown, when installed), its YouTube trailer, and the streaming apps that have it in your country (**Only services that have the title** turns that filter off). Spotlight keeps its images on the TV, so each one downloads only once, and it stops after 15 minutes without a key press.
+
+### Backup and restore
+
+**Settings → System → Backup and restore** saves your settings to your phone as a small file, and sends one back to restore them. The backup has your layout, theme, Spotlight settings and TMDB key, but not your photos or the lock PIN. Keep it private: it has your TMDB key.
+
 ### Gallery screensaver
 
-Select **Settings → Screensaver** to switch to Gallery. Piume downloads the paintings (4.7 MB) from Plume Launcher's releases and stores them privately. Switching back to another screensaver deletes them again, so they only take space while you use them.
+Select **Settings → Screensaver** to switch to Gallery. Piume downloads the paintings (4.7 MB) from Plume Launcher's releases and stores them privately. Switching back to another screensaver deletes them again, so they only take space while you use them. With a TMDB key you can choose **Spotlight trending (TMDB)** instead: it shows the backdrops Spotlight already keeps on the TV, with title, year and genre, and doesn't go online itself.
 
 ## Privacy
 
@@ -153,9 +173,9 @@ Piume has no analytics, no ads and no account. It only connects to the internet 
 - check this repository's GitHub releases for a new version, once a day, and download it when you choose to update
 - download the Gallery paintings from Plume Launcher's releases, **only if you choose that screensaver**
 - fetch the weather, **only if you turn it on**. It looks up your approximate location from your IP address via [ipwho.is](https://ipwho.is), then gets the forecast from [Open-Meteo](https://open-meteo.com). A city you pick by hand is looked up with Open-Meteo's geocoding instead.
-- show TMDB Spotlight, **only if you enter a TMDB API key**. It fetches trending titles, their genres, trailers and IMDb ids from [TMDB](https://www.themoviedb.org).
+- show TMDB Spotlight, **only if you enter a TMDB API key**. It fetches trending titles (or your list), their genres, backdrops, trailers, IMDb ids and streaming services from [TMDB](https://www.themoviedb.org).
 
-**Add from phone…** runs a small upload page on the TV itself, reachable only on your home network and only while that screen is open. Photos go straight from your phone to the TV and nowhere else.
+The phone screens (**Add from phone…**, the TMDB key and list, backup and restore) run a small page on the TV itself, reachable only on your home network, only while that screen is open, and only at a long random address in its QR code. What you send goes straight between your phone and the TV and nowhere else. Android's own backup doesn't copy Piume's settings.
 
 ## Troubleshooting
 
