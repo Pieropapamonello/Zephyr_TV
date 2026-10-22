@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="docs/home-light.jpg" alt="Home screen, light theme (Plume 1.3, before the fork)" width="49%">
-  <img src="docs/home-dark.jpg" alt="Home screen, dark theme (Plume 1.3, before the fork)" width="49%">
+  <img src="docs/screens/en-home-light.jpg" alt="Home screen, light theme" width="49%">
+  <img src="docs/screens/en-home-dark.jpg" alt="Home screen, dark theme" width="49%">
 </p>
 
 Piume replaces the cluttered stock home screen with the two things you actually use: your apps and what you were watching. There are no ads, no sponsored rows, no account and no tracking, and it stays out of the way of the apps it launches.
@@ -40,6 +40,14 @@ Piume replaces the cluttered stock home screen with the two things you actually 
 - **Voice search** from the top bar.
 - **Your phone as a keyboard.** Scan a QR code to send a wallpaper, type the TMDB key or list, save a settings backup, or restore one.
 - **Updates itself.** Piume checks its GitHub releases once a day and installs new versions from its settings. The first update asks you to allow installs from Piume.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screens/en-settings.jpg" alt="Piume settings, grouped in sections" width="32%">
+  <img src="docs/screens/en-settings-tmdb.jpg" alt="The TMDB Spotlight settings" width="32%">
+  <img src="docs/screens/en-phone.jpg" alt="The TMDB key from your phone: scan the code" width="32%">
+</p>
 
 ## How it compares
 

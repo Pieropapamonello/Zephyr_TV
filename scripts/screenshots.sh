@@ -75,7 +75,7 @@ for lang in en it; do
     # Home, dark: Spotlight at rest above the apps row, then focused with its buttons.
     prefs dark; home
     shot $lang-home-dark
-    key KEYCODE_DPAD_UP; WAIT=2 shot $lang-spotlight
+    [ -n "${TMDB_KEY:-}" ] && { key KEYCODE_DPAD_UP; WAIT=2 shot $lang-spotlight; }
 
     # Home, light.
     prefs light; home
@@ -93,11 +93,6 @@ for lang in en it; do
     key KEYCODE_DPAD_CENTER
     if [ $lang = it ]; then tap "Inserisci dal telefono…"; else tap "Enter from your phone…"; fi
     WAIT=2 shot $lang-phone
-
-    # All apps.
-    prefs dark; start
-    if [ $lang = it ]; then d="Tutte le app"; else d="All apps"; fi
-    tap allAppsButton "$d" @1524,90 && WAIT=2 shot $lang-all-apps
 done
 
 # Gallery screensaver from the Spotlight backdrops: let Spotlight turn for a while so a few are on disk first.

@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="docs/home-light.jpg" alt="Schermata Home, tema chiaro (Plume 1.3, prima del fork)" width="49%">
-  <img src="docs/home-dark.jpg" alt="Schermata Home, tema scuro (Plume 1.3, prima del fork)" width="49%">
+  <img src="docs/screens/it-home-light.jpg" alt="Schermata Home, tema chiaro" width="49%">
+  <img src="docs/screens/it-home-dark.jpg" alt="Schermata Home, tema scuro" width="49%">
 </p>
 
 Piume sostituisce la Home di serie, piena di elementi, con le due cose che usi davvero: le tue app e quello che stavi guardando. Niente pubblicità, niente righe sponsorizzate, nessun account e nessun tracciamento, e non intralcia le app che apre.
@@ -40,6 +40,14 @@ Piume sostituisce la Home di serie, piena di elementi, con le due cose che usi d
 - **Ricerca vocale** dalla barra in alto.
 - **Il telefono come tastiera.** Inquadra un codice QR per inviare uno sfondo, scrivere la chiave o la lista TMDB, salvare un backup delle impostazioni o ripristinarne uno.
 - **Si aggiorna da solo.** Piume controlla le sue release su GitHub una volta al giorno e installa le nuove versioni dalle sue impostazioni. Il primo aggiornamento ti chiede di consentire le installazioni da Piume.
+
+## Immagini
+
+<p align="center">
+  <img src="docs/screens/it-settings.jpg" alt="Impostazioni di Piume, raggruppate in sezioni" width="32%">
+  <img src="docs/screens/it-settings-tmdb.jpg" alt="Le impostazioni di In evidenza TMDB" width="32%">
+  <img src="docs/screens/it-phone.jpg" alt="La chiave TMDB dal telefono: inquadra il codice" width="32%">
+</p>
 
 ## Confronto
 

@@ -78,3 +78,7 @@ Use the [bug report form](../../issues/new/choose). The TV model, Android versio
 ## Building
 
 See [Building from source](README.md#building-from-source) in the README.
+
+## Screenshots
+
+The README images in `docs/screens/` come from an Android TV emulator. To take them again, run the **Screenshots** workflow from the Actions tab: it commits the new images to the branch it runs on. The Spotlight images need the `PIUME_TMDB_KEY` repository secret (a TMDB API key). The steps are in `scripts/screenshots.sh`.
