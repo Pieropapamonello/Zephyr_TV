@@ -81,6 +81,17 @@ for lang in en it; do
     prefs light; home
     shot $lang-home-light
 
+    # Home, Glass: see-through cards over the wallpaper.
+    prefs glass; home
+    shot $lang-home-glass
+
+    # The menu of an app (hold OK): open, move, hide, and its visible sections.
+    prefs dark; home
+    key KEYCODE_DPAD_RIGHT
+    adb shell input keyevent --longpress KEYCODE_DPAD_CENTER
+    WAIT=2 shot $lang-app-menu
+    key KEYCODE_BACK
+
     # Settings, grouped in sections; then the TMDB Spotlight section.
     prefs dark; start
     if [ $lang = it ]; then d="Impostazioni di Piume"; else d="Piume settings"; fi
