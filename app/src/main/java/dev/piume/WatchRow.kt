@@ -10,6 +10,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.media.tv.TvContract
+import android.media.tv.TvInputManager
 import android.net.Uri
 import android.text.TextUtils
 import android.view.Gravity
@@ -20,6 +21,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import dev.piume.MainActivity.App
 import dev.piume.MainActivity.Companion.CW_APPS_ROW
@@ -163,31 +165,55 @@ internal fun MainActivity.queryAppChannels(pkg: String?) {
     }
     io.execute {
         val hidden = prefs.getStringSet(K.HIDDEN_WATCH, emptySet())!!
-        val appChannels = ArrayList<Pair<Long, String>>() // (id, displayName)
-        contentResolver.query(TvContract.Channels.CONTENT_URI, null, null, null, null)?.use { c ->
-            val nameIdx = c.getColumnIndex("display_name")
-            val pkgIdx = c.getColumnIndex("package_name")
-            val idIdx = c.getColumnIndex("_id")
-            while (c.moveToNext()) {
-                if (c.getString(pkgIdx) == pkg) {
-                    val dName = c.getString(nameIdx) ?: ""
-                    appChannels += c.getLong(idIdx) to dName
-                }
+        // The TV app shows its channel list, a section per tuner (none, on a TV without one); any other app, a
+        // section per row it publishes for the home screen. Each can be turned off (see pickSections).
+        val all = if (isTvApp(pkg)) tunerSections(pkg, hidden) else appSections(pkg, hidden)
+        val off = prefs.getStringSet(K.SECTIONS_OFF, emptySet())!!
+        val shown = all.filter { sectionKey(pkg, it) !in off }
+        ui.post {
+            sectionCache = pkg to all
+            if (shown.isEmpty()) { // an app with nothing to recommend shows nothing under the row
+                if (tmdbLastFocusApp == pkg) hideWatchRow()
+            } else {
+                showSections(shown)
             }
         }
-        // Fetch preview programs from all channels for this app
-        val programs = appChannels.flatMap { (channelId, _) ->
-            readPrograms(TvContract.buildPreviewProgramsUriForChannel(channelId), hidden)
-        }.map { it.second }.distinctBy { it.intent ?: it.title }.let(::inChannelOrder)
-        if (programs.isEmpty()) { // an app with nothing to recommend shows nothing under the row
-            ui.post { if (tmdbLastFocusApp == pkg) hideWatchRow() }
-            return@execute
-        }
-        val appLabel = apps.firstOrNull { it.pkg == pkg }?.label ?: pkg
-        ui.post {
-            watchTitle.text = getString(R.string.tmdb_app_channels, appLabel)
-            showWatchNext(programs)
-        }
+    }
+}
+
+/** One row under the apps: [name] alone in the visible-sections list, [title] ("YouTube: Trending") over the row. */
+internal class Section(val key: String, val name: String, val title: String, val items: List<Prog>)
+
+internal fun sectionKey(pkg: String, s: Section) = "$pkg/${s.key}"
+
+internal fun MainActivity.appLabel(pkg: String) = apps.firstOrNull { it.pkg == pkg }?.label ?: pkg
+
+/**
+ * An app's rows for the home screen ("Recommended", "Trending", "Watch again"...), each a section in the app's
+ * own order, empty ones left out. Runs on the io thread.
+ */
+internal fun MainActivity.appSections(pkg: String, hidden: Set<String>): List<Section> {
+    val rows = ArrayList<Pair<Long, String>>() // (channel id, its name)
+    contentResolver.query(TvContract.Channels.CONTENT_URI, arrayOf("_id", "display_name", "package_name"), null, null, null)?.use { c ->
+        while (c.moveToNext()) if (c.getString(2) == pkg) rows += c.getLong(0) to (c.getString(1) ?: "")
+    }
+    val label = appLabel(pkg)
+    return rows.mapNotNull { (id, name) ->
+        val items = readPrograms(TvContract.buildPreviewProgramsUriForChannel(id), hidden).map { it.second }
+            .distinctBy { it.intent ?: it.title }.let(::inChannelOrder).take(SECTION_CARDS)
+        val shown = name.ifBlank { getString(R.string.section_recommended) }
+        if (items.isEmpty()) null else Section(name, shown, getString(R.string.app_section, label, shown), items)
+    }
+}
+
+/** Hold OK on an app, Visible sections: its rows under the apps, each on or off. Back applies the choice. */
+internal fun MainActivity.pickSections(pkg: String, sections: List<Section>) {
+    showPanel()
+    toggles(getString(R.string.app_section, appLabel(pkg), getString(R.string.menu_sections)), sections.map { it.name to sectionKey(pkg, it) },
+        K.SECTIONS_OFF, getString(R.string.state_shown), getString(R.string.state_hidden)) {
+        closeLauncherSettings()
+        watchKey = null
+        queryAppChannels(pkg)
     }
 }
 
@@ -208,15 +234,69 @@ internal fun MainActivity.inChannelOrder(programs: List<Prog>): List<Prog> {
             c.getString(2)?.let { byName[it.trim().lowercase()] = number }
         }
     }
-    fun number(p: Prog): String? {
-        val channel = p.intent?.let { runCatching { Intent.parseUri(it, Intent.URI_INTENT_SCHEME).data }.getOrNull() }
-            ?.takeIf { it.authority == TvContract.AUTHORITY && it.pathSegments.firstOrNull() == "channel" }
-            ?.lastPathSegment?.toLongOrNull()
-        return channel?.let(byId::get) ?: byName[p.title.trim().lowercase()]
-            ?: Regex("""^\s*(\d+(?:[.-]\d+)?)\b""").find(p.title)?.groupValues?.get(1)
-    }
+    fun number(p: Prog): String? = channelOf(p)?.let(byId::get) ?: byName[p.title.trim().lowercase()]
+        ?: Regex("""^\s*(\d+(?:[.-]\d+)?)\b""").find(p.title)?.groupValues?.get(1)
     return programs.sortedWith(compareBy<Prog>({ channelKey(number(it)) }).thenByDescending { it.weight })
 }
+
+/** The tuner channel a card opens (its intent points at content://android.media.tv/channel/<id>), if any. */
+internal fun channelOf(p: Prog): Long? =
+    p.intent?.let { runCatching { Intent.parseUri(it, Intent.URI_INTENT_SCHEME).data }.getOrNull() }
+        ?.takeIf { it.authority == TvContract.AUTHORITY && it.pathSegments.firstOrNull() == "channel" }
+        ?.lastPathSegment?.toLongOrNull()
+
+/**
+ * The TV app: the one Android opens a channel link (content://android.media.tv/channel/<id>) with. Found the
+ * same way on any TV, whatever it's called (Sony's com.sony.dtv.tvx, Google's Live Channels, ...).
+ */
+internal fun MainActivity.isTvApp(pkg: String): Boolean {
+    val uri = TvContract.buildChannelUri(1)
+    return listOf(Intent(Intent.ACTION_VIEW, uri), Intent(Intent.ACTION_VIEW).setType(TvContract.Channels.CONTENT_ITEM_TYPE)).any { intent ->
+        packageManager.queryIntentActivities(intent, 0).any { it.activityInfo.packageName == pkg }
+    }
+}
+
+/**
+ * The TV app's sections: the TV's own channel list, a section per tuner (aerial, satellite...), each in number
+ * order from the first. Not the cards the app publishes, which are only the handful of channels it picked
+ * (Sony's: about 20, often without 1-3) and look different on every TV; these all share one design (see
+ * [watchCard]). Empty without a tuner. Runs on the io thread.
+ */
+internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<Section> {
+    class Channel(val id: Long, val input: String, val number: String, val name: String)
+    val all = ArrayList<Channel>()
+    contentResolver.query(TvContract.Channels.CONTENT_URI, arrayOf("_id", "input_id", "display_number", "display_name", "browsable", "type"), null, null, null)?.use { c ->
+        while (c.moveToNext()) {
+            if (c.getString(5) == TvContract.Channels.TYPE_PREVIEW || c.getInt(4) == 0) continue // home-screen rows, hidden channels
+            all += Channel(c.getLong(0), c.getString(1) ?: "", c.getString(2)?.takeIf { it.isNotBlank() } ?: continue, c.getString(3) ?: continue)
+        }
+    }
+    val label = appLabel(pkg)
+    val tvInputs = getSystemService(TvInputManager::class.java)
+    return all.filter { hideKey(pkg, it.name) !in hidden }.groupBy { it.input }.values
+        .map { it.sortedBy { ch -> channelKey(ch.number) } }.sortedBy { channelKey(it.first().number) }
+        .map { channels ->
+            val input = channels.first().input
+            val name = runCatching { tvInputs?.getTvInputInfo(input)?.loadLabel(this)?.toString() }.getOrNull()
+                ?.takeIf { it.isNotBlank() } ?: getString(R.string.section_channels)
+            Section(input, name, getString(R.string.app_section, label, name), channels.take(TUNER_CARDS).map {
+                Prog(it.name, it.number.trimStart('0').ifEmpty { it.number }, 0, logo(it.id),
+                    Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(it.id)).toUri(Intent.URI_INTENT_SCHEME), pkg, badge = it.number)
+            })
+        }
+}
+
+/** The channel's logo, if the TV has one (many tuners store none). */
+private fun MainActivity.logo(id: Long): String? {
+    val uri = TvContract.buildChannelLogoUri(id)
+    return runCatching { contentResolver.openAssetFileDescriptor(uri, "r")?.use { uri.toString() } }.getOrNull()
+}
+
+/** Channels per tuner: enough to scroll through the main ones without building hundreds of cards. */
+private const val TUNER_CARDS = 30
+
+/** Cards per app section; with several sections, more would mean scrolling a long way past ones not wanted. */
+private const val SECTION_CARDS = 20
 
 /**
  * Hides the row under the apps for an app with no recommendations. The old cards stay (invisible) so the row
@@ -224,6 +304,7 @@ internal fun MainActivity.inChannelOrder(programs: List<Prog>): List<Prog> {
  */
 internal fun MainActivity.hideWatchRow() {
     watchKey = null
+    moreSections.removeAllViews()
     if (watchScroll.visibility == View.GONE) return
     watchTitle.visibility = View.INVISIBLE
     watchScroll.visibility = View.INVISIBLE
@@ -244,29 +325,79 @@ internal fun MainActivity.timeLeft(ms: Long): String {
     return if (min >= 60) getString(R.string.time_left_hr_min, min / 60, min % 60) else getString(R.string.time_left_min, min)
 }
 
-internal fun MainActivity.showWatchNext(list: List<Prog>) {
-    val key = list.joinToString("|") { "${it.title}/${it.sub}/${it.progress}/${it.image}" }
+internal fun MainActivity.showWatchNext(list: List<Prog>) = showSections(
+    if (list.isEmpty()) emptyList() else listOf(getString(R.string.continue_watching).let { Section("", it, it, list) }))
+
+/**
+ * The rows under the apps, one per section. The first is the row in the layout; any more are built under it (see
+ * BottomSection), and the page slides up to them as focus goes down (keepInView).
+ */
+internal fun MainActivity.showSections(sections: List<Section>) {
+    val key = sections.joinToString("||") { s -> s.title + "#" + s.items.joinToString("|") { "${it.title}/${it.sub}/${it.progress}/${it.image}" } }
     if (key == watchKey) { // unchanged: keep views (and focus) as they are, just fill in missing posters
         retryPosters()
         return
     }
     watchKey = key
-    val focusedAt = watchRow.indexOfChild(currentFocus?.parent as? View)
+    val focused = currentFocus?.takeIf { it.getTag(R.id.watchRow) is Prog }
+    val focusedRow = cardRows().indexOf(focused?.parent?.parent)
+    val focusedAt = (focused?.parent?.parent as? ViewGroup)?.indexOfChild(focused.parent as View) ?: -1
     watchRow.removeAllViews()
-    val visible = if (list.isEmpty()) View.GONE else View.VISIBLE
+    moreSections.removeAllViews()
+    val visible = if (sections.isEmpty()) View.GONE else View.VISIBLE
     watchTitle.visibility = visible
     watchScroll.visibility = visible
     // ~16 ms per card here and only four show at once: build them four per frame, not all 20 in one.
-    fun addCards(from: Int) {
+    fun addCards(row: ViewGroup, items: List<Prog>, from: Int) {
         if (watchKey != key) return // a newer list replaced this one
-        list.subList(from, minOf(from + 4, list.size)).forEach { watchRow.addView(watchCard(it, watchRow.childCount > 0)) }
-        if (from + 4 < list.size) ui.post { addCards(from + 4) }
+        items.subList(from, minOf(from + 4, items.size)).forEach { row.addView(watchCard(it, row.childCount > 0)) }
+        if (from + 4 < items.size) ui.post { addCards(row, items, from + 4) }
     }
-    addCards(0)
-    if (focusedAt >= 0) {
-        ((watchRow.getChildAt(focusedAt.coerceAtMost(watchRow.childCount - 1)) as? LinearLayout)?.getChildAt(0)
+    sections.forEachIndexed { i, s ->
+        if (i == 0) watchTitle.text = s.title
+        addCards(if (i == 0) watchRow else sectionRow(s.title), s.items, 0)
+    }
+    if (focusedRow >= 0) {
+        val row = cardRows().let { it.getOrNull(focusedRow) ?: it.last() }
+        ((row.getChildAt(focusedAt.coerceAtMost(row.childCount - 1)) as? LinearLayout)?.getChildAt(0)
             ?: appRow.getChildAt(0))?.requestFocus()
     }
+}
+
+/** A section after the first: its title and an empty row, styled like the first one's in the layout. */
+internal fun MainActivity.sectionRow(title: String): ViewGroup {
+    val row = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        clipChildren = false
+    }
+    moreSections.addView(TextView(this).apply {
+        text = title
+        textSize = 14f
+        alpha = watchTitle.alpha
+        typeface = watchTitle.typeface
+        setTextColor(watchTitle.textColors)
+        setShadowLayer(watchTitle.shadowRadius, watchTitle.shadowDx, watchTitle.shadowDy, watchTitle.shadowColor)
+    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        topMargin = (watchTitle.layoutParams as ViewGroup.MarginLayoutParams).topMargin
+    })
+    moreSections.addView(SnapScrollView(this, null).apply {
+        clipToPadding = false
+        isHorizontalScrollBarEnabled = false
+        setPadding(watchScroll.paddingLeft, watchScroll.paddingTop, watchScroll.paddingRight, watchScroll.paddingBottom)
+        addView(row, ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+    }, LinearLayout.LayoutParams(watchScroll.layoutParams as LinearLayout.LayoutParams))
+    return row
+}
+
+/** The card rows under the apps, top to bottom: the first section's, then any more. */
+internal fun MainActivity.cardRows(): List<ViewGroup> = listOf<ViewGroup>(watchRow) +
+    (0 until moreSections.childCount).mapNotNull { ((moreSections.getChildAt(it) as? ViewGroup)?.getChildAt(0) as? ViewGroup) }
+
+/** In [row], the card nearest across the screen to [from] (a card in the row above or below). */
+internal fun MainActivity.nearestCard(row: ViewGroup, from: View): View? {
+    fun mid(v: View) = IntArray(2).also { v.getLocationOnScreen(it) }[0] + v.width / 2
+    val x = mid(from)
+    return (0 until row.childCount).map { row.getChildAt(it) }.minByOrNull { Math.abs(mid(it) - x) }?.let { (it as? ViewGroup)?.getChildAt(0) }
 }
 
 /**
@@ -304,6 +435,21 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     }
     frame.contentDescription = p.title
     frame.addView(img, MATCH_PARENT, MATCH_PARENT)
+    // A TV channel: the same card on every TV, whatever the TV app's own look. Number and name; the logo, where
+    // the TV has one, small in the corner.
+    if (p.badge != null) {
+        frame.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            addView(label(p.badge, 30f).apply { gravity = Gravity.CENTER })
+            addView(label(p.title, 13f).apply { gravity = Gravity.CENTER; alpha = 0.8f; setPadding(dp(12), dp(4), dp(12), 0) })
+        }, MATCH_PARENT, MATCH_PARENT)
+        p.image?.let { uri ->
+            val logo = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER }
+            frame.addView(logo, FrameLayout.LayoutParams(dp(48), dp(28), Gravity.TOP or Gravity.END).apply { setMargins(0, dp(8), dp(10), 0) })
+            posterIo.execute { runCatching { decode(uri) }.getOrNull()?.let { ui.post { logo.setImageBitmap(it) } } }
+        }
+    }
     frame.setOnClickListener { open(p) }
     frame.setTag(R.id.watchRow, p) // holding OK hides it (see onHold)
     // Standard 16:9 aspect ratio prevents cutting off channel numbers and provider badges
@@ -329,7 +475,7 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
             }
         })
     }
-    loadPoster(img, p.image)
+    if (p.badge == null) loadPoster(img, p.image)
     return col
 }
 
@@ -419,8 +565,8 @@ internal fun MainActivity.fitPoster(v: ImageView, bmp: Bitmap) {
 
 /** Cards whose poster never arrived (offline, server timeout) try again; loaded ones are left alone. */
 internal fun MainActivity.retryPosters() {
-    for (i in 0 until watchRow.childCount) {
-        val img = ((watchRow.getChildAt(i) as? ViewGroup)?.getChildAt(0) as? ViewGroup)?.getChildAt(0) as? ImageView ?: continue
+    for (row in cardRows()) for (i in 0 until row.childCount) {
+        val img = ((row.getChildAt(i) as? ViewGroup)?.getChildAt(0) as? ViewGroup)?.getChildAt(0) as? ImageView ?: continue
         if (img.drawable == null) loadPoster(img, img.tag as? String)
     }
 }

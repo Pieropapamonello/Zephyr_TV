@@ -190,7 +190,10 @@
     <string name="toast_tmdb_fetch_failed">Impossibile caricare i contenuti di tendenza da TMDB</string>
     <string name="wallpaper_tmdb_trending">In evidenza TMDB (Trending)</string>
     <string name="setting_tmdb_default_apps">App preferite per i suggerimenti</string>
-    <string name="tmdb_app_channels">%1$s: Consigliati</string>
+    <string name="app_section">%1$s: %2$s</string>
+    <string name="section_channels">Canali</string>
+    <string name="section_recommended">Consigliati</string>
+    <string name="menu_sections">Sezioni visibili</string>
     <string name="dialog_save">Salva</string>
     <string name="dialog_clear">Rimuovi</string>
     <string name="tmdb_api_key_hint">Incolla o inserisci la tua API Key v3 di TMDB</string>

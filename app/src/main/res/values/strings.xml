@@ -190,7 +190,10 @@
     <string name="toast_tmdb_fetch_failed">Couldn\'t load TMDB trending items</string>
     <string name="wallpaper_tmdb_trending">TMDB Spotlight (Trending)</string>
     <string name="setting_tmdb_default_apps">Default apps for suggestions</string>
-    <string name="tmdb_app_channels">%1$s: Recommended</string>
+    <string name="app_section">%1$s: %2$s</string>
+    <string name="section_channels">Channels</string>
+    <string name="section_recommended">Recommended</string>
+    <string name="menu_sections">Visible sections</string>
     <string name="dialog_save">Save</string>
     <string name="dialog_clear">Clear</string>
     <string name="tmdb_api_key_hint">Paste or type your TMDB v3 API Key</string>

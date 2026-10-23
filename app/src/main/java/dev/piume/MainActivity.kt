@@ -111,7 +111,7 @@ internal const val CW_PKG = "piume:continue_watching"
 class MainActivity : Activity() {
 
     internal class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable)
-    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0)
+    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null)
 
     internal val prefs by lazy { getSharedPreferences(K.FILE, MODE_PRIVATE) }
     internal val io = Executors.newSingleThreadExecutor()
@@ -155,6 +155,8 @@ class MainActivity : Activity() {
     internal lateinit var watchTitle: TextView
     internal val appsTitle by lazy { findViewById<TextView>(R.id.appsTitle) }
     internal lateinit var watchScroll: View
+    internal val moreSections by lazy { findViewById<LinearLayout>(R.id.moreSections) }
+    internal var sectionCache: Pair<String, List<Section>>? = null // the last app queried and all its sections
     internal lateinit var allApps: View
     internal lateinit var allAppsGrid: GridLayout
     internal lateinit var wifi: ImageView
@@ -1178,8 +1180,8 @@ class MainActivity : Activity() {
     internal fun homeNav(v: View, key: Int): View? {
         fun alive(x: View?) = x?.takeIf { it.isAttachedToWindow }
         val apps = alive(lastApp)?.takeIf { it.parent === appRow } ?: appRow.getChildAt(0)
-        val cards = if (watchScroll.visibility != View.VISIBLE) null
-            else alive(lastCard) ?: (watchRow.getChildAt(0) as? ViewGroup)?.getChildAt(0)
+        val cards = if (watchScroll.visibility != View.VISIBLE) null // Down from the apps: the first section
+            else alive(lastCard)?.takeIf { it.parent?.parent === watchRow } ?: (watchRow.getChildAt(0) as? ViewGroup)?.getChildAt(0)
         val top = alive(lastTop) ?: findViewById(R.id.launcherSettings)
         val spotVis = spotlightContainer.visibility == View.VISIBLE
         return when {
@@ -1201,9 +1203,8 @@ class MainActivity : Activity() {
                     cycleSpotlight(-1)
                     v
                 }
-                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    spotlightAction(-1, 1) ?: v
-                }
+                // OK opens a cut-off overview in full (OK again closes it); otherwise it goes on to the buttons.
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> if (toggleOverview()) v else spotlightAction(-1, 1) ?: v
                 else -> null
             }
             v.parent === spotlightActions -> {
@@ -1227,13 +1228,16 @@ class MainActivity : Activity() {
                 KeyEvent.KEYCODE_DPAD_RIGHT -> if (appRow.indexOfChild(v) == appRow.childCount - 1) v else null
                 else -> null
             }
-            v.getTag(R.id.watchRow) is Prog -> {
-                val i = watchRow.indexOfChild(v.parent as View)
+            v.getTag(R.id.watchRow) is Prog -> { // a card: Up and Down go between sections, to the nearest card
+                val row = v.parent.parent as ViewGroup
+                val rows = cardRows()
+                val r = rows.indexOf(row)
+                val i = row.indexOfChild(v.parent as View)
                 when (key) {
-                    KeyEvent.KEYCODE_DPAD_UP -> apps ?: top
-                    KeyEvent.KEYCODE_DPAD_DOWN -> v
+                    KeyEvent.KEYCODE_DPAD_UP -> if (r <= 0) apps ?: top else nearestCard(rows[r - 1], v) ?: v
+                    KeyEvent.KEYCODE_DPAD_DOWN -> rows.getOrNull(r + 1)?.let { nearestCard(it, v) } ?: v
                     KeyEvent.KEYCODE_DPAD_LEFT -> if (i == 0) v else null
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> if (i == watchRow.childCount - 1) v else null
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> if (i == row.childCount - 1) v else null
                     else -> null
                 }
             }
@@ -1284,6 +1288,9 @@ class MainActivity : Activity() {
                 renderApps()
                 appRow.getChildAt(minOf(i, appRow.childCount - 1))?.requestFocus()
                 Toast.makeText(this, getString(R.string.removed_from_row_toast), Toast.LENGTH_SHORT).show()
+            },
+            sectionCache?.takeIf { it.first == pkg && it.second.isNotEmpty() }?.let { (_, sections) ->
+                getString(R.string.menu_sections) to { pickSections(pkg, sections) }
             },
             if (pkg.startsWith(HDMI)) null else getString(R.string.menu_app_info) to {
                 openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkg, null))
@@ -1662,7 +1669,7 @@ class MainActivity : Activity() {
 
     /**
      * Spotlight moves on to the next title by itself every few seconds while the home screen shows. It waits
-     * while you're on one of its buttons (the title shouldn't change under you), while the panel or All apps is
+     * while you're on the title or its buttons (it shouldn't change under you), while the panel or All apps is
      * open, and while something covers the home screen (a screensaver, a dialog), so it doesn't fetch backdrops unseen.
      */
     internal val spotlightTick = object : Runnable {
@@ -1674,7 +1681,7 @@ class MainActivity : Activity() {
                 spotlightIdle = true
                 return
             }
-            val busy = isNight() || currentFocus?.parent === spotlightActions || settingsScrim.visibility == View.VISIBLE ||
+            val busy = isNight() || isDescendantOf(currentFocus, spotlightContainer) || settingsScrim.visibility == View.VISIBLE ||
                 allApps.visibility == View.VISIBLE || editing || !hasWindowFocus()
             if (busy) restartSpotlightTick() else cycleSpotlight(1)
         }

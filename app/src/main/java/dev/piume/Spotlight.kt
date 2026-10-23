@@ -3,6 +3,7 @@ package dev.piume
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -35,6 +36,7 @@ internal fun MainActivity.setupSpotlight() {
     }
     spotlightPrev.setOnClickListener { cycleSpotlight(-1) }
     spotlightNext.setOnClickListener { cycleSpotlight(1) }
+    for (v in arrayOf(spotlightContainer, bottomSection)) v.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> centerSpotlight() }
 
     window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
         updateSpotlightFocusState(newFocus)
@@ -64,8 +66,39 @@ internal fun MainActivity.keepInView(v: View?) {
     }
 }
 
+/**
+ * The title block sits under the clock and weather, but with the rows below it can end up nearly touching the
+ * apps. Moved up so the gap above its first line (from the weather) and the one under the title (to the app
+ * tiles) are the same; never down, and never past the weather. Measured to the title, not the whole block, so
+ * the overview and buttons that open under it don't move it.
+ */
+internal fun MainActivity.centerSpotlight() {
+    val content = spotlightContainer.parent as ViewGroup
+    val infoRow = (spotlightContainer as ViewGroup).getChildAt(0)
+    val apps = findViewById<View>(R.id.appScroll)
+    val rowTop = spotlightContainer.top + infoRow.top + spotlightInfoBox.top
+    val above = rowTop - content.getChildAt(0).bottom
+    val below = bottomSection.top + apps.top + apps.paddingTop - (rowTop + spotlightTitle.bottom)
+    spotlightContainer.translationY = -((above - below) / 2).coerceIn(0, above.coerceAtLeast(0)).toFloat()
+}
+
+/** Opens the overview in full when it's cut off, or closes it again; false when there's nothing to open or close. */
+internal fun MainActivity.toggleOverview(): Boolean {
+    if (spotlightOverview.maxLines == Int.MAX_VALUE) {
+        spotlightOverview.maxLines = OVERVIEW_LINES
+        return true
+    }
+    val layout = spotlightOverview.layout ?: return false
+    if (layout.lineCount == 0 || layout.getEllipsisCount(layout.lineCount - 1) == 0) return false
+    spotlightOverview.maxLines = Int.MAX_VALUE
+    return true
+}
+
+private const val OVERVIEW_LINES = 3
+
 internal fun MainActivity.updateSpotlightFocusState(targetFocus: View?) {
     val inSpotlight = isDescendantOf(targetFocus, spotlightContainer)
+    if (!inSpotlight) spotlightOverview.maxLines = OVERVIEW_LINES
     spotlightOverview.visibility = if (inSpotlight) View.VISIBLE else View.GONE
     spotlightActions.visibility = if (inSpotlight) View.VISIBLE else View.GONE
     for (arrow in arrayOf(spotlightPrev, spotlightNext)) arrow.animate().alpha(if (inSpotlight) 0.9f else 0.5f).setDuration(220).start()
@@ -100,6 +133,7 @@ internal fun MainActivity.renderSpotlight() {
     spotlightMeta.text = "$rating$typeBadge$year$genre"
     spotlightTitle.text = item.title
     spotlightOverview.text = item.overview
+    spotlightOverview.maxLines = OVERVIEW_LINES // a new title starts closed
     val more = if (tmdbTrending.size > 1) View.VISIBLE else View.INVISIBLE
     spotlightPrev.visibility = more
     spotlightNext.visibility = more

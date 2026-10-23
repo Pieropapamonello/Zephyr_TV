@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sized in dp for a 960x540dp TV canvas (1080p and 4K both map to it). -->
+<!-- Sized in dp for a 960x540dp TV canvas (1080p and 4K both map to it). Nothing clips the page to the screen
+     height: the rows under the apps can run past the bottom edge, and the page slides up to show them. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F3F5F7">
+    android:background="#F3F5F7"
+    android:clipChildren="false">
 
     <ImageView
         android:id="@+id/wallpaper"
@@ -238,7 +240,9 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
 
-        <LinearLayout
+        <!-- Apps, then a row per section of the focused app's recommendations. Only the apps and the first
+             section set its height (the apps row stays put); further sections hang below, see BottomSection. -->
+        <dev.piume.BottomSection
             android:id="@+id/bottomSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -343,7 +347,16 @@
                     android:clipChildren="false"
                     android:orientation="horizontal" />
             </dev.piume.SnapScrollView>
-        </LinearLayout>
+
+            <!-- Sections after the first: a title and a row each, built in code like the ones above. -->
+            <LinearLayout
+                android:id="@+id/moreSections"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical" />
+        </dev.piume.BottomSection>
     </LinearLayout>
 
     <!-- All apps: hidden until the Apps tile is pressed; Back closes it. -->

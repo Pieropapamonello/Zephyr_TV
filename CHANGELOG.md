@@ -16,6 +16,14 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 ## Unreleased
 
 - In Piume settings, a long value no longer cuts the name of the setting. The value is shorter instead.
+- Each row that an app shows on the home screen is now a section under the apps row. For example, YouTube shows **Recommended** and **Trending** as two rows. Move down to see the next section.
+- To select the sections of an app, hold OK on the app and select **Visible sections**.
+- The TV app shows all the channels of the TV, from channel 1, in number order. Each tuner is a section. All channel cards have the same design on all TVs.
+- On a TV without a tuner, the TV app shows no channels.
+- Spotlight does not change the title while the title or its buttons have the focus.
+- Press OK on the Spotlight title to show all of a long description. Press OK again to make it short.
+- The Spotlight title is a little higher. The space above it and the space below it are the same.
+- The first and the last item of a row now show all of their shadow when they have the focus.
 
 ## 2.0
 

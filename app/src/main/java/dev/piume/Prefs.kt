@@ -37,6 +37,7 @@ internal object K {
     // Continue Watching
     const val HIDDEN_WATCH = "hidden_watch"
     const val CW_OFF = "cw_off"
+    const val SECTIONS_OFF = "sections_off" // "pkg/section" of the app sections turned off
 
     // Spotlight
     const val TMDB_API_KEY = "tmdb_api_key"
