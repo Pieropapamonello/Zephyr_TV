@@ -30,9 +30,10 @@ Piume replaces the cluttered stock home screen with the two things you actually 
 - **Tiny and fast.** A 0.5 MB APK with no third-party libraries. It uses about 50–70 MB of RAM and has no extra background services.
 - **Home button support on Google TV.** The Home button opens Piume directly, even on devices where the system launcher can't be replaced. Holding Home still opens the Google TV dashboard.
 - **Continue Watching.** Resume shows and films from Android TV's Watch Next list and from apps that publish their own "Continue Watching" channel, such as Stremio.
+- **App sections.** Each row an app puts on the home screen (for example YouTube's Recommended and Trending) is its own section under the apps row. Hold OK on the app and select **Visible sections** to choose them. The TV app shows the TV's channels from channel 1, one section per tuner.
 - **Clean apps row.** Monochrome logos (or the same logos in brand colour) in a single row, with names on focus, always or never. Rearrange it by holding OK, sort by most used, or hide apps you don't use (they stay in All apps). An optional PIN locks the layout so small hands can't rearrange it.
 - **HDMI inputs as apps.** A console or set-top box that names itself over HDMI-CEC (for example "PlayStation 5") gets its own tile, which switches the TV to that input.
-- **Light, dark or automatic theme**, each with its own wallpaper. Add your own photos from your phone by scanning a QR code, or show a folder of photos from the TV or a USB drive that changes on a timer.
+- **Light, dark, Glass or automatic theme**, each with its own wallpaper. Glass shows the wallpaper through glossy see-through cards, with white text. Add your own photos from your phone by scanning a QR code, or show a folder of photos from the TV or a USB drive that changes on a timer.
 - **Optional TMDB Spotlight.** Trending films and series, or your own public TMDB list, above the apps row, with their backdrop as the wallpaper. It changes title every few seconds, in a random order. Buttons open the title in Nuvio (by TMDB id) or Stremio (by IMDb id), play its YouTube trailer, or open a streaming app that has it in your country.
 - **Optional Gallery screensaver.** Public-domain landscape paintings in 16:9, downloaded only if you choose it, a folder of your own photos, or the Spotlight backdrops with their titles.
 - **Optional weather** under the clock, and a 12- or 24-hour clock.
@@ -42,6 +43,11 @@ Piume replaces the cluttered stock home screen with the two things you actually 
 - **Updates itself.** Piume checks its GitHub releases once a day and installs new versions from its settings. The first update asks you to allow installs from Piume.
 
 ## Screenshots
+
+<p align="center">
+  <img src="docs/screens/en-home-glass.jpg" alt="The Glass theme: see-through cards over the wallpaper" width="49%">
+  <img src="docs/screens/en-app-menu.jpg" alt="Hold OK on an app: its menu, with YouTube's sections under the apps row" width="49%">
+</p>
 
 <p align="center">
   <img src="docs/screens/en-settings.jpg" alt="Piume settings, grouped in sections" width="32%">
@@ -122,6 +128,8 @@ Android 13 and newer grey out the Accessibility switch for apps installed outsid
 
 | Action | How |
 |---|---|
+| Choose an app's sections on the home screen | Hold **OK** on the app, then **Visible sections** |
+| Switch to the Glass theme | **Settings → Appearance & wallpapers → Theme → Glass** |
 | Rearrange apps | Hold **OK** on an app, or use **Settings → Apps row → Edit apps row** |
 | Hide a Continue Watching item | Hold **OK** on its card, then **Remove from Continue Watching** |
 | Remove an app from the row | Hold **OK** on it, then **Remove from row** (it stays in *All apps*) |

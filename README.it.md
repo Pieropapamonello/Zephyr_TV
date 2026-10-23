@@ -30,9 +30,10 @@ Piume sostituisce la Home di serie, piena di elementi, con le due cose che usi d
 - **Piccolo e veloce.** Un APK da 0,5 MB senza librerie di terze parti. Usa circa 50–70 MB di RAM e non ha servizi in background aggiuntivi.
 - **Tasto Home su Google TV.** Il tasto Home apre direttamente Piume, anche sui dispositivi dove il launcher di sistema non si può sostituire. Tenendo premuto Home si apre ancora la dashboard di Google TV.
 - **Continua a guardare.** Riprendi serie e film dalla lista "Guarda dopo" di Android TV e dalle app che pubblicano un proprio canale "Continua a guardare", come Stremio.
+- **Sezioni delle app.** Ogni riga che un'app mette in Home (per esempio "Consigliati" e "Tendenze" di YouTube) è una sezione sotto la riga delle app. Tieni premuto OK sull'app e scegli **Sezioni visibili** per sceglierle. L'app TV mostra i canali della TV dal canale 1, una sezione per ogni sintonizzatore.
 - **Riga delle app pulita.** Loghi monocromatici (o gli stessi loghi a colori) in una sola riga, con i nomi al focus, sempre o mai. Riordinala tenendo premuto OK, ordinala per uso, o nascondi le app che non usi (restano in Tutte le app). Un PIN facoltativo blocca il layout, così i più piccoli non possono riordinarlo.
 - **Ingressi HDMI come app.** Una console o un decoder che si presenta via HDMI-CEC (per esempio "PlayStation 5") ha una sua tessera, che porta la TV su quell'ingresso.
-- **Tema chiaro, scuro o automatico**, ognuno con il suo sfondo. Aggiungi le tue foto dal telefono inquadrando un codice QR, oppure mostra una cartella di foto della TV o di una chiavetta USB che cambia a intervalli.
+- **Tema chiaro, scuro, Vetro o automatico**, ognuno con il suo sfondo. Vetro mostra lo sfondo attraverso schede lucide e trasparenti, con il testo bianco. Aggiungi le tue foto dal telefono inquadrando un codice QR, oppure mostra una cartella di foto della TV o di una chiavetta USB che cambia a intervalli.
 - **In evidenza TMDB, facoltativo.** Film e serie di tendenza, o una tua lista pubblica TMDB, sopra la riga delle app, con la loro immagine come sfondo. Cambia titolo ogni pochi secondi, in ordine casuale. I pulsanti aprono il titolo in Nuvio (tramite id TMDB) o Stremio (tramite id IMDb), avviano il trailer su YouTube o aprono un servizio di streaming che lo ha nel tuo paese.
 - **Salvaschermo Galleria, facoltativo.** Dipinti di paesaggi di pubblico dominio in 16:9, scaricati solo se lo scegli, una cartella delle tue foto, oppure le immagini di In evidenza con i loro titoli.
 - **Meteo facoltativo** sotto l'orologio, e orologio a 12 o 24 ore.
@@ -42,6 +43,11 @@ Piume sostituisce la Home di serie, piena di elementi, con le due cose che usi d
 - **Si aggiorna da solo.** Piume controlla le sue release su GitHub una volta al giorno e installa le nuove versioni dalle sue impostazioni. Il primo aggiornamento ti chiede di consentire le installazioni da Piume.
 
 ## Immagini
+
+<p align="center">
+  <img src="docs/screens/it-home-glass.jpg" alt="Il tema Vetro: schede trasparenti sopra lo sfondo" width="49%">
+  <img src="docs/screens/it-app-menu.jpg" alt="Tieni premuto OK su un'app: il suo menu, con le sezioni di YouTube sotto la riga delle app" width="49%">
+</p>
 
 <p align="center">
   <img src="docs/screens/it-settings.jpg" alt="Impostazioni di Piume, raggruppate in sezioni" width="32%">
@@ -122,6 +128,8 @@ Android 13 e successivi disattivano l'interruttore di Accessibilità per le app 
 
 | Azione | Come |
 |---|---|
+| Scegliere le sezioni di un'app in Home | Tieni premuto **OK** sull'app, poi **Sezioni visibili** |
+| Passare al tema Vetro | **Impostazioni → Aspetto e sfondi → Tema → Vetro** |
 | Riordinare le app | Tieni premuto **OK** su un'app, oppure usa **Impostazioni → Riga delle app → Modifica riga delle app** |
 | Nascondere un elemento di Continua a guardare | Tieni premuto **OK** sulla sua scheda, poi **Rimuovi da Continua a guardare** |
 | Togliere un'app dalla riga | Tieni premuto **OK** sull'app, poi **Rimuovi dalla riga** (resta in *Tutte le app*) |
