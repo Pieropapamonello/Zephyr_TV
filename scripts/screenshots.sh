@@ -10,7 +10,7 @@ mkdir -p "$OUT"
 shot() { # shot <name>: the screen as a 1280x720 JPEG
     sleep "${WAIT:-3}"
     adb exec-out screencap -p > "$OUT/$1.png"
-    convert "$OUT/$1.png" -resize 1280x720 -quality 86 "$OUT/$1.jpg" && rm "$OUT/$1.png"
+    $(command -v magick || echo convert) "$OUT/$1.png" -resize 1280x720 -quality 86 "$OUT/$1.jpg" && rm "$OUT/$1.png"
     echo "shot $1"
 }
 
