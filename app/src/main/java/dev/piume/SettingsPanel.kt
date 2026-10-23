@@ -120,6 +120,7 @@ internal fun MainActivity.refreshSettings(row: Int) {
 internal fun MainActivity.themeName() = when (prefs.getString(K.THEME, "light")) {
     "light" -> getString(R.string.setting_theme_light)
     "dark" -> getString(R.string.setting_theme_dark)
+    "glass" -> getString(R.string.setting_theme_glass)
     else -> getString(R.string.setting_theme_auto)
 }
 
@@ -145,7 +146,7 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
         val unit = if (weather == "off") prefs.getString(K.WX_UNIT, "c")!! else weather
         listOf(
             page(getString(R.string.setting_theme), themeName()) {
-                prefs.edit().putString(K.THEME, mapOf("light" to "dark", "dark" to "auto", "auto" to "light")[theme])
+                prefs.edit().putString(K.THEME, mapOf("light" to "dark", "dark" to "glass", "glass" to "auto", "auto" to "light")[theme])
                     .putInt(K.REOPEN_ROW, THEME_ROW).apply()
                 recreate() // colours are applied once per activity; reopen the panel after
             },

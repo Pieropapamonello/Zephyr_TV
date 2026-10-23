@@ -24,6 +24,7 @@
     <string name="setting_theme">Tema</string>
     <string name="setting_theme_light">Chiaro</string>
     <string name="setting_theme_dark">Scuro</string>
+    <string name="setting_theme_glass">Vetro</string>
     <string name="setting_theme_auto">Automatico</string>
 
     <string name="setting_light_wallpaper">Sfondo tema chiaro</string>

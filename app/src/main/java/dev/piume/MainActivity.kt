@@ -24,6 +24,7 @@ import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.TransitionDrawable
 import android.media.tv.TvContract
 import android.media.tv.TvInputInfo
@@ -62,9 +63,9 @@ import java.security.SecureRandom
 import java.util.Calendar
 import java.util.concurrent.Executors
 
-/** Light/dark from the launcher's theme setting; shared with the Gallery screensaver. */
+/** Light/dark from the launcher's theme setting; shared with the Gallery screensaver. Glass is a dark theme. */
 internal fun prefersDark(prefs: SharedPreferences) = when (prefs.getString(K.THEME, "light")) {
-    "dark" -> true
+    "dark", "glass" -> true
     "auto" -> Calendar.getInstance().get(Calendar.HOUR_OF_DAY) !in 7..18
     else -> false
 }
@@ -143,6 +144,7 @@ class MainActivity : Activity() {
     internal var grabbed: View? = null
     internal var holdFired = false
     internal var dark = false
+    internal var glass = false // the Glass theme: dark, with glossy see-through cards over the wallpaper
     internal var fg = Color.BLACK
     internal var ground = Color.WHITE
     internal var onFg = Color.WHITE // text and icons on an fg-coloured fill (focused small controls)
@@ -407,7 +409,8 @@ class MainActivity : Activity() {
 
     internal fun applyTheme() {
         dark = wantDark()
-        fg = if (dark) 0xFFF5F5F7.toInt() else 0xFF111214.toInt()
+        glass = prefs.getString(K.THEME, "light") == "glass"
+        fg = if (glass) Color.WHITE else if (dark) 0xFFF5F5F7.toInt() else 0xFF111214.toInt()
         // Small controls (top-bar icons, settings and menu rows, Spotlight buttons) show focus by inverting:
         // an fg fill with onFg content. A white-on-near-white or grey-on-black highlight barely reads from the sofa.
         onFg = if (dark) 0xFF111214.toInt() else Color.WHITE
@@ -415,16 +418,28 @@ class MainActivity : Activity() {
         // Dark cards are matte black glass on a true-black ground: lit faintly from the top and fading to
         // near-black, no outline (outlines read as a grey grid). Focus brightens the glass, never to grey.
         // Light cards are frosted grey glass, so they still read on white wallpapers; focus turns them white.
-        cardRest = if (dark) intArrayOf(0xFF16161B.toInt(), 0xFF060607.toInt()) else intArrayOf(0xD9E2E5E9.toInt(), 0xD9D8DCE1.toInt())
-        cardLit = if (dark) intArrayOf(0xFF26262E.toInt(), 0xFF0C0C0F.toInt()) else intArrayOf(Color.WHITE, Color.WHITE)
+        // Glass cards are smoked glass: the wallpaper shows through, but dark enough under white marks and text to
+        // read on any photo. Without a blur (Android 9 has none for views), the tint does the blur's job. Focus
+        // lightens the glass; the rim and the sheen (see style) give the gloss.
+        cardRest = when {
+            glass -> intArrayOf(0x8C2C2C34.toInt(), 0xA6121216.toInt())
+            dark -> intArrayOf(0xFF16161B.toInt(), 0xFF060607.toInt())
+            else -> intArrayOf(0xD9E2E5E9.toInt(), 0xD9D8DCE1.toInt())
+        }
+        cardLit = when {
+            glass -> intArrayOf(0xCC5A5A66.toInt(), 0xCC24242C.toInt())
+            dark -> intArrayOf(0xFF26262E.toInt(), 0xFF0C0C0F.toInt())
+            else -> intArrayOf(Color.WHITE, Color.WHITE)
+        }
         // Must match the colour each wallpaper fades into, or the bottom edge shows a seam.
         ground = if (dark) Color.BLACK else 0xFFF3F5F7.toInt()
         findViewById<View>(R.id.root).setBackgroundColor(ground)
         allApps.setBackgroundColor(ground)
         // A halo in the ground colour: dark text gets a light one, light text a dark one, so either stays readable
         // where it crosses a photo or a TMDB backdrop.
-        val textShadow = if (dark) 0x80000000.toInt() else 0xB3FFFFFF.toInt()
-        val textRadius = if (dark) 6f else 5f
+        // Glass has white text straight on the photo, with no fade to a plain colour behind it: a stronger halo.
+        val textShadow = if (glass) 0xB3000000.toInt() else if (dark) 0x80000000.toInt() else 0xB3FFFFFF.toInt()
+        val textRadius = if (glass) 8f else if (dark) 6f else 5f
         for (id in intArrayOf(R.id.clock, R.id.date, R.id.appsTitle, R.id.watchTitle, R.id.allAppsTitle, R.id.rowLabel, R.id.weather, R.id.spotlightTitle, R.id.spotlightMeta, R.id.spotlightOverview)) {
             findViewById<TextView>(id)?.apply {
                 setTextColor(fg)
@@ -537,12 +552,9 @@ class MainActivity : Activity() {
             val file = backdrops.get(url) { openStream(it) }
             val bmp = fitWallpaper { file.inputStream() } ?: return null
             val h = bmp.height.toFloat()
-            val base = ground and 0x00FFFFFF
             // Only the fade under the apps row, from halfway down: the backdrop shows clear everywhere else. The
             // clock, the icons and the Spotlight text read by their halo.
-            if (wallpaperFade()) Canvas(bmp).drawRect(0f, 0f, bmp.width.toFloat(), h, Paint().apply {
-                shader = LinearGradient(0f, h * 0.5f, 0f, h * 0.8f, base, base or 0xE6000000.toInt(), Shader.TileMode.CLAMP)
-            })
+            if (wallpaperFade()) glassOrFade(bmp, h * 0.5f, h * 0.8f)
             return bmp
         }
         // fitWallpaper's bitmap is mutable: the fades are painted onto it.
@@ -556,9 +568,7 @@ class MainActivity : Activity() {
         // Same fade as the bundled ones: clear above 28% height, into the background colour by 50%.
         val h = bmp.height.toFloat()
         val base = ground and 0x00FFFFFF
-        if (wallpaperFade()) Canvas(bmp).drawRect(0f, 0f, bmp.width.toFloat(), h, Paint().apply {
-            shader = LinearGradient(0f, h * 0.28f, 0f, h * 0.5f, base, base or 0xE6000000.toInt(), Shader.TileMode.CLAMP)
-        })
+        if (wallpaperFade()) glassOrFade(bmp, h * 0.28f, h * 0.5f)
         // Photos rarely have the bundled ones' empty sky: a soft veil behind the clock and top-bar icons keeps them readable.
         // Strong over the clock and icons (top ~20%), gone by 30% so the photo still shows above the apps.
         Canvas(bmp).drawRect(0f, 0f, bmp.width.toFloat(), h * 0.3f, Paint().apply {
@@ -566,6 +576,20 @@ class MainActivity : Activity() {
                 floatArrayOf(0f, 0.6f, 1f), Shader.TileMode.CLAMP)
         })
         return bmp
+    }
+
+    /**
+     * Fades the photo into the ground colour from [from] to [to]. Glass keeps the photo instead: a soft shade from
+     * the middle down, so the rows' white text reads while the photo still shows behind the glass cards.
+     */
+    private fun glassOrFade(bmp: Bitmap, from: Float, to: Float) {
+        val h = bmp.height.toFloat()
+        val base = ground and 0x00FFFFFF
+        Canvas(bmp).drawRect(0f, 0f, bmp.width.toFloat(), h, Paint().apply {
+            shader = if (glass) LinearGradient(0f, h * 0.45f, 0f, h, intArrayOf(0, 0x73000000, 0xA6000000.toInt()),
+                floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
+            else LinearGradient(0f, from, 0f, to, base, base or 0xE6000000.toInt(), Shader.TileMode.CLAMP)
+        })
     }
 
     /** Wallpapers page, framed by "Add from phone…" first and, once there are photos, "Remove a photo…" last. */
@@ -1007,8 +1031,8 @@ class MainActivity : Activity() {
             }
         }
         // Same card as light mode; in dark the marks rest slightly dimmed and brighten with focus.
-        val restLogo = if (dark) 0.8f else 1f
-        val restText = if (dark) 0.65f else 1f
+        val restLogo = if (dark && !glass) 0.8f else 1f
+        val restText = if (glass) 0.85f else if (dark) 0.65f else 1f
         img.alpha = restLogo
         text?.alpha = restText
         style(col, dp(8), card = true) { focused ->
@@ -1701,7 +1725,8 @@ class MainActivity : Activity() {
      * top sheen; dark mode brightens the glass gradient instead (a white sheen would haze it grey).
      * Only transform/alpha/colour change, so it stays on the GPU and costs no re-layout.
      */
-    internal fun style(v: View, radius: Int, card: Boolean, lift: Float = 1.08f, onFocus: ((Boolean) -> Unit)? = null) {
+    internal fun style(v: View, corner: Int, card: Boolean, lift: Float = 1.08f, onFocus: ((Boolean) -> Unit)? = null) {
+        val radius = if (glass && card) corner * 2 else corner // glass panes are rounder
         val sheen = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0x40FFFFFF, 0x00FFFFFF)).apply {
             cornerRadius = radius.toFloat()
             alpha = 0
@@ -1709,8 +1734,17 @@ class MainActivity : Activity() {
         val bg = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, if (card) cardRest else intArrayOf(0, 0)).apply {
             cornerRadius = radius.toFloat()
         }
-        v.background = bg
-        if (!dark) v.foreground = sheen
+        // Glass: a gloss on the top half of the card and a thin bright rim, brighter with focus, like light caught
+        // on the edge of a glass pane. Over the content, so a poster gets the rim too.
+        val rim = GradientDrawable().apply {
+            cornerRadius = radius.toFloat()
+            setStroke(dp(1).coerceAtLeast(1), 0x4DFFFFFF)
+        }
+        val gloss = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0x24FFFFFF, 0x08FFFFFF, 0x00FFFFFF)).apply {
+            cornerRadius = radius.toFloat()
+        }
+        v.background = if (glass && card) LayerDrawable(arrayOf(bg, gloss)) else bg
+        if (glass && card) v.foreground = rim else if (!dark) v.foreground = sheen
         v.clipToOutline = true
         // Android 9+ only (8.x would crash on these); black is the default shadow colour before that anyway.
         if (Build.VERSION.SDK_INT >= 28) {
@@ -1723,6 +1757,7 @@ class MainActivity : Activity() {
         v.setOnLongClickListener { if (!holdFired) fireHold(v); true }
         v.setOnFocusChangeListener { _, focused ->
             sheen.alpha = if (focused) 255 else 0
+            rim.setStroke(dp(if (focused) 2 else 1).coerceAtLeast(1), if (focused) 0xD9FFFFFF.toInt() else 0x4DFFFFFF)
             if (card) bg.colors = if (focused) cardLit else cardRest
             v.animate()
                 .scaleX(if (focused) lift else 1f).scaleY(if (focused) lift else 1f)

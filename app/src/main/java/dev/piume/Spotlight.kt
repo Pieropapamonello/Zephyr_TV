@@ -216,10 +216,11 @@ internal fun MainActivity.renderSpotlightActions() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(12), dp(7), dp(14), dp(7))
-            val rest = if (dark) 0xCC1C1C22.toInt() else 0xCCDCE0E8.toInt() // opaque enough for any backdrop
+            val rest = if (glass) 0x992C2C34.toInt() else if (dark) 0xCC1C1C22.toInt() else 0xCCDCE0E8.toInt() // opaque enough for any backdrop
             val btnBg = GradientDrawable().apply {
-                cornerRadius = dp(8).toFloat()
+                cornerRadius = dp(if (glass) 16 else 8).toFloat() // glass buttons are capsules
                 setColor(rest)
+                if (glass) setStroke(dp(1).coerceAtLeast(1), 0x4DFFFFFF)
             }
             background = btnBg
             isFocusable = true
