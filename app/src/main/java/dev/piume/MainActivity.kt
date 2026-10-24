@@ -1843,6 +1843,7 @@ class MainActivity : Activity() {
         const val LOCK_ROW = APPS_SECTION * SECTION + 6
         const val CW_APPS_ROW = WATCH_SECTION * SECTION
         const val HIDDEN_ROW = WATCH_SECTION * SECTION + 1
+        const val CHANNEL_LOGOS_ROW = WATCH_SECTION * SECTION + 2
         const val TMDB_KEY_ROW = SPOTLIGHT_SECTION * SECTION
         const val TMDB_SOURCE_ROW = TMDB_KEY_ROW + 1
         const val TMDB_LIST_ROW = TMDB_KEY_ROW + 2

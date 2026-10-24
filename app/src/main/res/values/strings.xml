@@ -48,6 +48,10 @@
     <string name="icon_style_colour">Colour</string>
     <string name="icon_style_monochrome">Monochrome</string>
 
+    <string name="setting_channel_logos">Channel logos (iptv-org)</string>
+    <string name="setting_channel_logos_update">Update the channel logos</string>
+    <string name="toast_channel_logos_updated">Channel logos updated: %1$d names</string>
+    <string name="toast_channel_logos_failed">Couldn\'t download the channel logos. Try again later.</string>
     <string name="setting_restore_hidden_shows">Restore hidden shows</string>
     <string name="hidden_shows_none">None hidden</string>
     <string name="hidden_shows_count">%1$d hidden</string>

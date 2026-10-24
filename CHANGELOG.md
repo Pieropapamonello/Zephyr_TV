@@ -13,6 +13,12 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.5
+
+- The TV channel cards show the logo of the channel, large in the middle on a blur of itself. The name and the number of the channel are under the card.
+- When the TV has no logo for a channel, Piume gets it from iptv-org, a public list of TV channels. Piume downloads the list for your country the first time and then each month.
+- To turn this off, select **Piume settings → Continue Watching → Channel logos (iptv-org)**. To get the latest logos now, select **Update the channel logos**.
+
 ## 2.4.13
 
 - Search results without a picture on TMDB now show the poster or the name of the title. Before, their card was empty.

@@ -38,6 +38,7 @@ internal object K {
     const val HIDDEN_WATCH = "hidden_watch"
     const val CW_OFF = "cw_off"
     const val SECTIONS_OFF = "sections_off" // "pkg/section" of the app sections turned off
+    const val CHANNEL_LOGOS = "channel_logos" // logos from iptv-org for channels the TV has none for
 
     // Spotlight
     const val TMDB_API_KEY = "tmdb_api_key"

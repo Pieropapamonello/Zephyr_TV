@@ -22,6 +22,7 @@ import dev.piume.MainActivity.Companion.CLOCK_ROW
 import dev.piume.MainActivity.Companion.FADE_ROW
 import dev.piume.MainActivity.Companion.HDMI
 import dev.piume.MainActivity.Companion.HIDDEN_ROW
+import dev.piume.MainActivity.Companion.CHANNEL_LOGOS_ROW
 import dev.piume.MainActivity.Companion.ICONS_ROW
 import dev.piume.MainActivity.Companion.LOCK_ROW
 import dev.piume.MainActivity.Companion.LOOK_SECTION
@@ -246,6 +247,19 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                 watchKey = null
                 refreshWatchNext()
                 renderSettings(HIDDEN_ROW)
+            },
+            page(getString(R.string.setting_channel_logos), toggle(channelLogosOn())) {
+                prefs.edit().putBoolean(K.CHANNEL_LOGOS, !channelLogosOn()).apply()
+                watchKey = null
+                renderSettings(CHANNEL_LOGOS_ROW)
+            },
+            page(getString(R.string.setting_channel_logos_update)) {
+                Toast.makeText(this, getString(R.string.searching), Toast.LENGTH_SHORT).show()
+                updateChannelLogos(null) { n ->
+                    watchKey = null
+                    Toast.makeText(this, if (n == null) getString(R.string.toast_channel_logos_failed)
+                        else getString(R.string.toast_channel_logos_updated, n), Toast.LENGTH_LONG).show()
+                }
             },
         )
     }

@@ -243,6 +243,7 @@ Bug reports, translations and pull requests are welcome. Piume stays small on pu
   - Martin Johnson Heade: *Thunder Storm on Narragansett Bay*
 - **Wallpapers:** "Canada" by Thomas Curryer, via [Unsplash](https://unsplash.com/@tawc20) (CC0)
 - **App logos:** [Simple Icons](https://simpleicons.org) (CC0). All trademarks belong to their respective owners.
+- **TV channel logos:** [iptv-org/database](https://github.com/iptv-org/database) (public domain), for channels the TV has no logo for.
 
 ## License
 

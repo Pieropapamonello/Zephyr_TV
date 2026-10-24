@@ -243,6 +243,7 @@ Segnalazioni di bug, traduzioni e pull request sono benvenute. Piume resta picco
   - Martin Johnson Heade: *Thunder Storm on Narragansett Bay*
 - **Sfondi:** "Canada" di Thomas Curryer, da [Unsplash](https://unsplash.com/@tawc20) (CC0)
 - **Loghi delle app:** [Simple Icons](https://simpleicons.org) (CC0). Tutti i marchi appartengono ai rispettivi proprietari.
+- **Loghi dei canali TV:** [iptv-org/database](https://github.com/iptv-org/database) (pubblico dominio), per i canali di cui la TV non ha il logo.
 
 ## Licenza
 

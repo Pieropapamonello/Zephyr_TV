@@ -281,6 +281,11 @@ internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<
     }
     val label = appLabel(pkg)
     val tvInputs = getSystemService(TvInputManager::class.java)
+    // Logos the TV has none for come from iptv-org's table (see ChannelLogos); fetched in the background the first
+    // time and each month, then these sections are built again with them.
+    val country = channelCountry()
+    val logos = if (channelLogosOn()) ChannelLogos.saved(filesDir, country).orEmpty() else emptyMap()
+    if (channelLogosOn() && ChannelLogos.due(filesDir, country)) updateChannelLogos(pkg)
     return all.filter { hideKey(pkg, it.name) !in hidden }.groupBy { it.input }.values
         .map { it.sortedBy { ch -> channelKey(ch.number) } }.sortedBy { channelKey(it.first().number) }
         .map { channels ->
@@ -288,10 +293,30 @@ internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<
             val name = runCatching { tvInputs?.getTvInputInfo(input)?.loadLabel(this)?.toString() }.getOrNull()
                 ?.takeIf { it.isNotBlank() } ?: getString(R.string.section_channels)
             Section(input, name, getString(R.string.app_section, label, name), channels.take(TUNER_CARDS).map {
-                Prog(it.name, it.number.trimStart('0').ifEmpty { it.number }, 0, logo(it.id),
+                Prog(it.name, it.number.trimStart('0').ifEmpty { it.number }, 0, logo(it.id) ?: ChannelLogos.match(logos, it.name),
                     Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(it.id)).toUri(Intent.URI_INTENT_SCHEME), pkg, badge = it.number)
             })
         }
+}
+
+internal fun MainActivity.channelLogosOn() = prefs.getBoolean(K.CHANNEL_LOGOS, true)
+
+/** The TV's country, for its channels' logos: its own setting, else the one the TMDB language names. */
+internal fun MainActivity.channelCountry() = TmdbClient.region(tmdbLang())
+
+/**
+ * Fetches the channel logo table in the background; once it's in, the TV app's sections are built again if it's
+ * still the app in focus. [done], when given, hears how many channel names the table has (null: it failed).
+ */
+internal fun MainActivity.updateChannelLogos(pkg: String?, done: ((Int?) -> Unit)? = null) = netIo.execute {
+    val n = ChannelLogos.update(filesDir, channelCountry())
+    ui.post {
+        done?.invoke(n)
+        if (n != null && pkg != null && tmdbLastFocusApp == pkg) {
+            watchApp = null
+            queryAppChannels(pkg)
+        }
+    }
 }
 
 /** The channel's logo, if the TV has one (many tuners store none). */
@@ -506,19 +531,36 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     }
     frame.contentDescription = p.title
     frame.addView(img, MATCH_PARENT, MATCH_PARENT)
-    // A TV channel: the same card on every TV, whatever the TV app's own look. Number and name; the logo, where
-    // the TV has one, small in the corner.
+    // A TV channel: the same card on every TV, whatever the TV app's own look. Its logo fills it, large in the
+    // middle on a blur of itself (its name and number are under the card); with no logo, or until it's in, the
+    // number and name instead.
     if (p.badge != null) {
-        frame.addView(LinearLayout(this).apply {
+        val number = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             addView(label(p.badge, 30f).apply { gravity = Gravity.CENTER })
             addView(label(p.title, 13f).apply { gravity = Gravity.CENTER; alpha = 0.8f; setPadding(dp(12), dp(4), dp(12), 0) })
-        }, MATCH_PARENT, MATCH_PARENT)
+        }
+        frame.addView(number, MATCH_PARENT, MATCH_PARENT)
         p.image?.let { uri ->
-            val logo = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER }
-            frame.addView(logo, FrameLayout.LayoutParams(dp(48), dp(28), Gravity.TOP or Gravity.END).apply { setMargins(0, dp(8), dp(10), 0) })
-            posterIo.execute { runCatching { decode(uri) }.getOrNull()?.let { ui.post { logo.setImageBitmap(it) } } }
+            posterIo.execute {
+                val bmp = runCatching { decode(uri, alpha = true) }.getOrNull() ?: return@execute
+                // A blur on any Android: shrunk to a few pixels, then drawn large and smoothed.
+                val blur = Bitmap.createScaledBitmap(bmp, 12, 7, true)
+                ui.post {
+                    number.visibility = View.GONE
+                    frame.addView(ImageView(this).apply {
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        alpha = 0.55f
+                        setImageBitmap(blur)
+                    }, 1, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+                    frame.addView(ImageView(this).apply {
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        setPadding(w / 6, cardHeight / 5, w / 6, cardHeight / 5)
+                        setImageBitmap(bmp)
+                    }, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+                }
+            }
         }
     }
     if (p.tmdb != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title)
@@ -556,7 +598,7 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
  */
 internal fun MainActivity.fillArt(frame: FrameLayout, w: Int, h: Int, backdrop: String?, logo: String?, poster: String?, title: String) {
     fun load(v: ImageView, uri: String, blur: Boolean = false) = posterIo.execute {
-        val bmp = runCatching { decode(uri) }.getOrNull() ?: return@execute
+        val bmp = runCatching { decode(uri, alpha = uri == logo) }.getOrNull() ?: return@execute
         // A blur on any Android: shrunk to a few pixels, then drawn large and smoothed.
         val shown = if (blur) Bitmap.createScaledBitmap(bmp, 12, 18, true) else bmp
         ui.post { v.setImageBitmap(shown) }
@@ -604,7 +646,7 @@ internal fun MainActivity.addTitleLogo(frame: FrameLayout, uri: String, w: Int, 
     }, FrameLayout.LayoutParams(MATCH_PARENT, h / 2, Gravity.BOTTOM))
     val logo = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_START }
     frame.addView(logo, FrameLayout.LayoutParams(w / 2, h / 3, Gravity.BOTTOM or Gravity.START).apply { setMargins(dp(10), 0, 0, dp(10)) })
-    posterIo.execute { runCatching { decode(uri) }.getOrNull()?.let { ui.post { logo.setImageBitmap(it) } } }
+    posterIo.execute { runCatching { decode(uri, alpha = true) }.getOrNull()?.let { ui.post { logo.setImageBitmap(it) } } }
 }
 
 internal fun MainActivity.progressBarDrawable(): Drawable {
@@ -703,7 +745,8 @@ internal fun MainActivity.retryPosters() {
 }
 
 /** Downsample to card size in RGB_565 so a dozen posters stay around 1-2 MB. */
-internal fun MainActivity.decode(uri: String): Bitmap? {
+/** [uri]'s picture at about card size; [alpha] keeps its transparency (a logo), at twice the memory. */
+internal fun MainActivity.decode(uri: String, alpha: Boolean = false): Bitmap? {
     val bytes = openStream(uri).use { it.readBytes() }
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
@@ -711,7 +754,7 @@ internal fun MainActivity.decode(uri: String): Bitmap? {
     while (bounds.outWidth / (sample * 2) >= dp(220)) sample *= 2
     val opts = BitmapFactory.Options().apply {
         inSampleSize = sample
-        inPreferredConfig = Bitmap.Config.RGB_565
+        inPreferredConfig = if (alpha) Bitmap.Config.ARGB_8888 else Bitmap.Config.RGB_565
     }
     return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
 }

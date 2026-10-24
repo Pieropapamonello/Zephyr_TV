@@ -48,6 +48,10 @@
     <string name="icon_style_colour">A colori</string>
     <string name="icon_style_monochrome">Monocromatiche</string>
 
+    <string name="setting_channel_logos">Loghi dei canali (iptv-org)</string>
+    <string name="setting_channel_logos_update">Aggiorna i loghi dei canali</string>
+    <string name="toast_channel_logos_updated">Loghi dei canali aggiornati: %1$d nomi</string>
+    <string name="toast_channel_logos_failed">Impossibile scaricare i loghi dei canali. Riprova più tardi.</string>
     <string name="setting_restore_hidden_shows">Ripristina elementi nascosti</string>
     <string name="hidden_shows_none">Nessun elemento nascosto</string>
     <string name="hidden_shows_count">%1$d nascosti</string>
