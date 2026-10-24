@@ -527,6 +527,7 @@ internal fun MainActivity.showWatchNext(list: List<Prog>, playing: List<Prog> = 
 internal fun MainActivity.showSections(sections: List<Section>) {
     val key = sections.joinToString("||") { s -> s.title + "#" + s.items.joinToString("|") { "${it.title}/${it.sub}/${it.progress}/${it.image}" } }
     if (key == watchKey) { // unchanged: keep views (and focus) as they are, just fill in missing posters
+        sections.firstOrNull()?.let { watchTitle.text = it.title } // a caller may have set its own meanwhile
         retryPosters()
         return
     }
