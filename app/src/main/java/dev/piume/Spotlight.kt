@@ -39,7 +39,7 @@ internal fun MainActivity.setupSpotlight() {
     // The arrows get a small disc in the ground colour, so they read on any backdrop.
     for (arrow in arrayOf(spotlightPrev, spotlightNext)) {
         arrow.background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor((ground and 0xFFFFFF) or 0x80000000.toInt()) }
-        arrow.setPadding(dp(4), dp(4), dp(4), dp(4))
+        arrow.setPadding(dp(3), dp(3), dp(3), dp(3))
     }
     spotlightPrev.setOnClickListener { cycleSpotlight(-1) }
     spotlightNext.setOnClickListener { cycleSpotlight(1) }

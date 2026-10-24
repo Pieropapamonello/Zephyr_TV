@@ -45,16 +45,21 @@ class SnapScrollView(context: Context, attrs: AttributeSet?) : HorizontalScrollV
         val home = context as? MainActivity ?: return
         val h = generateSequence(parent as? ViewGroup) { it.parent as? ViewGroup }.firstOrNull { it.id == R.id.bottomSection } ?: return
         val disc = (home.ground and 0xFFFFFF) or 0x80000000.toInt()
-        val line = resources.displayMetrics.density * 2
+        val line = resources.displayMetrics.density * 1.5f
         val pair = ChevronDrawable(ChevronDrawable.LEFT, disc, home.fg, line) to ChevronDrawable(ChevronDrawable.RIGHT, disc, home.fg, line)
         h.overlay.add(pair.first)
         h.overlay.add(pair.second)
         arrows = pair
         host = h
+        // Any focus move, not just into or out of this row: a row losing focus to another isn't told otherwise.
+        viewTreeObserver.addOnGlobalFocusChangeListener(focusMoved)
         updateArrows()
     }
 
+    private val focusMoved = android.view.ViewTreeObserver.OnGlobalFocusChangeListener { _, _ -> updateArrows() }
+
     override fun onDetachedFromWindow() {
+        viewTreeObserver.removeOnGlobalFocusChangeListener(focusMoved)
         arrows?.let { (l, r) -> host?.overlay?.apply { remove(l); remove(r) } }
         arrows = null
         host = null
@@ -65,13 +70,14 @@ class SnapScrollView(context: Context, attrs: AttributeSet?) : HorizontalScrollV
         val (left, right) = arrows ?: return
         val h = host ?: return
         val dp = resources.displayMetrics.density
-        val size = (28 * dp).toInt()
+        val size = (ARROW_DP * dp).toInt()
         val at = offsetIn(this, h)
         val cy = at[1] + paddingTop + (height - paddingTop - paddingBottom) / 2
         val start = at[0] + paddingLeft
         val end = at[0] + width - paddingRight
-        left.setBounds(start - (36 * dp).toInt(), cy - size / 2, start - (8 * dp).toInt(), cy + size / 2)
-        right.setBounds(end + (8 * dp).toInt(), cy - size / 2, end + (36 * dp).toInt(), cy + size / 2)
+        // Centred in the page margin's half nearest the row, like Spotlight's.
+        left.setBounds(start - (22 * dp).toInt() - size / 2, cy - size / 2, start - (22 * dp).toInt() + size / 2, cy + size / 2)
+        right.setBounds(end + (22 * dp).toInt() - size / 2, cy - size / 2, end + (22 * dp).toInt() + size / 2, cy + size / 2)
         val on = hasFocus()
         left.alpha = if (on && canScrollHorizontally(-1)) 255 else 0
         right.alpha = if (on && canScrollHorizontally(1)) 255 else 0
@@ -89,16 +95,6 @@ class SnapScrollView(context: Context, attrs: AttributeSet?) : HorizontalScrollV
         updateArrows()
     }
 
-    override fun requestChildFocus(child: View?, focused: View?) {
-        super.requestChildFocus(child, focused)
-        post { updateArrows() }
-    }
-
-    override fun clearChildFocus(child: View?) {
-        super.clearChildFocus(child)
-        post { updateArrows() }
-    }
-
     override fun computeScrollDeltaToGetChildRectOnScreen(rect: Rect): Int {
         val left = scrollX + paddingLeft
         val right = scrollX + width - paddingRight
@@ -111,5 +107,6 @@ class SnapScrollView(context: Context, attrs: AttributeSet?) : HorizontalScrollV
 
     private companion object {
         const val OPEN_DP = 48 // room for a lifted item's shadow past an open edge
+        const val ARROW_DP = 20
     }
 }
