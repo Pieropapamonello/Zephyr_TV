@@ -11,11 +11,14 @@ import org.json.JSONObject
  */
 internal object Http {
     private const val TIMEOUT_MS = 6000
+    private const val USER_AGENT = "Piume/1 (Android TV launcher; https://github.com/mccoy88f/Piume_Launcher)"
 
     fun connect(url: String, headers: Map<String, String> = emptyMap()): HttpURLConnection =
         (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = TIMEOUT_MS
             readTimeout = TIMEOUT_MS
+            // Who's asking, as Wikimedia (most channel logos) wants: Android's anonymous default gets throttled there.
+            setRequestProperty("User-Agent", USER_AGENT)
             headers.forEach { (k, v) -> setRequestProperty(k, v) }
         }
 

@@ -584,7 +584,12 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
         frame.addView(number, MATCH_PARENT, MATCH_PARENT)
         p.image?.let { uri ->
             posterIo.execute {
-                val bmp = runCatching { decode(uri, alpha = true) }.getOrNull() ?: return@execute
+                val bmp = try {
+                    decode(uri, alpha = true)
+                } catch (e: Exception) {
+                    warn("channel logo failed: $uri ($e)")
+                    null
+                } ?: return@execute
                 val blur = softBlur(bmp)
                 ui.post {
                     number.visibility = View.GONE

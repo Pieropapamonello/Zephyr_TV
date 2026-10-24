@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.6.3
+
+- More channel logos load, for example Rete 4 and Italia 1. Piume now says who it is when it downloads pictures.
+
 ## 2.6.2
 
 - Small changes to help find problems with the TV guide.
