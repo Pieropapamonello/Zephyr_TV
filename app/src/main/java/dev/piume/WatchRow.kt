@@ -293,17 +293,46 @@ internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<
             android.util.Log.i("PiumeChannels", "${it.number}\t${it.name}\t${if (logo(it.id) != null) "tv" else ChannelLogos.match(logos, it.name) ?: "-"}")
         }
     }
-    return all.filter { hideKey(pkg, it.name) !in hidden }.groupBy { it.input }.values
+    val onNow = programsOnNow()
+    // The TV lists some channels twice (same number and name, from two broadcasts of it): once is enough.
+    return all.filter { hideKey(pkg, it.name) !in hidden }.distinctBy { it.number to it.name }.groupBy { it.input }.values
         .map { it.sortedBy { ch -> channelKey(ch.number) } }.sortedBy { channelKey(it.first().number) }
         .map { channels ->
             val input = channels.first().input
             val name = runCatching { tvInputs?.getTvInputInfo(input)?.loadLabel(this)?.toString() }.getOrNull()
                 ?.takeIf { it.isNotBlank() } ?: getString(R.string.section_channels)
             Section(input, name, getString(R.string.app_section, label, name), channels.take(TUNER_CARDS).map {
-                Prog(it.name, it.number.trimStart('0').ifEmpty { it.number }, 0, logo(it.id) ?: ChannelLogos.match(logos, it.name),
+                val number = it.number.trimStart('0').ifEmpty { it.number }
+                val now = onNow[it.id]
+                // Under the card: the number, then what's on, its bar how far in it is.
+                Prog(it.name, listOfNotNull(number, now?.title).joinToString(" · "), now?.progress ?: 0, logo(it.id) ?: ChannelLogos.match(logos, it.name),
                     Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(it.id)).toUri(Intent.URI_INTENT_SCHEME), pkg, badge = it.number)
             })
         }
+}
+
+internal class OnNow(val title: String, val progress: Int)
+
+/**
+ * What each tuner channel is showing now, by channel id: the guide the TV gets with the broadcast (DVB EIT) and keeps
+ * in its TV listings. Nothing for channels it has no guide for. Runs on the io thread.
+ */
+internal fun MainActivity.programsOnNow(): Map<Long, OnNow> {
+    val now = System.currentTimeMillis()
+    val out = HashMap<Long, OnNow>()
+    runCatching {
+        contentResolver.query(TvContract.Programs.CONTENT_URI, arrayOf("channel_id", "title", "start_time_utc_millis", "end_time_utc_millis"),
+            "start_time_utc_millis <= ? AND end_time_utc_millis > ?", arrayOf(now.toString(), now.toString()), null)?.use { c ->
+            while (c.moveToNext()) {
+                val title = c.getString(1)?.takeIf { it.isNotBlank() } ?: continue
+                val start = c.getLong(2)
+                val end = c.getLong(3)
+                val progress = if (end > start) ((now - start) * 100 / (end - start)).toInt().coerceIn(1, 100) else 0
+                out[c.getLong(0)] = OnNow(title, progress)
+            }
+        }
+    }.onFailure { warn("TV guide not readable ($it)") }
+    return out
 }
 
 internal fun MainActivity.channelLogosOn() = prefs.getBoolean(K.CHANNEL_LOGOS, true)

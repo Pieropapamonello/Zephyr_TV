@@ -13,6 +13,13 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.6
+
+- The TV channel cards show the program that is on now, after the channel number. The bar under the card shows how far into the program you are. The guide comes from the TV.
+- Channels that the TV lists two times show one time only.
+- More channels get their logo. Piume finds names like "TELEAMBIENTE" for "TeleAmbiente TV" and "Mediaset Italia2" for "Italia 2". It also uses the logos that iptv-org has only as SVG on Wikimedia.
+- When you go back from an app, the home screen shows where you left it. The Home key still goes back to the start of the apps row.
+
 ## 2.5.1
 
 - The blurred background of the channel cards and of the search results is smoother.

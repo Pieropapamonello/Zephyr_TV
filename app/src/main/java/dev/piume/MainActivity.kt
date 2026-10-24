@@ -402,6 +402,8 @@ class MainActivity : Activity() {
             homeTest = 0
             return donePopup()
         }
+        // Back out of an app: Piume covering Google TV, not the Home key. Everything stays as it was left.
+        if (intent.getBooleanExtra(HomeOverride.COVER, false)) return
         if (editing) endEdit()
         if (settingsScrim.visibility == View.VISIBLE) closeLauncherSettings()
         if (allApps.visibility == View.VISIBLE) closeAllApps()

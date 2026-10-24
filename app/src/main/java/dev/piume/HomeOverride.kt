@@ -27,7 +27,7 @@ class HomeOverride : AccessibilityService() {
         if (e.keyCode != KeyEvent.KEYCODE_HOME) return false
         // Decided on release, by how long it was held: this TV's remote doesn't reliably send key repeats.
         if (e.action == KeyEvent.ACTION_UP && !e.isCanceled) {
-            if (e.eventTime - e.downTime < LONG_PRESS_MS) goHome() else performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+            if (e.eventTime - e.downTime < LONG_PRESS_MS) goHome(cover = false) else performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
         }
         return true
     }
@@ -35,11 +35,13 @@ class HomeOverride : AccessibilityService() {
     override fun onAccessibilityEvent(e: AccessibilityEvent) {
         if (e.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && e.packageName == GOOGLE_TV &&
             e.className?.contains("dashboard", ignoreCase = true) != true
-        ) goHome()
+        ) goHome(cover = true)
     }
 
-    // Marked as Home so the setup check can tell it from Piume being opened from the apps list.
-    private fun goHome() = startActivity(Intent(this, MainActivity::class.java).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    // Marked as Home so the setup check can tell it from Piume being opened from the apps list. [cover]: Google TV
+    // showed up by itself (Back out of an app), not the Home key: the home screen stays where it was (see onNewIntent).
+    private fun goHome(cover: Boolean) = startActivity(Intent(this, MainActivity::class.java).addCategory(Intent.CATEGORY_HOME)
+        .putExtra(COVER, cover).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 
     override fun onInterrupt() {}
 
@@ -49,5 +51,6 @@ class HomeOverride : AccessibilityService() {
             private set
         private const val GOOGLE_TV = "com.google.android.apps.tv.launcherx"
         private const val LONG_PRESS_MS = 500L
+        const val COVER = "dev.piume.COVER"
     }
 }

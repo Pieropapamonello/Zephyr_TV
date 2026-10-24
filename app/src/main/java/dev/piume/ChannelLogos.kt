@@ -22,7 +22,8 @@ internal object ChannelLogos {
     private val updating = java.util.concurrent.atomic.AtomicBoolean()
     val logged = java.util.concurrent.atomic.AtomicBoolean() // the channels and their logos went to the log this run
 
-    private fun file(dir: File, country: String) = File(dir, "channel_logos_$country.tsv")
+    // v2: loose names ("~" keys) and Wikimedia SVGs as PNG; an older table is built again.
+    private fun file(dir: File, country: String) = File(dir, "channel_logos_v2_$country.tsv")
     private fun failed(dir: File, country: String) = File(dir, "channel_logos_$country.failed")
 
     /** The saved table for [country], or null when there's none yet. Reads the disk the first time. */
@@ -111,16 +112,37 @@ internal object ChannelLogos {
             r.endObject()
             if (channel != null && url != null && channel in names) {
                 val logo = Logo(url, feed, inUse, format, width)
-                if (usable(logo) && better(logo, best[channel])) best[channel] = logo
+                if (drawable(logo) != null && better(logo, best[channel])) best[channel] = logo
             }
         }
+        return table(names.mapNotNull { (id, all) -> best[id]?.let { all to drawable(it)!! } })
+    }
+
+    /**
+     * The table from each channel's names (its own first) and logo: every name as it is, then, under "~" keys that
+     * never override those, looser forms of it (see [loose], [stem]). A name that differs from the channel's own
+     * only in its number is an old one ("Canale 10", once Canale 5's) and left out: it's another channel now.
+     */
+    internal fun table(channels: List<Pair<List<String>, String>>): Map<String, String> {
         val out = LinkedHashMap<String, String>()
-        for ((id, all) in names) {
-            val logo = best[id] ?: continue
-            for (n in all) normalize(n).takeIf { it.isNotEmpty() }?.let { out.putIfAbsent(it, logo.url) }
+        fun names(all: List<String>) = all.filterIndexed { i, n ->
+            i == 0 || !(letters(n) == letters(all[0]) && digits(n) != digits(all[0]))
+        }.map(::normalize).filter { it.isNotEmpty() }
+        for ((all, url) in channels) names(all).forEach { out.putIfAbsent(it, url) }
+        for ((all, url) in channels) names(all).forEach { k ->
+            listOfNotNull(loose(k), stem(k), stem(loose(k))).filter { it.length >= 4 && it != k }.forEach { out.putIfAbsent("~$it", url) }
         }
         return out
     }
+
+    private fun letters(s: String) = normalize(s).filter { it.isLetter() }
+    private fun digits(s: String) = normalize(s).filter { it.isDigit() }
+
+    /** Without a closing "tv", "channel" or "television": "TeleAmbiente TV" is also "TELEAMBIENTE". */
+    internal fun loose(key: String) = key.replace(Regex("(tv|channel|television)$"), "")
+
+    /** Without a closing number, when 7 letters or more stay: "Telepace 1" is also "TELEPACE" (but "Canale 5" isn't "Canale"). */
+    internal fun stem(key: String) = key.replace(Regex("[0-9]+$"), "").takeIf { it.length >= 7 && it != key }
 
     /** Each item of the JSON array at [url], read one at a time with [item] so the whole file never sits in memory. */
     private fun read(url: String, item: (JsonReader) -> Unit) = Http.open(url).use { stream ->
@@ -135,31 +157,45 @@ internal object ChannelLogos {
 
     internal class Logo(val url: String, val feed: String?, val inUse: Boolean, val format: String?, val width: Int)
 
-    /** A picture Android can draw: PNG, JPEG or WebP (not SVG), at an http(s) address (not a page that links to one). */
-    internal fun usable(l: Logo) = l.format?.uppercase() in setOf("PNG", "JPEG", "WEBP") && l.url.startsWith("http")
+    private val wikimediaSvg = Regex("https://upload\\.wikimedia\\.org/wikipedia/([a-z]+)/([0-9a-f])/([0-9a-f]{2})/([^/?]+\\.svg)")
+
+    /**
+     * Where to get [l] as a picture Android can draw: PNG, JPEG or WebP at an http(s) address (not a page that
+     * links to one); an SVG on Wikimedia as the PNG Wikimedia renders of it (500 pixels: a size it allows); else null.
+     */
+    internal fun drawable(l: Logo): String? {
+        if (l.format?.uppercase() in setOf("PNG", "JPEG", "WEBP") && l.url.startsWith("http")) return l.url
+        val m = wikimediaSvg.matchEntire(l.url)?.groupValues ?: return null
+        if (l.format?.uppercase() != "SVG") return null
+        return "https://upload.wikimedia.org/wikipedia/${m[1]}/thumb/${m[2]}/${m[3]}/${m[4]}/500px-${m[4]}.png"
+    }
 
     /** Whether [a] beats [b]: the channel's own logo before a feed's (an HD or regional version), in use, then wider. */
     internal fun better(a: Logo, b: Logo?): Boolean = b == null || compareValuesBy(a, b, { it.feed == null }, { it.inUse }, { it.width }) > 0
 
     /**
      * A channel name as the table keys it: no accents, case, spaces or punctuation, and no picture-quality words
-     * ("Canale 5 HD" and "CANALE5" are one). "+1" stays: a timeshift channel is a channel of its own.
+     * ("Canale 5 HD" and "CANALE5" are one). "+1" and "4K" stay: those are channels of their own ("Rai 4K").
      */
     internal fun normalize(name: String): String {
         val plain = Normalizer.normalize(name, Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "").lowercase()
-        return plain.replace(Regex("\\b(hd|fhd|uhd|4k|sd)\\b"), "").replace(Regex("[^a-z0-9+]"), "")
+        return plain.replace(Regex("\\b(hd|fhd|uhd|sd)\\b"), "").replace(Regex("[^a-z0-9+]"), "")
     }
 
     /**
-     * The logo for a channel called [name]: its name as it is, or else with words dropped from the end ("Rai 3 TGR
-     * Lazio", a regional edition, gets Rai 3's), never down to fewer than 3 letters, which would match too much.
+     * The logo for a channel called [name], trying in turn: its name, also loosely ("TELEAMBIENTE"); words dropped
+     * from the end down to two ("Rai 3 TGR Umbria" gets Rai 3's, a regional edition; one word, like "Italia", would
+     * match too much); the first word dropped, when what's left has a number or two words or more ("Mediaset
+     * Italia2" is Italia 2).
      */
     internal fun match(table: Map<String, String>, name: String): String? {
-        table[normalize(name)]?.let { return it }
+        fun look(key: String) = table[key] ?: table["~$key"] ?: table["~${loose(key)}"]
+        look(normalize(name))?.let { return it }
         val words = name.trim().split(Regex("\\s+"))
-        for (n in words.size - 1 downTo 1) {
-            val key = normalize(words.take(n).joinToString(" "))
-            if (key.length >= 3) table[key]?.let { return it }
+        for (n in words.size - 1 downTo 2) look(normalize(words.take(n).joinToString(" ")))?.let { return it }
+        if (words.size >= 2) {
+            val rest = normalize(words.drop(1).joinToString(" "))
+            if (rest.length >= 5 && (rest.any { it.isDigit() } || words.size >= 3)) table[rest]?.let { return it }
         }
         return null
     }
