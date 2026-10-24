@@ -13,6 +13,12 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 3.0.2
+
+- Fix TV inputs green dot: only inputs with an active device or signal show the green dot.
+- Fix selected row icon visibility in the TV inputs menu.
+- New option to show connected TV inputs in the apps row even in menu mode (**Piume settings → Apps row → Show connected inputs in apps**).
+
 ## 3.0.1
 
 - Choose how to show TV inputs: as a menu in the top bar or as tiles in the apps row (**Piume settings → Apps row → TV inputs**).

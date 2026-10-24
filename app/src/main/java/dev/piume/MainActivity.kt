@@ -864,20 +864,28 @@ class MainActivity : Activity() {
                     a.loadIcon(pm),
                 )
             }
-        return if (inputsMode() == "apps") installed + hdmiInputs() else installed
+        val hdmi = when {
+            inputsMode() == "apps" -> hdmiInputs()
+            inputsInApps() -> hdmiInputs().filter { !it.offline }
+            else -> emptyList()
+        }
+        return installed + hdmi
     }
 
     internal val inputCallback = object : TvInputManager.TvInputCallback() {
-        override fun onInputAdded(id: String) { updateInputsDot(); if (inputsMode() == "apps") refreshApps() }
-        override fun onInputRemoved(id: String) { updateInputsDot(); if (inputsMode() == "apps") refreshApps() }
-        override fun onInputStateChanged(id: String, state: Int) { updateInputsDot(); if (inputsMode() == "apps") refreshApps() }
+        override fun onInputAdded(id: String) { updateInputsDot(); if (inputsMode() == "apps" || inputsInApps()) refreshApps() }
+        override fun onInputRemoved(id: String) { updateInputsDot(); if (inputsMode() == "apps" || inputsInApps()) refreshApps() }
+        override fun onInputStateChanged(id: String, state: Int) { updateInputsDot(); if (inputsMode() == "apps" || inputsInApps()) refreshApps() }
     }
 
     /** What's playing changed: the Play queue's rows again, if they're the ones on screen (see refreshWatchNext). */
     internal val playingRefresh = Runnable { if (watchApp == CW_PKG) { watchKey = null; refreshWatchNext() } }
 
     internal val inputsObserver = object : android.database.ContentObserver(ui) {
-        override fun onChange(selfChange: Boolean) = updateInputsDot()
+        override fun onChange(selfChange: Boolean) {
+            updateInputsDot()
+            if (inputsMode() == "apps" || inputsInApps()) refreshApps()
+        }
     }
 
     internal val inputsDot by lazy { GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(INPUTS_ON) } }
@@ -888,18 +896,22 @@ class MainActivity : Activity() {
      * every HDMI input. Elsewhere, Android's state (connected, not standby or disconnected).
      */
     internal fun connectedInputs(): Set<String> {
-        runCatching {
+        val sony = runCatching {
             contentResolver.query(SONY_INPUTS,
                 arrayOf("input_id", "connect_state"), null, null, null)?.use { c ->
                 val out = HashSet<String>()
                 while (c.moveToNext()) if (c.getInt(1) == 1) c.getString(0)?.let { out += it }
-                return out
+                out
             }
-        }
+        }.getOrNull()
+        if (sony != null) return sony
+
         val tm = getSystemService(TvInputManager::class.java) ?: return emptySet()
         return runCatching {
-            tm.tvInputList.filter { (it.type == TvInputInfo.TYPE_HDMI || it.isPassthroughInput) && tm.getInputState(it.id) == TvInputManager.INPUT_STATE_CONNECTED }
-                .map { it.id }.toSet()
+            val cec = tm.tvInputList.filter { it.parentId != null }.mapNotNull { it.parentId }.toSet()
+            val hdmi = tm.tvInputList.filter { it.type == TvInputInfo.TYPE_HDMI || it.isPassthroughInput }
+            val connected = hdmi.filter { tm.getInputState(it.id) == TvInputManager.INPUT_STATE_CONNECTED }.map { it.id }.toSet()
+            if (hdmi.isNotEmpty() && connected.size == hdmi.size && cec.isNotEmpty()) cec else cec + connected
         }.getOrDefault(emptySet())
     }
 
@@ -1479,17 +1491,23 @@ class MainActivity : Activity() {
             elevation = dp(8).toFloat()
         }
         inputs.distinctBy { it.pkg }.forEachIndexed { i, src ->
-            val active = src.pkg.removePrefix(HDMI) in on || !src.offline
+            val active = !src.offline
             val row = settingsRow(src.label, "") {
                 menu.dismiss()
                 startActivity(src.launch)
             } as LinearLayout
-            row.addView(ImageView(this).apply {
+            val iconView = ImageView(this).apply {
                 setImageDrawable(src.icon)
                 setColorFilter(fg)
-            }, 0, LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
+            }
+            row.addView(iconView, 0, LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
             if (active) row.addView(View(this).apply { background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(INPUTS_ON) } },
                 LinearLayout.LayoutParams(dp(9), dp(9)).apply { marginStart = dp(8) })
+            val prevFocus = row.onFocusChangeListener
+            row.setOnFocusChangeListener { v, focused ->
+                prevFocus?.onFocusChange(v, focused)
+                iconView.setColorFilter(if (focused) onFg else fg)
+            }
             list.addView(row, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)).apply {
                 if (i > 0) topMargin = dp(2)
             })
@@ -1901,7 +1919,8 @@ class MainActivity : Activity() {
         const val NAMES_ROW = APPS_SECTION * SECTION + 4
         const val ICONS_ROW = APPS_SECTION * SECTION + 5
         const val INPUTS_MODE_ROW = APPS_SECTION * SECTION + 6
-        const val LOCK_ROW = APPS_SECTION * SECTION + 7
+        const val INPUTS_IN_APPS_ROW = APPS_SECTION * SECTION + 7
+        const val LOCK_ROW = APPS_SECTION * SECTION + 8
         const val CW_APPS_ROW = WATCH_SECTION * SECTION
         const val HIDDEN_ROW = WATCH_SECTION * SECTION + 1
         const val CHANNEL_LOGOS_ROW = WATCH_SECTION * SECTION + 2

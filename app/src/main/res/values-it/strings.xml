@@ -51,6 +51,7 @@
     <string name="setting_inputs_mode">Ingressi TV</string>
     <string name="inputs_mode_menu">Menù</string>
     <string name="inputs_mode_apps">Riga delle app</string>
+    <string name="setting_inputs_in_apps">Sorgenti collegate tra le app</string>
 
     <string name="setting_channel_logos">Loghi dei canali (iptv-org)</string>
     <string name="setting_channel_logos_update">Aggiorna i loghi dei canali</string>

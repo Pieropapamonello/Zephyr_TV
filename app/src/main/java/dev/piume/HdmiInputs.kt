@@ -40,6 +40,9 @@ internal fun MainActivity.pinnedInputs(): Set<String> = prefs.getStringSet(K.INP
 /** Mode for TV inputs: "menu" (top bar button with popup menu) or "apps" (app row tiles). */
 internal fun MainActivity.inputsMode() = prefs.getString(K.INPUTS_MODE, "menu")!!
 
+/** Show connected HDMI inputs in apps row even when in menu mode. */
+internal fun MainActivity.inputsInApps() = prefs.getBoolean(K.INPUTS_IN_APPS, false)
+
 /**
  * One tile per HDMI port, keyed by the port's input id. A device that names itself over CEC (the PS5 shows up
  * as "PlayStation 5") takes over its port's tile; it's listed while asleep too, and opening the tile wakes it.
@@ -48,25 +51,25 @@ internal fun MainActivity.inputsMode() = prefs.getString(K.INPUTS_MODE, "menu")!
 internal fun MainActivity.hdmiInputs(): List<MainActivity.App> = try {
     val tv = getSystemService(TvInputManager::class.java) ?: return emptyList()
     val inputs = tv.tvInputList.filter { (it.type == TvInputInfo.TYPE_HDMI || it.isPassthroughInput) && !it.isHidden(this) }
-        val devices = inputs.filter { it.parentId != null }
-        val audio = devices.filter { isAudioDevice(it.loadLabel(this)?.toString().orEmpty()) }.mapNotNull { it.parentId }.toSet()
-        val on = connectedInputs()
-        // Devices first, so distinctBy keeps the device over its port.
-        (devices + inputs.filter { it.parentId == null }).filter { (it.parentId ?: it.id) !in audio }.map { input ->
-            val port = input.parentId ?: input.id
-            val named = input.parentId != null
-            val label = (if (named) input.loadLabel(this) else input.loadCustomLabel(this) ?: input.loadLabel(this))?.toString()?.takeIf { it.isNotBlank() } ?: port
-            val iconRes = MainActivity.HDMI_ICONS[hdmiIcon(label, named)] ?: R.drawable.ic_hdmi
-            val icon = getDrawable(iconRes)!!
-            val isConnected = port in on || tv.getInputState(port) == TvInputManager.INPUT_STATE_CONNECTED
-            MainActivity.App(
-                MainActivity.HDMI + port,
-                label,
-                Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(port)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                icon,
-                offline = !named && !isConnected,
-            )
-        }.distinctBy { it.pkg }
+    val devices = inputs.filter { it.parentId != null }
+    val audio = devices.filter { isAudioDevice(it.loadLabel(this)?.toString().orEmpty()) }.mapNotNull { it.parentId }.toSet()
+    val on = connectedInputs()
+    // Devices first, so distinctBy keeps the device over its port.
+    (devices + inputs.filter { it.parentId == null }).filter { (it.parentId ?: it.id) !in audio }.map { input ->
+        val port = input.parentId ?: input.id
+        val named = input.parentId != null
+        val label = (if (named) input.loadLabel(this) else input.loadCustomLabel(this) ?: input.loadLabel(this))?.toString()?.takeIf { it.isNotBlank() } ?: port
+        val iconRes = MainActivity.HDMI_ICONS[hdmiIcon(label, named)] ?: R.drawable.ic_hdmi
+        val icon = getDrawable(iconRes)!!
+        val isConnected = port in on || (named && !isAudioDevice(label))
+        MainActivity.App(
+            MainActivity.HDMI + port,
+            label,
+            Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(port)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            icon,
+            offline = !isConnected,
+        )
+    }.distinctBy { it.pkg }
 } catch (e: Exception) {
     emptyList()
 }

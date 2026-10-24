@@ -51,6 +51,7 @@
     <string name="setting_inputs_mode">Entrées TV</string>
     <string name="inputs_mode_menu">Menu</string>
     <string name="inputs_mode_apps">Ligne d\'apps</string>
+    <string name="setting_inputs_in_apps">Sources connectées dans les applis</string>
 
     <string name="setting_channel_logos">Logos des chaînes (iptv-org)</string>
     <string name="setting_channel_logos_update">Mettre à jour les logos des chaînes</string>

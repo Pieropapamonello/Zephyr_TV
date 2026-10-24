@@ -35,6 +35,7 @@ internal object K {
     const val TIP_MOVE = "tip_move"
     const val INPUTS_MODE = "inputs_mode" // "menu" (default) or "apps"
     const val INPUTS_PINNED = "inputs_pinned" // HDMI ports pinned by hand
+    const val INPUTS_IN_APPS = "inputs_in_apps" // show connected HDMI inputs in apps row even in menu mode
 
     // Continue Watching
     const val HIDDEN_WATCH = "hidden_watch"
