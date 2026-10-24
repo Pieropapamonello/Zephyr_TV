@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.4.7
+
+- The cover on the page of a search result now reaches the edges of the page and the top of the screen.
+
 ## 2.4.6
 
 - On the page of a search result, the cover is at the very top, above the title. It fills the full width of the page.

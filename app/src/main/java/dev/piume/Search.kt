@@ -261,7 +261,11 @@ internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = nu
     panel.addView(picture, 0, LinearLayout.LayoutParams(panelWidth, panelWidth * 9 / 16).apply {
         setMargins(-panel.paddingStart, -panel.paddingTop, -panel.paddingEnd, dp(20))
     })
-    pageExit = { panel.removeView(picture) }
+    panel.clipToPadding = false
+    pageExit = {
+        panel.removeView(picture)
+        panel.clipToPadding = true
+    }
     // Each row starts with its app's icon, before the name.
     shown.forEachIndexed { i, a ->
         (settingsList.getChildAt(1 + i) as? LinearLayout)?.addView(ImageView(this).apply {
