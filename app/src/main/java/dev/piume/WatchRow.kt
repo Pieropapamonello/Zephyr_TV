@@ -52,12 +52,13 @@ internal fun MainActivity.refreshWatchNext() {
         } catch (e: Exception) {
             emptyList()
         }
+        val playing = nowPlaying()
         ui.post {
             if (tmdbLastFocusApp != null) return@post // focus moved on to an app meanwhile: its rows, not these
             watchTitle.text = getString(R.string.continue_watching)
             watchApp = CW_PKG
-            sectionCounts[CW_PKG] = if (list.isEmpty()) 0 else 1
-            showWatchNext(list)
+            sectionCounts[CW_PKG] = listOf(playing, list).count { it.isNotEmpty() }
+            showWatchNext(list, playing)
         }
     }
 }
@@ -513,8 +514,11 @@ internal fun MainActivity.timeLeft(ms: Long): String {
     return if (min >= 60) getString(R.string.time_left_hr_min, min / 60, min % 60) else getString(R.string.time_left_min, min)
 }
 
-internal fun MainActivity.showWatchNext(list: List<Prog>) = showSections(
-    if (list.isEmpty()) emptyList() else listOf(getString(R.string.continue_watching).let { Section("", it, it, list) }))
+/** The Play queue tile's rows: what's playing now (see nowPlaying), then Continue Watching; each only when it has some. */
+internal fun MainActivity.showWatchNext(list: List<Prog>, playing: List<Prog> = emptyList()) = showSections(listOfNotNull(
+    playing.takeIf { it.isNotEmpty() }?.let { getString(R.string.now_playing).let { t -> Section("playing", t, t, it) } },
+    list.takeIf { it.isNotEmpty() }?.let { getString(R.string.continue_watching).let { t -> Section("", t, t, it) } },
+))
 
 /**
  * The rows under the apps, one per section. The first is the row in the layout; any more are built under it (see

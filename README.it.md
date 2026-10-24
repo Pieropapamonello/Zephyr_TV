@@ -142,8 +142,8 @@ Android 13 e successivi disattivano l'interruttore di Accessibilità per le app 
 | Aggiornare Piume | **Impostazioni → Sistema → Aggiornamenti** |
 | Bloccare il layout con un PIN | **Impostazioni → Riga delle app → Blocco layout** |
 | Mostrare film e serie di tendenza in alto (In evidenza TMDB) | **Impostazioni → In evidenza TMDB → API Key TMDB** (scrivila sulla TV o dal telefono) |
-| Scegliere cosa mostra In evidenza (tendenze, popolari, più votati, al cinema…) | **Impostazioni → In evidenza TMDB → Spotlight mostra** |
-| Mostrare la tua lista TMDB in In evidenza | **Impostazioni → In evidenza TMDB → Spotlight mostra → La mia lista TMDB** |
+| Scegliere cosa mostra In evidenza (tendenze, popolari, più votati, al cinema…) | **Impostazioni → In evidenza TMDB → In evidenza mostra** |
+| Mostrare la tua lista TMDB in In evidenza | **Impostazioni → In evidenza TMDB → In evidenza mostra → La mia lista TMDB** |
 | Mostrare il programma in onda sotto i canali TV | **Impostazioni → Continua a guardare → Guida TV (XMLTV)** |
 | Attivare o disattivare i loghi dei canali da iptv-org, o scaricare gli ultimi | **Impostazioni → Continua a guardare → Loghi dei canali (iptv-org)**, **Aggiorna i loghi dei canali** |
 | Orologio a 12 o 24 ore | **Impostazioni → Aspetto e sfondi → Orologio** |
@@ -178,7 +178,7 @@ Il blocco protegge il layout, non è un controllo parentale: le app si possono a
 
 ### In evidenza TMDB
 
-In evidenza ha bisogno di una chiave API TMDB gratuita (chiave v3 o token di lettura v4) da [themoviedb.org](https://www.themoviedb.org/settings/api). Inseriscila in **Impostazioni → In evidenza TMDB → API Key TMDB**, oppure scegli **Inserisci dal telefono…** e inquadra il codice; Piume verifica la chiave con TMDB. In evidenza mostra poi i titoli di tendenza. **Spotlight mostra** sceglie invece un'altra lista di TMDB: di tendenza questa settimana, i più popolari, i più votati, i film al cinema ora o in uscita nel tuo paese, le serie in onda. **La mia lista TMDB** mostra una lista pubblica che hai creato su themoviedb.org, nel suo ordine: incolla il suo link dal telefono. Si seleziona solo dopo aver impostato una lista.
+In evidenza ha bisogno di una chiave API TMDB gratuita (chiave v3 o token di lettura v4) da [themoviedb.org](https://www.themoviedb.org/settings/api). Inseriscila in **Impostazioni → In evidenza TMDB → API Key TMDB**, oppure scegli **Inserisci dal telefono…** e inquadra il codice; Piume verifica la chiave con TMDB. In evidenza mostra poi i titoli di tendenza. **In evidenza mostra** sceglie invece un'altra lista di TMDB: di tendenza questa settimana, i più popolari, i più votati, i film al cinema ora o in uscita nel tuo paese, le serie in onda. **La mia lista TMDB** mostra una lista pubblica che hai creato su themoviedb.org, nel suo ordine: incolla il suo link dal telefono. Si seleziona solo dopo aver impostato una lista.
 
 Ogni titolo ha i pulsanti per Nuvio e Stremio (sempre presenti, se installati), il trailer su YouTube e i servizi di streaming che lo hanno nel tuo paese (**Solo i servizi che hanno il titolo** disattiva questo filtro). In evidenza tiene le immagini sulla TV, quindi ognuna si scarica una sola volta, e si ferma dopo 15 minuti senza che premi un tasto.
 
@@ -194,7 +194,7 @@ Android lascia leggere la guida programmi della TV solo alle app di sistema, qui
 
 ### Salvaschermo Galleria
 
-Seleziona **Impostazioni → Salvaschermo** per passare a Galleria. Piume scarica i dipinti (4,7 MB) dalle release di Plume Launcher e li conserva in privato. Se torni a un altro salvaschermo vengono eliminati, quindi occupano spazio solo mentre li usi. Con una chiave TMDB puoi scegliere invece **Tendenze Spotlight (TMDB)**: mostra le immagini che In evidenza tiene già sulla TV, con titolo, anno e genere, e non si collega a internet.
+Seleziona **Impostazioni → Salvaschermo** per passare a Galleria. Piume scarica i dipinti (4,7 MB) dalle release di Plume Launcher e li conserva in privato. Se torni a un altro salvaschermo vengono eliminati, quindi occupano spazio solo mentre li usi. Con una chiave TMDB puoi scegliere invece **Immagini di In evidenza (TMDB)**: mostra le immagini che In evidenza tiene già sulla TV, con titolo, anno e genere, e non si collega a internet.
 
 ## Privacy
 

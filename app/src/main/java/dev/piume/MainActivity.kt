@@ -277,8 +277,14 @@ class MainActivity : Activity() {
         })
         // Application context: ConnectivityManager keeps its first instance (and that instance's context) in a
         // static callback handler forever, so an Activity context here leaks the whole first home screen.
-        applicationContext.getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(net)
+        applicationContext.getSystemService(ConnectivityManager::class.java).let { cm ->
+            // No network at all calls nothing back: start from what there is now (the red dot when offline).
+            showNet(cm.activeNetwork?.let { cm.getNetworkCapabilities(it) })
+            cm.registerDefaultNetworkCallback(net)
+        }
         getSystemService(TvInputManager::class.java)?.registerCallback(inputCallback, ui)
+        enableListener() // what's playing, for the Play queue (see NowPlaying)
+        watchSessions()
         // Sony's table changes when a device is plugged in or out: the dot follows (see connectedInputs).
         runCatching { contentResolver.registerContentObserver(SONY_INPUTS, true, inputsObserver) }
 
@@ -780,7 +786,18 @@ class MainActivity : Activity() {
         wifi.setImageResource(if (ethernet) R.drawable.ic_ethernet else R.drawable.ic_wifi)
         // Dim only the icon: the focus ring is the background and should stay full strength.
         wifi.imageAlpha = if (caps == null) 90 else 255
+        // A red dot while there's no internet: no network, or one Android couldn't reach the internet through.
+        val online = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+        wifi.post {
+            wifi.overlay.remove(offlineDot)
+            if (online || wifi.width == 0) return@post
+            val size = dp(9)
+            offlineDot.setBounds(wifi.width - size - dp(3), dp(3), wifi.width - dp(3), dp(3) + size)
+            wifi.overlay.add(offlineDot)
+        }
     }
+
+    internal val offlineDot by lazy { GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(BADGE) } }
 
     /**
      * The TV's voice search (Google Assistant on Google TV), by the ways Android TVs offer it, most specific first.
@@ -876,6 +893,9 @@ class MainActivity : Activity() {
         override fun onInputStateChanged(id: String, state: Int) = updateInputsDot()
     }
 
+    /** What's playing changed: the Play queue's rows again, if they're the ones on screen (see refreshWatchNext). */
+    internal val playingRefresh = Runnable { if (watchApp == CW_PKG) { watchKey = null; refreshWatchNext() } }
+
     internal val inputsObserver = object : android.database.ContentObserver(ui) {
         override fun onChange(selfChange: Boolean) = updateInputsDot()
     }
@@ -961,7 +981,7 @@ class MainActivity : Activity() {
             tmdbLastFocusApp = null
             queryAppChannels(null)
         }.apply {
-            contentDescription = getString(R.string.continue_watching)
+            contentDescription = getString(R.string.play_queue)
         }
 
         val searchTile = searchQuery?.let { q ->

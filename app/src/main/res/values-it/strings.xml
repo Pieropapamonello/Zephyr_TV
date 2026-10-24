@@ -156,7 +156,7 @@
     <string name="menu_app_info">Info app</string>
     <string name="menu_remove_from_cw">Rimuovi da Continua a guardare</string>
     <string name="menu_open_app">Apri app</string>
-    <string name="removed_from_row_toast">Rossa dalla riga. È ancora presente in Tutte le app.</string>
+    <string name="removed_from_row_toast">Rimossa dalla riga. È ancora presente in Tutte le app.</string>
 
     <!-- Time left -->
     <string name="time_left_hr_min">%1$d h e %2$d min rimanenti</string>
@@ -206,7 +206,7 @@
     <string name="tmdb_badge_movie">Film</string>
     <string name="tmdb_badge_tv">Serie TV</string>
     <string name="toast_tmdb_fetch_failed">Impossibile caricare i contenuti di tendenza da TMDB</string>
-    <string name="wallpaper_tmdb_trending">In evidenza TMDB (Trending)</string>
+    <string name="wallpaper_tmdb_trending">In evidenza TMDB (tendenze)</string>
     <string name="setting_tmdb_default_apps">App preferite per i suggerimenti</string>
     <string name="app_section">%1$s: %2$s</string>
     <string name="section_channels">Canali</string>
@@ -281,7 +281,7 @@
     <string name="phone_tmdb_title">Chiave API TMDB</string>
     <string name="phone_tmdb_intro">Incolla la chiave API o il token di accesso in lettura di TMDB. Li trovi su themoviedb.org, in Impostazioni → API.</string>
     <string name="phone_tmdb_hint">Chiave API o token di accesso</string>
-    <string name="phone_tmdb_saved">Chiave salvata sulla TV. Spotlight attivo.</string>
+    <string name="phone_tmdb_saved">Chiave salvata sulla TV. In evidenza è attivo.</string>
     <string name="phone_tmdb_refused">TMDB non accetta questa chiave. Controllala e riprova.</string>
     <string name="phone_tmdb_unchecked">Chiave salvata, ma non è stato possibile verificarla con TMDB.</string>
     <string name="setting_tmdb_key_phone">Inserisci dal telefono…</string>
@@ -311,12 +311,12 @@
     <string name="setting_night_from">Inizio modalità notte</string>
     <string name="setting_night_to">Fine modalità notte</string>
     <string name="search_title">Cerca</string>
-    <string name="search_hint">Titolo di un film o di una serie</string>
+    <string name="search_hint">Film, serie o canale TV</string>
     <string name="search_dictate">Dillo a voce</string>
     <string name="search_assistant">Assistente vocale della TV</string>
     <string name="search_phone">Oppure scrivi dal telefono: inquadra il codice</string>
     <string name="phone_search_title">Cerca sulla TV</string>
-    <string name="phone_search_intro">Scrivi il titolo di un film o di una serie. La TV mostra quello che trova TMDB.</string>
+    <string name="phone_search_intro">Scrivi il titolo di un film o di una serie, o il nome di un canale TV. La TV mostra quello che trova.</string>
     <string name="phone_search_sent">Cerco “%1$s” sulla TV.</string>
     <string name="toast_no_voice_search">Questa TV non ha la ricerca vocale</string>
     <string name="search_listening">Ti ascolto… di\' un titolo</string>
@@ -329,15 +329,18 @@
     <string name="channel_number">Canale %1$s</string>
     <string name="channel_next">A seguire: %1$s %2$s</string>
     <string name="channel_watch">Guarda in TV</string>
+    <string name="play_queue">Coda di riproduzione</string>
+    <string name="now_playing">In riproduzione</string>
+    <string name="playing_paused">%1$s · In pausa</string>
     <string name="toast_no_results">Nessun risultato per “%1$s”</string>
     <plurals name="toast_search_results">
         <item quantity="one">%1$d risultato per “%2$s”. Indietro chiude la ricerca</item>
         <item quantity="many">%1$d risultati per “%2$s”. Indietro chiude la ricerca</item>
         <item quantity="other">%1$d risultati per “%2$s”. Indietro chiude la ricerca</item>
     </plurals>
-    <string name="screensaver_tmdb">Tendenze Spotlight (TMDB)</string>
+    <string name="screensaver_tmdb">Immagini di In evidenza (TMDB)</string>
     <!-- TMDB list as Spotlight source -->
-    <string name="setting_tmdb_source">Spotlight mostra</string>
+    <string name="setting_tmdb_source">In evidenza mostra</string>
     <string name="tmdb_source_trending">Titoli di tendenza</string>
     <string name="tmdb_source_trending_week">Di tendenza questa settimana</string>
     <string name="tmdb_source_popular">I più popolari</string>
@@ -350,7 +353,7 @@
     <string name="tmdb_list_none">Non impostata: premi per aggiungerla</string>
     <string name="list_waiting">In attesa della lista…</string>
     <string name="phone_list_title">La tua lista TMDB</string>
-    <string name="phone_list_intro">Incolla il link di una lista pubblica di themoviedb.org, o il suo numero. Spotlight mostrerà i suoi titoli, nell\'ordine della lista.</string>
+    <string name="phone_list_intro">Incolla il link di una lista pubblica di themoviedb.org, o il suo numero. In evidenza mostrerà i suoi titoli, nell\'ordine della lista.</string>
     <string name="phone_list_hint">https://www.themoviedb.org/list/…</string>
     <string name="phone_list_saved">Lista salvata sulla TV: %1$d titoli.</string>
     <string name="phone_list_bad">Non è una lista TMDB pubblica, oppure è vuota.</string>
