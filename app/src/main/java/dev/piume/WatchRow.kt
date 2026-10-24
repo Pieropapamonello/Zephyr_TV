@@ -318,7 +318,7 @@ internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<
             val input = channels.first().input
             val name = runCatching { tvInputs?.getTvInputInfo(input)?.loadLabel(this)?.toString() }.getOrNull()
                 ?.takeIf { it.isNotBlank() } ?: getString(R.string.section_channels)
-            Section(input, name, getString(R.string.app_section, label, name), channels.take(TUNER_CARDS).map {
+            Section(input, name, getString(R.string.app_section, label, name), channels.map {
                 val number = it.number.trimStart('0').ifEmpty { it.number }
                 val now = onNow[it.id] ?: guide?.let { g -> Epg.now(g, it.name)?.let { (title, progress) -> OnNow(title, progress) } }
                 // Under the card: the number, then what's on, its bar how far in it is.
@@ -388,6 +388,8 @@ internal fun MainActivity.channelCountry() = TmdbClient.region(tmdbLang())
  */
 internal fun MainActivity.updateChannelLogos(pkg: String?, done: ((Int?) -> Unit)? = null) = netIo.execute {
     val n = ChannelLogos.update(filesDir, channelCountry())
+    // A new table each month (or by hand): the logos themselves are fetched again with it, in case they changed.
+    if (n != null) channelLogoFiles.clear()
     ui.post {
         done?.invoke(n)
         if (n != null && pkg != null && tmdbLastFocusApp == pkg) {
@@ -402,9 +404,6 @@ private fun MainActivity.logo(id: Long): String? {
     val uri = TvContract.buildChannelLogoUri(id)
     return runCatching { contentResolver.openAssetFileDescriptor(uri, "r")?.use { uri.toString() } }.getOrNull()
 }
-
-/** Channels per tuner: enough to scroll through the main ones without building hundreds of cards. */
-private const val TUNER_CARDS = 30
 
 /** Cards per app section; with several sections, more would mean scrolling a long way past ones not wanted. */
 private const val SECTION_CARDS = 20
@@ -517,21 +516,42 @@ internal fun MainActivity.showSections(sections: List<Section>) {
     val visible = if (sections.isEmpty()) View.GONE else View.VISIBLE
     watchTitle.visibility = visible
     watchScroll.visibility = visible
-    // ~16 ms per card here and only four show at once: build them four per frame, not all 20 in one.
-    fun addCards(row: ViewGroup, items: List<Prog>, from: Int) {
-        if (watchKey != key) return // a newer list replaced this one
-        items.subList(from, minOf(from + 4, items.size)).forEach { row.addView(watchCard(it, row.childCount > 0)) }
-        if (from + 4 < items.size) ui.post { addCards(row, items, from + 4) }
-    }
     sections.forEachIndexed { i, s ->
         if (i == 0) watchTitle.text = s.title
-        addCards(if (i == 0) watchRow else sectionRow(s.title), s.items, 0)
+        val row = if (i == 0) watchRow else sectionRow(s.title)
+        row.setTag(R.id.watchScroll, RowCards(s.items))
+        moreCards(row) // the first page; the rest as focus nears the end (see watchCard)
     }
     if (focusedRow >= 0) {
         val row = cardRows().let { it.getOrNull(focusedRow) ?: it.last() }
         ((row.getChildAt(focusedAt.coerceAtMost(row.childCount - 1)) as? LinearLayout)?.getChildAt(0)
             ?: appRow.getChildAt(0))?.requestFocus()
     }
+}
+
+/** A row's cards: all of them, and how many are built (or on their way). */
+internal class RowCards(var items: List<Prog>, var built: Int = 0)
+
+/** Cards built at a time in a row: a page more each time focus nears its end, so long rows (all the channels) open at once. */
+private const val PAGE = 10
+
+/**
+ * Builds the next page of [row]'s cards (see RowCards). ~16 ms per card and only four show at once: four per frame,
+ * not a page in one.
+ */
+internal fun MainActivity.moreCards(row: ViewGroup) {
+    val cards = row.getTag(R.id.watchScroll) as? RowCards ?: return
+    val until = minOf(cards.built + PAGE, cards.items.size)
+    if (until <= cards.built) return
+    val key = watchKey
+    fun add(from: Int) {
+        if (watchKey != key || row.getTag(R.id.watchScroll) !== cards) return // a newer list replaced this one
+        cards.items.subList(from, minOf(from + 4, until)).forEach { row.addView(watchCard(it, row.childCount > 0)) }
+        if (from + 4 < until) ui.post { add(from + 4) }
+    }
+    val from = cards.built
+    cards.built = until
+    add(from)
 }
 
 /** A section after the first: its title and an empty row, styled like the first one's in the layout. */
@@ -605,6 +625,8 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
         if (focused) {
             lastCard = frame
             showRowLabel(frame, false)
+            // Three from the end of what's built: the next page, so moving on never waits.
+            (col.parent as? ViewGroup)?.let { row -> if (row.indexOfChild(col) >= row.childCount - 3) moreCards(row) }
         }
     }
     frame.contentDescription = p.title
@@ -655,8 +677,10 @@ internal fun MainActivity.channelArt(frame: FrameLayout, w: Int, h: Int, logo: S
     frame.addView(text, MATCH_PARENT, MATCH_PARENT)
     val uri = logo ?: return
     posterIo.execute {
-        val bmp = try {
-            decode(uri, alpha = true)
+        // Kept on disk (see channelLogoFiles) and in memory: a logo is downloaded once, not each time its card is.
+        val bmp = posters.get(uri) ?: try {
+            val file = channelLogoFiles.get(uri) { openStream(it) }
+            decode(android.net.Uri.fromFile(file).toString(), alpha = true)?.also { posters.put(uri, it) }
         } catch (e: Exception) {
             warn("channel logo failed: $uri ($e)")
             null

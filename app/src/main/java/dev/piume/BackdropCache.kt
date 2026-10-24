@@ -18,7 +18,7 @@ internal const val SS_TMDB = "tmdb:trending"
  * The newest [maxFiles] stay; the rest go, oldest use first. Files are written under a temporary name and renamed,
  * so a download cut short never leaves a broken image behind. Safe to use from several threads.
  */
-internal class BackdropCache(private val dir: File, private val maxFiles: Int = 48) {
+internal class BackdropCache(private val dir: File, private val maxFiles: Int = 48, private val name: (String) -> String = ::nameFor) {
     init {
         dir.mkdirs()
         // Leftovers of downloads cut short by a crash or a killed process.
@@ -50,7 +50,7 @@ internal class BackdropCache(private val dir: File, private val maxFiles: Int = 
         dir.listFiles()?.forEach { it.delete() }
     }
 
-    private fun fileFor(url: String) = File(dir, nameFor(url))
+    private fun fileFor(url: String) = File(dir, name(url))
 
     @Synchronized
     private fun trim() {

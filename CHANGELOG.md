@@ -13,6 +13,13 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.8.2
+
+- Search results show at once. Their covers with the title come a moment later, in their place.
+- The rows show 10 cards at a time. When you move near the end of a row, the next 10 cards come.
+- The TV app shows all the channels, not only the first 30.
+- Piume keeps the channel logos on the TV. It downloads them again only each month, or when you select **Update the channel logos**.
+
 ## 2.8.1
 
 - Search results show in three rows: films, series, then TV channels. Each card shows the year and the genre.

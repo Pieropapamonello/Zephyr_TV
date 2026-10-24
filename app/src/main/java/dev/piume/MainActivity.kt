@@ -125,6 +125,9 @@ class MainActivity : Activity() {
     // Spotlight's own thread: downloading the next backdrop ahead mustn't hold up the rows' data on io.
     internal val spotlightIo = Executors.newSingleThreadExecutor()
     internal val backdrops by lazy { BackdropCache(File(cacheDir, BACKDROP_DIR)) }
+    // Channel logos, kept with the app's files (not its cache, which Android empties): cleared when their table is
+    // fetched again, each month or by hand. Named by the whole address: many are called just "logo.png".
+    internal val channelLogoFiles by lazy { BackdropCache(File(filesDir, "channel_logo_images"), maxFiles = 2000) { "l${it.hashCode().toUInt()}" } }
     internal var lastInput = SystemClock.elapsedRealtime() // last key press, for pausing Spotlight when nobody watches
     internal var spotlightIdle = false
     internal var nightShown = false // night mode's dimming is showing

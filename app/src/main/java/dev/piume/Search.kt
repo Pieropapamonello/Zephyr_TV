@@ -13,6 +13,7 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
@@ -173,7 +174,20 @@ internal fun MainActivity.searchTmdb(query: String) {
     spotlightIo.execute {
         val channels = runCatching { findChannels(query) }.getOrDefault(emptyList())
         val found = TmdbClient.search(key, query, tmdbLang())
-        // Each result's landscape art with its title on it, all at once (one TMDB call each) before showing them.
+        // The results show at once, on the plain art the search gives; their art with the title on it follows.
+        ui.post {
+            if (found.isEmpty() && channels.isEmpty()) return@post Toast.makeText(this, getString(R.string.toast_no_results, query), Toast.LENGTH_SHORT).show()
+            searchQuery = query
+            searchResults = found
+            searchArt = emptyMap()
+            searchChannels = channels
+            watchApp = null // the tile's cards are new even if it's focused already
+            renderApps()
+            (0 until appRow.childCount).map { appRow.getChildAt(it) }.firstOrNull { it.tag == SEARCH_PKG }?.requestFocus()
+            val n = found.size + channels.size
+            Toast.makeText(this, resources.getQuantityString(R.plurals.toast_search_results, n, n, query), Toast.LENGTH_LONG).show()
+        }
+        // Each result's landscape art with its title on it, all at once (one TMDB call each).
         val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
         val art = try {
             pool.invokeAll(found.map { item -> java.util.concurrent.Callable { item.id to TmdbClient.art(key, item, tmdbLang()) } })
@@ -182,16 +196,41 @@ internal fun MainActivity.searchTmdb(query: String) {
             pool.shutdown()
         }
         ui.post {
-            if (found.isEmpty() && channels.isEmpty()) return@post Toast.makeText(this, getString(R.string.toast_no_results, query), Toast.LENGTH_SHORT).show()
-            searchQuery = query
-            searchResults = found
+            if (searchQuery != query || searchResults !== found) return@post // another search, or none, since
             searchArt = art
-            searchChannels = channels
-            watchApp = null // the tile's cards are new even if it's focused already
-            renderApps()
-            (0 until appRow.childCount).map { appRow.getChildAt(it) }.firstOrNull { it.tag == SEARCH_PKG }?.requestFocus()
-            val n = found.size + channels.size
-            Toast.makeText(this, resources.getQuantityString(R.plurals.toast_search_results, n, n, query), Toast.LENGTH_LONG).show()
+            refreshSearchArt()
+        }
+    }
+}
+
+/** [p] with its art from [MainActivity.searchArt], when it's a search result that has some; else [p] itself. */
+internal fun MainActivity.withArt(p: Prog): Prog {
+    val item = p.tmdb ?: return p
+    val art = searchArt[item.id] ?: return p
+    return Prog(p.title, p.sub, 0, art.backdrop ?: TmdbClient.cardUrl(item.backdropPath), null, null,
+        tmdb = item, logo = art.logo, poster = art.poster ?: item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" })
+}
+
+/**
+ * The results' art arrived: each card built so far gets it in place (focus staying on the one it's on), and so do
+ * those still to come (see RowCards).
+ */
+internal fun MainActivity.refreshSearchArt() {
+    if (watchApp != SEARCH_PKG) return // not on screen: showSearchResults builds them with it
+    for (row in cardRows()) {
+        val cards = row.getTag(R.id.watchScroll) as? RowCards ?: continue
+        cards.items = cards.items.map(::withArt)
+        for (i in 0 until row.childCount) {
+            val old = row.getChildAt(i) as? ViewGroup ?: continue
+            val frame = old.getChildAt(0) ?: continue
+            val p = frame.getTag(R.id.watchRow) as? Prog ?: continue
+            val fresh = withArt(p)
+            if (fresh === p) continue
+            val focused = frame.hasFocus()
+            val card = watchCard(fresh, i > 0)
+            row.addView(card, i)
+            if (focused) (card as ViewGroup).getChildAt(0).requestFocus()
+            row.removeView(old)
         }
     }
 }
@@ -207,9 +246,8 @@ internal fun MainActivity.showSearchResults() {
         Section(key, query, getString(heading, query), found.map { item ->
             val year = item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }
             val genre = item.genres.firstOrNull()
-            val art = searchArt[item.id]
-            Prog(item.title, listOfNotNull(year, genre).joinToString(" · "), 0, art?.backdrop ?: TmdbClient.cardUrl(item.backdropPath), null, null,
-                tmdb = item, logo = art?.logo, poster = art?.poster ?: item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" })
+            withArt(Prog(item.title, listOfNotNull(year, genre).joinToString(" · "), 0, TmdbClient.cardUrl(item.backdropPath), null, null,
+                tmdb = item, poster = item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }))
         })
     }
     val channels = searchChannels.takeIf { it.isNotEmpty() }?.let { list ->
