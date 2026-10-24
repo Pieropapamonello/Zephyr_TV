@@ -305,6 +305,7 @@ class MainActivity : Activity() {
         // Only rebuild what changed, so focus stays where it was when returning from an app.
         if (appsDirty) refreshApps() else if (appRow.childCount == 0) renderApps()
         watchSessions() // once allowed (see NowPlaying): the Play queue follows what's playing
+        ui.post(playingTick)
         refreshWatchNext()
         showWeather()
         ui.removeCallbacks(weatherTick)
@@ -369,6 +370,7 @@ class MainActivity : Activity() {
         ui.removeCallbacks(wallpaperTick)
         ui.removeCallbacks(spotlightTick)
         ui.removeCallbacks(nightTick)
+        ui.removeCallbacks(playingTick)
         if (editing) endEdit()
         super.onPause()
     }
@@ -881,6 +883,26 @@ class MainActivity : Activity() {
 
     /** What's playing changed: the Play queue's rows again, if they're the ones on screen (see refreshWatchNext). */
     internal val playingRefresh = Runnable { if (watchApp == CW_PKG) { watchKey = null; refreshWatchNext() } }
+
+    /**
+     * Every few seconds while the Play queue's rows show: what's playing, compared by track and playing or paused,
+     * rebuilt when it changed. Some apps' sessions don't tell listeners (Spotify on this Sony didn't).
+     */
+    internal val playingTick = object : Runnable {
+        override fun run() {
+            ui.removeCallbacks(this)
+            if (watchApp != CW_PKG || !hasWindowFocus()) return ui.postDelayed(this, 5000).let { }
+            io.execute {
+                val now = nowPlaying().joinToString("|") { "${it.title}/${it.sub}" }
+                ui.post {
+                    if (lastPlaying != null && now != lastPlaying) playingRefresh.run()
+                    lastPlaying = now
+                    ui.postDelayed(this, 5000)
+                }
+            }
+        }
+    }
+    internal var lastPlaying: String? = null
 
     internal val inputsObserver = object : android.database.ContentObserver(ui) {
         override fun onChange(selfChange: Boolean) {

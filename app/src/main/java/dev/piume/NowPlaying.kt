@@ -98,7 +98,10 @@ internal fun MainActivity.watchSessions() {
         var last = c.playbackState?.state
         runCatching {
             c.registerCallback(object : MediaController.Callback() {
-                override fun onMetadataChanged(metadata: MediaMetadata?) = playingChanged()
+                override fun onMetadataChanged(metadata: MediaMetadata?) {
+                    android.util.Log.d("PiumePlaying", "metadata changed: ${c.packageName}")
+                    playingChanged()
+                }
                 override fun onPlaybackStateChanged(state: PlaybackState?) {
                     if (state?.state == last) return // the position moving on: nothing to redraw
                     last = state?.state

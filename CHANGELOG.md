@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 3.0.6
+
+- **Playing now** changes when the track changes, also with apps like Spotify that do not tell other apps about it.
+
 ## 3.0.5
 
 - The first row of **Play queue** is called **Playing now** again. Before, it was sometimes called **Continue Watching**.
