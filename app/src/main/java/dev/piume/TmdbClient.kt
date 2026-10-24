@@ -43,6 +43,18 @@ object TmdbClient {
         return items(json.optJSONArray("results") ?: return emptyList(), genres(apiKey, language), type)
     }
 
+    /** Films and series matching [query], most relevant first (people left out). Empty when none, or TMDB can't be reached. */
+    fun search(apiKey: String, query: String, language: String): List<TmdbItem> {
+        val json = try {
+            JSONObject(get(apiKey, "/search/multi?language=$language&include_adult=false&query=${Uri.encode(query)}"))
+        } catch (e: Exception) {
+            warn("TMDB search failed (${redact(e)})")
+            return emptyList()
+        }
+        return items(json.optJSONArray("results") ?: return emptyList(), genres(apiKey, language), "movie")
+            .filter { it.mediaType == "movie" || it.mediaType == "tv" }
+    }
+
     /**
      * The titles in a public TMDB list (a "watchlist" made on themoviedb.org), in its order, up to 5 pages.
      * Empty when the list doesn't exist, isn't public, or TMDB can't be reached.

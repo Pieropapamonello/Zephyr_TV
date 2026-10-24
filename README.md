@@ -38,7 +38,7 @@ Piume replaces the cluttered stock home screen with the two things you actually 
 - **Optional Gallery screensaver.** Public-domain landscape paintings in 16:9, downloaded only if you choose it, a folder of your own photos, or the Spotlight backdrops with their titles.
 - **Optional weather** under the clock, and a 12- or 24-hour clock.
 - **Night mode.** Between the hours you choose, the home screen goes darker and Spotlight stops.
-- **Voice search** from the top bar.
+- **Search** from the top bar: type with the remote, say it, or type on your phone. TMDB results show in Spotlight, with the trailer and the apps that have the title.
 - **Your phone as a keyboard.** Scan a QR code to send a wallpaper, type the TMDB key or list, save a settings backup, or restore one.
 - **Updates itself.** Piume checks its GitHub releases once a day and installs new versions from its settings. The first update asks you to allow installs from Piume.
 
@@ -146,7 +146,7 @@ Android 13 and newer grey out the Accessibility switch for apps installed outsid
 | Night mode | **Settings → Appearance & wallpapers → Night mode** |
 | Back up or restore your settings | **Settings → System → Backup and restore** |
 | See what did not work recently | **Settings → System → Recent problems** |
-| Search by voice | The **microphone** button in the top bar |
+| Search for a film or series | The **search** button in the top bar (hold OK on it for the TV's voice assistant) |
 | Switch to an HDMI input | The **TV inputs** button in the top bar |
 | Open the Google TV dashboard | Hold the **Home** button |
 

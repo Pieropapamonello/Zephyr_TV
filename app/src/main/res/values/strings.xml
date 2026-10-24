@@ -294,8 +294,22 @@
     <string name="setting_night">Night mode</string>
     <string name="setting_night_from">Night mode starts at</string>
     <string name="setting_night_to">Night mode ends at</string>
-    <string name="voice_search">Voice search</string>
+    <string name="search_title">Search</string>
+    <string name="search_hint">Title of a film or series</string>
+    <string name="search_dictate">Say it</string>
+    <string name="search_assistant">TV voice assistant</string>
+    <string name="search_phone">Or type on your phone: scan the code</string>
+    <string name="phone_search_title">Search on the TV</string>
+    <string name="phone_search_intro">Type the title of a film or series. The TV shows what TMDB finds.</string>
+    <string name="phone_search_sent">Searching for “%1$s” on the TV.</string>
     <string name="toast_no_voice_search">This TV has no voice search</string>
+    <string name="voice_search_prompt">Search for a film or series</string>
+    <string name="toast_no_results">Nothing found for “%1$s”</string>
+    <plurals name="toast_search_results">
+        <item quantity="one">%1$d result for “%2$s”. Back closes the search</item>
+        <item quantity="other">%1$d results for “%2$s”. Back closes the search</item>
+    </plurals>
+    <string name="spotlight_search">“%1$s” %2$d/%3$d · </string>
     <string name="screensaver_tmdb">Spotlight trending (TMDB)</string>
     <!-- TMDB list as Spotlight source -->
     <string name="setting_tmdb_source">Spotlight shows</string>

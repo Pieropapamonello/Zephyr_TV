@@ -159,6 +159,8 @@ class MainActivity : Activity() {
     internal lateinit var watchScroll: View
     internal val moreSections by lazy { findViewById<LinearLayout>(R.id.moreSections) }
     internal var sectionCache: Pair<String, List<Section>>? = null // the last app queried and all its sections
+    internal var watchApp: String? = null // whose rows are under the apps (CW_PKG for Continue Watching), null for none yet
+    internal val sectionCounts = HashMap<String, Int>() // rows each app showed last time, for its loading placeholder
     internal lateinit var allApps: View
     internal lateinit var allAppsGrid: GridLayout
     internal lateinit var wifi: ImageView
@@ -178,6 +180,8 @@ class MainActivity : Activity() {
     @Volatile internal var tmdbFetchedAt = 0L
     internal var spotlightApps: List<App>? = null // apps behind the Spotlight buttons; null rebuilds them
     internal var tmdbLastFocusApp: String? = null
+    internal var searchQuery: String? = null // Spotlight shows TMDB's results for this instead of its titles; null when not searching
+    internal var searchStash: Pair<List<TmdbItem>, Int>? = null // Spotlight's own titles and place, back when the search closes
     internal val appChannelDebounce = Runnable { queryAppChannels(tmdbLastFocusApp) }
 
     internal val packageReceiver = object : BroadcastReceiver() {
@@ -228,12 +232,12 @@ class MainActivity : Activity() {
 
         // Top bar: network, All apps, TV inputs, Android settings, launcher settings. Round, lit on focus.
         for ((id, action) in listOf<Pair<Int, () -> Unit>>(
-            R.id.voiceSearch to { voiceSearch() },
+            R.id.searchButton to { openSearch() },
             R.id.wifi to { openSettings(Settings.ACTION_WIFI_SETTINGS) },
             R.id.allAppsButton to { openAllApps() },
             R.id.tvInputsButton to { openInputsMenu(findViewById(R.id.tvInputsButton)) },
             R.id.systemSettings to { openSettings(Settings.ACTION_SETTINGS) },
-            R.id.launcherSettings to { unlock { openLauncherSettings() } },
+            R.id.launcherSettings to { unlock { endSearch(); openLauncherSettings() } },
         )) findViewById<ImageView>(id).apply {
             setColorFilter(fg)
             val ring = GradientDrawable().apply { shape = GradientDrawable.OVAL }
@@ -326,8 +330,11 @@ class MainActivity : Activity() {
         else Toast.makeText(this, getString(R.string.toast_photo_access_needed), Toast.LENGTH_LONG).show()
     }
 
-    @Deprecated("Only used for the default-home role request")
+    @Deprecated("Only used for the default-home role request and voice search")
     override fun onActivityResult(code: Int, result: Int, data: Intent?) {
+        if (code == VOICE_REQUEST && result == RESULT_OK) {
+            data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.takeIf { it.isNotBlank() }?.let { searchTmdb(it) }
+        }
         if (code == ROLE_REQUEST) refreshSettings(DEFAULT_HOME_ROW)
         if (code == ROLE_REQUEST && setupStep == 1) {
             setupStep = 0
@@ -400,6 +407,7 @@ class MainActivity : Activity() {
         when {
             settingsScrim.visibility == View.VISIBLE -> pageBack?.invoke() ?: closeLauncherSettings()
             allApps.visibility == View.VISIBLE -> closeAllApps()
+            else -> endSearch()
         }
     }
 
@@ -493,7 +501,7 @@ class MainActivity : Activity() {
 
     internal fun loadWallpaper() {
         val view = findViewById<ImageView>(R.id.wallpaper)
-        val choice = currentWallpaper()
+        val choice = if (searchQuery != null) "tmdb:trending" else currentWallpaper() // search results bring their backdrops
         if (choice.startsWith("plain:")) { // the root's ground colour shows through
             view.setImageDrawable(null)
             return
@@ -535,7 +543,7 @@ class MainActivity : Activity() {
             val key = prefs.getString(K.TMDB_API_KEY, null) ?: return null
             val type = prefs.getString(K.TMDB_TYPE, "all") ?: "all"
             // Trending is per day: refetch now and then, or a home screen that never closes keeps last week's list.
-            if (tmdbTrending.isEmpty() || System.currentTimeMillis() - tmdbFetchedAt > TMDB_FRESH_MS) {
+            if (searchQuery == null && (tmdbTrending.isEmpty() || System.currentTimeMillis() - tmdbFetchedAt > TMDB_FRESH_MS)) {
                 val listId = prefs.getString(K.TMDB_LIST, null)
                 val fresh = if (prefs.getString(K.TMDB_SOURCE, "trending") == "list" && listId != null) TmdbClient.fetchList(key, listId, tmdbLang(), type)
                     else TmdbClient.fetchTrending(key, tmdbLang(), type)
@@ -758,10 +766,26 @@ class MainActivity : Activity() {
     }
 
     /**
+     * Dictation for the search: what's said comes back to onActivityResult and is looked up on TMDB (see searchTmdb).
+     * On a TV with no speech recogniser, the TV's own voice search instead.
+     */
+    @Suppress("DEPRECATION")
+    internal fun dictate() {
+        try {
+            return startActivityForResult(Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, tmdbLang())
+                .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, getString(R.string.voice_search_prompt)), VOICE_REQUEST)
+        } catch (e: Exception) {
+        }
+        assistant()
+    }
+
+    /**
      * The TV's voice search (Google Assistant on Google TV), by the ways Android TVs offer it, most specific first.
      * Started directly rather than looked up first: Android 11+ hides other apps' activities from lookups.
      */
-    internal fun voiceSearch() {
+    internal fun assistant() {
         for (intent in listOf(
             Intent("android.intent.action.VOICE_ASSIST"),
             Intent(Intent.ACTION_ASSIST),
@@ -914,10 +938,12 @@ class MainActivity : Activity() {
                     if (pkg == CW_PKG) {
                         watchTitle.text = getString(R.string.continue_watching)
                         tmdbLastFocusApp = null
+                        showLoading(pkg)
                         ui.removeCallbacks(appChannelDebounce)
                         ui.postDelayed(appChannelDebounce, 200)
                     } else if (pkg != null && !pkg.startsWith(HDMI)) {
                         tmdbLastFocusApp = pkg
+                        showLoading(pkg)
                         ui.removeCallbacks(appChannelDebounce)
                         ui.postDelayed(appChannelDebounce, 300)
                     }
@@ -1212,7 +1238,7 @@ class MainActivity : Activity() {
             v.parent === wifi.parent -> when (key) { // top bar
                 KeyEvent.KEYCODE_DPAD_DOWN -> if (spotVis) spotlightInfoBox else apps ?: cards ?: v
                 KeyEvent.KEYCODE_DPAD_UP -> v
-                KeyEvent.KEYCODE_DPAD_LEFT -> if (v.id == R.id.voiceSearch) v else null
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (v.id == R.id.searchButton) v else null
                 KeyEvent.KEYCODE_DPAD_RIGHT -> if (v.id == R.id.launcherSettings) v else null
                 else -> null
             }
@@ -1246,7 +1272,8 @@ class MainActivity : Activity() {
                 }
             }
             v.parent === appRow -> when (key) {
-                KeyEvent.KEYCODE_DPAD_UP -> if (spotVis) spotlightInfoBox else top
+                // Up climbs Spotlight from the bottom: its buttons (shown only while it has focus), the title, the top bar.
+                KeyEvent.KEYCODE_DPAD_UP -> if (spotVis) spotlightAction(-1, 1)?.also { spotlightActions.visibility = View.VISIBLE } ?: spotlightInfoBox else top
                 KeyEvent.KEYCODE_DPAD_DOWN -> cards ?: v
                 KeyEvent.KEYCODE_DPAD_LEFT -> if (appRow.indexOfChild(v) == 0) v else null
                 KeyEvent.KEYCODE_DPAD_RIGHT -> if (appRow.indexOfChild(v) == appRow.childCount - 1) v else null
@@ -1286,6 +1313,7 @@ class MainActivity : Activity() {
     internal fun onHold(v: View) {
         val tag = v.tag as? String
         when {
+            v.id == R.id.searchButton -> assistant() // the TV's own voice search, for what TMDB doesn't know
             allApps.visibility == View.VISIBLE && tag != null -> unlock { // grid: pin to the front of the row (unhiding it)
                 prefs.edit().putStringSet(K.ROW_HIDDEN, rowHiddenSet() - tag).apply()
                 saveOrder(listOf(tag) + sortedApps().map { it.pkg }.filter { it != tag })
@@ -1781,6 +1809,7 @@ class MainActivity : Activity() {
         const val TV_LISTINGS = "android.permission.READ_TV_LISTINGS"
         const val WRITE_SECURE = "android.permission.WRITE_SECURE_SETTINGS"
         const val ROLE_REQUEST = 2
+        const val VOICE_REQUEST = 4
         const val SPOTLIGHT_IDLE_MS = 15 * 60_000L // Spotlight stops turning after this long without a key press
         const val TMDB_FRESH_MS = 3 * 3600_000L // how long a trending list is kept before it's fetched again
         val SPOTLIGHT_PKGS = listOf("com.nuvio.tv", "com.nuvio.app", "com.stremio.one", "com.netflix.ninja", "com.google.android.youtube.tv", "com.amazon.amazonvideo.livingroom")

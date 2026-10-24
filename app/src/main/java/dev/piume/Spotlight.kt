@@ -121,7 +121,7 @@ internal fun MainActivity.spotlightItem(): TmdbItem? = tmdbTrending.let { list -
 
 internal fun MainActivity.renderSpotlight() {
     val item = spotlightItem()
-    if (currentWallpaper() != "tmdb:trending" || item == null) {
+    if ((currentWallpaper() != "tmdb:trending" && searchQuery == null) || item == null) {
         spotlightContainer.visibility = View.GONE
         return
     }
@@ -130,7 +130,8 @@ internal fun MainActivity.renderSpotlight() {
     val rating = if (item.voteAverage > 0) "★ %.1f · ".format(item.voteAverage) else ""
     val typeBadge = if (item.mediaType == "tv") getString(R.string.tmdb_badge_tv) else getString(R.string.tmdb_badge_movie)
     val genre = item.genres.firstOrNull()?.let { " · $it" } ?: ""
-    spotlightMeta.text = "$rating$typeBadge$year$genre"
+    val found = searchQuery?.let { getString(R.string.spotlight_search, it, tmdbIndex.mod(tmdbTrending.size) + 1, tmdbTrending.size) } ?: ""
+    spotlightMeta.text = "$found$rating$typeBadge$year$genre"
     spotlightTitle.text = item.title
     spotlightOverview.text = item.overview
     spotlightOverview.maxLines = OVERVIEW_LINES // a new title starts closed
@@ -300,6 +301,7 @@ internal fun MainActivity.spotlightEvery() = prefs.getInt(K.TMDB_CYCLE, 5) // se
 
 internal fun MainActivity.restartSpotlightTick() {
     ui.removeCallbacks(spotlightTick)
+    if (searchQuery != null) return // results only change by hand
     val every = spotlightEvery()
     if (every > 0 && tmdbTrending.size > 1) ui.postDelayed(spotlightTick, every * 1000L)
 }
@@ -329,4 +331,3 @@ internal fun MainActivity.prefetchAllBackdrops() {
         }
     }
 }
-

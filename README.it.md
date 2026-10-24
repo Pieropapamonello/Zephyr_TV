@@ -38,7 +38,7 @@ Piume sostituisce la Home di serie, piena di elementi, con le due cose che usi d
 - **Salvaschermo Galleria, facoltativo.** Dipinti di paesaggi di pubblico dominio in 16:9, scaricati solo se lo scegli, una cartella delle tue foto, oppure le immagini di In evidenza con i loro titoli.
 - **Meteo facoltativo** sotto l'orologio, e orologio a 12 o 24 ore.
 - **Modalità notte.** Nelle ore che scegli la Home diventa più scura e In evidenza si ferma.
-- **Ricerca vocale** dalla barra in alto.
+- **Ricerca** dalla barra in alto: scrivi con il telecomando, parla, o scrivi dal telefono. I risultati TMDB compaiono in Spotlight, con il trailer e le app che hanno il titolo.
 - **Il telefono come tastiera.** Inquadra un codice QR per inviare uno sfondo, scrivere la chiave o la lista TMDB, salvare un backup delle impostazioni o ripristinarne uno.
 - **Si aggiorna da solo.** Piume controlla le sue release su GitHub una volta al giorno e installa le nuove versioni dalle sue impostazioni. Il primo aggiornamento ti chiede di consentire le installazioni da Piume.
 
@@ -146,7 +146,7 @@ Android 13 e successivi disattivano l'interruttore di Accessibilità per le app 
 | Modalità notte | **Impostazioni → Aspetto e sfondi → Modalità notte** |
 | Salvare o ripristinare le impostazioni | **Impostazioni → Sistema → Backup e ripristino** |
 | Vedere cosa non ha funzionato di recente | **Impostazioni → Sistema → Problemi recenti** |
-| Cercare con la voce | Il pulsante **microfono** nella barra in alto |
+| Cercare un film o una serie | Il pulsante **cerca** nella barra in alto (tieni premuto OK per l'assistente vocale della TV) |
 | Passare a un ingresso HDMI | Il pulsante **Sorgenti TV** nella barra in alto |
 | Aprire la dashboard di Google TV | Tieni premuto il tasto **Home** |
 

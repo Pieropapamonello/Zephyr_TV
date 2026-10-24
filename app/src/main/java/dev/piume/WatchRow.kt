@@ -1,5 +1,7 @@
 package dev.piume
 
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -43,7 +45,7 @@ internal fun MainActivity.refreshWatchNext() {
         showWatchNext(emptyList())
         return
     }
-    ui.post { watchTitle.text = getString(R.string.continue_watching) }
+    ui.post { if (tmdbLastFocusApp == null) watchTitle.text = getString(R.string.continue_watching) }
     io.execute {
         val list = try {
             queryWatchNext()
@@ -51,7 +53,10 @@ internal fun MainActivity.refreshWatchNext() {
             emptyList()
         }
         ui.post {
+            if (tmdbLastFocusApp != null) return@post // focus moved on to an app meanwhile: its rows, not these
             watchTitle.text = getString(R.string.continue_watching)
+            watchApp = CW_PKG
+            sectionCounts[CW_PKG] = if (list.isEmpty()) 0 else 1
             showWatchNext(list)
         }
     }
@@ -172,8 +177,11 @@ internal fun MainActivity.queryAppChannels(pkg: String?) {
         val shown = all.filter { sectionKey(pkg, it) !in off }
         ui.post {
             sectionCache = pkg to all
+            sectionCounts[pkg] = shown.size
+            if (tmdbLastFocusApp != pkg) return@post // focus moved on meanwhile: don't show this app's rows under another
+            watchApp = pkg
             if (shown.isEmpty()) { // an app with nothing to recommend shows nothing under the row
-                if (tmdbLastFocusApp == pkg) hideWatchRow()
+                hideWatchRow()
             } else {
                 showSections(shown)
             }
@@ -308,6 +316,65 @@ internal fun MainActivity.hideWatchRow() {
     if (watchScroll.visibility == View.GONE) return
     watchTitle.visibility = View.INVISIBLE
     watchScroll.visibility = View.INVISIBLE
+}
+
+/**
+ * While [pkg]'s rows load: as many rows of empty, pulsing cards as it showed last time (one the first time), so
+ * the previous app's cards don't linger under it. An app known to have nothing hides the row at once instead.
+ */
+internal fun MainActivity.showLoading(pkg: String) {
+    if (pkg == watchApp) return // its rows are already there (e.g. focus back up from them)
+    watchApp = null
+    val rows = sectionCounts[pkg] ?: 1
+    if (rows == 0) return hideWatchRow()
+    val key = "loading:$pkg/$rows"
+    if (watchKey == key) return
+    watchKey = key
+    watchRow.removeAllViews()
+    moreSections.removeAllViews()
+    watchTitle.visibility = View.VISIBLE
+    watchScroll.visibility = View.VISIBLE
+    watchTitle.text = if (pkg == CW_PKG) getString(R.string.continue_watching) else appLabel(pkg)
+    repeat(rows) { r ->
+        val row = if (r == 0) watchRow else sectionRow(" ")
+        repeat(4) { row.addView(placeholderCard(it > 0, it * 120L)) }
+    }
+}
+
+/** An empty card the size of [watchCard]'s, pulsing (starting [delay] ms in, so a row ripples) until it's removed. */
+internal fun MainActivity.placeholderCard(gapBefore: Boolean, delay: Long): View {
+    val gap = dp(GRID_GAP)
+    val w = (resources.displayMetrics.widthPixels - dp(96) - gap * 3) / 4
+    fun shape(color: Int, corner: Int) = GradientDrawable().apply { cornerRadius = dp(corner).toFloat(); setColor(color) }
+    val bar = if (dark) 0x33FFFFFF else 0x26000000
+    // A text line's height (an invisible label), with a bar across part of it.
+    fun line(size: Float, top: Int, width: Float) = FrameLayout(this).apply {
+        addView(label(" ", size).apply { visibility = View.INVISIBLE; setPadding(0, dp(top), 0, 0) })
+        addView(View(context).apply { background = shape(bar, 4) },
+            FrameLayout.LayoutParams((w * width).toInt(), dp(size.toInt() * 2 / 3), Gravity.BOTTOM).apply { bottomMargin = dp(4) })
+    }
+    val col = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        layoutParams = LinearLayout.LayoutParams(w, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            if (gapBefore) marginStart = gap
+        }
+        addView(View(context).apply { background = shape(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt(), 8) },
+            LinearLayout.LayoutParams(w, w * 9 / 16))
+        addView(View(context), LinearLayout.LayoutParams(w, dp(3)).apply { topMargin = dp(6) }) // the progress bar's room
+        addView(line(14f, 6, 0.7f))
+        addView(line(12f, 2, 0.4f))
+    }
+    val pulse = ObjectAnimator.ofFloat(col, View.ALPHA, 1f, 0.4f).apply {
+        duration = 700
+        startDelay = delay
+        repeatMode = ValueAnimator.REVERSE
+        repeatCount = ValueAnimator.INFINITE
+    }
+    col.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) = pulse.start()
+        override fun onViewDetachedFromWindow(v: View) = pulse.cancel()
+    })
+    return col
 }
 
 internal fun MainActivity.sourceIcon(pkg: String?): Drawable? {

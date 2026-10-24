@@ -13,6 +13,14 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## Unreleased
+
+- The top bar has a **Search** button with a magnifying glass. Type a title with the remote, say it, or type it on your phone with the QR code.
+- Search finds films and series on TMDB. Spotlight shows the results, with the description, the trailer and the apps that have the title. Press Back to close the search.
+- Hold OK on **Search** to open the voice assistant of the TV.
+- When you move along the apps row, empty cards show while the recommendations of the app load. The cards of the previous app do not stay on the screen.
+- From the apps row, Up goes to the Spotlight buttons first, then to the title, then to the top bar.
+
 ## 2.2
 
 - The new **Glass** theme shows the wallpaper through glossy glass cards. The text is white and easy to read on any photo. Select **Piume settings → Appearance & wallpapers → Theme → Glass**. It uses the dark wallpaper.
