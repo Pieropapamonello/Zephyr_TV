@@ -322,8 +322,9 @@
     <string name="search_listening">Listening… say a title</string>
     <string name="search_not_heard">Didn\'t catch that. Select Say it to try again</string>
     <string name="search_results_tile">Results: “%1$s”</string>
-    <string name="search_results_for">Results for “%1$s”</string>
     <string name="toast_mic_needed">Piume needs the microphone to hear the title</string>
+    <string name="search_films_for">Films for “%1$s”</string>
+    <string name="search_series_for">Series for “%1$s”</string>
     <string name="search_channels_for">TV channels for “%1$s”</string>
     <string name="channel_number">Channel %1$s</string>
     <string name="channel_next">Next: %1$s %2$s</string>

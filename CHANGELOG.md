@@ -13,9 +13,13 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.8.1
+
+- Search results show in three rows: films, series, then TV channels. Each card shows the year and the genre.
+
 ## 2.8
 
-- Search also finds the TV channels, by name or by number. They show in a row of their own, before the films and series.
+- Search also finds the TV channels, by name or by number. They show in a row of their own, after the films and series.
 - Press OK on a channel to see its page: the logo, the program that is on now with its time and description, and the next program. Select **Watch on TV** to open the channel.
 
 ## 2.7.2

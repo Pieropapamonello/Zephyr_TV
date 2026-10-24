@@ -197,26 +197,32 @@ internal fun MainActivity.searchTmdb(query: String) {
 }
 
 /**
- * The results' cards under the apps row: the TV channels it found first, then the films and series, with landscape
- * art with the title on it (see TmdbClient.art) and what each is.
+ * The results' cards under the apps row, a row each: the films, the series (landscape art with the title on it,
+ * see TmdbClient.art, and what each is), then the TV channels it found.
  */
 internal fun MainActivity.showSearchResults() {
     val query = searchQuery ?: return
     watchApp = SEARCH_PKG
+    fun titles(key: String, heading: Int, items: List<TmdbItem>) = items.takeIf { it.isNotEmpty() }?.let { found ->
+        Section(key, query, getString(heading, query), found.map { item ->
+            val year = item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }
+            val genre = item.genres.firstOrNull()
+            val art = searchArt[item.id]
+            Prog(item.title, listOfNotNull(year, genre).joinToString(" · "), 0, art?.backdrop ?: TmdbClient.cardUrl(item.backdropPath), null, null,
+                tmdb = item, logo = art?.logo, poster = art?.poster ?: item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" })
+        })
+    }
     val channels = searchChannels.takeIf { it.isNotEmpty() }?.let { list ->
         Section("channels", query, getString(R.string.search_channels_for, query), list.map { d ->
             Prog(d.name, listOfNotNull(d.number, d.now?.title).joinToString(" · "), d.now?.let { Epg.progress(it) } ?: 0,
                 d.logo, d.intent, d.pkg, badge = d.number, channelPage = d)
         })
     }
-    val titles = searchResults.takeIf { it.isNotEmpty() }?.let { found -> Section("search", query, getString(R.string.search_results_for, query), found.map { item ->
-        val kind = getString(if (item.mediaType == "tv") R.string.tmdb_badge_tv else R.string.tmdb_badge_movie)
-        val year = item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }
-        val art = searchArt[item.id]
-        Prog(item.title, listOfNotNull(kind, year).joinToString(" · "), 0, art?.backdrop ?: TmdbClient.cardUrl(item.backdropPath), null, null,
-            tmdb = item, logo = art?.logo, poster = art?.poster ?: item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" })
-    }) }
-    showSections(listOfNotNull(channels, titles))
+    showSections(listOfNotNull(
+        titles("films", R.string.search_films_for, searchResults.filter { it.mediaType != "tv" }),
+        titles("series", R.string.search_series_for, searchResults.filter { it.mediaType == "tv" }),
+        channels,
+    ))
 }
 
 /** A TV channel the search found: what its card and its page show. */
