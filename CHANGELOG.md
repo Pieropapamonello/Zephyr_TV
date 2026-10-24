@@ -13,6 +13,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.9.3
+
+- In the TV inputs menu, a green dot shows next to each input with a device that is connected and on.
+- On the TV channel cards, a long program title scrolls when the card has the focus.
+
 ## 2.9.2
 
 - The TV inputs button in the top bar shows a green dot when a device on HDMI is connected and on.

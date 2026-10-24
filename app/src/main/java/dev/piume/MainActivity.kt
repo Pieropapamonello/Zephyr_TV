@@ -1432,9 +1432,11 @@ class MainActivity : Activity() {
             Toast.makeText(this, getString(R.string.toast_no_inputs), Toast.LENGTH_SHORT).show()
             return
         }
+        // The inputs with a device connected and on (see updateInputsDot) get the same green dot in the menu.
+        val on = inputs.filter { runCatching { tm?.getInputState(it.id) == TvInputManager.INPUT_STATE_CONNECTED }.getOrDefault(false) }.map { it.id }.toSet()
         val items = inputs.distinctBy { it.id }.map { input ->
             val label = input.loadLabel(this)?.toString()?.takeIf { it.isNotBlank() } ?: input.id
-            label to {
+            Triple(label, input.id in on) {
                 try {
                     val uri = TvContract.buildChannelUriForPassthroughInput(input.parentId ?: input.id)
                     startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -1457,8 +1459,11 @@ class MainActivity : Activity() {
             elevation = dp(8).toFloat()
         }
         val menu = PopupWindow(list, dp(260), LinearLayout.LayoutParams.WRAP_CONTENT, true)
-        items.forEachIndexed { i, (name, action) ->
-            list.addView(settingsRow(name, "") { menu.dismiss(); action() }, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)).apply {
+        items.forEachIndexed { i, (name, active, action) ->
+            val row = settingsRow(name, "") { menu.dismiss(); action() } as LinearLayout
+            if (active) row.addView(View(this).apply { background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(INPUTS_ON) } },
+                LinearLayout.LayoutParams(dp(9), dp(9)).apply { marginStart = dp(8) })
+            list.addView(row, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)).apply {
                 if (i > 0) topMargin = dp(2)
             })
         }

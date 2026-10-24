@@ -639,8 +639,10 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
         marqueeRepeatLimit = -1
     }
     val frame = FrameLayout(this)
+    var details: TextView? = null // the line under the title, set below; scrolls too (a channel's program)
     style(frame, dp(8), card = true, lift = 1.1f) { focused ->
         title.isSelected = focused
+        details?.isSelected = focused
         if (focused) {
             lastCard = frame
             showRowLabel(frame, false)
@@ -671,8 +673,12 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     val icon = sourceIcon(p.pkg)
     if (p.sub.isNotEmpty() || icon != null) {
         col.addView(label(p.sub, 12f).apply {
+            details = this
             alpha = 0.8f
             setPadding(0, dp(2), 0, 0)
+            isSingleLine = true
+            ellipsize = TextUtils.TruncateAt.MARQUEE
+            marqueeRepeatLimit = -1
             icon?.let {
                 it.setBounds(0, 0, dp(12), dp(12))
                 setCompoundDrawablesRelative(it, null, null, null)
