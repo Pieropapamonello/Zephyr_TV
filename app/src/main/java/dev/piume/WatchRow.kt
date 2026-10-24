@@ -335,6 +335,7 @@ internal fun MainActivity.programsOnNow(): Map<Long, OnNow> {
             }
         }
     }.onFailure { warn("TV guide not readable ($it)") }
+    android.util.Log.i("PiumeChannels", "on now: ${out.size} channels in the TV guide")
     return out
 }
 
