@@ -48,6 +48,10 @@
     <string name="icon_style_colour">A colori</string>
     <string name="icon_style_monochrome">Monocromatiche</string>
 
+    <string name="setting_inputs_mode">Ingressi TV</string>
+    <string name="inputs_mode_menu">Menù</string>
+    <string name="inputs_mode_apps">Riga delle app</string>
+
     <string name="setting_channel_logos">Loghi dei canali (iptv-org)</string>
     <string name="setting_channel_logos_update">Aggiorna i loghi dei canali</string>
     <string name="toast_channel_logos_updated">Loghi dei canali aggiornati: %1$d nomi</string>
@@ -55,7 +59,7 @@
     <string name="setting_epg">Guida TV (XMLTV)</string>
     <string name="setting_epg_phone">Incolla l\'indirizzo dal telefono</string>
     <string name="epg_hint">https://…/guida.xml.gz</string>
-    <string name="epg_intro">L\'indirizzo di una guida TV in formato XMLTV, per il programma in onda sotto ogni canale. Piume la scarica due volte al giorno.</string>
+    <string name="epg_intro">L\'indirizzo di una guida TV in formato XMLTV, per il programma in onda sotto ogni canale. Piume la scarica una volta al giorno.</string>
     <string name="epg_downloading">Scarico la guida TV…</string>
     <string name="toast_epg_updated">Guida TV scaricata: %1$d canali</string>
     <string name="toast_epg_old">La guida TV non ha programmi per oggi: non è aggiornata. Prova un altro indirizzo.</string>

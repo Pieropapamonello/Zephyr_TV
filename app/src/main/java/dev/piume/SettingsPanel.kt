@@ -27,6 +27,7 @@ import dev.piume.MainActivity.Companion.UPDATE_ROW
 import dev.piume.MainActivity.Companion.EPG_ROW
 import dev.piume.MainActivity.Companion.CHANNEL_LOGOS_ROW
 import dev.piume.MainActivity.Companion.ICONS_ROW
+import dev.piume.MainActivity.Companion.INPUTS_MODE_ROW
 import dev.piume.MainActivity.Companion.LOCK_ROW
 import dev.piume.MainActivity.Companion.LOOK_SECTION
 import dev.piume.MainActivity.Companion.NAMES_ROW
@@ -234,6 +235,12 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                 prefs.edit().putBoolean(K.COLOUR_ICONS, !colour).apply()
                 renderApps()
                 renderSettings(ICONS_ROW)
+            },
+            page(getString(R.string.setting_inputs_mode), if (inputsMode() == "apps") getString(R.string.inputs_mode_apps) else getString(R.string.inputs_mode_menu)) {
+                val next = if (inputsMode() == "apps") "menu" else "apps"
+                prefs.edit().putString(K.INPUTS_MODE, next).apply()
+                applyInputsMode()
+                renderSettings(INPUTS_MODE_ROW)
             },
             page(getString(R.string.setting_lock_layout), toggle(lockOn())) {
                 if (!lockOn()) return@page setLock()

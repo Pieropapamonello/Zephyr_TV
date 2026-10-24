@@ -33,6 +33,8 @@ internal object K {
     const val NAMES = "names"
     const val LOCK_PIN = "lock_pin"
     const val TIP_MOVE = "tip_move"
+    const val INPUTS_MODE = "inputs_mode" // "menu" (default) or "apps"
+    const val INPUTS_PINNED = "inputs_pinned" // HDMI ports pinned by hand
 
     // Continue Watching
     const val HIDDEN_WATCH = "hidden_watch"

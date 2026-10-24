@@ -22,6 +22,7 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
@@ -112,7 +113,7 @@ internal const val SEARCH_PKG = "piume:search" // the search results tile, after
 
 class MainActivity : Activity() {
 
-    internal class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable)
+    internal class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable, val offline: Boolean = false)
     internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val tmdb: TmdbItem? = null, val logo: String? = null, val poster: String? = null, val channelPage: ChannelDetail? = null, val channelId: Long? = null)
 
     internal val prefs by lazy { getSharedPreferences(K.FILE, MODE_PRIVATE) }
@@ -259,6 +260,7 @@ class MainActivity : Activity() {
             }
             setOnClickListener { action() }
         }
+        findViewById<View>(R.id.tvInputsButton).visibility = if (inputsMode() == "apps") View.GONE else View.VISIBLE
         if (prefs.contains(K.REOPEN_ROW)) {
             val row = prefs.getInt(K.REOPEN_ROW, THEME_ROW)
             prefs.edit().remove(K.REOPEN_ROW).apply()
@@ -849,7 +851,7 @@ class MainActivity : Activity() {
 
     internal fun loadApps(): List<App> {
         val pm = packageManager
-        return pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0)
+        val installed = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0)
             .map { it.activityInfo }
             .filter { it.packageName != packageName && it.packageName != TV_SETTINGS }
             .distinctBy { it.packageName }
@@ -861,36 +863,14 @@ class MainActivity : Activity() {
                         .setComponent(ComponentName(a.packageName, a.name)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                     a.loadIcon(pm),
                 )
-            } + consoleInputs()
-    }
-
-    /**
-     * Devices on HDMI that name themselves over CEC (the PS5 shows up as "PlayStation 5"), as app tiles.
-     * Opening one switches the TV to that HDMI input, which also wakes the device over CEC.
-     */
-    internal fun consoleInputs(): List<App> = try {
-        getSystemService(TvInputManager::class.java).tvInputList
-            .filter { it.type == TvInputInfo.TYPE_HDMI && it.parentId != null }
-            .map { input ->
-                val label = input.loadLabel(this).toString()
-                val ps = label.contains("PlayStation", ignoreCase = true)
-                App(
-                    HDMI + input.parentId,
-                    label,
-                    Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(input.parentId))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                    if (ps) getDrawable(R.drawable.logo_playstation)!! else input.loadIcon(this) ?: getDrawable(R.drawable.ic_apps)!!,
-                )
             }
-            .distinctBy { it.pkg }
-    } catch (e: Exception) {
-        emptyList()
+        return if (inputsMode() == "apps") installed + hdmiInputs() else installed
     }
 
     internal val inputCallback = object : TvInputManager.TvInputCallback() {
-        override fun onInputAdded(id: String) = refreshApps().also { updateInputsDot() }
-        override fun onInputRemoved(id: String) = refreshApps().also { updateInputsDot() }
-        override fun onInputStateChanged(id: String, state: Int) = updateInputsDot()
+        override fun onInputAdded(id: String) { updateInputsDot(); if (inputsMode() == "apps") refreshApps() }
+        override fun onInputRemoved(id: String) { updateInputsDot(); if (inputsMode() == "apps") refreshApps() }
+        override fun onInputStateChanged(id: String, state: Int) { updateInputsDot(); if (inputsMode() == "apps") refreshApps() }
     }
 
     /** What's playing changed: the Play queue's rows again, if they're the ones on screen (see refreshWatchNext). */
@@ -989,7 +969,8 @@ class MainActivity : Activity() {
                 contentDescription = getString(R.string.search_results_tile, q)
             }
         }
-        val appTiles = sortedApps().filter { it.pkg !in hidden }.map { appTile(it, labeled = false) }
+        val pinned = pinnedInputs()
+        val appTiles = sortedApps().filter { inRow(it.pkg, it.offline, hidden, pinned) }.map { appTile(it, labeled = false) }
         val tiles = listOfNotNull(cwTile, searchTile) + appTiles
         tiles.forEachIndexed { i, t ->
             t.id = View.generateViewId()
@@ -1045,7 +1026,7 @@ class MainActivity : Activity() {
         val t = when {
             custom != null -> tile(name, custom, false, a.pkg) { launch(a) }
             a.pkg.startsWith(HDMI) -> tile(name, a.icon, true, a.pkg,
-                tint = BRAND_COLOURS["playstation"]?.takeIf { colour && a.label.contains("PlayStation", ignoreCase = true) }) { launch(a) }
+                tint = BRAND_COLOURS[hdmiIcon(a.label, true)]?.takeIf { colour }) { launch(a) }
             logo != null -> tile(name.takeIf { !logo.second }, getDrawable(logo.first)!!, true, a.pkg,
                 wordmarkInset = if (!logo.second) null else dp(if (labeled) 28 else 14),
                 tint = BRAND_COLOURS[a.pkg]?.takeIf { colour }) { launch(a) }
@@ -1385,7 +1366,9 @@ class MainActivity : Activity() {
             v.id == R.id.searchButton -> assistant() // the TV's own voice search, for what TMDB doesn't know
             tag == SEARCH_PKG -> endSearch()
             allApps.visibility == View.VISIBLE && tag != null -> unlock { // grid: pin to the front of the row (unhiding it)
-                prefs.edit().putStringSet(K.ROW_HIDDEN, rowHiddenSet() - tag).apply()
+                val edit = prefs.edit().putStringSet(K.ROW_HIDDEN, rowHiddenSet() - tag)
+                if (tag.startsWith(HDMI)) edit.putStringSet(K.INPUTS_PINNED, pinnedInputs() + tag)
+                edit.apply()
                 saveOrder(listOf(tag) + sortedApps().map { it.pkg }.filter { it != tag })
                 closeAllApps()
                 appRow.getChildAt(0)?.requestFocus() // show the app just pinned
@@ -1407,7 +1390,9 @@ class MainActivity : Activity() {
             getString(R.string.menu_move) to { startEdit(grab = v, once = true) },
             getString(R.string.menu_remove_from_row) to {
                 val i = appRow.indexOfChild(v)
-                prefs.edit().putStringSet(K.ROW_HIDDEN, rowHiddenSet() + pkg).apply()
+                val offline = apps.any { it.pkg == pkg && it.offline }
+                prefs.edit().putStringSet(K.ROW_HIDDEN, if (offline) rowHiddenSet() else rowHiddenSet() + pkg)
+                    .putStringSet(K.INPUTS_PINNED, pinnedInputs() - pkg).apply()
                 renderApps()
                 appRow.getChildAt(minOf(i, appRow.childCount - 1))?.requestFocus()
                 Toast.makeText(this, getString(R.string.removed_from_row_toast), Toast.LENGTH_SHORT).show()
@@ -1436,18 +1421,34 @@ class MainActivity : Activity() {
         ))
     }
 
+    /** Background for popup menus (inputs, app hold menu) matching the current theme, with smoked glass in Glass theme. */
+    internal fun menuBackground(): Drawable = when {
+        glass -> GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xD9202028.toInt(), 0xE6121218.toInt())).apply {
+            cornerRadius = dp(12).toFloat()
+            setStroke(dp(1), 0x26FFFFFF)
+        }
+        dark -> GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xFF18181D.toInt(), 0xFF121216.toInt())).apply {
+            cornerRadius = dp(12).toFloat()
+            setStroke(dp(1), 0x1AFFFFFF)
+        }
+        else -> GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xFFFFFFFF.toInt(), 0xFFF2F3F7.toInt())).apply {
+            cornerRadius = dp(12).toFloat()
+            setStroke(dp(1), 0x1A000000)
+        }
+    }
+
     /** A small Piume-styled menu just above [anchor]; Back closes it. */
     internal fun holdMenu(anchor: View, items: List<Pair<String, () -> Unit>>) {
         val list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(6), dp(6), dp(6), dp(6))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat()
-                setColor(if (dark) 0xFF141418.toInt() else 0xFFF7F8FA.toInt())
-            }
+            background = menuBackground()
             elevation = dp(8).toFloat()
         }
-        val menu = PopupWindow(list, dp(260), LinearLayout.LayoutParams.WRAP_CONTENT, true)
+        val menu = PopupWindow(list, dp(260), LinearLayout.LayoutParams.WRAP_CONTENT, true).apply {
+            setBackgroundDrawable(ColorDrawable(0))
+            elevation = dp(8).toFloat()
+        }
         items.forEachIndexed { i, (name, action) ->
             list.addView(settingsRow(name, "") { menu.dismiss(); action() }, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)).apply {
                 if (i > 0) topMargin = dp(2)
@@ -1455,52 +1456,38 @@ class MainActivity : Activity() {
         }
         list.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         val at = IntArray(2).also { anchor.getLocationInWindow(it) }
-        menu.elevation = dp(8).toFloat()
         menu.showAtLocation(anchor, Gravity.NO_GRAVITY, at[0], maxOf(dp(8), at[1] - list.measuredHeight - dp(8)))
         list.getChildAt(0).requestFocus()
     }
 
     /** Top-bar TV Inputs popup menu listing all HDMI and passthrough inputs. */
     internal fun openInputsMenu(anchor: View) {
-        val tm = getSystemService(TvInputManager::class.java)
-        val inputs = try {
-            tm?.tvInputList?.filter { it.type == TvInputInfo.TYPE_HDMI || it.isPassthroughInput } ?: emptyList()
-        } catch (e: Exception) {
-            emptyList()
-        }
+        val inputs = hdmiInputs()
         if (inputs.isEmpty()) {
             Toast.makeText(this, getString(R.string.toast_no_inputs), Toast.LENGTH_SHORT).show()
             return
         }
-        // The inputs with a device connected (see connectedInputs) get the same green dot in the menu.
         val on = connectedInputs()
-        val items = inputs.distinctBy { it.id }.map { input ->
-            val label = input.loadLabel(this)?.toString()?.takeIf { it.isNotBlank() } ?: input.id
-            Triple(label, input.id in on) {
-                try {
-                    val uri = TvContract.buildChannelUriForPassthroughInput(input.parentId ?: input.id)
-                    startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                } catch (e: Exception) {
-                    try {
-                        startActivity(Intent("android.intent.action.VIEW", TvContract.buildChannelUriForPassthroughInput(input.id)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    } catch (e2: Exception) {
-                        openSettings(Settings.ACTION_SETTINGS)
-                    }
-                }
-            }
-        }
         val list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(6), dp(6), dp(6), dp(6))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat()
-                setColor(if (dark) 0xFF141418.toInt() else 0xFFF7F8FA.toInt())
-            }
+            background = menuBackground()
             elevation = dp(8).toFloat()
         }
-        val menu = PopupWindow(list, dp(260), LinearLayout.LayoutParams.WRAP_CONTENT, true)
-        items.forEachIndexed { i, (name, active, action) ->
-            val row = settingsRow(name, "") { menu.dismiss(); action() } as LinearLayout
+        val menu = PopupWindow(list, dp(260), LinearLayout.LayoutParams.WRAP_CONTENT, true).apply {
+            setBackgroundDrawable(ColorDrawable(0))
+            elevation = dp(8).toFloat()
+        }
+        inputs.distinctBy { it.pkg }.forEachIndexed { i, src ->
+            val active = src.pkg.removePrefix(HDMI) in on || !src.offline
+            val row = settingsRow(src.label, "") {
+                menu.dismiss()
+                startActivity(src.launch)
+            } as LinearLayout
+            row.addView(ImageView(this).apply {
+                setImageDrawable(src.icon)
+                setColorFilter(fg)
+            }, 0, LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
             if (active) row.addView(View(this).apply { background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(INPUTS_ON) } },
                 LinearLayout.LayoutParams(dp(9), dp(9)).apply { marginStart = dp(8) })
             list.addView(row, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)).apply {
@@ -1509,10 +1496,9 @@ class MainActivity : Activity() {
         }
         list.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         val at = IntArray(2).also { anchor.getLocationInWindow(it) }
-        menu.elevation = dp(8).toFloat()
         // Display directly underneath the top bar icon
         menu.showAtLocation(anchor, Gravity.NO_GRAVITY, at[0] - dp(100), at[1] + anchor.height + dp(8))
-        list.getChildAt(0).requestFocus()
+        list.getChildAt(0)?.requestFocus()
     }
 
     internal fun appTileCount() = appRow.childCount
@@ -1586,7 +1572,7 @@ class MainActivity : Activity() {
     internal fun rowHiddenSet() = prefs.getStringSet(K.ROW_HIDDEN, emptySet())!!
 
     internal fun pickRowApps() {
-        val list = sortedApps()
+        val list = sortedApps().filter { !it.offline || it.pkg in pinnedInputs() }
         toggles(getString(R.string.setting_apps_in_row), list.map { it.label to it.pkg }, K.ROW_HIDDEN, getString(R.string.state_shown), getString(R.string.state_hidden)) {
             renderApps()
             renderSettings(ROW_APPS_ROW)
@@ -1914,7 +1900,8 @@ class MainActivity : Activity() {
         const val ALIGN_ROW = APPS_SECTION * SECTION + 3
         const val NAMES_ROW = APPS_SECTION * SECTION + 4
         const val ICONS_ROW = APPS_SECTION * SECTION + 5
-        const val LOCK_ROW = APPS_SECTION * SECTION + 6
+        const val INPUTS_MODE_ROW = APPS_SECTION * SECTION + 6
+        const val LOCK_ROW = APPS_SECTION * SECTION + 7
         const val CW_APPS_ROW = WATCH_SECTION * SECTION
         const val HIDDEN_ROW = WATCH_SECTION * SECTION + 1
         const val CHANNEL_LOGOS_ROW = WATCH_SECTION * SECTION + 2
@@ -1979,12 +1966,25 @@ class MainActivity : Activity() {
         /** accent() colours by package; null = no clear colour. Main thread only. */
         val ACCENTS = HashMap<String, Int?>()
 
+        /** HDMI tile icons by hdmiIcon key: brand marks (Simple Icons, CC0), the rest from Material Symbols (Apache 2.0). */
+        val HDMI_ICONS = mapOf(
+            "playstation" to R.drawable.logo_playstation,
+            "xbox" to R.drawable.logo_xbox,
+            "nintendoswitch" to R.drawable.logo_nintendoswitch,
+            "appletv" to R.drawable.logo_appletv,
+            "settop" to R.drawable.ic_settop,
+            "playback" to R.drawable.ic_playback,
+            "hdmi" to R.drawable.ic_hdmi,
+        )
+
         /**
          * Colour mode tints for the bundled marks: Simple Icons' brand hex, except where that's too dark to
          * read on dark cards (PlayStation, Prime Video) or grey (Google Play), where the brand's brighter blue/green is used.
          */
         val BRAND_COLOURS = mapOf(
             "playstation" to 0xFF0070D1.toInt(),
+            "xbox" to 0xFF107C10.toInt(),
+            "nintendoswitch" to 0xFFE60012.toInt(),
             "com.nuvio.app" to 0xFF6C5CE7.toInt(),
             "com.nuvio.tv" to 0xFF6C5CE7.toInt(), // Nuvio's GitHub build
             "com.netflix.ninja" to 0xFFE50914.toInt(),

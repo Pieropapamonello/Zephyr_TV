@@ -12,13 +12,13 @@ import org.xmlpull.v1.XmlPullParser
 /**
  * A TV guide from the internet, for TVs that keep their own to themselves (Android lets only system apps read the
  * programs in the TV listings). Any XMLTV file, gzipped or not, at an address set in Piume settings: read as a
- * stream, keeping only the next day, into a small file fetched again twice a day. Channels are matched to it by
+ * stream, keeping the next two days, into a small file fetched again once a day. Channels are matched to it by
  * name, the same way as their logos (see ChannelLogos). Network and disk: off the UI thread.
  */
 internal object Epg {
-    private const val MAX_AGE_MS = 12 * 3600_000L // the file is fetched again after this long
+    private const val MAX_AGE_MS = 24 * 3600_000L // the file is fetched again after this long (at least a day)
     private const val RETRY_MS = 3600_000L // and after a failure, not before an hour
-    private const val KEEP_MS = 24 * 3600_000L // how far ahead programs are kept
+    private const val KEEP_MS = 48 * 3600_000L // how far ahead programs are kept (two days)
 
     /** One program: when it's on, its title and what it's about. */
     internal class Show(val start: Long, val stop: Long, val title: String, val desc: String = "")

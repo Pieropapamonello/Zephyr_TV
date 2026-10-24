@@ -13,6 +13,14 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 3.0.1
+
+- Choose how to show TV inputs: as a menu in the top bar or as tiles in the apps row (**Piume settings → Apps row → TV inputs**).
+- TV inputs show dedicated brand marks for PlayStation, Xbox, Nintendo Switch, Apple TV, set-top boxes, and media players.
+- The TV inputs popup menu now matches the current theme and has smoked glass styling in the Glass theme.
+- Fixed the updates page staying stuck until reopened when a new version is found.
+- The TV guide cache now stays for up to 24 hours between refreshes.
+
 ## 3.0.0
 
 - The Play queue tile shows what is playing now in other apps above Continue Watching. Select a card to open that app.

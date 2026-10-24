@@ -9,6 +9,7 @@ import android.text.style.BulletSpan
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import dev.piume.MainActivity.Companion.REPO
 import dev.piume.MainActivity.Companion.UPDATE_ROW
@@ -21,10 +22,19 @@ internal fun MainActivity.myVersion() = packageManager.getPackageInfo(packageNam
 /** The newer version a check found, if any (null again once it's installed). */
 internal fun MainActivity.availableUpdate() = prefs.getString(K.UPD_VER, null)?.takeIf { newerVersion(it, myVersion()) }
 
+private fun MainActivity.isShowingUpdates(): Boolean {
+    if (settingsScrim.visibility != View.VISIBLE) return false
+    val title = findViewById<TextView>(R.id.settingsTitle)?.text?.toString()
+    return title == getString(R.string.whats_new_title, myVersion())
+}
+
 internal fun MainActivity.checkUpdate(force: Boolean) {
     if (checking || !force && System.currentTimeMillis() - prefs.getLong(K.UPD_TIME, 0) < 24 * 3600_000L) return
     checking = true
-    if (force) refreshSettings(UPDATE_ROW)
+    if (force) {
+        if (isShowingUpdates()) showUpdates()
+        refreshSettings(UPDATE_ROW)
+    }
     netIo.execute {
         val latest = try {
             Updater.latest(REPO)
@@ -36,12 +46,13 @@ internal fun MainActivity.checkUpdate(force: Boolean) {
         ui.post {
             checking = false
             val ver = availableUpdate()
-            if (ver != null && (force || prefs.getString(K.UPD_TOLD, null) != ver)) {
+            if (ver != null) {
                 prefs.edit().putString(K.UPD_TOLD, ver).apply()
-                if (!force) Toast.makeText(this, getString(R.string.toast_update_available, ver), Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.toast_update_available, ver), Toast.LENGTH_LONG).show()
             } else if (force) {
                 Toast.makeText(this, if (latest == null) getString(R.string.toast_update_check_failed) else getString(R.string.toast_update_up_to_date), Toast.LENGTH_SHORT).show()
             }
+            if (isShowingUpdates()) showUpdates()
             refreshSettings(UPDATE_ROW)
             updateBadge()
         }
@@ -53,10 +64,13 @@ internal fun MainActivity.showUpdates() {
     prefs.edit().putString(K.SEEN_NOTES, myVersion()).apply()
     updateBadge()
     val ver = availableUpdate()
-    showPage(getString(R.string.whats_new_title, myVersion()), listOf(
-        if (ver != null) page(getString(R.string.install_update, ver)) { installUpdate(ver) }
-        else page(getString(R.string.check_updates)) { checkUpdate(force = true) },
-    ), back = { renderSettings(UPDATE_ROW) })
+    val topRow = when {
+        updating -> page(getString(R.string.updates_updating)) {}
+        checking -> page(getString(R.string.updates_checking)) {}
+        ver != null -> page(getString(R.string.install_update, ver)) { installUpdate(ver) }
+        else -> page(getString(R.string.check_updates)) { checkUpdate(force = true) }
+    }
+    showPage(getString(R.string.whats_new_title, myVersion()), listOf(topRow), back = { renderSettings(UPDATE_ROW) })
     // Focusable, lit on focus, so Down walks through notes longer than the panel and it scrolls along.
     getString(R.string.whats_new).split('\n').forEach {
         settingsList.addView(label("", 13f).apply {
@@ -107,6 +121,7 @@ internal fun MainActivity.installUpdate(ver: String) {
         return openSettings(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
     }
     updating = true
+    if (isShowingUpdates()) showUpdates()
     refreshSettings(UPDATE_ROW)
     netIo.execute {
         val ok = try {
@@ -121,6 +136,7 @@ internal fun MainActivity.installUpdate(ver: String) {
                 updating = false
                 Toast.makeText(this, getString(R.string.toast_update_download_failed), Toast.LENGTH_LONG).show()
             }
+            if (isShowingUpdates()) showUpdates()
             refreshSettings(UPDATE_ROW)
         }
     }
@@ -141,5 +157,6 @@ internal fun MainActivity.installStatus(intent: Intent) {
             Toast.makeText(this, getString(R.string.toast_update_install_failed), Toast.LENGTH_LONG).show()
         }
     }
+    if (isShowingUpdates()) showUpdates()
     refreshSettings(UPDATE_ROW)
 }

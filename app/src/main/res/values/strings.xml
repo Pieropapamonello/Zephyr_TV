@@ -48,6 +48,10 @@
     <string name="icon_style_colour">Colour</string>
     <string name="icon_style_monochrome">Monochrome</string>
 
+    <string name="setting_inputs_mode">TV inputs</string>
+    <string name="inputs_mode_menu">Menu</string>
+    <string name="inputs_mode_apps">Apps row</string>
+
     <string name="setting_channel_logos">Channel logos (iptv-org)</string>
     <string name="setting_channel_logos_update">Update the channel logos</string>
     <string name="toast_channel_logos_updated">Channel logos updated: %1$d names</string>
@@ -55,7 +59,7 @@
     <string name="setting_epg">TV guide (XMLTV)</string>
     <string name="setting_epg_phone">Paste the address on your phone</string>
     <string name="epg_hint">https://…/guide.xml.gz</string>
-    <string name="epg_intro">The address of a TV guide in XMLTV format, for what\'s on under each channel. Piume downloads it twice a day.</string>
+    <string name="epg_intro">The address of a TV guide in XMLTV format, for what\'s on under each channel. Piume downloads it once a day.</string>
     <string name="epg_downloading">Downloading the TV guide…</string>
     <string name="toast_epg_updated">TV guide downloaded: %1$d channels</string>
     <string name="toast_epg_old">The TV guide has no programs for today: it isn\'t up to date. Try another address.</string>
