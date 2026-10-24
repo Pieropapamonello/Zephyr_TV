@@ -13,6 +13,12 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 3.0.0
+
+- The Play queue tile shows what is playing now in other apps above Continue Watching. Select a card to open that app.
+- The network button in the top bar shows a red dot when the TV is offline.
+- Improved Italian translations across settings and menus.
+
 ## 2.9.4
 
 - The green dots of the TV inputs show only the inputs with a device connected. Piume reads the state from Android. On Sony TVs, Android marks all HDMI inputs as connected, so Piume reads the state from the Sony inputs app instead. On other TVs, the dots are as correct as the state that the TV gives to Android.
