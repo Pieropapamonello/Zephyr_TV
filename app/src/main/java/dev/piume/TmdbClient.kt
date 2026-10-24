@@ -15,6 +15,7 @@ data class TmdbItem(
     val mediaType: String, // "movie" or "tv"
     val genres: List<String>, // names in the language the list was fetched in
     val releaseDate: String?,
+    val posterPath: String? = null, // in the language asked for, where TMDB has one
 )
 
 object TmdbClient {
@@ -105,7 +106,8 @@ object TmdbClient {
                     voteAverage = obj.optDouble("vote_average", 0.0),
                     mediaType = obj.optString("media_type", defaultType),
                     genres = names,
-                    releaseDate = obj.optString("release_date").ifEmpty { obj.optString("first_air_date") }
+                    releaseDate = obj.optString("release_date").ifEmpty { obj.optString("first_air_date") },
+                    posterPath = obj.optString("poster_path").takeIf { it.isNotBlank() },
                 )
             )
         }
@@ -126,6 +128,9 @@ object TmdbClient {
     }
 
     fun backdropUrl(path: String?): String? = if (path.isNullOrBlank()) null else "$IMAGE_BASE$path"
+
+    /** A title's poster, at card size. */
+    fun posterUrl(path: String?): String? = if (path.isNullOrBlank()) null else "https://image.tmdb.org/t/p/w500$path"
 
     /** The same image at card size. */
     fun cardUrl(path: String?): String? = if (path.isNullOrBlank()) null else "https://image.tmdb.org/t/p/w780$path"

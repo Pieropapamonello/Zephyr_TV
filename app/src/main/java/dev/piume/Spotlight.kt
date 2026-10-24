@@ -46,8 +46,7 @@ internal fun MainActivity.setupSpotlight() {
     for (v in arrayOf(spotlightContainer, bottomSection)) v.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> centerSpotlight() }
 
     // The title has no card to light up like the tiles: a soft panel round its text says it has focus.
-    spotlightInfoBox.background = TextHalo(spotlightInfoBox as ViewGroup, dp(14).toFloat(), (fg and 0xFFFFFF) or 0x24000000,
-        (fg and 0xFFFFFF) or 0xCC000000.toInt(), dp(2).toFloat()).apply { alpha = 0 }
+    spotlightInfoBox.background = TextHalo(spotlightInfoBox as ViewGroup, dp(14).toFloat(), (fg and 0xFFFFFF) or 0x2E000000).apply { alpha = 0 }
 
     window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
         updateSpotlightFocusState(newFocus)
@@ -351,24 +350,19 @@ internal fun MainActivity.prefetchAllBackdrops() {
 }
 
 /**
- * A rounded panel just round the text of [box] (the widest of its shown lines), reaching [pad] past it. Drawn from
- * the text, not the view's bounds: the box spans the screen, and its parents don't clip what reaches past it.
+ * A band across the whole screen behind [box] (its text, [pad] above and below). Drawn past the box's own bounds,
+ * which its parents don't clip, so it reaches both screen edges whatever the page margins.
  */
-internal class TextHalo(private val box: ViewGroup, private val pad: Float, private val fill: Int, private val edge: Int, edgeWidth: Float) : Drawable() {
-    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = edgeWidth }
+internal class TextHalo(private val box: ViewGroup, private val pad: Float, private val fill: Int) : Drawable() {
+    private val paint = Paint()
     private var shown = 255
 
     override fun draw(canvas: Canvas) {
         if (shown == 0) return
-        val right = (0 until box.childCount).map { box.getChildAt(it) }.filter { it.visibility == View.VISIBLE }.maxOfOrNull { it.right } ?: return
-        val r = RectF(-pad, -pad * 0.5f, right + pad, box.height + pad * 0.35f)
-        fillPaint.color = fill
-        fillPaint.alpha = (fill ushr 24) * shown / 255
-        edgePaint.color = edge
-        edgePaint.alpha = (edge ushr 24) * shown / 255
-        canvas.drawRoundRect(r, pad, pad, fillPaint)
-        canvas.drawRoundRect(r, pad, pad, edgePaint)
+        val at = IntArray(2).also { box.getLocationInWindow(it) }
+        paint.color = fill
+        paint.alpha = (fill ushr 24) * shown / 255
+        canvas.drawRect(RectF(-at[0].toFloat(), -pad * 0.5f, (box.rootView.width - at[0]).toFloat(), box.height + pad * 0.35f), paint)
     }
 
     override fun setAlpha(alpha: Int) {

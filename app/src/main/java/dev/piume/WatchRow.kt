@@ -475,7 +475,10 @@ internal fun MainActivity.nearestCard(row: ViewGroup, from: View): View? {
  */
 internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     val gap = dp(GRID_GAP)
-    val w = (resources.displayMetrics.widthPixels - dp(96) - gap * 3) / 4
+    // Standard 16:9 aspect ratio prevents cutting off channel numbers and provider badges. A search result is a
+    // poster instead: as tall, 2:3.
+    val cardHeight = (resources.displayMetrics.widthPixels - dp(96) - gap * 3) / 4 * 9 / 16
+    val w = if (p.tmdb != null) cardHeight * 2 / 3 else (resources.displayMetrics.widthPixels - dp(96) - gap * 3) / 4
     val col = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         clipChildren = false
@@ -521,8 +524,6 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     }
     frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: open(p) }
     frame.setTag(R.id.watchRow, p) // holding OK hides it (see onHold)
-    // Standard 16:9 aspect ratio prevents cutting off channel numbers and provider badges
-    val cardHeight = w * 9 / 16
     col.addView(frame, LinearLayout.LayoutParams(w, cardHeight))
     // Thin bar under the poster, card width. Kept (invisible) when there's no progress so titles line up.
     col.addView(ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
@@ -616,13 +617,14 @@ internal fun MainActivity.loadPoster(v: ImageView, uri: String?) {
  */
 internal fun MainActivity.fitPoster(v: ImageView, bmp: Bitmap) {
     val ratio = bmp.width.toFloat() / bmp.height
+    val card = (v.parent as? View)?.layoutParams?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height } ?: (16f / 9f)
     // Plain background: the corners and the middle of each edge all the same colour (a film still rarely is).
     val r = bmp.width - 1
     val b = bmp.height - 1
     val edge = listOf(0 to 0, r / 2 to 0, r to 0, 0 to b / 2, r to b / 2, 0 to b, r / 2 to b, r to b).map { (x, y) -> bmp.getPixel(x, y) }
     fun near(c1: Int, c2: Int) = Math.abs(Color.red(c1) - Color.red(c2)) + Math.abs(Color.green(c1) - Color.green(c2)) + Math.abs(Color.blue(c1) - Color.blue(c2)) < 24
     val flat = edge.all { Color.alpha(it) == 255 && near(it, edge[0]) }
-    if (Math.abs(ratio / (16f / 9f) - 1f) < 0.08f && !flat) {
+    if (Math.abs(ratio / card - 1f) < 0.08f && !flat) {
         v.scaleType = ImageView.ScaleType.CENTER_CROP
         v.setPadding(0, 0, 0, 0)
         return

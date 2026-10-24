@@ -204,7 +204,6 @@
                         android:ellipsize="end"
                         android:fontFamily="sans-serif"
                         android:maxLines="3"
-                        android:maxWidth="640dp"
                         android:shadowColor="#80000000"
                         android:shadowDx="0"
                         android:shadowDy="1"

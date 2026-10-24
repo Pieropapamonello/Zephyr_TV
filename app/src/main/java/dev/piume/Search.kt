@@ -183,14 +183,14 @@ internal fun MainActivity.searchTmdb(query: String) {
     }
 }
 
-/** The results' cards under the apps row: the TMDB image, the title, and what it is (film or series, year). */
+/** The results' cards under the apps row: the poster (in the TMDB language), the title, and what it is (film or series, year). */
 internal fun MainActivity.showSearchResults() {
     val query = searchQuery ?: return
     watchApp = SEARCH_PKG
     showSections(listOf(Section("search", query, getString(R.string.search_results_for, query), searchResults.map { item ->
         val kind = getString(if (item.mediaType == "tv") R.string.tmdb_badge_tv else R.string.tmdb_badge_movie)
         val year = item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }
-        Prog(item.title, listOfNotNull(kind, year).joinToString(" · "), 0, TmdbClient.cardUrl(item.backdropPath), null, null, tmdb = item)
+        Prog(item.title, listOfNotNull(kind, year).joinToString(" · "), 0, TmdbClient.posterUrl(item.posterPath) ?: TmdbClient.cardUrl(item.backdropPath), null, null, tmdb = item)
     })))
 }
 
