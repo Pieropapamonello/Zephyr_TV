@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.5.1
+
+- The blurred background of the channel cards and of the search results is smoother.
+
 ## 2.5
 
 - The TV channel cards show the logo of the channel, large in the middle on a blur of itself. The name and the number of the channel are under the card.

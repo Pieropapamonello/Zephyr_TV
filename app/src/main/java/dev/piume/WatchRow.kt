@@ -286,6 +286,13 @@ internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<
     val country = channelCountry()
     val logos = if (channelLogosOn()) ChannelLogos.saved(filesDir, country).orEmpty() else emptyMap()
     if (channelLogosOn() && ChannelLogos.due(filesDir, country)) updateChannelLogos(pkg)
+    // Once per run with a table: each channel and the logo it got, for `adb logcat -s PiumeChannels` (matching
+    // names is guesswork; this shows where it misses).
+    if (logos.isNotEmpty() && ChannelLogos.logged.compareAndSet(false, true)) {
+        all.sortedBy { channelKey(it.number) }.forEach {
+            android.util.Log.i("PiumeChannels", "${it.number}\t${it.name}\t${if (logo(it.id) != null) "tv" else ChannelLogos.match(logos, it.name) ?: "-"}")
+        }
+    }
     return all.filter { hideKey(pkg, it.name) !in hidden }.groupBy { it.input }.values
         .map { it.sortedBy { ch -> channelKey(ch.number) } }.sortedBy { channelKey(it.first().number) }
         .map { channels ->
@@ -545,8 +552,7 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
         p.image?.let { uri ->
             posterIo.execute {
                 val bmp = runCatching { decode(uri, alpha = true) }.getOrNull() ?: return@execute
-                // A blur on any Android: shrunk to a few pixels, then drawn large and smoothed.
-                val blur = Bitmap.createScaledBitmap(bmp, 12, 7, true)
+                val blur = softBlur(bmp)
                 ui.post {
                     number.visibility = View.GONE
                     frame.addView(ImageView(this).apply {
@@ -599,8 +605,7 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
 internal fun MainActivity.fillArt(frame: FrameLayout, w: Int, h: Int, backdrop: String?, logo: String?, poster: String?, title: String) {
     fun load(v: ImageView, uri: String, blur: Boolean = false) = posterIo.execute {
         val bmp = runCatching { decode(uri, alpha = uri == logo) }.getOrNull() ?: return@execute
-        // A blur on any Android: shrunk to a few pixels, then drawn large and smoothed.
-        val shown = if (blur) Bitmap.createScaledBitmap(bmp, 12, 18, true) else bmp
+        val shown = if (blur) softBlur(bmp) else bmp
         ui.post { v.setImageBitmap(shown) }
     }
     when {
@@ -637,6 +642,36 @@ internal fun MainActivity.fillArt(frame: FrameLayout, w: Int, h: Int, backdrop: 
             }, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         }
     }
+}
+
+/**
+ * A soft blur of [src] for a card's background, on any Android (RenderEffect needs 12): shrunk to 32 pixels across,
+ * box-blurred three times each way (close to a Gaussian), and left small; drawn large, it's smoothed further.
+ */
+internal fun softBlur(src: Bitmap): Bitmap {
+    val w = 32
+    val h = (w * src.height / src.width.coerceAtLeast(1)).coerceIn(8, 64)
+    val small = Bitmap.createScaledBitmap(src, w, h, true).copy(Bitmap.Config.ARGB_8888, true)
+    val px = IntArray(w * h).also { small.getPixels(it, 0, w, 0, 0, w, h) }
+    val r = 3
+    fun pass(horizontal: Boolean) {
+        val out = IntArray(px.size)
+        val (lines, len) = if (horizontal) h to w else w to h
+        for (line in 0 until lines) for (i in 0 until len) {
+            var a = 0; var rr = 0; var g = 0; var b = 0
+            for (k in -r..r) {
+                val j = (i + k).coerceIn(0, len - 1)
+                val c = px[if (horizontal) line * w + j else j * w + line]
+                a += c ushr 24; rr += (c shr 16) and 0xFF; g += (c shr 8) and 0xFF; b += c and 0xFF
+            }
+            val n = 2 * r + 1
+            out[if (horizontal) line * w + i else i * w + line] = (a / n shl 24) or (rr / n shl 16) or (g / n shl 8) or (b / n)
+        }
+        out.copyInto(px)
+    }
+    repeat(3) { pass(true); pass(false) }
+    small.setPixels(px, 0, w, 0, 0, w, h)
+    return small
 }
 
 /** A search result on plain art: the title's logo over it, bottom left, on a shade so a light logo still reads. */
