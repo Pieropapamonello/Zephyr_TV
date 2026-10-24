@@ -558,8 +558,9 @@ class MainActivity : Activity() {
             // Trending is per day: refetch now and then, or a home screen that never closes keeps last week's list.
             if (tmdbTrending.isEmpty() || System.currentTimeMillis() - tmdbFetchedAt > TMDB_FRESH_MS) {
                 val listId = prefs.getString(K.TMDB_LIST, null)
-                val fresh = if (prefs.getString(K.TMDB_SOURCE, "trending") == "list" && listId != null) TmdbClient.fetchList(key, listId, tmdbLang(), type)
-                    else TmdbClient.fetchTrending(key, tmdbLang(), type)
+                val source = prefs.getString(K.TMDB_SOURCE, "trending") ?: "trending"
+                val fresh = if (source == "list" && listId != null) TmdbClient.fetchList(key, listId, tmdbLang(), type)
+                    else TmdbClient.fetchCategory(key, source.takeIf { it in TmdbClient.CATEGORIES } ?: "trending", tmdbLang(), type, TmdbClient.region(tmdbLang()))
                 if (fresh.isNotEmpty()) {
                     // A different order each time, so the same top titles don't always open the round.
                     tmdbTrending = fresh.shuffled()

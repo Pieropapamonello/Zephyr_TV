@@ -338,6 +338,12 @@
     <!-- TMDB list as Spotlight source -->
     <string name="setting_tmdb_source">Spotlight shows</string>
     <string name="tmdb_source_trending">Trending titles</string>
+    <string name="tmdb_source_trending_week">Trending this week</string>
+    <string name="tmdb_source_popular">Popular</string>
+    <string name="tmdb_source_top_rated">Top rated</string>
+    <string name="tmdb_source_now_playing">Now in cinemas (films)</string>
+    <string name="tmdb_source_upcoming">Coming soon (films)</string>
+    <string name="tmdb_source_on_the_air">On the air (series)</string>
     <string name="tmdb_source_list">My TMDB list</string>
     <string name="setting_tmdb_list">My TMDB list</string>
     <string name="tmdb_list_none">Not set: press to add</string>

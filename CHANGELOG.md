@@ -13,6 +13,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.9
+
+- Spotlight can show more TMDB lists: trending this week, popular, top rated, films now in cinemas, films coming soon and series on the air. Select **Piume settings → TMDB Spotlight → Spotlight shows**.
+- **My TMDB list** is selected only after you set a list. If you do not set one, Spotlight keeps what it showed before.
+
 ## 2.8.2
 
 - Search results show at once. Their covers with the title come a moment later, in their place.

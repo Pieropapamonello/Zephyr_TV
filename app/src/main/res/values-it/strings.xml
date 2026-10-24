@@ -339,6 +339,12 @@
     <!-- TMDB list as Spotlight source -->
     <string name="setting_tmdb_source">Spotlight mostra</string>
     <string name="tmdb_source_trending">Titoli di tendenza</string>
+    <string name="tmdb_source_trending_week">Di tendenza questa settimana</string>
+    <string name="tmdb_source_popular">I più popolari</string>
+    <string name="tmdb_source_top_rated">I più votati</string>
+    <string name="tmdb_source_now_playing">Al cinema ora (film)</string>
+    <string name="tmdb_source_upcoming">Prossime uscite (film)</string>
+    <string name="tmdb_source_on_the_air">In onda (serie TV)</string>
     <string name="tmdb_source_list">La mia lista TMDB</string>
     <string name="setting_tmdb_list">La mia lista TMDB</string>
     <string name="tmdb_list_none">Non impostata: premi per aggiungerla</string>

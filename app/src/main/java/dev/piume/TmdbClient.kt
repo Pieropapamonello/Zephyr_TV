@@ -97,6 +97,43 @@ object TmdbClient {
     }
 
     /**
+     * TMDB's ready-made lists Spotlight can show, by key: (path, kind of its titles) for films, then for series. A
+     * list that has only one kind (films in cinemas, series on air) has null for the other.
+     */
+    val CATEGORIES: Map<String, Pair<String?, String?>> = linkedMapOf(
+        "trending" to ("/trending/movie/day" to "/trending/tv/day"),
+        "trending_week" to ("/trending/movie/week" to "/trending/tv/week"),
+        "popular" to ("/movie/popular" to "/tv/popular"),
+        "top_rated" to ("/movie/top_rated" to "/tv/top_rated"),
+        "now_playing" to ("/movie/now_playing" to null),
+        "upcoming" to ("/movie/upcoming" to null),
+        "on_the_air" to (null to "/tv/on_the_air"),
+    )
+
+    /**
+     * The titles in TMDB's list [category] (see CATEGORIES), of [mediaType] ("movie", "tv" or "all": both, taken in
+     * turn), for [region] where it matters (what's in cinemas). Empty when TMDB can't be reached.
+     */
+    fun fetchCategory(apiKey: String, category: String, language: String, mediaType: String, region: String): List<TmdbItem> {
+        if (category == "trending" && mediaType !in setOf("movie", "tv")) return fetchTrending(apiKey, language, "all")
+        val (films, series) = CATEGORIES[category] ?: return emptyList()
+        val genres = genres(apiKey, language)
+        fun page(path: String?, type: String, wanted: Boolean): List<TmdbItem> {
+            if (path == null || !wanted) return emptyList()
+            return try {
+                items(JSONObject(get(apiKey, "$path?language=$language&region=$region")).optJSONArray("results") ?: return emptyList(), genres, type)
+            } catch (e: Exception) {
+                warn("TMDB $category failed (${redact(e)})")
+                emptyList()
+            }
+        }
+        val a = page(films, "movie", mediaType != "tv")
+        val b = page(series, "tv", mediaType != "movie")
+        // Films and series in turn, so neither crowds the other out of the first titles.
+        return (0 until maxOf(a.size, b.size)).flatMap { listOfNotNull(a.getOrNull(it), b.getOrNull(it)) }
+    }
+
+    /**
      * The titles in a public TMDB list (a "watchlist" made on themoviedb.org), in its order, up to 5 pages.
      * Empty when the list doesn't exist, isn't public, or TMDB can't be reached.
      */

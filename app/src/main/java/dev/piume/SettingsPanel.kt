@@ -301,14 +301,8 @@ internal fun MainActivity.spotlightRows(): List<Triple<String, String, () -> Uni
         page(getString(R.string.setting_tmdb_api_key), if (hasKey) getString(R.string.tmdb_api_key_set) else getString(R.string.tmdb_api_key_empty)) {
             configureTmdbApiKey()
         },
-        // What Spotlight shows: TMDB's trending titles, or the user's own public TMDB list (a watchlist).
-        page(getString(R.string.setting_tmdb_source), getString(if (listSource()) R.string.tmdb_source_list else R.string.tmdb_source_trending)) {
-            prefs.edit().putString(K.TMDB_SOURCE, if (listSource()) "trending" else "list").apply()
-            if (listSource() && prefs.getString(K.TMDB_LIST, null) == null) return@page tmdbListFromPhone()
-            tmdbTrending = emptyList()
-            loadWallpaper()
-            renderSettings(TMDB_SOURCE_ROW)
-        },
+        // What Spotlight shows: one of TMDB's ready-made lists, or the user's own public TMDB list (a watchlist).
+        page(getString(R.string.setting_tmdb_source), sourceName(spotlightSource())) { pickSpotlightSource() },
         page(getString(R.string.setting_tmdb_list), prefs.getString(K.TMDB_LIST, null) ?: getString(R.string.tmdb_list_none)) { tmdbListFromPhone() },
         page(getString(R.string.setting_tmdb_language), lang) {
             val langs = TmdbClient.LANGUAGES
@@ -711,5 +705,42 @@ internal fun MainActivity.pickNightHour(key: String, title: Int, row: Int) {
     }, current / 60) { renderSettings(row) }
 }
 
-internal fun MainActivity.listSource() = prefs.getString(K.TMDB_SOURCE, "trending") == "list"
+/** What Spotlight shows: a key of TmdbClient.CATEGORIES, or "list" (only once a list is set: see tmdbListFromPhone). */
+internal fun MainActivity.spotlightSource(): String {
+    val s = prefs.getString(K.TMDB_SOURCE, "trending") ?: "trending"
+    return when {
+        s == "list" && prefs.getString(K.TMDB_LIST, null) != null -> "list"
+        s in TmdbClient.CATEGORIES -> s
+        else -> "trending"
+    }
+}
+
+internal fun MainActivity.sourceName(source: String) = getString(when (source) {
+    "list" -> R.string.tmdb_source_list
+    "trending_week" -> R.string.tmdb_source_trending_week
+    "popular" -> R.string.tmdb_source_popular
+    "top_rated" -> R.string.tmdb_source_top_rated
+    "now_playing" -> R.string.tmdb_source_now_playing
+    "upcoming" -> R.string.tmdb_source_upcoming
+    "on_the_air" -> R.string.tmdb_source_on_the_air
+    else -> R.string.tmdb_source_trending
+})
+
+/**
+ * Spotlight's source: TMDB's lists, then the user's own. That one is chosen only once a list is set: picking it
+ * without one asks for it first (on the phone), and the source changes when it arrives.
+ */
+internal fun MainActivity.pickSpotlightSource() {
+    val current = spotlightSource()
+    val sources = TmdbClient.CATEGORIES.keys.toList() + "list"
+    showPage(getString(R.string.setting_tmdb_source), sources.map { s ->
+        page(sourceName(s), if (s == current) CHOSEN else "") {
+            if (s == "list" && prefs.getString(K.TMDB_LIST, null) == null) return@page tmdbListFromPhone()
+            prefs.edit().putString(K.TMDB_SOURCE, s).apply()
+            tmdbTrending = emptyList()
+            loadWallpaper()
+            renderSettings(TMDB_SOURCE_ROW)
+        }
+    }, sources.indexOf(current)) { renderSettings(TMDB_SOURCE_ROW) }
+}
 
