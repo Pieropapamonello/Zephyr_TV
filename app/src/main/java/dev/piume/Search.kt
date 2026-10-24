@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Outline
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -13,9 +14,11 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
@@ -219,17 +222,32 @@ internal fun MainActivity.endSearch(): Boolean {
 }
 
 /**
- * A result's page in the side panel: what Spotlight would say about it (rating, kind, year, genre, the overview)
- * and a row per app to watch it in, the services TMDB lists it on and the YouTube trailer, as Spotlight's buttons.
+ * A result's page in the side panel: its card art on top, what Spotlight would say about it (rating, kind, year,
+ * genre, the overview) under it, and a row per app to watch it in, each with the app's icon: the YouTube trailer
+ * and the services TMDB lists it on, as Spotlight's buttons.
  */
 internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = null) {
     if (settingsScrim.visibility != View.VISIBLE) showPanel()
     val year = item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }
     val rating = if (item.voteAverage > 0) "★ %.1f".format(item.voteAverage) else null
     val kind = getString(if (item.mediaType == "tv") R.string.tmdb_badge_tv else R.string.tmdb_badge_movie)
+    val art = searchArt[item.id]
+    val picture = FrameLayout(this).apply {
+        clipToOutline = true
+        outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) = outline.setRoundRect(0, 0, view.width, view.height, dp(8).toFloat())
+        }
+        setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt())
+    }
+    val panelWidth = dp(380 - 28 - 48) // the panel's width inside its padding (activity_main.xml)
+    val img = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+    picture.addView(img, MATCH_PARENT, MATCH_PARENT)
+    loadPoster(img, art?.backdrop ?: TmdbClient.cardUrl(item.backdropPath))
+    art?.logo?.let { addTitleLogo(picture, it, panelWidth, panelWidth * 9 / 16) }
     val top = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, 0, 0, dp(12))
+        addView(picture, LinearLayout.LayoutParams(MATCH_PARENT, panelWidth * 9 / 16).apply { bottomMargin = dp(12) })
         addView(label(listOfNotNull(rating, kind, year, item.genres.firstOrNull()).joinToString(" · "), 13f).apply { alpha = 0.7f })
         if (item.overview.isNotBlank()) addView(label(item.overview, 13f).apply {
             maxLines = 12
@@ -237,7 +255,8 @@ internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = nu
             setPadding(0, dp(8), 0, 0)
         })
     }
-    val rows = titleApps().filter { TmdbClient.offers(it.pkg, available) }.map { a ->
+    val shown = titleApps().filter { TmdbClient.offers(it.pkg, available) }
+    val rows = shown.map { a ->
         val name = if (TmdbClient.isYouTube(a.pkg)) getString(R.string.spotlight_trailer) else getString(R.string.tmdb_search_on, a.label)
         page(name) {
             closeLauncherSettings()
@@ -245,6 +264,13 @@ internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = nu
         }
     }
     showPage(item.title, rows, top = top) { closeLauncherSettings() }
+    // Each row starts with its app's icon, before the name.
+    shown.forEachIndexed { i, a ->
+        (settingsList.getChildAt(1 + i) as? LinearLayout)?.addView(ImageView(this).apply {
+            setImageDrawable(a.icon.constantState?.newDrawable(resources) ?: a.icon)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+        }, 0, LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(12) })
+    }
     // Which services have it: known answers apply at once, others once TMDB answers (until then every app shows).
     val key = prefs.getString(K.TMDB_API_KEY, null)
     if (available != null || !providersOn() || key == null) return

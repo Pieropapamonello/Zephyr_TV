@@ -13,6 +13,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.4.5
+
+- The page of a search result shows its wide cover at the top, with the text under it.
+- Each app on that page shows its icon next to its name.
+
 ## 2.4.4
 
 - Search results are wide covers with the title on them, in the language that you set for TMDB, or else in English. When TMDB has no such cover, the card shows the logo of the title on the picture.

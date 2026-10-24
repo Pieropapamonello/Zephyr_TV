@@ -521,15 +521,7 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
             posterIo.execute { runCatching { decode(uri) }.getOrNull()?.let { ui.post { logo.setImageBitmap(it) } } }
         }
     }
-    // A search result on plain art: the title's logo over it, bottom left, on a shade so a light logo still reads.
-    p.logo?.let { uri ->
-        frame.addView(View(this).apply {
-            background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0x99000000.toInt(), 0))
-        }, FrameLayout.LayoutParams(MATCH_PARENT, cardHeight / 2, Gravity.BOTTOM))
-        val logo = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_START; adjustViewBounds = false }
-        frame.addView(logo, FrameLayout.LayoutParams(w / 2, cardHeight / 3, Gravity.BOTTOM or Gravity.START).apply { setMargins(dp(10), 0, 0, dp(10)) })
-        posterIo.execute { runCatching { decode(uri) }.getOrNull()?.let { ui.post { logo.setImageBitmap(it) } } }
-    }
+    p.logo?.let { addTitleLogo(frame, it, w, cardHeight) }
     frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: open(p) }
     frame.setTag(R.id.watchRow, p) // holding OK hides it (see onHold)
     col.addView(frame, LinearLayout.LayoutParams(w, cardHeight))
@@ -555,6 +547,16 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     }
     if (p.badge == null) loadPoster(img, p.image)
     return col
+}
+
+/** A search result on plain art: the title's logo over it, bottom left, on a shade so a light logo still reads. */
+internal fun MainActivity.addTitleLogo(frame: FrameLayout, uri: String, w: Int, h: Int) {
+    frame.addView(View(this).apply {
+        background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0x99000000.toInt(), 0))
+    }, FrameLayout.LayoutParams(MATCH_PARENT, h / 2, Gravity.BOTTOM))
+    val logo = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_START }
+    frame.addView(logo, FrameLayout.LayoutParams(w / 2, h / 3, Gravity.BOTTOM or Gravity.START).apply { setMargins(dp(10), 0, 0, dp(10)) })
+    posterIo.execute { runCatching { decode(uri) }.getOrNull()?.let { ui.post { logo.setImageBitmap(it) } } }
 }
 
 internal fun MainActivity.progressBarDrawable(): Drawable {
