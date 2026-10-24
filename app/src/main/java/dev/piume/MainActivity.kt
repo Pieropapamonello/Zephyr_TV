@@ -845,6 +845,7 @@ class MainActivity : Activity() {
                 renderApps()
                 spotlightApps = null
                 renderSpotlight()
+                updateInputsDot()
             }
         }
     }
@@ -915,12 +916,16 @@ class MainActivity : Activity() {
         }.getOrDefault(emptySet())
     }
 
-    /** A green dot on the TV inputs button while a device is connected to an external input (see connectedInputs). */
+    /** A green dot on the TV inputs button while at least one external input has an active device (see hdmiInputs). */
     internal fun updateInputsDot() {
-        val icon = findViewById<ImageView>(R.id.tvInputsButton)
-        val on = connectedInputs().isNotEmpty()
+        val icon = findViewById<ImageView>(R.id.tvInputsButton) ?: return
+        val on = hdmiInputs().any { !it.offline }
         icon.overlay.remove(inputsDot)
-        if (!on || icon.width == 0) return
+        if (!on) return
+        if (icon.width == 0) {
+            icon.post { updateInputsDot() }
+            return
+        }
         val size = dp(9)
         inputsDot.setBounds(icon.width - size - dp(3), dp(3), icon.width - dp(3), dp(3) + size)
         icon.overlay.add(inputsDot)

@@ -78,5 +78,6 @@ internal fun MainActivity.hdmiInputs(): List<MainActivity.App> = try {
 internal fun MainActivity.applyInputsMode() {
     val mode = inputsMode()
     findViewById<View>(R.id.tvInputsButton)?.visibility = if (mode == "apps") View.GONE else View.VISIBLE
+    updateInputsDot()
     refreshApps()
 }
