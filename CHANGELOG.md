@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.7.2
+
+- Piume also finds channels in a TV guide by their guide ID, like "Rai1.it" or "Canale.5.it".
+
 ## 2.7.1
 
 - Piume finds more channels in TV guides that put the country before the name, like "IT - Canale 5".

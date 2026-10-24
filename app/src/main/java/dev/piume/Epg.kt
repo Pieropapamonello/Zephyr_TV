@@ -110,7 +110,11 @@ internal object Epg {
             }
             if (parser.eventType != XmlPullParser.START_TAG) continue
             when (parser.name) {
-                "channel" -> channel = parser.getAttributeValue(null, "id")
+                "channel" -> channel = parser.getAttributeValue(null, "id")?.also { id ->
+                    // The id names the channel too, with the country after it: "Rai1.it", "Canale.5.it".
+                    id.replace(Regex("\\.[a-z]{2}$"), "").replace('.', ' ').trim()
+                        .takeIf { it.isNotEmpty() }?.let { names.getOrPut(id) { ArrayList() } += it }
+                }
                 "display-name" -> channel?.let { id ->
                     val name = parser.nextText().trim()
                     val list = names.getOrPut(id) { ArrayList() }
