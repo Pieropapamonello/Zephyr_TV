@@ -302,7 +302,7 @@ internal fun MainActivity.showChannel(d: ChannelDetail) {
     val panel = findViewById<LinearLayout>(R.id.settingsPanel)
     val panelWidth = dp(380) // the panel's width (activity_main.xml)
     val picture = FrameLayout(this).apply { setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt()) }
-    channelArt(picture, panelWidth, panelWidth * 9 / 16, d.logo, d.number, d.name)
+    channelArt(picture, panelWidth, panelWidth * 9 / 16, d.number, d.name) { d.logo }
     val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT)
     fun hours(s: Epg.Show) = if (s.start > 0) "${time.format(java.util.Date(s.start))} – ${time.format(java.util.Date(s.stop))}" else null
     val top = LinearLayout(this).apply {

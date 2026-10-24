@@ -20,7 +20,6 @@ internal object ChannelLogos {
 
     @Volatile private var table: Pair<String, Map<String, String>>? = null // country to its table, once read
     private val updating = java.util.concurrent.atomic.AtomicBoolean()
-    val logged = java.util.concurrent.atomic.AtomicBoolean() // the channels and their logos went to the log this run
 
     // v2: loose names ("~" keys) and Wikimedia SVGs as PNG; an older table is built again.
     private fun file(dir: File, country: String) = File(dir, "channel_logos_v2_$country.tsv")

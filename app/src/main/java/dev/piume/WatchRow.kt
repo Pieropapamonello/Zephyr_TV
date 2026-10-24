@@ -172,7 +172,8 @@ internal fun MainActivity.queryAppChannels(pkg: String?) {
         val hidden = prefs.getStringSet(K.HIDDEN_WATCH, emptySet())!!
         // The TV app shows its channel list, a section per tuner (none, on a TV without one); any other app, a
         // section per row it publishes for the home screen. Each can be turned off (see pickSections).
-        val all = if (isTvApp(pkg)) tunerSections(pkg, hidden) else appSections(pkg, hidden)
+        val tv = isTvApp(pkg)
+        val all = if (tv) tunerSections(pkg, hidden) else appSections(pkg, hidden)
         val off = prefs.getStringSet(K.SECTIONS_OFF, emptySet())!!
         val shown = all.filter { sectionKey(pkg, it) !in off }
         ui.post {
@@ -184,6 +185,7 @@ internal fun MainActivity.queryAppChannels(pkg: String?) {
                 hideWatchRow()
             } else {
                 showSections(shown)
+                if (tv) fillGuide(pkg)
             }
         }
     }
@@ -294,24 +296,10 @@ internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<
     val all = tunerChannels()
     val label = appLabel(pkg)
     val tvInputs = getSystemService(TvInputManager::class.java)
-    // Logos the TV has none for come from iptv-org's table (see ChannelLogos); fetched in the background the first
-    // time and each month, then these sections are built again with them.
-    val country = channelCountry()
-    val logos = if (channelLogosOn()) ChannelLogos.saved(filesDir, country).orEmpty() else emptyMap()
-    if (channelLogosOn() && ChannelLogos.due(filesDir, country)) updateChannelLogos(pkg)
-    // Once per run with a table: each channel and the logo it got, for `adb logcat -s PiumeChannels` (matching
-    // names is guesswork; this shows where it misses).
-    if (logos.isNotEmpty() && ChannelLogos.logged.compareAndSet(false, true)) {
-        all.sortedBy { channelKey(it.number) }.forEach {
-            android.util.Log.i("PiumeChannels", "${it.number}\t${it.name}\t${if (logo(it.id) != null) "tv" else ChannelLogos.match(logos, it.name) ?: "-"}")
-        }
-    }
-    val onNow = programsOnNow()
-    // The guide from the internet (see Epg), for channels the TV's own guide doesn't give: fetched in the background
-    // when due, then these sections are built again with it.
-    val epgUrl = epgUrl()
-    val guide = epgUrl?.let { Epg.saved(filesDir, it) }
-    if (epgUrl != null && Epg.due(filesDir, epgUrl)) updateEpg(pkg)
+    // Only names and numbers here, so the channels show at once: each card finds its logo when it's built (see
+    // channelArt), and what's on comes after (fillGuide). The logo table and the guide are fetched when due.
+    if (channelLogosOn() && ChannelLogos.due(filesDir, channelCountry())) updateChannelLogos(pkg)
+    epgUrl()?.let { if (Epg.due(filesDir, it)) updateEpg(pkg) }
     return all.filter { hideKey(pkg, it.name) !in hidden }.groupBy { it.input }.values
         .map { it.sortedBy { ch -> channelKey(ch.number) } }.sortedBy { channelKey(it.first().number) }
         .map { channels ->
@@ -319,16 +307,48 @@ internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<
             val name = runCatching { tvInputs?.getTvInputInfo(input)?.loadLabel(this)?.toString() }.getOrNull()
                 ?.takeIf { it.isNotBlank() } ?: getString(R.string.section_channels)
             Section(input, name, getString(R.string.app_section, label, name), channels.map {
-                val number = it.number.trimStart('0').ifEmpty { it.number }
-                val now = onNow[it.id] ?: guide?.let { g -> Epg.now(g, it.name)?.let { (title, progress) -> OnNow(title, progress) } }
-                // Under the card: the number, then what's on, its bar how far in it is.
-                Prog(it.name, listOfNotNull(number, now?.title).joinToString(" · "), now?.progress ?: 0, channelLogo(it, logos),
-                    Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(it.id)).toUri(Intent.URI_INTENT_SCHEME), pkg, badge = it.number)
+                Prog(it.name, it.number.trimStart('0').ifEmpty { it.number }, 0, null,
+                    Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(it.id)).toUri(Intent.URI_INTENT_SCHEME), pkg, badge = it.number, channelId = it.id)
             })
         }
 }
 
 internal class OnNow(val title: String, val progress: Int)
+
+/** The iptv-org logo table for this TV's channels, or none when that's turned off (read from disk once). */
+internal fun MainActivity.channelLogoTable() =
+    if (channelLogosOn()) ChannelLogos.saved(filesDir, channelCountry()).orEmpty() else emptyMap()
+
+/**
+ * What's on, filled in under the TV app's channel cards once they show: the TV's own guide, else the one set in
+ * Piume settings. The cards built so far change in place (focus stays), and so do those still to come.
+ */
+internal fun MainActivity.fillGuide(pkg: String) = io.execute {
+    val guide = epgUrl()?.let { Epg.saved(filesDir, it) }
+    val onNow = programsOnNow()
+    if (guide == null && onNow.isEmpty()) return@execute
+    val byId = tunerChannels().mapNotNull { ch ->
+        (onNow[ch.id] ?: guide?.let { g -> Epg.now(g, ch.name)?.let { (title, progress) -> OnNow(title, progress) } })?.let { ch.id to it }
+    }.toMap()
+    ui.post {
+        if (watchApp != pkg) return@post
+        for (row in cardRows()) {
+            val cards = row.getTag(R.id.watchScroll) as? RowCards ?: continue
+            cards.items = cards.items.map { p ->
+                val now = p.channelId?.let(byId::get) ?: return@map p
+                // Under the card: the number, then what's on, its bar how far in it is.
+                Prog(p.title, "${p.sub} · ${now.title}", now.progress, p.image, p.intent, p.pkg, p.weight, p.badge, channelId = p.channelId)
+            }
+            for (i in 0 until row.childCount) {
+                val col = row.getChildAt(i) as? ViewGroup ?: continue
+                val p = cards.items.getOrNull(i)?.takeIf { it.progress > 0 } ?: continue
+                col.getChildAt(0)?.setTag(R.id.watchRow, p)
+                (col.getChildAt(1) as? ProgressBar)?.apply { progress = p.progress; visibility = View.VISIBLE }
+                (col.getChildAt(3) as? TextView)?.text = p.sub
+            }
+        }
+    }
+}
 
 /**
  * What each tuner channel is showing now, by channel id: the guide the TV gets with the broadcast (DVB EIT) and keeps
@@ -352,7 +372,6 @@ internal fun MainActivity.programsOnNow(): Map<Long, OnNow> {
             }
         }
     }.onFailure { warn("TV guide not readable ($it)") }
-    android.util.Log.i("PiumeChannels", "on now: ${out.size} channels in the TV guide")
     return out
 }
 
@@ -634,7 +653,9 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     // A TV channel: the same card on every TV, whatever the TV app's own look. Its logo fills it, large in the
     // middle on a blur of itself (its name and number are under the card); with no logo, or until it's in, the
     // number and name instead.
-    if (p.badge != null) channelArt(frame, w, cardHeight, p.image, p.badge, p.title)
+    if (p.badge != null) channelArt(frame, w, cardHeight, p.badge, p.title) {
+        p.image ?: p.channelId?.let { id -> logo(id) ?: ChannelLogos.match(channelLogoTable(), p.title) }
+    }
     if (p.tmdb != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title)
     frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: p.channelPage?.let { showChannel(it) } ?: open(p) }
     frame.setTag(R.id.watchRow, p) // holding OK hides it (see onHold)
@@ -664,10 +685,10 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
 }
 
 /**
- * A TV channel's picture in [frame] ([w] by [h]): its [logo] large in the middle on a blur of itself; with no logo,
- * or until it's in, its [number] and [name] instead.
+ * A TV channel's picture in [frame] ([w] by [h]): its [logo] (found on a background thread) large in the middle on a
+ * blur of itself; with no logo, or until it's in, its [number] and [name] instead.
  */
-internal fun MainActivity.channelArt(frame: FrameLayout, w: Int, h: Int, logo: String?, number: String, name: String) {
+internal fun MainActivity.channelArt(frame: FrameLayout, w: Int, h: Int, number: String, name: String, logo: () -> String?) {
     val text = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
@@ -675,8 +696,8 @@ internal fun MainActivity.channelArt(frame: FrameLayout, w: Int, h: Int, logo: S
         addView(label(name, 13f).apply { gravity = Gravity.CENTER; alpha = 0.8f; setPadding(dp(12), dp(4), dp(12), 0) })
     }
     frame.addView(text, MATCH_PARENT, MATCH_PARENT)
-    val uri = logo ?: return
     posterIo.execute {
+        val uri = logo() ?: return@execute // looked up here, off the UI thread: the TV's own, then iptv-org's
         // Kept on disk (see channelLogoFiles) and in memory: a logo is downloaded once, not each time its card is.
         val bmp = posters.get(uri) ?: try {
             val file = channelLogoFiles.get(uri) { openStream(it) }
