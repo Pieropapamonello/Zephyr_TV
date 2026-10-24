@@ -19,6 +19,15 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - The network button in the top bar shows a red dot when the TV is offline.
 - Improved Italian translations across settings and menus.
 
+## 3.0.0
+
+- The first tile is now **Play queue**. Its first row, **Playing now**, shows what plays now in any app, like Spotify or YouTube, with the art and the progress. **Continue Watching** comes under it.
+- The apps row is now called **Favourites**, in the home screen and in Piume settings.
+- Piume is now in Spanish and in French.
+- The network icon shows a red dot when there is no internet.
+- The Piume settings icon shows a red dot only when an update is ready. The dot also shows on **System** and on **Updates**, so it leads you to the update.
+- Some Italian texts are corrected.
+
 ## 2.9.4
 
 - The green dots of the TV inputs show only the inputs with a device connected. Piume reads the state from Android. On Sony TVs, Android marks all HDMI inputs as connected, so Piume reads the state from the Sony inputs app instead. On other TVs, the dots are as correct as the state that the TV gives to Android.

@@ -15,10 +15,10 @@
     <string name="continue_watching">Continue Watching</string>
 
     <!-- Edit mode -->
-    <string name="edit_apps_row">Edit apps row</string>
-    <string name="editing_row_instructions">Editing apps row:  OK pick up / drop  ·  ◀ ▶ move  ·  Back done</string>
+    <string name="edit_apps_row">Edit Favourites</string>
+    <string name="editing_row_instructions">Editing Favourites:  OK pick up / drop  ·  ◀ ▶ move  ·  Back done</string>
     <string name="moving_app_instructions">Moving:  ◀ ▶ move  ·  OK place</string>
-    <string name="tip_rearrange_row">Tip: hold OK on an app to rearrange the row</string>
+    <string name="tip_rearrange_row">Tip: hold OK on an app to rearrange your Favourites</string>
 
     <!-- Settings menu labels -->
     <string name="setting_theme">Theme</string>
@@ -35,7 +35,7 @@
     <string name="setting_sort_manual">Manual</string>
     <string name="setting_sort_usage">Most used</string>
 
-    <string name="setting_apps_in_row">Apps in row</string>
+    <string name="setting_apps_in_row">Apps in Favourites</string>
     <string name="apps_in_row_all">All</string>
     <string name="apps_in_row_count">%1$d of %2$d</string>
 
@@ -152,11 +152,11 @@
     <!-- Context Menus (Hold OK) -->
     <string name="menu_open">Open</string>
     <string name="menu_move">Move</string>
-    <string name="menu_remove_from_row">Remove from row</string>
+    <string name="menu_remove_from_row">Remove from Favourites</string>
     <string name="menu_app_info">App info</string>
     <string name="menu_remove_from_cw">Remove from Continue Watching</string>
     <string name="menu_open_app">Open app</string>
-    <string name="removed_from_row_toast">Removed from the row. It\'s still in All apps.</string>
+    <string name="removed_from_row_toast">Removed from Favourites. It\'s still in All apps.</string>
 
     <!-- Time left -->
     <string name="time_left_hr_min">%1$d hr %2$d min left</string>
@@ -216,7 +216,7 @@
     <string name="dialog_clear">Clear</string>
     <string name="tmdb_api_key_hint">Paste or type your TMDB v3 API Key</string>
     <string name="settings_section_look">Appearance &amp; wallpapers</string>
-    <string name="settings_section_apps">Apps row</string>
+    <string name="settings_section_apps">Favourites</string>
     <string name="settings_section_system">System</string>
     <string name="settings_summary_setup">Home button to turn on</string>
     <string name="setting_tmdb_cycle">Next title every</string>
@@ -265,7 +265,7 @@
     <string name="searching">Searching…</string>
     <string name="search_failed">Couldn\'t search. Check the connection and try again.</string>
     <string name="no_places">No places called \"%1$s\".</string>
-    <string name="row_position">App row position</string>
+    <string name="row_position">Favourites position</string>
     <string name="align_left">Left</string>
     <string name="align_centre">Centre</string>
     <string name="align_right">Right</string>

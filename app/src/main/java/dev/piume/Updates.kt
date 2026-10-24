@@ -8,6 +8,7 @@ import android.text.SpannableString
 import android.text.style.BulletSpan
 import android.view.View
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Toast
 import dev.piume.MainActivity.Companion.REPO
 import dev.piume.MainActivity.Companion.UPDATE_ROW
@@ -78,14 +79,25 @@ internal fun MainActivity.notesUnseen(): Boolean {
     return info.firstInstallTime != info.lastUpdateTime && prefs.getString(K.SEEN_NOTES, null) != info.versionName
 }
 
-/** A dot on the Piume settings icon while an update waits or its notes are unread. */
+/**
+ * A dot on the Piume settings icon while an update waits, and on each row on the way to it (System, then Updates;
+ * see updateDot), so the dot leads there.
+ */
 internal fun MainActivity.updateBadge() {
     val icon = findViewById<ImageView>(R.id.launcherSettings)
     icon.overlay.clear()
-    if (availableUpdate() == null && !notesUnseen()) return
+    if (availableUpdate() == null) return
     val size = dp(9)
     badge.setBounds(icon.width - size - dp(3), dp(3), icon.width - dp(3), dp(3) + size)
     icon.overlay.add(badge)
+}
+
+/** The update dot on the panel's row [index] (a settings row), when an update waits. */
+internal fun MainActivity.updateDot(index: Int) {
+    if (availableUpdate() == null) return
+    (settingsList.getChildAt(index) as? LinearLayout)?.addView(View(this).apply {
+        background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(MainActivity.BADGE) }
+    }, 1, LinearLayout.LayoutParams(dp(9), dp(9)).apply { marginStart = dp(8); marginEnd = dp(8) })
 }
 
 internal fun MainActivity.installUpdate(ver: String) {

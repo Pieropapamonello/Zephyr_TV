@@ -23,6 +23,7 @@ import dev.piume.MainActivity.Companion.CLOCK_ROW
 import dev.piume.MainActivity.Companion.FADE_ROW
 import dev.piume.MainActivity.Companion.HDMI
 import dev.piume.MainActivity.Companion.HIDDEN_ROW
+import dev.piume.MainActivity.Companion.UPDATE_ROW
 import dev.piume.MainActivity.Companion.EPG_ROW
 import dev.piume.MainActivity.Companion.CHANNEL_LOGOS_ROW
 import dev.piume.MainActivity.Companion.ICONS_ROW
@@ -109,6 +110,7 @@ internal fun MainActivity.renderSettingsHome(focus: Int = 0) {
     showPage(getString(R.string.plume_settings), sections.map { section ->
         page(sectionTitle(section), SUBMENU) { renderSettings(section * SECTION) }
     }, focus, back = null)
+    updateDot(sections.indexOf(SYSTEM_SECTION))
     // The one thing that needs doing by hand still shows on its section: Piume isn't fully set up as the home screen.
     if (!homeServiceOn()) (settingsList.getChildAt(sections.indexOf(SYSTEM_SECTION)) as? LinearLayout)?.addView(
         label(getString(R.string.settings_summary_setup), 13f).apply { alpha = 0.6f; setPadding(dp(12), 0, dp(8), 0) }, 1)
@@ -119,6 +121,7 @@ internal fun MainActivity.renderSettings(row: Int) {
     val section = row / SECTION
     showPage(sectionTitle(section), sectionRows(section), row % SECTION) { renderSettingsHome(section) }
     shownSection = section
+    if (section == SYSTEM_SECTION) updateDot(UPDATE_ROW % SECTION)
 }
 
 /** Redraws the section page holding [row] for news that arrives later (a download, an update), only if it's on screen. */

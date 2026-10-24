@@ -9,7 +9,7 @@
 </p>
 
 > [!NOTE]
-> **Piume** (Italian for *feathers*) is a fork of [**Plume Launcher**](https://github.com/aradhyas8/Plume_Launcher) by [aradhyas8](https://github.com/aradhyas8). It keeps Plume's small, fast design and adds an Italian translation, a TMDB Spotlight of trending films and series (or other TMDB lists, or your own), recommendations per app, TV channels with logos and what's on, search across TMDB and the TV's channels, grouped settings, a TV inputs menu, night mode, settings backup and readability changes. Piume installs next to Plume: it has its own package name (`dev.piume`) and its own updates. See [Credits](#credits) for everyone whose work it builds on.
+> **Piume** (Italian for *feathers*) is a fork of [**Plume Launcher**](https://github.com/aradhyas8/Plume_Launcher) by [aradhyas8](https://github.com/aradhyas8). It keeps Plume's small, fast design and adds Italian, Spanish and French translations, a TMDB Spotlight of trending films and series (or other TMDB lists, or your own), recommendations per app, TV channels with logos and what's on, search across TMDB and the TV's channels, grouped settings, a TV inputs menu, night mode, settings backup and readability changes. Piume installs next to Plume: it has its own package name (`dev.piume`) and its own updates. See [Credits](#credits) for everyone whose work it builds on.
 
 <p align="center">
   <a href="https://github.com/mccoy88f/Piume_Launcher/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mccoy88f/Piume_Launcher?label=release"></a>
@@ -29,25 +29,26 @@ Piume replaces the cluttered stock home screen with the two things you actually 
 
 - **Tiny and fast.** A 0.5 MB APK with no third-party libraries. It uses about 50–70 MB of RAM and has no extra background services.
 - **Home button support on Google TV.** The Home button opens Piume directly, even on devices where the system launcher can't be replaced. Holding Home still opens the Google TV dashboard.
-- **Continue Watching.** Resume shows and films from Android TV's Watch Next list and from apps that publish their own "Continue Watching" channel, such as Stremio.
-- **App sections.** Each row an app puts on the home screen (for example YouTube's Recommended and Trending) is its own section under the apps row. Hold OK on the app and select **Visible sections** to choose them. The TV app shows all the TV's channels from channel 1, one section per tuner, 10 at a time as you move along.
-- **Clean apps row.** Monochrome logos (or the same logos in brand colour) in a single row, with names on focus, always or never. Rearrange it by holding OK, sort by most used, or hide apps you don't use (they stay in All apps). An optional PIN locks the layout so small hands can't rearrange it.
+- **Play queue.** The first tile shows what's playing now in any app (Spotify, YouTube…) with its art and progress, then **Continue Watching**: resume shows and films from Android TV's Watch Next list and from apps that publish their own "Continue Watching" channel, such as Stremio.
+- **App sections.** Each row an app puts on the home screen (for example YouTube's Recommended and Trending) is its own section under your Favourites. Hold OK on the app and select **Visible sections** to choose them. The TV app shows all the TV's channels from channel 1, one section per tuner, 10 at a time as you move along.
+- **Favourites.** Your apps as monochrome logos (or the same logos in brand colour) in a single row, with names on focus, always or never. Rearrange it by holding OK, sort by most used, or hide apps you don't use (they stay in All apps). An optional PIN locks the layout so small hands can't rearrange it.
 - **HDMI inputs as apps.** A console or set-top box that names itself over HDMI-CEC (for example "PlayStation 5") gets its own tile, which switches the TV to that input.
 - **Light, dark, Glass or automatic theme**, each with its own wallpaper. Glass shows the wallpaper through glossy see-through cards, with white text. Add your own photos from your phone by scanning a QR code, or show a folder of photos from the TV or a USB drive that changes on a timer.
-- **Optional TMDB Spotlight.** Trending films and series, another TMDB list (popular, top rated, in cinemas, coming soon, on the air), or your own public TMDB list, above the apps row, with their backdrop as the wallpaper. It changes title every few seconds, in a random order. Buttons open the title in Nuvio (by TMDB id) or Stremio (by IMDb id), play its YouTube trailer, or open a streaming app that has it in your country.
+- **Optional TMDB Spotlight.** Trending films and series, another TMDB list (popular, top rated, in cinemas, coming soon, on the air), or your own public TMDB list, above your Favourites, with their backdrop as the wallpaper. It changes title every few seconds, in a random order. Buttons open the title in Nuvio (by TMDB id) or Stremio (by IMDb id), play its YouTube trailer, or open a streaming app that has it in your country.
 - **Optional Gallery screensaver.** Public-domain landscape paintings in 16:9, downloaded only if you choose it, a folder of your own photos, or the Spotlight backdrops with their titles.
 - **Optional weather** under the clock, and a 12- or 24-hour clock.
 - **Night mode.** Between the hours you choose, the home screen goes darker and Spotlight stops.
 - **TV channels with logos and what's on.** Each channel card shows the channel's logo, from the TV or else from [iptv-org](https://github.com/iptv-org/database), and the program on now with a progress bar, from a TV guide in XMLTV format that you choose.
-- **Search** from the top bar: type with the remote, say it, or type on your phone. Films, series and TV channels show in their own rows under a **Results** tile in the apps row. OK on a film or series shows its description, the trailer and the apps that have it; OK on a channel shows what's on and **Watch on TV**.
+- **Search** from the top bar: type with the remote, say it, or type on your phone. Films, series and TV channels show in their own rows under a **Results** tile in your Favourites. OK on a film or series shows its description, the trailer and the apps that have it; OK on a channel shows what's on and **Watch on TV**.
 - **Your phone as a keyboard.** Scan a QR code to send a wallpaper, type the TMDB key or list, a search or the TV guide's address, save a settings backup, or restore one.
+- **Status at a glance.** A red dot on the network icon when there's no internet; a red dot on Piume settings when an update is ready, and on each item that leads to it.
 - **Updates itself.** Piume checks its GitHub releases once a day and installs new versions from its settings. The first update asks you to allow installs from Piume.
 
 ## Screenshots
 
 <p align="center">
   <img src="docs/screens/en-home-glass.jpg" alt="The Glass theme: see-through cards over the wallpaper" width="49%">
-  <img src="docs/screens/en-app-menu.jpg" alt="Hold OK on an app: its menu, with YouTube's sections under the apps row" width="49%">
+  <img src="docs/screens/en-app-menu.jpg" alt="Hold OK on an app: its menu, with YouTube's sections under your Favourites" width="49%">
 </p>
 
 <p align="center">
@@ -131,16 +132,16 @@ Android 13 and newer grey out the Accessibility switch for apps installed outsid
 |---|---|
 | Choose an app's sections on the home screen | Hold **OK** on the app, then **Visible sections** |
 | Switch to the Glass theme | **Settings → Appearance & wallpapers → Theme → Glass** |
-| Rearrange apps | Hold **OK** on an app, or use **Settings → Apps row → Edit apps row** |
+| Rearrange apps | Hold **OK** on an app, or use **Settings → Favourites → Edit Favourites** |
 | Hide a Continue Watching item | Hold **OK** on its card, then **Remove from Continue Watching** |
-| Remove an app from the row | Hold **OK** on it, then **Remove from row** (it stays in *All apps*) |
+| Remove an app from Favourites | Hold **OK** on it, then **Remove from Favourites** (it stays in *All apps*) |
 | Choose which apps feed Continue Watching | **Settings → Continue Watching → Continue Watching apps** |
 | Pin an app from *All apps* to the front | Open **All apps**, hold **OK** on the app (this also unhides it) |
-| Hide apps from the row | **Settings → Apps row → Apps in row** |
-| Show app names always, on focus or never | **Settings → Apps row → App names** |
-| Switch between monochrome and colour icons | **Settings → Apps row → Icon style** |
+| Hide apps from Favourites | **Settings → Favourites → Apps in Favourites** |
+| Show app names always, on focus or never | **Settings → Favourites → App names** |
+| Switch between monochrome and colour icons | **Settings → Favourites → Icon style** |
 | Update Piume | **Settings → System → Updates** |
-| Lock the layout with a PIN | **Settings → Apps row → Lock layout** |
+| Lock the layout with a PIN | **Settings → Favourites → Lock layout** |
 | Show trending films and series on top (TMDB Spotlight) | **Settings → TMDB Spotlight → TMDB API Key** (type it on the TV or from your phone) |
 | Choose what Spotlight shows (trending, popular, top rated, in cinemas…) | **Settings → TMDB Spotlight → Spotlight shows** |
 | Show your own TMDB list in Spotlight | **Settings → TMDB Spotlight → Spotlight shows → My TMDB list** |
@@ -172,7 +173,7 @@ Choose **Choose a folder on this TV…** in the wallpaper list to use a whole fo
 
 ### Lock layout
 
-**Settings → Apps row → Lock layout** sets a 4-digit PIN. While it's on, Piume settings and anything that changes the home screen (moving, removing or pinning apps, hiding shows) ask for the PIN first; opening apps works as usual. One PIN unlocks changes for five minutes, until you leave the home screen. Use the arrows or the remote's number keys to enter it.
+**Settings → Favourites → Lock layout** sets a 4-digit PIN. While it's on, Piume settings and anything that changes the home screen (moving, removing or pinning apps, hiding shows) ask for the PIN first; opening apps works as usual. One PIN unlocks changes for five minutes, until you leave the home screen. Use the arrows or the remote's number keys to enter it.
 
 The lock keeps the layout safe, it isn't parental control: apps can still be opened by voice search or from Android settings. Forgot the PIN? **Android Settings → Apps → Piume → Clear data** removes it, along with your layout and settings.
 
@@ -208,6 +209,8 @@ Piume has no analytics, no ads and no account. It only connects to the internet 
 - download a TV guide, **only if you enter its address**, twice a day.
 
 The phone screens (**Add from phone…**, the TMDB key and list, search, the TV guide's address, backup and restore) run a small page on the TV itself, reachable only on your home network, only while that screen is open, and only at a long random address in its QR code. What you send goes straight between your phone and the TV and nowhere else. Android's own backup doesn't copy Piume's settings.
+
+The Play queue shows what's playing from Android's media sessions, which Piume can see because it turns on a notification listener for itself (with the permission granted over adb). It reads no notifications, and what's playing stays on the TV.
 
 ## Troubleshooting
 

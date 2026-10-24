@@ -1,0 +1,360 @@
+<resources>
+    <!-- App & General -->
+    <string name="app_name">Piume</string>
+    <string name="override_desc">Abre Piume cada vez que aparece la pantalla de inicio de Google TV, así el botón Inicio lleva aquí.</string>
+
+    <!-- Top bar & Accessibility descriptions -->
+    <string name="network_settings">Ajustes de red</string>
+    <string name="all_apps">Todas las apps</string>
+    <string name="settings">Ajustes</string>
+    <string name="plume_settings">Ajustes de Piume</string>
+    <string name="tv_inputs">Entradas de TV</string>
+    <string name="toast_no_inputs">No se han encontrado entradas de TV</string>
+
+    <!-- Home screen sections -->
+    <string name="continue_watching">Seguir viendo</string>
+
+    <!-- Edit mode -->
+    <string name="edit_apps_row">Editar Favoritos</string>
+    <string name="editing_row_instructions">Editando Favoritos:  OK coger / soltar  ·  ◀ ▶ mover  ·  Atrás terminar</string>
+    <string name="moving_app_instructions">Moviendo:  ◀ ▶ mover  ·  OK colocar</string>
+    <string name="tip_rearrange_row">Consejo: mantén pulsado OK en una app para reordenar tus Favoritos</string>
+
+    <!-- Settings menu labels -->
+    <string name="setting_theme">Tema</string>
+    <string name="setting_theme_light">Claro</string>
+    <string name="setting_theme_dark">Oscuro</string>
+    <string name="setting_theme_glass">Cristal</string>
+    <string name="setting_theme_auto">Automático</string>
+
+    <string name="setting_light_wallpaper">Fondo del tema claro</string>
+    <string name="setting_dark_wallpaper">Fondo del tema oscuro</string>
+    <string name="setting_photo_fade">Fundido de fotos</string>
+    <string name="setting_folder_photo_changes">Cambio de foto de la carpeta</string>
+    <string name="setting_sort_apps">Ordenar apps</string>
+    <string name="setting_sort_manual">Manual</string>
+    <string name="setting_sort_usage">Más usadas</string>
+
+    <string name="setting_apps_in_row">Apps en Favoritos</string>
+    <string name="apps_in_row_all">Todas</string>
+    <string name="apps_in_row_count">%1$d de %2$d</string>
+
+    <string name="setting_app_names">Nombres de las apps</string>
+    <string name="app_names_focus">Al seleccionar</string>
+    <string name="app_names_always">Siempre</string>
+    <string name="app_names_never">Nunca</string>
+
+    <string name="setting_icon_style">Estilo de iconos</string>
+    <string name="icon_style_colour">En color</string>
+    <string name="icon_style_monochrome">Monocromo</string>
+
+    <string name="setting_channel_logos">Logos de los canales (iptv-org)</string>
+    <string name="setting_channel_logos_update">Actualizar los logos de los canales</string>
+    <string name="toast_channel_logos_updated">Logos de los canales actualizados: %1$d nombres</string>
+    <string name="toast_channel_logos_failed">No se han podido descargar los logos de los canales. Inténtalo más tarde.</string>
+    <string name="setting_epg">Guía de TV (XMLTV)</string>
+    <string name="setting_epg_phone">Pegar la dirección desde el móvil</string>
+    <string name="epg_hint">https://…/guia.xml.gz</string>
+    <string name="epg_intro">La dirección de una guía de TV en formato XMLTV, para ver lo que se emite bajo cada canal. Piume la descarga dos veces al día.</string>
+    <string name="epg_downloading">Descargando la guía de TV…</string>
+    <string name="toast_epg_updated">Guía de TV descargada: %1$d canales</string>
+    <string name="toast_epg_old">La guía de TV no tiene programas para hoy: no está actualizada. Prueba otra dirección.</string>
+    <string name="toast_epg_failed">No se ha podido descargar la guía de TV. Comprueba la dirección.</string>
+    <string name="epg_phone_waiting">Esperando la dirección desde el móvil…</string>
+    <string name="phone_epg_title">Dirección de la guía de TV</string>
+    <string name="phone_epg_intro">Pega la dirección de una guía de TV en formato XMLTV (.xml o .xml.gz).</string>
+    <string name="phone_epg_bad">No es una dirección web. Empieza por http:// o https://.</string>
+    <string name="phone_epg_saved">Dirección guardada en la TV. Descargando la guía.</string>
+    <string name="setting_restore_hidden_shows">Recuperar elementos ocultos</string>
+    <string name="hidden_shows_none">Ninguno oculto</string>
+    <string name="hidden_shows_count">%1$d ocultos</string>
+
+    <string name="setting_cw_apps">Apps de Seguir viendo</string>
+    <string name="cw_apps_all_on">Todas activadas</string>
+    <string name="cw_apps_count_off">%1$d desactivadas</string>
+
+    <string name="setting_weather">Tiempo</string>
+    <string name="weather_off">Desactivado</string>
+
+    <string name="setting_screensaver">Salvapantallas</string>
+    <string name="setting_test_screensaver">Probar salvapantallas</string>
+    <string name="setting_screensaver_timing">Tiempo del salvapantallas</string>
+
+    <string name="setting_home_button">Botón Inicio</string>
+    <string name="home_button_on">Activado</string>
+    <string name="home_button_off_prompt">Desactivado: pulsa para activar</string>
+
+    <string name="setting_default_launcher">Launcher predeterminado</string>
+    <string name="default_launcher_set_prompt">Pulsa para establecer</string>
+
+    <string name="setting_updates">Actualizaciones</string>
+    <string name="updates_updating">Actualizando…</string>
+    <string name="updates_checking">Comprobando…</string>
+    <string name="updates_available_prompt">%1$s disponible: pulsa para actualizar</string>
+    <string name="updates_up_to_date">Actualizado (%1$s)</string>
+
+    <string name="setting_lock_layout">Bloquear diseño</string>
+    <string name="state_on">Activado</string>
+    <string name="state_off">Desactivado</string>
+    <string name="state_shown">Visible</string>
+    <string name="state_hidden">Oculta</string>
+
+    <!-- Wallpapers & Folders -->
+    <string name="wallpaper_plain_pure_black">Negro puro</string>
+    <string name="wallpaper_plain_soft_white">Blanco suave</string>
+    <string name="wallpaper_rockies_day">Montañas Rocosas (día)</string>
+    <string name="wallpaper_rockies_dusk">Montañas Rocosas (atardecer)</string>
+    <string name="wallpaper_prefix_folder">Carpeta: %1$s</string>
+    <string name="add_from_phone">Añadir desde el móvil…</string>
+    <string name="choose_from_tv">Elegir una carpeta de esta TV…</string>
+    <string name="remove_photo">Quitar una foto…</string>
+    <string name="choose_folder_title">Elige una carpeta</string>
+    <string name="photos_count_singular">%1$d foto</string>
+    <string name="photos_count_plural">%1$d fotos</string>
+    <string name="delete_photo_confirm">¿Eliminar \"%1$s\"?</string>
+    <string name="dialog_cancel">Cancelar</string>
+    <string name="dialog_delete">Eliminar</string>
+    <string name="dialog_done">Listo</string>
+
+    <string name="add_from_phone_title">Añadir desde el móvil</string>
+    <string name="upload_waiting">Esperando una foto…</string>
+    <string name="upload_added_status">Añadida \"%1$s\". Envía otra o pulsa Listo.</string>
+    <string name="upload_qr_instructions">Escanea con la cámara del móvil o abre esta dirección. El móvil y la TV deben estar en la misma Wi-Fi.</string>
+
+    <!-- Photo interval -->
+    <string name="interval_every_minute">Cada minuto</string>
+    <string name="interval_every_5_min">Cada 5 min</string>
+    <string name="interval_every_10_min">Cada 10 min</string>
+    <string name="interval_every_15_min">Cada 15 min</string>
+    <string name="interval_every_30_min">Cada 30 min</string>
+    <string name="interval_every_hour">Cada hora</string>
+    <string name="interval_every_day">Cada día</string>
+
+    <!-- Screensaver -->
+    <string name="screensaver_gallery_paintings">Cuadros de la galería</string>
+    <string name="screensaver_your_photos">Tus fotos</string>
+    <string name="screensaver_gallery_label">Galería</string>
+    <string name="screensaver_downloading">Descargando la galería…</string>
+    <string name="screensaver_system_default">Predeterminado del sistema</string>
+
+    <!-- PIN & Lock -->
+    <string name="pin_enter_title">Introduce el PIN</string>
+    <string name="pin_choose_title">Elige un PIN</string>
+    <string name="pin_enter_again_title">Introdúcelo otra vez</string>
+    <string name="pin_wrong">PIN incorrecto</string>
+    <string name="pin_too_many_tries_wait">Demasiados intentos. Vuelve a intentarlo en %1$d s.</string>
+    <string name="pin_instructions">▲ ▼ cambiar  ·  ◀ ▶ mover  ·  OK confirmar. También sirven las teclas numéricas.</string>
+    <string name="pin_forgot_notice">¿Lo has olvidado? Ajustes de Android → Apps → Piume → Borrar datos quita el bloqueo, junto con tu diseño y tus ajustes.</string>
+    <string name="pin_mismatch">Los PIN no coinciden. Elige uno otra vez.</string>
+    <string name="layout_locked_toast">Diseño bloqueado. Los ajustes de Piume y los cambios en la pantalla de inicio piden ahora el PIN.</string>
+    <string name="unlock_to_edit">Desbloquear para editar…</string>
+
+    <!-- Context Menus (Hold OK) -->
+    <string name="menu_open">Abrir</string>
+    <string name="menu_move">Mover</string>
+    <string name="menu_remove_from_row">Quitar de Favoritos</string>
+    <string name="menu_app_info">Información de la app</string>
+    <string name="menu_remove_from_cw">Quitar de Seguir viendo</string>
+    <string name="menu_open_app">Abrir app</string>
+    <string name="removed_from_row_toast">Quitada de Favoritos. Sigue en Todas las apps.</string>
+
+    <!-- Time left -->
+    <string name="time_left_hr_min">Quedan %1$d h %2$d min</string>
+    <string name="time_left_min">Quedan %1$d min</string>
+
+    <!-- Weather conditions -->
+    <string name="weather_clear">Despejado</string>
+    <string name="weather_partly_cloudy">Parcialmente nublado</string>
+    <string name="weather_cloudy">Nublado</string>
+    <string name="weather_fog">Niebla</string>
+    <string name="weather_drizzle">Llovizna</string>
+    <string name="weather_rain">Lluvia</string>
+    <string name="weather_snow">Nieve</string>
+    <string name="weather_thunderstorm">Tormenta</string>
+
+    <!-- Toasts & Notifications -->
+    <string name="toast_photo_access_needed">Piume necesita acceso a las fotos para mostrar tus carpetas</string>
+    <string name="toast_home_button_permission">Activa \"Piume: botón Inicio\" en Ajustes → Sistema → Accesibilidad</string>
+    <string name="toast_no_photos_found">No se han encontrado fotos. Copia algunas a la TV o conecta una memoria USB con fotos.</string>
+    <string name="toast_connect_network">Conecta primero la TV a la Wi-Fi o a Ethernet</string>
+    <string name="toast_upload_server_failed">No se ha podido abrir la página de envío</string>
+    <string name="toast_screensaver_choose_gallery">Elige aquí \"Galería\" como salvapantallas</string>
+    <string name="toast_screensaver_downloading">Descargando los cuadros de la galería (%1$s)…</string>
+    <string name="toast_screensaver_download_failed">No se han podido descargar los cuadros. Comprueba la conexión e inténtalo de nuevo.</string>
+    <string name="toast_screensaver_cannot_start">Esta TV no puede iniciar el salvapantallas a petición</string>
+    <string name="toast_update_available">Piume %1$s está disponible. Actualízala en los ajustes de Piume.</string>
+    <string name="toast_update_check_failed">No se han podido buscar actualizaciones. Comprueba la conexión.</string>
+    <string name="toast_update_up_to_date">Piume está actualizada</string>
+    <string name="toast_update_permission">Activa Piume en la lista siguiente y vuelve a pulsar Actualizaciones</string>
+    <string name="toast_update_download_failed">No se ha podido descargar la actualización. Comprueba la conexión e inténtalo de nuevo.</string>
+    <string name="toast_update_install_failed">No se ha podido instalar la actualización</string>
+    <string name="toast_no_cw_apps">Ninguna app instalada admite Seguir viendo</string>
+    <string name="toast_hidden_from_cw">Ocultado de Seguir viendo</string>
+
+    <!-- TMDB Spotlight & Channels -->
+    <string name="setting_tmdb">Destacados de TMDB</string>
+    <string name="setting_tmdb_api_key">Clave API de TMDB</string>
+    <string name="setting_tmdb_language">Idioma / región de TMDB</string>
+    <string name="setting_tmdb_media_type">Tipo de contenido</string>
+    <string name="tmdb_type_all">Películas y series</string>
+    <string name="tmdb_type_movie">Solo películas</string>
+    <string name="tmdb_type_tv">Solo series</string>
+    <string name="tmdb_api_key_set">Configurada</string>
+    <string name="tmdb_api_key_empty">Sin configurar: pulsa para configurar</string>
+    <string name="tmdb_qr_instructions">Escanea para abrir la página de configuración en el móvil, o escribe tu clave API v3 de TMDB.</string>
+    <string name="tmdb_search_on">Ver en %1$s</string>
+    <string name="tmdb_badge_movie">Película</string>
+    <string name="tmdb_badge_tv">Serie</string>
+    <string name="toast_tmdb_fetch_failed">No se han podido cargar las tendencias de TMDB</string>
+    <string name="wallpaper_tmdb_trending">Destacados de TMDB (tendencias)</string>
+    <string name="setting_tmdb_default_apps">Apps para las sugerencias</string>
+    <string name="app_section">%1$s: %2$s</string>
+    <string name="section_channels">Canales</string>
+    <string name="section_recommended">Recomendados</string>
+    <string name="menu_sections">Secciones visibles</string>
+    <string name="dialog_save">Guardar</string>
+    <string name="dialog_clear">Quitar</string>
+    <string name="tmdb_api_key_hint">Pega o escribe tu clave API v3 de TMDB</string>
+    <string name="settings_section_look">Apariencia y fondos</string>
+    <string name="settings_section_apps">Favoritos</string>
+    <string name="settings_section_system">Sistema</string>
+    <string name="settings_summary_setup">Falta activar el botón Inicio</string>
+    <string name="setting_tmdb_cycle">Siguiente título cada</string>
+    <string name="tmdb_cycle_off">Desactivado (solo con ◀ ▶)</string>
+    <string name="tmdb_cycle_seconds">%1$d segundos</string>
+    <string name="spotlight_previous">Título anterior</string>
+    <string name="spotlight_next">Título siguiente</string>
+    <string name="folder_untitled">Fotos</string>
+    <string name="spotlight_trailer">Tráiler en YouTube</string>
+    <!-- Merged from upstream: guided Home setup, weather location, row position, update notes -->
+    <string name="home_service_label">Piume: botón Inicio</string>
+    <string name="gallery">Galería</string>
+    <string name="home_off_hint">Desactiva \"Piume: botón Inicio\" en Ajustes → Sistema → Accesibilidad</string>
+    <string name="home_on_hint">Activa \"Piume: botón Inicio\" en Ajustes → Sistema → Accesibilidad</string>
+    <string name="plume_press_change">Piume: pulsa para cambiar</string>
+    <string name="setup_home">Configurar el botón Inicio</string>
+    <string name="preview_home_setup">Vista previa de la configuración de Inicio</string>
+    <string name="setup_step">Paso %1$d de 3</string>
+    <string name="setup_role_title">Usa Piume como pantalla de inicio</string>
+    <string name="setup_role_body">Android te preguntará qué app usar como pantalla de inicio. Elige Piume.</string>
+    <string name="setup_test_title">Pulsa Inicio en el mando</string>
+    <string name="setup_test_body">Piume comprueba que Inicio te trae aquí. Si se abre otra pantalla de inicio, vuelve a abrir Piume desde tus apps y la configuración probará el siguiente método.</string>
+    <string name="setup_service_title">Activa el botón Inicio de Piume</string>
+    <string name="setup_service_body">Se abrirán los ajustes de Accesibilidad. Selecciona \"Piume: botón Inicio\", actívalo y pulsa Atrás para volver aquí.</string>
+    <string name="setup_adb_title">Desbloquéalo una vez con ADB</string>
+    <string name="setup_adb_body">Esta TV bloquea el interruptor del botón Inicio para las apps instaladas fuera de Play Store. Activa la depuración por red en Opciones para desarrolladores y ejecuta estos comandos desde un ordenador o una app de ADB en el móvil. Piume hace el resto.</string>
+    <string name="setup_scan_help">Ayuda paso a paso</string>
+    <string name="setup_done_title">Inicio configurado</string>
+    <string name="setup_done_body">Ahora el botón Inicio del mando abre Piume.</string>
+    <string name="setup_done_body_service">Ahora el botón Inicio del mando abre Piume. Mantén pulsado Inicio para el panel de Google TV.</string>
+    <string name="setup_continue">Continuar</string>
+    <string name="setup_not_now">Ahora no</string>
+    <string name="setup_skip_check">Omitir esta comprobación</string>
+    <string name="setup_open_accessibility">Abrir Accesibilidad</string>
+    <string name="setup_try_again">Reintentar</string>
+    <string name="setup_close">Cerrar</string>
+    <string name="setup_done">Listo</string>
+    <string name="whats_new_title">Novedades de la versión %1$s</string>
+    <string name="check_updates">Buscar actualizaciones</string>
+    <string name="install_update">Instalar %1$s</string>
+    <string name="weather_units">Unidades del tiempo</string>
+    <string name="weather_location">Ubicación del tiempo</string>
+    <string name="automatic">Automática</string>
+    <string name="automatic_ip">Automática (por tu dirección de internet)</string>
+    <string name="city_hint">Escribe una ciudad y pulsa Buscar</string>
+    <string name="searching">Buscando…</string>
+    <string name="search_failed">No se ha podido buscar. Comprueba la conexión e inténtalo de nuevo.</string>
+    <string name="no_places">Ningún lugar llamado \"%1$s\".</string>
+    <string name="row_position">Posición de Favoritos</string>
+    <string name="align_left">Izquierda</string>
+    <string name="align_centre">Centro</string>
+    <string name="align_right">Derecha</string>
+    <!-- Phone link (QR) pages -->
+    <string name="phone_send">Enviar a la TV</string>
+    <string name="phone_sending">Enviando…</string>
+    <string name="phone_unreachable">No se ha podido conectar con la TV. ¿Sigue abierta esa pantalla?</string>
+    <string name="phone_wallpaper_title">Añadir un fondo</string>
+    <string name="phone_wallpaper_intro">Elige una foto. Aparece en la TV un momento después de enviarla.</string>
+    <string name="phone_choose_photo">Elegir foto</string>
+    <string name="phone_wallpaper_added">\"%1$s\" añadida a la TV. Puedes enviar otra.</string>
+    <string name="phone_not_a_photo">No parece una foto que la TV pueda abrir.</string>
+    <string name="phone_tmdb_title">Clave API de TMDB</string>
+    <string name="phone_tmdb_intro">Pega tu clave API o tu token de acceso de lectura de TMDB. Los encontrarás en themoviedb.org, en Ajustes → API.</string>
+    <string name="phone_tmdb_hint">Clave API o token de acceso de lectura</string>
+    <string name="phone_tmdb_saved">Clave guardada en la TV. Destacados está activado.</string>
+    <string name="phone_tmdb_refused">TMDB no acepta esta clave. Compruébala e inténtalo de nuevo.</string>
+    <string name="phone_tmdb_unchecked">Clave guardada, pero no se ha podido comprobar con TMDB.</string>
+    <string name="setting_tmdb_key_phone">Introducir desde el móvil…</string>
+    <string name="tmdb_phone_waiting">Esperando la clave…</string>
+    <string name="setting_tmdb_providers">Solo servicios que tienen el título</string>
+    <string name="setting_problems">Problemas recientes</string>
+    <string name="problems_none">Ninguno</string>
+    <string name="problems_on_phone">Leerlos en el móvil…</string>
+    <!-- Backup and restore -->
+    <string name="setting_backup">Copia de seguridad y restauración</string>
+    <string name="backup_save">Guardar una copia en el móvil…</string>
+    <string name="backup_restore">Restaurar desde el móvil…</string>
+    <string name="backup_waiting">Esperando el archivo de copia…</string>
+    <string name="phone_backup_title">Copia de seguridad de Piume</string>
+    <string name="phone_backup_intro">Guarda este archivo. Contiene tus ajustes de Piume y tu clave de TMDB, así que mantenlo privado. No incluye las fotos ni el PIN de bloqueo.</string>
+    <string name="phone_backup_download">Descargar la copia</string>
+    <string name="phone_restore_title">Restaurar Piume</string>
+    <string name="phone_restore_intro">Elige un archivo de copia de Piume. Sus ajustes sustituyen a los de la TV.</string>
+    <string name="phone_choose_file">Elegir archivo</string>
+    <string name="phone_restore_done">%1$d ajustes restaurados. Piume se reinicia en la TV.</string>
+    <string name="phone_restore_bad">No es un archivo de copia de Piume.</string>
+    <!-- Clock and night mode -->
+    <string name="setting_clock">Reloj</string>
+    <string name="clock_24">24 horas</string>
+    <string name="clock_12">12 horas</string>
+    <string name="setting_night">Modo noche</string>
+    <string name="setting_night_from">El modo noche empieza a las</string>
+    <string name="setting_night_to">El modo noche termina a las</string>
+    <string name="search_title">Buscar</string>
+    <string name="search_hint">Película, serie o canal de TV</string>
+    <string name="search_dictate">Dilo en voz alta</string>
+    <string name="search_assistant">Asistente de voz de la TV</string>
+    <string name="search_phone">O escribe en el móvil: escanea el código</string>
+    <string name="phone_search_title">Buscar en la TV</string>
+    <string name="phone_search_intro">Escribe el título de una película o serie, o el nombre de un canal de TV. La TV muestra lo que encuentra.</string>
+    <string name="phone_search_sent">Buscando “%1$s” en la TV.</string>
+    <string name="toast_no_voice_search">Esta TV no tiene búsqueda por voz</string>
+    <string name="search_listening">Te escucho… di un título</string>
+    <string name="search_not_heard">No te he entendido. Elige Dilo en voz alta para reintentar</string>
+    <string name="search_results_tile">Resultados: “%1$s”</string>
+    <string name="toast_mic_needed">Piume necesita el micrófono para oír el título</string>
+    <string name="search_films_for">Películas para “%1$s”</string>
+    <string name="search_series_for">Series para “%1$s”</string>
+    <string name="search_channels_for">Canales de TV para “%1$s”</string>
+    <string name="channel_number">Canal %1$s</string>
+    <string name="channel_next">A continuación: %1$s %2$s</string>
+    <string name="channel_watch">Ver en la TV</string>
+    <string name="play_queue">Cola de reproducción</string>
+    <string name="now_playing">Reproduciendo ahora</string>
+    <string name="playing_paused">%1$s · En pausa</string>
+    <string name="toast_no_results">No se ha encontrado nada para “%1$s”</string>
+    <plurals name="toast_search_results">
+        <item quantity="one">%1$d resultado para “%2$s”. Atrás cierra la búsqueda</item>
+        <item quantity="many">%1$d resultados para “%2$s”. Atrás cierra la búsqueda</item>
+        <item quantity="other">%1$d resultados para “%2$s”. Atrás cierra la búsqueda</item>
+    </plurals>
+    <string name="screensaver_tmdb">Imágenes de Destacados (TMDB)</string>
+    <!-- TMDB list as Spotlight source -->
+    <string name="setting_tmdb_source">Destacados muestra</string>
+    <string name="tmdb_source_trending">Títulos en tendencia</string>
+    <string name="tmdb_source_trending_week">Tendencia esta semana</string>
+    <string name="tmdb_source_popular">Populares</string>
+    <string name="tmdb_source_top_rated">Mejor valorados</string>
+    <string name="tmdb_source_now_playing">En cines (películas)</string>
+    <string name="tmdb_source_upcoming">Próximos estrenos (películas)</string>
+    <string name="tmdb_source_on_the_air">En emisión (series)</string>
+    <string name="tmdb_source_list">Mi lista de TMDB</string>
+    <string name="setting_tmdb_list">Mi lista de TMDB</string>
+    <string name="tmdb_list_none">Sin configurar: pulsa para añadirla</string>
+    <string name="list_waiting">Esperando la lista…</string>
+    <string name="phone_list_title">Tu lista de TMDB</string>
+    <string name="phone_list_intro">Pega el enlace de una lista pública de themoviedb.org, o su número. Destacados mostrará sus títulos, en el orden de la lista.</string>
+    <string name="phone_list_hint">https://www.themoviedb.org/list/…</string>
+    <string name="phone_list_saved">Lista guardada en la TV: %1$d títulos.</string>
+    <string name="phone_list_bad">No es una lista pública de TMDB, o está vacía.</string>
+</resources>

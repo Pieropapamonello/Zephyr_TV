@@ -15,10 +15,10 @@
     <string name="continue_watching">Continua a guardare</string>
 
     <!-- Edit mode -->
-    <string name="edit_apps_row">Modifica riga delle app</string>
-    <string name="editing_row_instructions">Modifica riga delle app:  OK prendi / rilascia  ·  ◀ ▶ sposta  ·  Indietro fatto</string>
+    <string name="edit_apps_row">Modifica Preferiti</string>
+    <string name="editing_row_instructions">Modifica Preferiti:  OK prendi / rilascia  ·  ◀ ▶ sposta  ·  Indietro fatto</string>
     <string name="moving_app_instructions">Spostamento:  ◀ ▶ sposta  ·  OK posiziona</string>
-    <string name="tip_rearrange_row">Suggerimento: tieni premuto OK su un\'app per riordinare la riga</string>
+    <string name="tip_rearrange_row">Suggerimento: tieni premuto OK su un\'app per riordinare i Preferiti</string>
 
     <!-- Settings menu labels -->
     <string name="setting_theme">Tema</string>
@@ -35,7 +35,7 @@
     <string name="setting_sort_manual">Manuale</string>
     <string name="setting_sort_usage">Più usate</string>
 
-    <string name="setting_apps_in_row">App nella riga</string>
+    <string name="setting_apps_in_row">App nei Preferiti</string>
     <string name="apps_in_row_all">Tutte</string>
     <string name="apps_in_row_count">%1$d di %2$d</string>
 
@@ -152,11 +152,11 @@
     <!-- Context Menus (Hold OK) -->
     <string name="menu_open">Apri</string>
     <string name="menu_move">Sposta</string>
-    <string name="menu_remove_from_row">Rimuovi dalla riga</string>
+    <string name="menu_remove_from_row">Rimuovi dai Preferiti</string>
     <string name="menu_app_info">Info app</string>
     <string name="menu_remove_from_cw">Rimuovi da Continua a guardare</string>
     <string name="menu_open_app">Apri app</string>
-    <string name="removed_from_row_toast">Rimossa dalla riga. È ancora presente in Tutte le app.</string>
+    <string name="removed_from_row_toast">Rimossa dai Preferiti. È ancora presente in Tutte le app.</string>
 
     <!-- Time left -->
     <string name="time_left_hr_min">%1$d h e %2$d min rimanenti</string>
@@ -216,7 +216,7 @@
     <string name="dialog_clear">Rimuovi</string>
     <string name="tmdb_api_key_hint">Incolla o inserisci la tua API Key v3 di TMDB</string>
     <string name="settings_section_look">Aspetto e sfondi</string>
-    <string name="settings_section_apps">Riga delle app</string>
+    <string name="settings_section_apps">Preferiti</string>
     <string name="settings_section_system">Sistema</string>
     <string name="settings_summary_setup">Tasto Home da attivare</string>
     <string name="setting_tmdb_cycle">Titolo successivo ogni</string>
@@ -265,7 +265,7 @@
     <string name="searching">Ricerca in corso…</string>
     <string name="search_failed">Ricerca non riuscita. Controlla la connessione e riprova.</string>
     <string name="no_places">Nessun luogo chiamato \"%1$s\".</string>
-    <string name="row_position">Posizione riga delle app</string>
+    <string name="row_position">Posizione dei Preferiti</string>
     <string name="align_left">Sinistra</string>
     <string name="align_centre">Centro</string>
     <string name="align_right">Destra</string>
