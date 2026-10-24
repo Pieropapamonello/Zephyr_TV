@@ -38,7 +38,7 @@ Piume sostituisce la Home di serie, piena di elementi, con le due cose che usi d
 - **Salvaschermo Galleria, facoltativo.** Dipinti di paesaggi di pubblico dominio in 16:9, scaricati solo se lo scegli, una cartella delle tue foto, oppure le immagini di In evidenza con i loro titoli.
 - **Meteo facoltativo** sotto l'orologio, e orologio a 12 o 24 ore.
 - **Modalità notte.** Nelle ore che scegli la Home diventa più scura e In evidenza si ferma.
-- **Ricerca** dalla barra in alto: scrivi con il telecomando, parla, o scrivi dal telefono. I risultati TMDB compaiono in Spotlight, con il trailer e le app che hanno il titolo.
+- **Ricerca** dalla barra in alto: scrivi con il telecomando, parla, o scrivi dal telefono. I risultati TMDB compaiono come schede sotto un riquadro **Risultati** nella riga delle app; OK su una mostra descrizione, trailer e app che hanno il titolo.
 - **Il telefono come tastiera.** Inquadra un codice QR per inviare uno sfondo, scrivere la chiave o la lista TMDB, salvare un backup delle impostazioni o ripristinarne uno.
 - **Si aggiorna da solo.** Piume controlla le sue release su GitHub una volta al giorno e installa le nuove versioni dalle sue impostazioni. Il primo aggiornamento ti chiede di consentire le installazioni da Piume.
 

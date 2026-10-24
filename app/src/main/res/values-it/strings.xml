@@ -303,14 +303,17 @@
     <string name="phone_search_intro">Scrivi il titolo di un film o di una serie. La TV mostra quello che trova TMDB.</string>
     <string name="phone_search_sent">Cerco “%1$s” sulla TV.</string>
     <string name="toast_no_voice_search">Questa TV non ha la ricerca vocale</string>
-    <string name="voice_search_prompt">Cerca un film o una serie</string>
+    <string name="search_listening">Ti ascolto… di\' un titolo</string>
+    <string name="search_not_heard">Non ho capito. Scegli Dillo a voce per riprovare</string>
+    <string name="search_results_tile">Risultati: “%1$s”</string>
+    <string name="search_results_for">Risultati per “%1$s”</string>
+    <string name="toast_mic_needed">Piume ha bisogno del microfono per sentire il titolo</string>
     <string name="toast_no_results">Nessun risultato per “%1$s”</string>
     <plurals name="toast_search_results">
         <item quantity="one">%1$d risultato per “%2$s”. Indietro chiude la ricerca</item>
         <item quantity="many">%1$d risultati per “%2$s”. Indietro chiude la ricerca</item>
         <item quantity="other">%1$d risultati per “%2$s”. Indietro chiude la ricerca</item>
     </plurals>
-    <string name="spotlight_search">“%1$s” %2$d/%3$d · </string>
     <string name="screensaver_tmdb">Tendenze Spotlight (TMDB)</string>
     <!-- TMDB list as Spotlight source -->
     <string name="setting_tmdb_source">Spotlight mostra</string>

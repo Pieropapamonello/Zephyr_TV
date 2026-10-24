@@ -1,5 +1,12 @@
 package dev.piume
 
+import android.animation.ValueAnimator
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.PixelFormat
+import android.graphics.RectF
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
@@ -37,6 +44,10 @@ internal fun MainActivity.setupSpotlight() {
     spotlightPrev.setOnClickListener { cycleSpotlight(-1) }
     spotlightNext.setOnClickListener { cycleSpotlight(1) }
     for (v in arrayOf(spotlightContainer, bottomSection)) v.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> centerSpotlight() }
+
+    // The title has no card to light up like the tiles: a soft panel round its text says it has focus.
+    spotlightInfoBox.background = TextHalo(spotlightInfoBox as ViewGroup, dp(14).toFloat(), (fg and 0xFFFFFF) or 0x24000000,
+        (fg and 0xFFFFFF) or 0xCC000000.toInt(), dp(2).toFloat()).apply { alpha = 0 }
 
     window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
         updateSpotlightFocusState(newFocus)
@@ -102,6 +113,10 @@ internal fun MainActivity.updateSpotlightFocusState(targetFocus: View?) {
     spotlightOverview.visibility = if (inSpotlight) View.VISIBLE else View.GONE
     spotlightActions.visibility = if (inSpotlight) View.VISIBLE else View.GONE
     for (arrow in arrayOf(spotlightPrev, spotlightNext)) arrow.animate().alpha(if (inSpotlight) 0.9f else 0.5f).setDuration(220).start()
+    (spotlightInfoBox.background as? TextHalo)?.let { halo ->
+        val to = if (targetFocus === spotlightInfoBox) 255 else 0
+        if (halo.alpha != to) ValueAnimator.ofInt(halo.alpha, to).setDuration(180).apply { addUpdateListener { halo.alpha = it.animatedValue as Int } }.start()
+    }
     // Translate bottomSection downwards to give spotlight breathing room
     val targetTransY = if (inSpotlight) dp(65).toFloat() else 0f
     val targetAlpha = if (inSpotlight) 0.65f else 1f
@@ -121,7 +136,7 @@ internal fun MainActivity.spotlightItem(): TmdbItem? = tmdbTrending.let { list -
 
 internal fun MainActivity.renderSpotlight() {
     val item = spotlightItem()
-    if ((currentWallpaper() != "tmdb:trending" && searchQuery == null) || item == null) {
+    if (currentWallpaper() != "tmdb:trending" || item == null) {
         spotlightContainer.visibility = View.GONE
         return
     }
@@ -130,8 +145,7 @@ internal fun MainActivity.renderSpotlight() {
     val rating = if (item.voteAverage > 0) "★ %.1f · ".format(item.voteAverage) else ""
     val typeBadge = if (item.mediaType == "tv") getString(R.string.tmdb_badge_tv) else getString(R.string.tmdb_badge_movie)
     val genre = item.genres.firstOrNull()?.let { " · $it" } ?: ""
-    val found = searchQuery?.let { getString(R.string.spotlight_search, it, tmdbIndex.mod(tmdbTrending.size) + 1, tmdbTrending.size) } ?: ""
-    spotlightMeta.text = "$found$rating$typeBadge$year$genre"
+    spotlightMeta.text = "$rating$typeBadge$year$genre"
     spotlightTitle.text = item.title
     spotlightOverview.text = item.overview
     spotlightOverview.maxLines = OVERVIEW_LINES // a new title starts closed
@@ -189,9 +203,8 @@ internal fun MainActivity.spotlightAction(from: Int, step: Int): View? {
     return null
 }
 
-/** Up to five search buttons: the known streaming apps first, then other installed apps, minus those turned off. */
-internal fun MainActivity.renderSpotlightActions() {
-    spotlightActions.removeAllViews()
+/** Up to five apps to open a title in: the known streaming apps first, then other installed apps, minus those turned off. */
+internal fun MainActivity.titleApps(): List<App> {
     val offSet = prefs.getStringSet(K.TMDB_DEFAULT_APPS, emptySet()) ?: emptySet()
     val candidateApps = mutableListOf<App>()
     // The known services' apps join whenever installed: each shows only for titles TMDB lists on it.
@@ -209,7 +222,13 @@ internal fun MainActivity.renderSpotlightActions() {
         }
     }
     // Five at most, not counting services' apps beyond that: those hide for titles they don't have.
-    val targetApps = candidateApps.filterIndexed { i, a -> i < 5 || a.pkg in TmdbClient.providerApps }
+    return candidateApps.filterIndexed { i, a -> i < 5 || a.pkg in TmdbClient.providerApps }
+}
+
+/** Spotlight's buttons, one per app in [titleApps]. */
+internal fun MainActivity.renderSpotlightActions() {
+    spotlightActions.removeAllViews()
+    val targetApps = titleApps()
     spotlightApps = targetApps
 
     for (a in targetApps) {
@@ -258,8 +277,8 @@ internal fun MainActivity.renderSpotlightActions() {
  * IMDb id, looked up first), YouTube on the trailer TMDB lists (or a search for one), otherwise through the
  * app's search, otherwise just the app.
  */
-internal fun MainActivity.openInApp(a: App) {
-    val item = spotlightItem() ?: return launch(a)
+internal fun MainActivity.openInApp(a: App, title: TmdbItem? = spotlightItem()) {
+    val item = title ?: return launch(a)
     val lang = tmdbLang()
     fun start(ref: String?) = try {
         startActivity(TmdbClient.openIntent(this, a.pkg, item, ref, lang))
@@ -301,7 +320,6 @@ internal fun MainActivity.spotlightEvery() = prefs.getInt(K.TMDB_CYCLE, 5) // se
 
 internal fun MainActivity.restartSpotlightTick() {
     ui.removeCallbacks(spotlightTick)
-    if (searchQuery != null) return // results only change by hand
     val every = spotlightEvery()
     if (every > 0 && tmdbTrending.size > 1) ui.postDelayed(spotlightTick, every * 1000L)
 }
@@ -330,4 +348,36 @@ internal fun MainActivity.prefetchAllBackdrops() {
             warn("backdrop prefetch failed ($e)")
         }
     }
+}
+
+/**
+ * A rounded panel just round the text of [box] (the widest of its shown lines), reaching [pad] past it. Drawn from
+ * the text, not the view's bounds: the box spans the screen, and its parents don't clip what reaches past it.
+ */
+internal class TextHalo(private val box: ViewGroup, private val pad: Float, private val fill: Int, private val edge: Int, edgeWidth: Float) : Drawable() {
+    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = edgeWidth }
+    private var shown = 255
+
+    override fun draw(canvas: Canvas) {
+        if (shown == 0) return
+        val right = (0 until box.childCount).map { box.getChildAt(it) }.filter { it.visibility == View.VISIBLE }.maxOfOrNull { it.right } ?: return
+        val r = RectF(-pad, -pad * 0.6f, right + pad, box.height + pad * 0.6f)
+        fillPaint.color = fill
+        fillPaint.alpha = (fill ushr 24) * shown / 255
+        edgePaint.color = edge
+        edgePaint.alpha = (edge ushr 24) * shown / 255
+        canvas.drawRoundRect(r, pad, pad, fillPaint)
+        canvas.drawRoundRect(r, pad, pad, edgePaint)
+    }
+
+    override fun setAlpha(alpha: Int) {
+        shown = alpha
+        invalidateSelf()
+    }
+
+    override fun getAlpha() = shown
+    override fun setColorFilter(colorFilter: ColorFilter?) {}
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity() = PixelFormat.TRANSLUCENT
 }

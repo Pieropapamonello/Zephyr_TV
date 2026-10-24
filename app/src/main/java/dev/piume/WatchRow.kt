@@ -457,6 +457,8 @@ internal fun MainActivity.sectionRow(title: String): ViewGroup {
 }
 
 /** The card rows under the apps, top to bottom: the first section's, then any more. */
+internal fun MainActivity.firstCard(): View? = (watchRow.getChildAt(0) as? ViewGroup)?.getChildAt(0)
+
 internal fun MainActivity.cardRows(): List<ViewGroup> = listOf<ViewGroup>(watchRow) +
     (0 until moreSections.childCount).mapNotNull { ((moreSections.getChildAt(it) as? ViewGroup)?.getChildAt(0) as? ViewGroup) }
 
@@ -517,7 +519,7 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
             posterIo.execute { runCatching { decode(uri) }.getOrNull()?.let { ui.post { logo.setImageBitmap(it) } } }
         }
     }
-    frame.setOnClickListener { open(p) }
+    frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: open(p) }
     frame.setTag(R.id.watchRow, p) // holding OK hides it (see onHold)
     // Standard 16:9 aspect ratio prevents cutting off channel numbers and provider badges
     val cardHeight = w * 9 / 16

@@ -13,6 +13,16 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.4
+
+- Search results no longer replace Spotlight. A **Results** tile shows after **Continue Watching**, with the results as cards under the apps row.
+- Press OK on a result to see its description, the YouTube trailer and the apps that have it.
+- Press Back, or hold OK on the **Results** tile, to close the search.
+- **Say it** listens in the search page. The words show in the search box while you speak. The first time, allow Piume to use the microphone.
+- In the search page, Down goes from the search box to **Say it**.
+- The Spotlight title shows a soft panel when it has the focus.
+- The pages that open on your phone from a QR code show the name of the TV at the bottom.
+
 ## 2.3
 
 - The top bar has a **Search** button with a magnifying glass. Type a title with the remote, say it, or type it on your phone with the QR code.

@@ -127,6 +127,9 @@ object TmdbClient {
 
     fun backdropUrl(path: String?): String? = if (path.isNullOrBlank()) null else "$IMAGE_BASE$path"
 
+    /** The same image at card size. */
+    fun cardUrl(path: String?): String? = if (path.isNullOrBlank()) null else "https://image.tmdb.org/t/p/w780$path"
+
     // Nuvio's builds: GitHub ("full") and Play Store. Both take nuvio://tmdb/<type>/<id> and have no search link
     // (their stremio:// handler only installs addons).
     private val NUVIO = setOf("com.nuvio.tv", "com.nuvio.app")

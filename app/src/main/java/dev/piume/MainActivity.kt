@@ -108,11 +108,12 @@ internal fun pinMatches(stored: String, pin: String) = hashPin(pin, stored.subst
 
 /** Allowed to start an activity from the background because the Home button service is bound. */
 internal const val CW_PKG = "piume:continue_watching"
+internal const val SEARCH_PKG = "piume:search" // the search results tile, after Continue Watching while a search is open
 
 class MainActivity : Activity() {
 
     internal class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable)
-    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null)
+    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val tmdb: TmdbItem? = null)
 
     internal val prefs by lazy { getSharedPreferences(K.FILE, MODE_PRIVATE) }
     internal val io = Executors.newSingleThreadExecutor()
@@ -180,8 +181,10 @@ class MainActivity : Activity() {
     @Volatile internal var tmdbFetchedAt = 0L
     internal var spotlightApps: List<App>? = null // apps behind the Spotlight buttons; null rebuilds them
     internal var tmdbLastFocusApp: String? = null
-    internal var searchQuery: String? = null // Spotlight shows TMDB's results for this instead of its titles; null when not searching
-    internal var searchStash: Pair<List<TmdbItem>, Int>? = null // Spotlight's own titles and place, back when the search closes
+    internal var searchQuery: String? = null // the last search, while its results tile is in the apps row; null for none
+    internal var searchResults: List<TmdbItem> = emptyList()
+    internal var recognizer: android.speech.SpeechRecognizer? = null // dictating into the search box
+    internal var afterMicAccess: (() -> Unit)? = null // what asked, while Android's microphone prompt is up
     internal val appChannelDebounce = Runnable { queryAppChannels(tmdbLastFocusApp) }
 
     internal val packageReceiver = object : BroadcastReceiver() {
@@ -237,7 +240,7 @@ class MainActivity : Activity() {
             R.id.allAppsButton to { openAllApps() },
             R.id.tvInputsButton to { openInputsMenu(findViewById(R.id.tvInputsButton)) },
             R.id.systemSettings to { openSettings(Settings.ACTION_SETTINGS) },
-            R.id.launcherSettings to { unlock { endSearch(); openLauncherSettings() } },
+            R.id.launcherSettings to { unlock { openLauncherSettings() } },
         )) findViewById<ImageView>(id).apply {
             setColorFilter(fg)
             val ring = GradientDrawable().apply { shape = GradientDrawable.OVAL }
@@ -325,16 +328,19 @@ class MainActivity : Activity() {
     }
 
     override fun onRequestPermissionsResult(code: Int, perms: Array<out String>, results: IntArray) {
+        if (code == MIC_REQUEST) {
+            if (results.firstOrNull() == PackageManager.PERMISSION_GRANTED) afterMicAccess?.invoke()
+            else Toast.makeText(this, getString(R.string.toast_mic_needed), Toast.LENGTH_LONG).show()
+            afterMicAccess = null
+            return
+        }
         if (code != MEDIA_REQUEST) return refreshWatchNext()
         if (results.firstOrNull() == PackageManager.PERMISSION_GRANTED) afterPhotoAccess?.invoke()
         else Toast.makeText(this, getString(R.string.toast_photo_access_needed), Toast.LENGTH_LONG).show()
     }
 
-    @Deprecated("Only used for the default-home role request and voice search")
+    @Deprecated("Only used for the default-home role request")
     override fun onActivityResult(code: Int, result: Int, data: Intent?) {
-        if (code == VOICE_REQUEST && result == RESULT_OK) {
-            data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.takeIf { it.isNotBlank() }?.let { searchTmdb(it) }
-        }
         if (code == ROLE_REQUEST) refreshSettings(DEFAULT_HOME_ROW)
         if (code == ROLE_REQUEST && setupStep == 1) {
             setupStep = 0
@@ -501,7 +507,7 @@ class MainActivity : Activity() {
 
     internal fun loadWallpaper() {
         val view = findViewById<ImageView>(R.id.wallpaper)
-        val choice = if (searchQuery != null) "tmdb:trending" else currentWallpaper() // search results bring their backdrops
+        val choice = currentWallpaper()
         if (choice.startsWith("plain:")) { // the root's ground colour shows through
             view.setImageDrawable(null)
             return
@@ -543,7 +549,7 @@ class MainActivity : Activity() {
             val key = prefs.getString(K.TMDB_API_KEY, null) ?: return null
             val type = prefs.getString(K.TMDB_TYPE, "all") ?: "all"
             // Trending is per day: refetch now and then, or a home screen that never closes keeps last week's list.
-            if (searchQuery == null && (tmdbTrending.isEmpty() || System.currentTimeMillis() - tmdbFetchedAt > TMDB_FRESH_MS)) {
+            if (tmdbTrending.isEmpty() || System.currentTimeMillis() - tmdbFetchedAt > TMDB_FRESH_MS) {
                 val listId = prefs.getString(K.TMDB_LIST, null)
                 val fresh = if (prefs.getString(K.TMDB_SOURCE, "trending") == "list" && listId != null) TmdbClient.fetchList(key, listId, tmdbLang(), type)
                     else TmdbClient.fetchTrending(key, tmdbLang(), type)
@@ -766,22 +772,6 @@ class MainActivity : Activity() {
     }
 
     /**
-     * Dictation for the search: what's said comes back to onActivityResult and is looked up on TMDB (see searchTmdb).
-     * On a TV with no speech recogniser, the TV's own voice search instead.
-     */
-    @Suppress("DEPRECATION")
-    internal fun dictate() {
-        try {
-            return startActivityForResult(Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
-                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, tmdbLang())
-                .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, getString(R.string.voice_search_prompt)), VOICE_REQUEST)
-        } catch (e: Exception) {
-        }
-        assistant()
-    }
-
-    /**
      * The TV's voice search (Google Assistant on Google TV), by the ways Android TVs offer it, most specific first.
      * Started directly rather than looked up first: Android 11+ hides other apps' activities from lookups.
      */
@@ -924,8 +914,13 @@ class MainActivity : Activity() {
             contentDescription = getString(R.string.continue_watching)
         }
 
+        val searchTile = searchQuery?.let { q ->
+            tile(null, getDrawable(R.drawable.ic_search)!!, mono = true, SEARCH_PKG) { firstCard()?.requestFocus() }.apply {
+                contentDescription = getString(R.string.search_results_tile, q)
+            }
+        }
         val appTiles = sortedApps().filter { it.pkg !in hidden }.map { appTile(it, labeled = false) }
-        val tiles = listOf(cwTile) + appTiles
+        val tiles = listOfNotNull(cwTile, searchTile) + appTiles
         tiles.forEachIndexed { i, t ->
             t.id = View.generateViewId()
             appRow.addView(t, LinearLayout.LayoutParams(width, dp(76)).apply { if (i > 0) marginStart = gap })
@@ -941,6 +936,10 @@ class MainActivity : Activity() {
                         showLoading(pkg)
                         ui.removeCallbacks(appChannelDebounce)
                         ui.postDelayed(appChannelDebounce, 200)
+                    } else if (pkg == SEARCH_PKG) {
+                        tmdbLastFocusApp = pkg
+                        ui.removeCallbacks(appChannelDebounce)
+                        showSearchResults()
                     } else if (pkg != null && !pkg.startsWith(HDMI)) {
                         tmdbLastFocusApp = pkg
                         showLoading(pkg)
@@ -1314,6 +1313,7 @@ class MainActivity : Activity() {
         val tag = v.tag as? String
         when {
             v.id == R.id.searchButton -> assistant() // the TV's own voice search, for what TMDB doesn't know
+            tag == SEARCH_PKG -> endSearch()
             allApps.visibility == View.VISIBLE && tag != null -> unlock { // grid: pin to the front of the row (unhiding it)
                 prefs.edit().putStringSet(K.ROW_HIDDEN, rowHiddenSet() - tag).apply()
                 saveOrder(listOf(tag) + sortedApps().map { it.pkg }.filter { it != tag })
@@ -1321,6 +1321,7 @@ class MainActivity : Activity() {
                 appRow.getChildAt(0)?.requestFocus() // show the app just pinned
             }
             v.parent === appRow -> appMenu(v)
+            (v.getTag(R.id.watchRow) as? Prog)?.tmdb != null -> {} // a search result: OK already shows all it has
             v.getTag(R.id.watchRow) is Prog -> watchMenu(v, v.getTag(R.id.watchRow) as Prog)
         }
     }
@@ -1809,7 +1810,7 @@ class MainActivity : Activity() {
         const val TV_LISTINGS = "android.permission.READ_TV_LISTINGS"
         const val WRITE_SECURE = "android.permission.WRITE_SECURE_SETTINGS"
         const val ROLE_REQUEST = 2
-        const val VOICE_REQUEST = 4
+        const val MIC_REQUEST = 4
         const val SPOTLIGHT_IDLE_MS = 15 * 60_000L // Spotlight stops turning after this long without a key press
         const val TMDB_FRESH_MS = 3 * 3600_000L // how long a trending list is kept before it's fetched again
         val SPOTLIGHT_PKGS = listOf("com.nuvio.tv", "com.nuvio.app", "com.stremio.one", "com.netflix.ninja", "com.google.android.youtube.tv", "com.amazon.amazonvideo.livingroom")

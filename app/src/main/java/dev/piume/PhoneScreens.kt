@@ -38,7 +38,13 @@ internal fun MainActivity.uploadWallpaper(forDark: Boolean) {
 }
 
 internal fun MainActivity.phoneTexts(title: Int, intro: Int) = PhoneTexts(getString(title), getString(intro),
-    getString(R.string.phone_send), getString(R.string.phone_sending), getString(R.string.phone_unreachable))
+    getString(R.string.phone_send), getString(R.string.phone_sending), getString(R.string.phone_unreachable), phoneFooter())
+
+/** "Piume Launcher - TV del salotto": the TV's name as set in Android settings, else its model. */
+internal fun MainActivity.phoneFooter(): String {
+    val name = android.provider.Settings.Global.getString(contentResolver, "device_name")?.takeIf { it.isNotBlank() } ?: android.os.Build.MODEL
+    return "Piume Launcher - $name"
+}
 
 /**
  * A settings page with a QR code that opens [task] on a phone on the same Wi-Fi, for anything easier done on a
@@ -90,7 +96,8 @@ internal fun MainActivity.problemsOnPhone() {
     val page = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <title>Piume</title><style>body{font:14px ui-monospace,monospace;margin:0;padding:20px;background:#f7f8fa;color:#111214}
         @media (prefers-color-scheme:dark){body{background:#09090b;color:#f5f5f7}} li{margin:0 0 10px;word-break:break-word}</style></head>
-        <body><h1 style="font:600 20px system-ui,sans-serif">${esc(getString(R.string.setting_problems))}</h1><ol>${list.joinToString("") { "<li>${esc(it)}</li>" }}</ol></body></html>"""
+        <body><h1 style="font:600 20px system-ui,sans-serif">${esc(getString(R.string.setting_problems))}</h1><ol>${list.joinToString("") { "<li>${esc(it)}</li>" }}</ol>
+        <footer style="margin-top:32px;font:13px system-ui,sans-serif;opacity:.5;text-align:center">${esc(phoneFooter())}</footer></body></html>"""
     showPhoneLink(getString(R.string.setting_problems), PhoneTask(page, 0) { 405 to "" }, label("", 12f)) { showProblems() }
 }
 
@@ -143,7 +150,7 @@ internal fun MainActivity.showBackup() {
 
 internal fun MainActivity.backupToPhone() {
     val page = PhonePages.download(getString(R.string.phone_backup_title), getString(R.string.phone_backup_intro),
-        getString(R.string.phone_backup_download), "piume-backup.json", Backup.export(prefs))
+        getString(R.string.phone_backup_download), "piume-backup.json", Backup.export(prefs), phoneFooter())
     showPhoneLink(getString(R.string.backup_save), PhoneTask(page, 0) { 405 to "" }, label("", 12f)) { showBackup() }
 }
 

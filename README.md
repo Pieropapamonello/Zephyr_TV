@@ -38,7 +38,7 @@ Piume replaces the cluttered stock home screen with the two things you actually 
 - **Optional Gallery screensaver.** Public-domain landscape paintings in 16:9, downloaded only if you choose it, a folder of your own photos, or the Spotlight backdrops with their titles.
 - **Optional weather** under the clock, and a 12- or 24-hour clock.
 - **Night mode.** Between the hours you choose, the home screen goes darker and Spotlight stops.
-- **Search** from the top bar: type with the remote, say it, or type on your phone. TMDB results show in Spotlight, with the trailer and the apps that have the title.
+- **Search** from the top bar: type with the remote, say it, or type on your phone. TMDB results show as cards under a **Results** tile in the apps row; OK on one shows its description, the trailer and the apps that have it.
 - **Your phone as a keyboard.** Scan a QR code to send a wallpaper, type the TMDB key or list, save a settings backup, or restore one.
 - **Updates itself.** Piume checks its GitHub releases once a day and installs new versions from its settings. The first update asks you to allow installs from Piume.
 

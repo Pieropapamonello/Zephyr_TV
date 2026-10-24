@@ -127,7 +127,8 @@ internal class PhoneLink(private val tempDir: File, private val task: PhoneTask)
 }
 
 /** The texts of a phone page, in the TV's language. */
-internal class PhoneTexts(val title: String, val intro: String, val send: String, val sending: String, val unreachable: String)
+/** [footer] goes at the bottom: which TV the page belongs to ("Piume Launcher - TV del salotto"). */
+internal class PhoneTexts(val title: String, val intro: String, val send: String, val sending: String, val unreachable: String, val footer: String = "")
 
 /** The pages the phone opens. They post to their own address, so the token never has to be in the page itself. */
 internal object PhonePages {
@@ -147,11 +148,13 @@ internal object PhonePages {
           textarea{border:1.5px solid currentColor;background:transparent;color:inherit;min-height:6em;font-family:ui-monospace,monospace}
           @media (prefers-color-scheme:dark){button{background:#f5f5f7;color:#111214}}
           button:disabled{opacity:.35} input{display:none} #s{min-height:1.5em}
+          footer{margin-top:40px;font-size:13px;opacity:.5;text-align:center}
         </style></head><body>
         <h1>${esc(t.title)}</h1>
         <p>${esc(t.intro)}</p>
         $body
         <div id="s"></div>
+        ${if (t.footer.isEmpty()) "" else "<footer>${esc(t.footer)}</footer>"}
         <script>
           const b=document.getElementById('b'),s=document.getElementById('s');
           async function send(data){
@@ -173,9 +176,9 @@ internal object PhonePages {
         b.onclick=()=>send(f.files[0]);""")
 
     /** Shows a button that saves [content] on the phone as [fileName]; nothing goes back to the TV. */
-    fun download(title: String, intro: String, button: String, fileName: String, content: String): String {
+    fun download(title: String, intro: String, button: String, fileName: String, content: String, footer: String = ""): String {
         val data = content.replace("\\", "\\\\").replace("'", "\\'").replace("<", "\\x3c").replace("\n", "\\n")
-        return frame(PhoneTexts(title, intro, button, "", ""),
+        return frame(PhoneTexts(title, intro, button, "", "", footer),
             """<button id="b">${esc(button)}</button>""",
             """b.onclick=()=>{const u=URL.createObjectURL(new Blob(['$data'],{type:'application/json'}));
             const a=document.createElement('a');a.href=u;a.download='${js(fileName)}';document.body.appendChild(a);a.click();a.remove();};""")
