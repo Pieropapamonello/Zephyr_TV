@@ -13,6 +13,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.7
+
+- The TV channel cards can show the program that is on now from a TV guide on the internet. Many TVs do not let apps read their own guide.
+- To set the guide, select **Piume settings → Continue Watching → TV guide (XMLTV)**. Type the address of a guide in XMLTV format, or paste it on your phone with the QR code. Piume downloads the guide two times each day.
+
 ## 2.6.3
 
 - More channel logos load, for example Rete 4 and Italia 1. Piume now says who it is when it downloads pictures.

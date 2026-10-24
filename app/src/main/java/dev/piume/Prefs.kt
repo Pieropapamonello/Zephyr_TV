@@ -39,6 +39,7 @@ internal object K {
     const val CW_OFF = "cw_off"
     const val SECTIONS_OFF = "sections_off" // "pkg/section" of the app sections turned off
     const val CHANNEL_LOGOS = "channel_logos" // logos from iptv-org for channels the TV has none for
+    const val EPG_URL = "epg_url" // an XMLTV guide's address, for what's on (see Epg)
 
     // Spotlight
     const val TMDB_API_KEY = "tmdb_api_key"

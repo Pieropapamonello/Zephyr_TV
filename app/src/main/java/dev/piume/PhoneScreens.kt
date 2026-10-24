@@ -118,6 +118,21 @@ internal fun MainActivity.tmdbKeyFromPhone() {
     }, status) { renderSettings(TMDB_KEY_ROW) }
 }
 
+/** The guide's address pasted on a phone: saved like the Save row does, and fetched at once. */
+internal fun MainActivity.epgFromPhone() {
+    val status = label(getString(R.string.epg_phone_waiting), 14f)
+    val page = PhonePages.text(phoneTexts(R.string.phone_epg_title, R.string.phone_epg_intro), getString(R.string.epg_hint))
+    showPhoneLink(getString(R.string.setting_epg), PhoneTask(page, 4096) { file ->
+        val url = file.readText().trim()
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return@PhoneTask 400 to getString(R.string.phone_epg_bad)
+        ui.post {
+            saveEpgUrl(url)
+            status.text = getString(R.string.phone_epg_saved)
+        }
+        200 to getString(R.string.phone_epg_saved)
+    }, status) { configureEpg() }
+}
+
 /** The TV's own address on the home network (IPv4: easy to read and type). */
 internal fun MainActivity.lanAddress(): String? {
     val cm = getSystemService(ConnectivityManager::class.java)

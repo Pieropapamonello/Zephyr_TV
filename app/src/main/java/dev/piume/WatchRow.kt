@@ -294,6 +294,11 @@ internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<
         }
     }
     val onNow = programsOnNow()
+    // The guide from the internet (see Epg), for channels the TV's own guide doesn't give: fetched in the background
+    // when due, then these sections are built again with it.
+    val epgUrl = epgUrl()
+    val guide = epgUrl?.let { Epg.saved(filesDir, it) }
+    if (epgUrl != null && Epg.due(filesDir, epgUrl)) updateEpg(pkg)
     // The TV lists some channels twice (same number and name, from two broadcasts of it): once is enough.
     return all.filter { hideKey(pkg, it.name) !in hidden }.distinctBy { it.number to it.name }.groupBy { it.input }.values
         .map { it.sortedBy { ch -> channelKey(ch.number) } }.sortedBy { channelKey(it.first().number) }
@@ -303,7 +308,7 @@ internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<
                 ?.takeIf { it.isNotBlank() } ?: getString(R.string.section_channels)
             Section(input, name, getString(R.string.app_section, label, name), channels.take(TUNER_CARDS).map {
                 val number = it.number.trimStart('0').ifEmpty { it.number }
-                val now = onNow[it.id]
+                val now = onNow[it.id] ?: guide?.let { g -> Epg.now(g, it.name)?.let { (title, progress) -> OnNow(title, progress) } }
                 // Under the card: the number, then what's on, its bar how far in it is.
                 Prog(it.name, listOfNotNull(number, now?.title).joinToString(" · "), now?.progress ?: 0, logo(it.id) ?: ChannelLogos.match(logos, it.name),
                     Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(it.id)).toUri(Intent.URI_INTENT_SCHEME), pkg, badge = it.number)
@@ -340,6 +345,27 @@ internal fun MainActivity.programsOnNow(): Map<Long, OnNow> {
 }
 
 internal fun MainActivity.channelLogosOn() = prefs.getBoolean(K.CHANNEL_LOGOS, true)
+
+/** The address of the XMLTV guide set in Piume settings, or null for none. */
+internal fun MainActivity.epgUrl() = prefs.getString(K.EPG_URL, null)?.takeIf { it.isNotBlank() }
+
+/**
+ * Fetches the guide in the background; once it's in, the TV app's sections are built again if it's still the app
+ * in focus. [done], when given, hears how many channels it has programs for (null: it failed).
+ */
+internal fun MainActivity.updateEpg(pkg: String?, done: ((Int?) -> Unit)? = null) {
+    val url = epgUrl() ?: return
+    netIo.execute {
+        val n = Epg.update(filesDir, url)
+        ui.post {
+            done?.invoke(n)
+            if (n != null && pkg != null && tmdbLastFocusApp == pkg) {
+                watchApp = null
+                queryAppChannels(pkg)
+            }
+        }
+    }
+}
 
 /** The TV's country, for its channels' logos: its own setting, else the one the TMDB language names. */
 internal fun MainActivity.channelCountry() = TmdbClient.region(tmdbLang())

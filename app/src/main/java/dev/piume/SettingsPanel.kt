@@ -4,6 +4,7 @@ import android.animation.ObjectAnimator
 import android.content.pm.ApplicationInfo
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
+import android.net.Uri
 import android.os.SystemClock
 import android.view.Gravity
 import android.view.KeyEvent
@@ -22,6 +23,7 @@ import dev.piume.MainActivity.Companion.CLOCK_ROW
 import dev.piume.MainActivity.Companion.FADE_ROW
 import dev.piume.MainActivity.Companion.HDMI
 import dev.piume.MainActivity.Companion.HIDDEN_ROW
+import dev.piume.MainActivity.Companion.EPG_ROW
 import dev.piume.MainActivity.Companion.CHANNEL_LOGOS_ROW
 import dev.piume.MainActivity.Companion.ICONS_ROW
 import dev.piume.MainActivity.Companion.LOCK_ROW
@@ -261,6 +263,7 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                         else getString(R.string.toast_channel_logos_updated, n), Toast.LENGTH_LONG).show()
                 }
             },
+            page(getString(R.string.setting_epg), epgUrl()?.let { Uri.parse(it).host } ?: getString(R.string.state_off)) { configureEpg() },
         )
     }
     SPOTLIGHT_SECTION -> spotlightRows()
@@ -362,6 +365,60 @@ internal fun MainActivity.saveTmdbKey(key: String) {
     tmdbTrending = emptyList()
     setWallpaper(false, "tmdb:trending")
     setWallpaper(true, "tmdb:trending")
+}
+
+/**
+ * The TV guide's address (an XMLTV file, see Epg): typed with the remote or sent from a phone. Saving fetches it at
+ * once; Clear turns the guide off.
+ */
+internal fun MainActivity.configureEpg() {
+    val input = EditText(this).apply {
+        setText(epgUrl() ?: "")
+        hint = getString(R.string.epg_hint)
+        setTextColor(fg)
+        setHintTextColor(if (dark) 0x66FFFFFF else 0x66000000)
+        isSingleLine = true
+        inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
+        setPadding(dp(14), dp(10), dp(14), dp(10))
+        val bg = GradientDrawable().apply {
+            cornerRadius = dp(8).toFloat()
+            setColor(field)
+            setStroke(dp(1), fieldEdge())
+        }
+        background = bg
+        setOnFocusChangeListener { _, focused -> bg.setStroke(if (focused) dp(2) else dp(1), if (focused) fg else fieldEdge()) }
+    }
+    val box = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(0, dp(12), 0, dp(12))
+        addView(input)
+        addView(label(getString(R.string.epg_intro), 12f).apply { alpha = 0.6f; maxLines = 4; setPadding(dp(4), dp(10), dp(4), 0) })
+    }
+    val rows = listOf(
+        page(getString(R.string.setting_epg_phone)) { epgFromPhone() },
+        page(getString(R.string.dialog_save)) {
+            saveEpgUrl(input.text?.toString()?.trim())
+            renderSettings(EPG_ROW)
+        },
+        page(getString(R.string.dialog_clear)) {
+            saveEpgUrl(null)
+            renderSettings(EPG_ROW)
+        },
+    )
+    showPage(getString(R.string.setting_epg), rows, top = box, back = { renderSettings(EPG_ROW) })
+    input.requestFocus()
+}
+
+/** Saves the guide's address (null or blank: no guide) and fetches it, telling how it went. */
+internal fun MainActivity.saveEpgUrl(url: String?) {
+    val clean = url?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+    prefs.edit().apply { if (clean == null) remove(K.EPG_URL) else putString(K.EPG_URL, clean) }.apply()
+    watchKey = null
+    if (clean == null) return
+    Toast.makeText(this, getString(R.string.epg_downloading), Toast.LENGTH_SHORT).show()
+    updateEpg(tmdbLastFocusApp) { n ->
+        Toast.makeText(this, if (n == null) getString(R.string.toast_epg_failed) else getString(R.string.toast_epg_updated, n), Toast.LENGTH_LONG).show()
+    }
 }
 
 internal fun MainActivity.configureTmdbApiKey() {
