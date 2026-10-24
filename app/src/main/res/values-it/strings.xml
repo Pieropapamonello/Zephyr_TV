@@ -58,6 +58,7 @@
     <string name="epg_intro">L\'indirizzo di una guida TV in formato XMLTV, per il programma in onda sotto ogni canale. Piume la scarica due volte al giorno.</string>
     <string name="epg_downloading">Scarico la guida TV…</string>
     <string name="toast_epg_updated">Guida TV scaricata: %1$d canali</string>
+    <string name="toast_epg_old">La guida TV non ha programmi per oggi: non è aggiornata. Prova un altro indirizzo.</string>
     <string name="toast_epg_failed">Impossibile scaricare la guida TV. Controlla l\'indirizzo.</string>
     <string name="epg_phone_waiting">In attesa dell\'indirizzo dal telefono…</string>
     <string name="phone_epg_title">Indirizzo della guida TV</string>

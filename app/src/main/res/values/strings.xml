@@ -58,6 +58,7 @@
     <string name="epg_intro">The address of a TV guide in XMLTV format, for what\'s on under each channel. Piume downloads it twice a day.</string>
     <string name="epg_downloading">Downloading the TV guide…</string>
     <string name="toast_epg_updated">TV guide downloaded: %1$d channels</string>
+    <string name="toast_epg_old">The TV guide has no programs for today: it isn\'t up to date. Try another address.</string>
     <string name="toast_epg_failed">Couldn\'t download the TV guide. Check the address.</string>
     <string name="epg_phone_waiting">Waiting for the address from your phone…</string>
     <string name="phone_epg_title">TV guide address</string>

@@ -406,6 +406,9 @@ internal fun MainActivity.configureEpg() {
         },
     )
     showPage(getString(R.string.setting_epg), rows, top = box, back = { renderSettings(EPG_ROW) })
+    // The TV keyboard keeps Down for itself while the box has focus, even with the keyboard put away.
+    val first = settingsList.getChildAt(1)
+    input.setOnKeyListener { _, key, e -> (key == KeyEvent.KEYCODE_DPAD_DOWN && e.action == KeyEvent.ACTION_DOWN).also { if (it) first.requestFocus() } }
     input.requestFocus()
 }
 
@@ -417,7 +420,11 @@ internal fun MainActivity.saveEpgUrl(url: String?) {
     if (clean == null) return
     Toast.makeText(this, getString(R.string.epg_downloading), Toast.LENGTH_SHORT).show()
     updateEpg(tmdbLastFocusApp) { n ->
-        Toast.makeText(this, if (n == null) getString(R.string.toast_epg_failed) else getString(R.string.toast_epg_updated, n), Toast.LENGTH_LONG).show()
+        Toast.makeText(this, getString(when (n) {
+            null -> R.string.toast_epg_failed
+            0 -> R.string.toast_epg_old
+            else -> R.string.toast_epg_updated
+        }, n ?: 0), Toast.LENGTH_LONG).show()
     }
 }
 

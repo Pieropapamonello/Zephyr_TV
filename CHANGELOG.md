@@ -13,6 +13,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.7.1
+
+- Piume finds more channels in TV guides that put the country before the name, like "IT - Canale 5".
+- When a TV guide has no programs for today, Piume tells you that the guide is not up to date.
+
 ## 2.7
 
 - The TV channel cards can show the program that is on now from a TV guide on the internet. Many TVs do not let apps read their own guide.

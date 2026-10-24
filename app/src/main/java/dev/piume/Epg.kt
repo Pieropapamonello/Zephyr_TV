@@ -60,13 +60,15 @@ internal object Epg {
         return !(fail.exists() && now - fail.lastModified() < RETRY_MS && fail.readText() == url)
     }
 
-    /** Fetches and saves the guide at [url]: how many channels it has, or null when it couldn't (or one is running). */
+    /**
+     * Fetches and saves the guide at [url]: how many channels it has programs for in the next day (0: none, an
+     * out-of-date guide), or null when it couldn't (or another update is running).
+     */
     fun update(dir: File, url: String): Int? {
         if (!updating.compareAndSet(false, true)) return null
         try {
             val now = System.currentTimeMillis()
             val (names, shows) = Http.open(url).use { read(it, now - 3 * 3600_000L, now + KEEP_MS) }
-            if (shows.isEmpty()) throw java.io.IOException("no programs in the next day")
             val f = file(dir)
             val part = File(dir, f.name + ".part")
             part.bufferedWriter().use { w ->
@@ -88,10 +90,7 @@ internal object Epg {
         }
     }
 
-    /**
-     * The channels (id to display names) and their programs between [from] and [to], from an XMLTV stream,
-     * gzipped or not. Names keep a form without the trailing channel number some guides add ("Rai 1 HD  101").
-     */
+    /** The channels (id to display names) and their programs between [from] and [to], from an XMLTV stream, gzipped or not. */
     internal fun read(input: InputStream, from: Long, to: Long): Pair<Map<String, List<String>>, Map<String, List<Show>>> {
         val buffered = BufferedInputStream(input)
         buffered.mark(2)
@@ -116,7 +115,10 @@ internal object Epg {
                     val name = parser.nextText().trim()
                     val list = names.getOrPut(id) { ArrayList() }
                     if (name.isNotEmpty()) list += name
-                    name.replace(Regex("\\s{2,}\\d+$"), "").takeIf { it != name && it.isNotEmpty() }?.let { list += it }
+                    // Also without what some guides add: the channel number after it ("Rai 1 HD  101"), the
+                    // country before it ("IT - Canale 5").
+                    val bare = name.replace(Regex("\\s{2,}\\d+$"), "").replace(Regex("^[A-Z]{2}\\s*-\\s+"), "")
+                    if (bare != name && bare.isNotEmpty()) list += bare
                 }
                 "programme" -> {
                     val id = parser.getAttributeValue(null, "channel")
