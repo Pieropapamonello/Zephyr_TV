@@ -9,7 +9,7 @@
 </p>
 
 > [!NOTE]
-> **Piume** è un fork di [**Plume Launcher**](https://github.com/aradhyas8/Plume_Launcher) di [aradhyas8](https://github.com/aradhyas8). Mantiene il design piccolo e veloce di Plume e aggiunge la traduzione italiana, una sezione In evidenza TMDB con film e serie di tendenza (o la tua lista TMDB), i contenuti consigliati per app, impostazioni raggruppate, un menu delle sorgenti TV, la ricerca vocale, la modalità notte, il backup delle impostazioni e miglioramenti di leggibilità. Piume si installa accanto a Plume: ha un suo nome di pacchetto (`dev.piume`) e aggiornamenti propri. Vedi [Riconoscimenti](#riconoscimenti) per tutti coloro sul cui lavoro si basa.
+> **Piume** è un fork di [**Plume Launcher**](https://github.com/aradhyas8/Plume_Launcher) di [aradhyas8](https://github.com/aradhyas8). Mantiene il design piccolo e veloce di Plume e aggiunge la traduzione italiana, una sezione In evidenza TMDB con film e serie di tendenza (o altre liste TMDB, o la tua), i contenuti consigliati per app, i canali TV con loghi e programma in onda, la ricerca su TMDB e sui canali della TV, impostazioni raggruppate, un menu delle sorgenti TV, la modalità notte, il backup delle impostazioni e miglioramenti di leggibilità. Piume si installa accanto a Plume: ha un suo nome di pacchetto (`dev.piume`) e aggiornamenti propri. Vedi [Riconoscimenti](#riconoscimenti) per tutti coloro sul cui lavoro si basa.
 
 <p align="center">
   <a href="https://github.com/mccoy88f/Piume_Launcher/releases/latest"><img alt="Ultima versione" src="https://img.shields.io/github/v/release/mccoy88f/Piume_Launcher?label=release"></a>
@@ -30,16 +30,17 @@ Piume sostituisce la Home di serie, piena di elementi, con le due cose che usi d
 - **Piccolo e veloce.** Un APK da 0,5 MB senza librerie di terze parti. Usa circa 50–70 MB di RAM e non ha servizi in background aggiuntivi.
 - **Tasto Home su Google TV.** Il tasto Home apre direttamente Piume, anche sui dispositivi dove il launcher di sistema non si può sostituire. Tenendo premuto Home si apre ancora la dashboard di Google TV.
 - **Continua a guardare.** Riprendi serie e film dalla lista "Guarda dopo" di Android TV e dalle app che pubblicano un proprio canale "Continua a guardare", come Stremio.
-- **Sezioni delle app.** Ogni riga che un'app mette in Home (per esempio "Consigliati" e "Tendenze" di YouTube) è una sezione sotto la riga delle app. Tieni premuto OK sull'app e scegli **Sezioni visibili** per sceglierle. L'app TV mostra i canali della TV dal canale 1, una sezione per ogni sintonizzatore.
+- **Sezioni delle app.** Ogni riga che un'app mette in Home (per esempio "Consigliati" e "Tendenze" di YouTube) è una sezione sotto la riga delle app. Tieni premuto OK sull'app e scegli **Sezioni visibili** per sceglierle. L'app TV mostra tutti i canali della TV dal canale 1, una sezione per ogni sintonizzatore, 10 alla volta mentre scorri.
 - **Riga delle app pulita.** Loghi monocromatici (o gli stessi loghi a colori) in una sola riga, con i nomi al focus, sempre o mai. Riordinala tenendo premuto OK, ordinala per uso, o nascondi le app che non usi (restano in Tutte le app). Un PIN facoltativo blocca il layout, così i più piccoli non possono riordinarlo.
 - **Ingressi HDMI come app.** Una console o un decoder che si presenta via HDMI-CEC (per esempio "PlayStation 5") ha una sua tessera, che porta la TV su quell'ingresso.
 - **Tema chiaro, scuro, Vetro o automatico**, ognuno con il suo sfondo. Vetro mostra lo sfondo attraverso schede lucide e trasparenti, con il testo bianco. Aggiungi le tue foto dal telefono inquadrando un codice QR, oppure mostra una cartella di foto della TV o di una chiavetta USB che cambia a intervalli.
-- **In evidenza TMDB, facoltativo.** Film e serie di tendenza, o una tua lista pubblica TMDB, sopra la riga delle app, con la loro immagine come sfondo. Cambia titolo ogni pochi secondi, in ordine casuale. I pulsanti aprono il titolo in Nuvio (tramite id TMDB) o Stremio (tramite id IMDb), avviano il trailer su YouTube o aprono un servizio di streaming che lo ha nel tuo paese.
+- **In evidenza TMDB, facoltativo.** Film e serie di tendenza, un'altra lista TMDB (popolari, più votati, al cinema, prossime uscite, in onda) o una tua lista pubblica TMDB, sopra la riga delle app, con la loro immagine come sfondo. Cambia titolo ogni pochi secondi, in ordine casuale. I pulsanti aprono il titolo in Nuvio (tramite id TMDB) o Stremio (tramite id IMDb), avviano il trailer su YouTube o aprono un servizio di streaming che lo ha nel tuo paese.
 - **Salvaschermo Galleria, facoltativo.** Dipinti di paesaggi di pubblico dominio in 16:9, scaricati solo se lo scegli, una cartella delle tue foto, oppure le immagini di In evidenza con i loro titoli.
 - **Meteo facoltativo** sotto l'orologio, e orologio a 12 o 24 ore.
 - **Modalità notte.** Nelle ore che scegli la Home diventa più scura e In evidenza si ferma.
-- **Ricerca** dalla barra in alto: scrivi con il telecomando, parla, o scrivi dal telefono. I risultati TMDB compaiono come schede sotto un riquadro **Risultati** nella riga delle app; OK su una mostra descrizione, trailer e app che hanno il titolo.
-- **Il telefono come tastiera.** Inquadra un codice QR per inviare uno sfondo, scrivere la chiave o la lista TMDB, salvare un backup delle impostazioni o ripristinarne uno.
+- **Canali TV con loghi e programma in onda.** Ogni scheda di canale mostra il logo del canale, dalla TV o altrimenti da [iptv-org](https://github.com/iptv-org/database), e il programma in onda con la barra di avanzamento, da una guida TV in formato XMLTV che scegli tu.
+- **Ricerca** dalla barra in alto: scrivi con il telecomando, parla, o scrivi dal telefono. Film, serie e canali TV compaiono in righe separate sotto un riquadro **Risultati** nella riga delle app. OK su un film o una serie mostra descrizione, trailer e app che lo hanno; OK su un canale mostra il programma in onda e **Guarda in TV**.
+- **Il telefono come tastiera.** Inquadra un codice QR per inviare uno sfondo, scrivere la chiave o la lista TMDB, una ricerca o l'indirizzo della guida TV, salvare un backup delle impostazioni o ripristinarne uno.
 - **Si aggiorna da solo.** Piume controlla le sue release su GitHub una volta al giorno e installa le nuove versioni dalle sue impostazioni. Il primo aggiornamento ti chiede di consentire le installazioni da Piume.
 
 ## Immagini
@@ -141,12 +142,15 @@ Android 13 e successivi disattivano l'interruttore di Accessibilità per le app 
 | Aggiornare Piume | **Impostazioni → Sistema → Aggiornamenti** |
 | Bloccare il layout con un PIN | **Impostazioni → Riga delle app → Blocco layout** |
 | Mostrare film e serie di tendenza in alto (In evidenza TMDB) | **Impostazioni → In evidenza TMDB → API Key TMDB** (scrivila sulla TV o dal telefono) |
+| Scegliere cosa mostra In evidenza (tendenze, popolari, più votati, al cinema…) | **Impostazioni → In evidenza TMDB → Spotlight mostra** |
 | Mostrare la tua lista TMDB in In evidenza | **Impostazioni → In evidenza TMDB → Spotlight mostra → La mia lista TMDB** |
+| Mostrare il programma in onda sotto i canali TV | **Impostazioni → Continua a guardare → Guida TV (XMLTV)** |
+| Attivare o disattivare i loghi dei canali da iptv-org, o scaricare gli ultimi | **Impostazioni → Continua a guardare → Loghi dei canali (iptv-org)**, **Aggiorna i loghi dei canali** |
 | Orologio a 12 o 24 ore | **Impostazioni → Aspetto e sfondi → Orologio** |
 | Modalità notte | **Impostazioni → Aspetto e sfondi → Modalità notte** |
 | Salvare o ripristinare le impostazioni | **Impostazioni → Sistema → Backup e ripristino** |
 | Vedere cosa non ha funzionato di recente | **Impostazioni → Sistema → Problemi recenti** |
-| Cercare un film o una serie | Il pulsante **cerca** nella barra in alto (tieni premuto OK per l'assistente vocale della TV) |
+| Cercare un film, una serie o un canale TV | Il pulsante **cerca** nella barra in alto (tieni premuto OK per l'assistente vocale della TV) |
 | Passare a un ingresso HDMI | Il pulsante **Sorgenti TV** nella barra in alto |
 | Aprire la dashboard di Google TV | Tieni premuto il tasto **Home** |
 
@@ -174,9 +178,15 @@ Il blocco protegge il layout, non è un controllo parentale: le app si possono a
 
 ### In evidenza TMDB
 
-In evidenza ha bisogno di una chiave API TMDB gratuita (chiave v3 o token di lettura v4) da [themoviedb.org](https://www.themoviedb.org/settings/api). Inseriscila in **Impostazioni → In evidenza TMDB → API Key TMDB**, oppure scegli **Inserisci dal telefono…** e inquadra il codice; Piume verifica la chiave con TMDB. In evidenza mostra poi i titoli di tendenza; **Spotlight mostra → La mia lista TMDB** mostra invece una lista pubblica che hai creato su themoviedb.org, nel suo ordine. Incolla il suo link dal telefono.
+In evidenza ha bisogno di una chiave API TMDB gratuita (chiave v3 o token di lettura v4) da [themoviedb.org](https://www.themoviedb.org/settings/api). Inseriscila in **Impostazioni → In evidenza TMDB → API Key TMDB**, oppure scegli **Inserisci dal telefono…** e inquadra il codice; Piume verifica la chiave con TMDB. In evidenza mostra poi i titoli di tendenza. **Spotlight mostra** sceglie invece un'altra lista di TMDB: di tendenza questa settimana, i più popolari, i più votati, i film al cinema ora o in uscita nel tuo paese, le serie in onda. **La mia lista TMDB** mostra una lista pubblica che hai creato su themoviedb.org, nel suo ordine: incolla il suo link dal telefono. Si seleziona solo dopo aver impostato una lista.
 
 Ogni titolo ha i pulsanti per Nuvio e Stremio (sempre presenti, se installati), il trailer su YouTube e i servizi di streaming che lo hanno nel tuo paese (**Solo i servizi che hanno il titolo** disattiva questo filtro). In evidenza tiene le immagini sulla TV, quindi ognuna si scarica una sola volta, e si ferma dopo 15 minuti senza che premi un tasto.
+
+### Canali TV e guida TV
+
+La sezione dell'app TV mostra tutti i canali sintonizzati, in ordine di numero. Il logo viene dalla TV oppure, se la TV non lo ha, da [iptv-org](https://github.com/iptv-org/database), un elenco di canali TV di pubblico dominio: Piume scarica l'elenco del tuo paese la prima volta e poi una volta al mese, abbina i canali per nome e tiene i loghi sulla TV. **Aggiorna i loghi dei canali** scarica subito gli ultimi.
+
+Android lascia leggere la guida programmi della TV solo alle app di sistema, quindi per il programma in onda Piume usa una guida TV da internet, in formato XMLTV (`.xml` o `.xml.gz`). Inserisci l'indirizzo in **Impostazioni → Continua a guardare → Guida TV (XMLTV)**, oppure incollalo dal telefono. Piume la scarica due volte al giorno e ne tiene il giorno successivo; ogni scheda di canale mostra il programma in onda con la barra di avanzamento, e la pagina di un canale nella ricerca mostra orario, descrizione e programma successivo. Per l'Italia, `https://iptv-epg.org/files/epg-it.xml.gz` copre i canali nazionali.
 
 ### Backup e ripristino
 
@@ -193,9 +203,11 @@ Piume non ha statistiche, pubblicità né account. Si collega a internet solo pe
 - controllare le release di questo repository su GitHub, una volta al giorno, e scaricare la nuova versione quando scegli di aggiornare
 - scaricare i dipinti della Galleria dalle release di Plume Launcher, **solo se scegli quel salvaschermo**
 - ottenere il meteo, **solo se lo attivi**. Trova la tua posizione approssimativa dall'indirizzo IP tramite [ipwho.is](https://ipwho.is), poi ottiene le previsioni da [Open-Meteo](https://open-meteo.com). Una città scelta a mano viene cercata invece con la geocodifica di Open-Meteo.
-- mostrare In evidenza TMDB, **solo se inserisci una chiave API TMDB**. Scarica da [TMDB](https://www.themoviedb.org) i titoli di tendenza (o la tua lista), i generi, le immagini, i trailer, gli id IMDb e i servizi di streaming.
+- mostrare In evidenza TMDB e la ricerca, **solo se inserisci una chiave API TMDB**. Scarica da [TMDB](https://www.themoviedb.org) i titoli della lista che scegli (o della tua), i risultati delle ricerche, i generi, le immagini, i trailer, gli id IMDb e i servizi di streaming.
+- scaricare i loghi dei canali TV, **solo per i canali di cui la TV non ha il logo, e se non lo disattivi**: l'elenco dei canali da [iptv-org](https://iptv-org.github.io/api/) una volta al mese, e ogni logo una volta da dove lo indica iptv-org (per lo più Wikimedia e imgur).
+- scaricare una guida TV, **solo se ne inserisci l'indirizzo**, due volte al giorno.
 
-Le schermate per il telefono (**Aggiungi dal telefono…**, chiave e lista TMDB, backup e ripristino) avviano una piccola pagina sulla TV stessa, raggiungibile solo dalla rete di casa, solo mentre quella schermata è aperta e solo a un lungo indirizzo casuale presente nel codice QR. Quello che invii passa direttamente tra telefono e TV, e da nessun'altra parte. Il backup di Android non copia le impostazioni di Piume.
+Le schermate per il telefono (**Aggiungi dal telefono…**, chiave e lista TMDB, ricerca, indirizzo della guida TV, backup e ripristino) avviano una piccola pagina sulla TV stessa, raggiungibile solo dalla rete di casa, solo mentre quella schermata è aperta e solo a un lungo indirizzo casuale presente nel codice QR. Quello che invii passa direttamente tra telefono e TV, e da nessun'altra parte. Il backup di Android non copia le impostazioni di Piume.
 
 ## Risoluzione dei problemi
 
@@ -243,7 +255,8 @@ Segnalazioni di bug, traduzioni e pull request sono benvenute. Piume resta picco
   - Martin Johnson Heade: *Thunder Storm on Narragansett Bay*
 - **Sfondi:** "Canada" di Thomas Curryer, da [Unsplash](https://unsplash.com/@tawc20) (CC0)
 - **Loghi delle app:** [Simple Icons](https://simpleicons.org) (CC0). Tutti i marchi appartengono ai rispettivi proprietari.
-- **Loghi dei canali TV:** [iptv-org/database](https://github.com/iptv-org/database) (pubblico dominio), per i canali di cui la TV non ha il logo.
+- **Loghi dei canali TV:** [iptv-org](https://github.com/iptv-org): il loro [database dei canali](https://github.com/iptv-org/database) (pubblico dominio) tramite le loro [API](https://github.com/iptv-org/api), per i canali di cui la TV non ha il logo. I loghi appartengono ai rispettivi canali.
+- **Film e serie:** dati e immagini da [TMDB](https://www.themoviedb.org). Piume usa le API di TMDB ma non è approvato né certificato da TMDB.
 
 ## Licenza
 
