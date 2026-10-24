@@ -285,7 +285,6 @@ class MainActivity : Activity() {
             cm.registerDefaultNetworkCallback(net)
         }
         getSystemService(TvInputManager::class.java)?.registerCallback(inputCallback, ui)
-        enableListener() // what's playing, for the Play queue (see NowPlaying)
         watchSessions()
         // Sony's table changes when a device is plugged in or out: the dot follows (see connectedInputs).
         runCatching { contentResolver.registerContentObserver(SONY_INPUTS, true, inputsObserver) }
@@ -305,6 +304,7 @@ class MainActivity : Activity() {
         }
         // Only rebuild what changed, so focus stays where it was when returning from an app.
         if (appsDirty) refreshApps() else if (appRow.childCount == 0) renderApps()
+        watchSessions() // once allowed (see NowPlaying): the Play queue follows what's playing
         refreshWatchNext()
         showWeather()
         ui.removeCallbacks(weatherTick)
@@ -1928,8 +1928,8 @@ class MainActivity : Activity() {
         const val LOCK_ROW = APPS_SECTION * SECTION + 8
         const val CW_APPS_ROW = WATCH_SECTION * SECTION
         const val HIDDEN_ROW = WATCH_SECTION * SECTION + 1
-        const val CHANNEL_LOGOS_ROW = WATCH_SECTION * SECTION + 2
-        const val EPG_ROW = WATCH_SECTION * SECTION + 4
+        const val CHANNEL_LOGOS_ROW = WATCH_SECTION * SECTION + 3
+        const val EPG_ROW = WATCH_SECTION * SECTION + 5
         const val TMDB_KEY_ROW = SPOTLIGHT_SECTION * SECTION
         const val TMDB_SOURCE_ROW = TMDB_KEY_ROW + 1
         const val TMDB_LIST_ROW = TMDB_KEY_ROW + 2

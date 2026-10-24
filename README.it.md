@@ -210,7 +210,7 @@ Piume non ha statistiche, pubblicità né account. Si collega a internet solo pe
 
 Le schermate per il telefono (**Aggiungi dal telefono…**, chiave e lista TMDB, ricerca, indirizzo della guida TV, backup e ripristino) avviano una piccola pagina sulla TV stessa, raggiungibile solo dalla rete di casa, solo mentre quella schermata è aperta e solo a un lungo indirizzo casuale presente nel codice QR. Quello che invii passa direttamente tra telefono e TV, e da nessun'altra parte. Il backup di Android non copia le impostazioni di Piume.
 
-La Coda di riproduzione mostra cosa sta suonando leggendo le sessioni multimediali di Android, che Piume vede perché attiva per sé un servizio di accesso alle notifiche (con il permesso concesso via adb). Non legge nessuna notifica, e quello che stai ascoltando resta sulla TV.
+La Coda di riproduzione mostra cosa sta suonando leggendo le sessioni multimediali di Android, che Piume vede perché attiva per sé un servizio di accesso alle notifiche (Android lo lascia concedere solo al sistema: esegui una volta `adb shell cmd notification allow_listener dev.piume/dev.piume.PlayingListener`; **Impostazioni → Continua a guardare → Mostra cosa sta suonando** dice se è attivo). Non legge nessuna notifica, e quello che stai ascoltando resta sulla TV.
 
 ## Risoluzione dei problemi
 

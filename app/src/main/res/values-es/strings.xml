@@ -50,8 +50,8 @@
 
     <string name="setting_inputs_mode">Entradas de TV</string>
     <string name="inputs_mode_menu">Menú</string>
-    <string name="inputs_mode_apps">Fila de apps</string>
-    <string name="setting_inputs_in_apps">Entradas conectadas en las apps</string>
+    <string name="inputs_mode_apps">Favoritos</string>
+    <string name="setting_inputs_in_apps">Entradas conectadas en Favoritos</string>
 
     <string name="setting_channel_logos">Logos de los canales (iptv-org)</string>
     <string name="setting_channel_logos_update">Actualizar los logos de los canales</string>
@@ -334,6 +334,10 @@
     <string name="channel_number">Canal %1$s</string>
     <string name="channel_next">A continuación: %1$s %2$s</string>
     <string name="channel_watch">Ver en la TV</string>
+    <string name="setting_now_playing">Mostrar lo que suena</string>
+    <string name="now_playing_needs_access">Necesita acceso</string>
+    <string name="now_playing_on">Piume ve lo que suena en otras apps.</string>
+    <string name="now_playing_help">Para mostrar lo que suena en otras apps, Piume necesita acceso a las notificaciones. En esta TV solo el sistema puede darlo: ejecuta una vez este comando desde un ordenador y vuelve aquí.</string>
     <string name="play_queue">Cola de reproducción</string>
     <string name="now_playing">Reproduciendo ahora</string>
     <string name="playing_paused">%1$s · En pausa</string>

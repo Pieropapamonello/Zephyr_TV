@@ -210,7 +210,7 @@ Piume has no analytics, no ads and no account. It only connects to the internet 
 
 The phone screens (**Add from phone…**, the TMDB key and list, search, the TV guide's address, backup and restore) run a small page on the TV itself, reachable only on your home network, only while that screen is open, and only at a long random address in its QR code. What you send goes straight between your phone and the TV and nowhere else. Android's own backup doesn't copy Piume's settings.
 
-The Play queue shows what's playing from Android's media sessions, which Piume can see because it turns on a notification listener for itself (with the permission granted over adb). It reads no notifications, and what's playing stays on the TV.
+The Play queue shows what's playing from Android's media sessions, which Piume can see because it turns on a notification listener for itself (Android lets only the system allow it: run `adb shell cmd notification allow_listener dev.piume/dev.piume.PlayingListener` once; **Settings → Continue Watching → Show what's playing** shows whether it's on). It reads no notifications, and what's playing stays on the TV.
 
 ## Troubleshooting
 

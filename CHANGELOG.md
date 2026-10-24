@@ -13,16 +13,25 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 3.0.4
+
+- **Playing now** needs notification access, and only the system can give it. Select **Piume settings → Continue Watching → Show what's playing** to see if Piume has it. If not, the page shows the adb command to run once. The Home button setup shows it too.
+- Pictures that are not wide, like the square Spotify covers, show whole on a blur of themselves and fill the card.
+- In Piume settings, the TV inputs options say **Favourites** like the rest.
+
 ## 3.0.3
 
 - The TV inputs button in the top bar shows a green dot when at least one input has an active device.
+
+## 3.0.2
+
 - In the TV inputs menu, only inputs with an active device or signal show the green dot.
 - Fix selected row icon visibility in the TV inputs menu.
-- New option to show connected TV inputs in the apps row even in menu mode (**Piume settings → Apps row → Show connected inputs in apps**).
+- New option to show connected TV inputs in your Favourites even in menu mode (**Piume settings → Favourites → Show connected inputs in Favourites**).
 
 ## 3.0.1
 
-- Choose how to show TV inputs: as a menu in the top bar or as tiles in the apps row (**Piume settings → Apps row → TV inputs**).
+- Choose how to show TV inputs: as a menu in the top bar or as tiles in your Favourites (**Piume settings → Favourites → TV inputs**).
 - TV inputs show dedicated brand marks for PlayStation, Xbox, Nintendo Switch, Apple TV, set-top boxes, and media players.
 - The TV inputs popup menu now matches the current theme and has smoked glass styling in the Glass theme.
 - Fixed the updates page staying stuck until reopened when a new version is found.
@@ -30,13 +39,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## 3.0.0
 
-- The Play queue tile shows what is playing now in other apps above Continue Watching. Select a card to open that app.
-- The network button in the top bar shows a red dot when the TV is offline.
-- Improved Italian translations across settings and menus.
-
-## 3.0.0
-
-- The first tile is now **Play queue**. Its first row, **Playing now**, shows what plays now in any app, like Spotify or YouTube, with the art and the progress. **Continue Watching** comes under it.
+- The first tile is now **Play queue**. Its first row, **Playing now**, shows what plays now in any app, like Spotify or YouTube, with the art and the progress. Select a card to open that app. **Continue Watching** comes under it.
 - The apps row is now called **Favourites**, in the home screen and in Piume settings.
 - Piume is now in Spanish and in French.
 - The network icon shows a red dot when there is no internet.

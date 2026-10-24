@@ -883,9 +883,9 @@ internal fun MainActivity.loadPoster(v: ImageView, uri: String?) {
 
 /**
  * Film and show art fills the card, cropped to its shape: also a landscape picture on a landscape card, like
- * YouTube's 4:3 thumbnails, whose black bars the crop takes off. Art of another shape (a poster on a wide card),
- * or that sits on a plain background (a TV app's channel cards: logo and name on a flat colour), is shown whole
- * instead, inset from the edges on its own background colour, so the name in it doesn't run into the border.
+ * YouTube's 4:3 thumbnails, whose black bars the crop takes off. Art of another shape (a poster or a square cover
+ * on a wide card), or that sits on a plain background (a TV app's channel cards: logo and name on a flat colour),
+ * is shown whole instead, inset from the edges, on a blur of itself or its own background colour.
  */
 internal fun MainActivity.fitPoster(v: ImageView, bmp: Bitmap) {
     val ratio = bmp.width.toFloat() / bmp.height
@@ -904,7 +904,13 @@ internal fun MainActivity.fitPoster(v: ImageView, bmp: Bitmap) {
     }
     v.scaleType = ImageView.ScaleType.FIT_CENTER
     v.setPadding(dp(12), dp(10), dp(12), dp(10))
-    if (flat) v.setBackgroundColor(edge[0])
+    // A plain background goes on around it; a picture of another shape (Spotify's square covers) sits on a blur of
+    // itself, so the card is filled either way.
+    v.background = if (flat) android.graphics.drawable.ColorDrawable(edge[0])
+        else android.graphics.drawable.LayerDrawable(arrayOf(
+            android.graphics.drawable.BitmapDrawable(resources, softBlur(bmp)).apply { isFilterBitmap = true },
+            android.graphics.drawable.ColorDrawable(0x33000000),
+        ))
 }
 
 /** Cards whose poster never arrived (offline, server timeout) try again; loaded ones are left alone. */

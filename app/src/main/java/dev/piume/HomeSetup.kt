@@ -178,7 +178,7 @@ internal fun MainActivity.adbPopup() {
             cornerRadius = dp(10).toFloat()
             setColor(if (dark) 0xFF09090B.toInt() else 0xFFE9EBEF.toInt())
         }
-        listOfNotNull(lanAddress()?.let { "adb connect $it:5555" }, "adb shell pm grant $packageName $WRITE_SECURE").forEach {
+        listOfNotNull(lanAddress()?.let { "adb connect $it:5555" }, "adb shell pm grant $packageName $WRITE_SECURE", "adb shell $LISTENER_GRANT").forEach {
             addView(label(it, 12f).apply { typeface = mono; maxLines = 2; ellipsize = null; setPadding(0, dp(2), 0, dp(2)) })
         }
     }
