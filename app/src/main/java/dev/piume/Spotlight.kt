@@ -362,7 +362,7 @@ internal class TextHalo(private val box: ViewGroup, private val pad: Float, priv
     override fun draw(canvas: Canvas) {
         if (shown == 0) return
         val right = (0 until box.childCount).map { box.getChildAt(it) }.filter { it.visibility == View.VISIBLE }.maxOfOrNull { it.right } ?: return
-        val r = RectF(-pad, -pad * 0.6f, right + pad, box.height + pad * 0.6f)
+        val r = RectF(-pad, -pad * 0.5f, right + pad, box.height + pad * 0.35f)
         fillPaint.color = fill
         fillPaint.alpha = (fill ushr 24) * shown / 255
         edgePaint.color = edge

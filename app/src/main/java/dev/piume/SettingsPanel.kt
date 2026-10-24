@@ -69,6 +69,8 @@ internal fun MainActivity.showPanel() {
 }
 
 internal fun MainActivity.closeLauncherSettings() {
+    // A box on the page (search, city, API key) may have the keyboard up: it would stay over the home screen.
+    getSystemService(android.view.inputmethod.InputMethodManager::class.java).hideSoftInputFromWindow(window.decorView.windowToken, 0)
     pageExit?.invoke()
     pageExit = null
     pageBack = null
