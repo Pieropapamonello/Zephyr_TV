@@ -279,6 +279,8 @@ class MainActivity : Activity() {
         // static callback handler forever, so an Activity context here leaks the whole first home screen.
         applicationContext.getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(net)
         getSystemService(TvInputManager::class.java)?.registerCallback(inputCallback, ui)
+        // Sony's table changes when a device is plugged in or out: the dot follows (see connectedInputs).
+        runCatching { contentResolver.registerContentObserver(SONY_INPUTS, true, inputsObserver) }
 
         if (checkSelfPermission(TV_LISTINGS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(TV_LISTINGS), 1)
@@ -378,6 +380,7 @@ class MainActivity : Activity() {
         unregisterReceiver(packageReceiver)
         applicationContext.getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(net)
         getSystemService(TvInputManager::class.java)?.unregisterCallback(inputCallback)
+        contentResolver.unregisterContentObserver(inputsObserver)
         upload?.stop()
         io.shutdownNow()
         posterIo.shutdownNow()
@@ -873,20 +876,37 @@ class MainActivity : Activity() {
         override fun onInputStateChanged(id: String, state: Int) = updateInputsDot()
     }
 
+    internal val inputsObserver = object : android.database.ContentObserver(ui) {
+        override fun onChange(selfChange: Boolean) = updateInputsDot()
+    }
+
     internal val inputsDot by lazy { GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(INPUTS_ON) } }
 
     /**
-     * A green dot on the TV inputs button while a device on HDMI is connected and on (Android's input state:
-     * connected, not standby or disconnected). How well a TV reports it is up to the TV.
+     * The external inputs (HDMI, AV) with a device connected, by input id. Sony TVs keep the real state in their
+     * external inputs app's own table, readable by any app; Android's own input state there says "connected" for
+     * every HDMI input. Elsewhere, Android's state (connected, not standby or disconnected).
      */
+    internal fun connectedInputs(): Set<String> {
+        runCatching {
+            contentResolver.query(SONY_INPUTS,
+                arrayOf("input_id", "connect_state"), null, null, null)?.use { c ->
+                val out = HashSet<String>()
+                while (c.moveToNext()) if (c.getInt(1) == 1) c.getString(0)?.let { out += it }
+                return out
+            }
+        }
+        val tm = getSystemService(TvInputManager::class.java) ?: return emptySet()
+        return runCatching {
+            tm.tvInputList.filter { (it.type == TvInputInfo.TYPE_HDMI || it.isPassthroughInput) && tm.getInputState(it.id) == TvInputManager.INPUT_STATE_CONNECTED }
+                .map { it.id }.toSet()
+        }.getOrDefault(emptySet())
+    }
+
+    /** A green dot on the TV inputs button while a device is connected to an external input (see connectedInputs). */
     internal fun updateInputsDot() {
         val icon = findViewById<ImageView>(R.id.tvInputsButton)
-        val tm = getSystemService(TvInputManager::class.java)
-        val on = try {
-            tm?.tvInputList?.any { (it.type == TvInputInfo.TYPE_HDMI || it.isPassthroughInput) && tm.getInputState(it.id) == TvInputManager.INPUT_STATE_CONNECTED } == true
-        } catch (e: Exception) {
-            false
-        }
+        val on = connectedInputs().isNotEmpty()
         icon.overlay.remove(inputsDot)
         if (!on || icon.width == 0) return
         val size = dp(9)
@@ -1432,8 +1452,8 @@ class MainActivity : Activity() {
             Toast.makeText(this, getString(R.string.toast_no_inputs), Toast.LENGTH_SHORT).show()
             return
         }
-        // The inputs with a device connected and on (see updateInputsDot) get the same green dot in the menu.
-        val on = inputs.filter { runCatching { tm?.getInputState(it.id) == TvInputManager.INPUT_STATE_CONNECTED }.getOrDefault(false) }.map { it.id }.toSet()
+        // The inputs with a device connected (see connectedInputs) get the same green dot in the menu.
+        val on = connectedInputs()
         val items = inputs.distinctBy { it.id }.map { input ->
             val label = input.loadLabel(this)?.toString()?.takeIf { it.isNotBlank() } ?: input.id
             Triple(label, input.id in on) {
@@ -1901,6 +1921,7 @@ class MainActivity : Activity() {
         )
         const val BADGE = 0xFFFF453A.toInt()
         const val INPUTS_ON = 0xFF30D158.toInt() // the TV inputs button's dot: a device is on
+        val SONY_INPUTS: Uri = Uri.parse("content://com.sony.dtv.tvinput.external.provider/sony_external_input")
         const val REPO = "mccoy88f/Piume_Launcher" // where Piume's releases are published
         const val HELP_URL = "https://github.com/$REPO#home-button-on-android-13-and-newer"
         const val TOGGLE_ON = "\u0000on" // row values drawn as a switch instead of text

@@ -151,7 +151,7 @@ Android 13 and newer grey out the Accessibility switch for apps installed outsid
 | Back up or restore your settings | **Settings → System → Backup and restore** |
 | See what did not work recently | **Settings → System → Recent problems** |
 | Search for a film, a series or a TV channel | The **search** button in the top bar (hold OK on it for the TV's voice assistant) |
-| Switch to an HDMI input | The **TV inputs** button in the top bar |
+| Switch to an HDMI input | The **TV inputs** button in the top bar. A green dot shows the inputs with a device connected: Android's state, or on Sony TVs the TV's own (checked on Sony; on other brands it's as good as what the TV reports to Android) |
 | Open the Google TV dashboard | Hold the **Home** button |
 
 ### Custom wallpapers

@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.9.4
+
+- The green dots of the TV inputs show only the inputs with a device connected. Piume reads the state from Android. On Sony TVs, Android marks all HDMI inputs as connected, so Piume reads the state from the Sony inputs app instead. On other TVs, the dots are as correct as the state that the TV gives to Android.
+
 ## 2.9.3
 
 - In the TV inputs menu, a green dot shows next to each input with a device that is connected and on.

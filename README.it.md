@@ -151,7 +151,7 @@ Android 13 e successivi disattivano l'interruttore di Accessibilità per le app 
 | Salvare o ripristinare le impostazioni | **Impostazioni → Sistema → Backup e ripristino** |
 | Vedere cosa non ha funzionato di recente | **Impostazioni → Sistema → Problemi recenti** |
 | Cercare un film, una serie o un canale TV | Il pulsante **cerca** nella barra in alto (tieni premuto OK per l'assistente vocale della TV) |
-| Passare a un ingresso HDMI | Il pulsante **Sorgenti TV** nella barra in alto |
+| Passare a un ingresso HDMI | Il pulsante **Sorgenti TV** nella barra in alto. Un pallino verde indica gli ingressi con un dispositivo collegato: lo stato di Android, o sulle TV Sony quello della TV stessa (verificato su Sony; su altre marche è affidabile quanto lo stato che la TV comunica ad Android) |
 | Aprire la dashboard di Google TV | Tieni premuto il tasto **Home** |
 
 ### Sfondi personalizzati
