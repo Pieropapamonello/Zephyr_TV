@@ -240,7 +240,7 @@ internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = nu
     art?.logo?.let { addTitleLogo(picture, it, panelWidth, panelWidth * 9 / 16) }
     val top = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(0, 0, 0, dp(12))
+        setPadding(dp(14), 0, dp(14), dp(12)) // in line with the page title and the rows' names
         addView(label(listOfNotNull(rating, kind, year, item.genres.firstOrNull()).joinToString(" · "), 13f).apply { alpha = 0.7f })
         if (item.overview.isNotBlank()) addView(label(item.overview, 13f).apply {
             maxLines = 12
@@ -265,6 +265,14 @@ internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = nu
     pageExit = {
         panel.removeView(picture)
         panel.clipToPadding = true
+    }
+    // Back up on the first row, the page scrolls back to its top: nothing above it takes focus to pull it there.
+    settingsList.getChildAt(1)?.let { first ->
+        val own = first.onFocusChangeListener
+        first.setOnFocusChangeListener { v, focused ->
+            own?.onFocusChange(v, focused)
+            if (focused) (settingsList.parent as View).post { (settingsList.parent as android.widget.ScrollView).smoothScrollTo(0, 0) }
+        }
     }
     // Each row starts with its app's icon, before the name.
     shown.forEachIndexed { i, a ->
