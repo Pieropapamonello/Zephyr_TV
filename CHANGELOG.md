@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.9.2
+
+- The TV inputs button in the top bar shows a green dot when a device on HDMI is connected and on.
+
 ## 2.9.1
 
 - The TV channels show at once, with their names and numbers. The logos come one by one as they load, and the program that is on now comes last.

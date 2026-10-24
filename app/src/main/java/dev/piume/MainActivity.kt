@@ -310,7 +310,7 @@ class MainActivity : Activity() {
         // Gallery chosen but its paintings missing (updated from a version that bundled them): fetch them.
         if (galleryOn() && photoScreensaver() == null && !paintingsReady(this)) downloadPaintings {}
         checkUpdate(force = false)
-        ui.post { updateBadge() } // after layout, so the icon has its size
+        ui.post { updateBadge(); updateInputsDot() } // after layout, so the icons have their size
     }
 
     /** Night mode starts and ends on time even while the home screen just sits there. */
@@ -868,8 +868,30 @@ class MainActivity : Activity() {
     }
 
     internal val inputCallback = object : TvInputManager.TvInputCallback() {
-        override fun onInputAdded(id: String) = refreshApps()
-        override fun onInputRemoved(id: String) = refreshApps()
+        override fun onInputAdded(id: String) = refreshApps().also { updateInputsDot() }
+        override fun onInputRemoved(id: String) = refreshApps().also { updateInputsDot() }
+        override fun onInputStateChanged(id: String, state: Int) = updateInputsDot()
+    }
+
+    internal val inputsDot by lazy { GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(INPUTS_ON) } }
+
+    /**
+     * A green dot on the TV inputs button while a device on HDMI is connected and on (Android's input state:
+     * connected, not standby or disconnected). How well a TV reports it is up to the TV.
+     */
+    internal fun updateInputsDot() {
+        val icon = findViewById<ImageView>(R.id.tvInputsButton)
+        val tm = getSystemService(TvInputManager::class.java)
+        val on = try {
+            tm?.tvInputList?.any { (it.type == TvInputInfo.TYPE_HDMI || it.isPassthroughInput) && tm.getInputState(it.id) == TvInputManager.INPUT_STATE_CONNECTED } == true
+        } catch (e: Exception) {
+            false
+        }
+        icon.overlay.remove(inputsDot)
+        if (!on || icon.width == 0) return
+        val size = dp(9)
+        inputsDot.setBounds(icon.width - size - dp(3), dp(3), icon.width - dp(3), dp(3) + size)
+        icon.overlay.add(inputsDot)
     }
 
     internal fun sortedApps(): List<App> {
@@ -1873,6 +1895,7 @@ class MainActivity : Activity() {
             "right" to (R.string.align_right to Gravity.END),
         )
         const val BADGE = 0xFFFF453A.toInt()
+        const val INPUTS_ON = 0xFF30D158.toInt() // the TV inputs button's dot: a device is on
         const val REPO = "mccoy88f/Piume_Launcher" // where Piume's releases are published
         const val HELP_URL = "https://github.com/$REPO#home-button-on-android-13-and-newer"
         const val TOGGLE_ON = "\u0000on" // row values drawn as a switch instead of text
