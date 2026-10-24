@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.Outline
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -14,7 +13,6 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
-import android.view.ViewOutlineProvider
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
@@ -222,7 +220,8 @@ internal fun MainActivity.endSearch(): Boolean {
 }
 
 /**
- * A result's page in the side panel: its card art on top, what Spotlight would say about it (rating, kind, year,
+ * A result's page in the side panel: its card art across the top, edge to edge above the page title, what
+ * Spotlight would say about it (rating, kind, year,
  * genre, the overview) under it, and a row per app to watch it in, each with the app's icon: the YouTube trailer
  * and the services TMDB lists it on, as Spotlight's buttons.
  */
@@ -232,14 +231,9 @@ internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = nu
     val rating = if (item.voteAverage > 0) "★ %.1f".format(item.voteAverage) else null
     val kind = getString(if (item.mediaType == "tv") R.string.tmdb_badge_tv else R.string.tmdb_badge_movie)
     val art = searchArt[item.id]
-    val picture = FrameLayout(this).apply {
-        clipToOutline = true
-        outlineProvider = object : ViewOutlineProvider() {
-            override fun getOutline(view: View, outline: Outline) = outline.setRoundRect(0, 0, view.width, view.height, dp(8).toFloat())
-        }
-        setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt())
-    }
-    val panelWidth = dp(380 - 28 - 48) // the panel's width inside its padding (activity_main.xml)
+    val panel = findViewById<LinearLayout>(R.id.settingsPanel)
+    val panelWidth = dp(380) // the panel's width (activity_main.xml)
+    val picture = FrameLayout(this).apply { setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt()) }
     val img = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
     picture.addView(img, MATCH_PARENT, MATCH_PARENT)
     loadPoster(img, art?.backdrop ?: TmdbClient.cardUrl(item.backdropPath))
@@ -247,7 +241,6 @@ internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = nu
     val top = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, 0, 0, dp(12))
-        addView(picture, LinearLayout.LayoutParams(MATCH_PARENT, panelWidth * 9 / 16).apply { bottomMargin = dp(12) })
         addView(label(listOfNotNull(rating, kind, year, item.genres.firstOrNull()).joinToString(" · "), 13f).apply { alpha = 0.7f })
         if (item.overview.isNotBlank()) addView(label(item.overview, 13f).apply {
             maxLines = 12
@@ -264,6 +257,11 @@ internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = nu
         }
     }
     showPage(item.title, rows, top = top) { closeLauncherSettings() }
+    // Over the panel's padding, so it reaches its edges and the top of the screen; gone with the page.
+    panel.addView(picture, 0, LinearLayout.LayoutParams(panelWidth, panelWidth * 9 / 16).apply {
+        setMargins(-panel.paddingStart, -panel.paddingTop, -panel.paddingEnd, dp(20))
+    })
+    pageExit = { panel.removeView(picture) }
     // Each row starts with its app's icon, before the name.
     shown.forEachIndexed { i, a ->
         (settingsList.getChildAt(1 + i) as? LinearLayout)?.addView(ImageView(this).apply {
