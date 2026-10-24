@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.4.3
+
+- **YouTube trailer** is the first button in Spotlight and the first item on the page of a search result.
+
 ## 2.4.2
 
 - Search results show as posters, in the language that you set for TMDB.

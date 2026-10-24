@@ -220,8 +220,8 @@ internal fun MainActivity.titleApps(): List<App> {
             candidateApps.add(app)
         }
     }
-    // Five at most, not counting services' apps beyond that: those hide for titles they don't have.
-    return candidateApps.filterIndexed { i, a -> i < 5 || a.pkg in TmdbClient.providerApps }
+    // Five at most, not counting services' apps beyond that: those hide for titles they don't have. The trailer first.
+    return candidateApps.filterIndexed { i, a -> i < 5 || a.pkg in TmdbClient.providerApps }.sortedByDescending { TmdbClient.isYouTube(it.pkg) }
 }
 
 /** Spotlight's buttons, one per app in [titleApps]. */
