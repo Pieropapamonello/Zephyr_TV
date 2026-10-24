@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.4.10
+
+- In Piume settings, each section shows an arrow instead of a value. The arrow tells you that the section opens a page.
+
 ## 2.4.9
 
 - Arrows show at the sides of the apps row and of the recommendation rows when there are more items that way. They show only on the row that has the focus.

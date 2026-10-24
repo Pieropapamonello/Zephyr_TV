@@ -201,7 +201,6 @@
     <string name="settings_section_look">Appearance &amp; wallpapers</string>
     <string name="settings_section_apps">Apps row</string>
     <string name="settings_section_system">System</string>
-    <string name="settings_summary_locked">Locked</string>
     <string name="settings_summary_setup">Home button to turn on</string>
     <string name="setting_tmdb_cycle">Next title every</string>
     <string name="tmdb_cycle_off">Off (only with ◀ ▶)</string>

@@ -1868,6 +1868,7 @@ class MainActivity : Activity() {
         const val HELP_URL = "https://github.com/$REPO#home-button-on-android-13-and-newer"
         const val TOGGLE_ON = "\u0000on" // row values drawn as a switch instead of text
         const val TOGGLE_OFF = "\u0000off"
+        const val SUBMENU = "\u0000more" // a row that opens a page of its own: drawn as an arrow
         const val PIN_TRIES = 5 // wrong PINs before a 30 s wait
         const val UNLOCKED_MS = 5 * 60_000L
         const val MEDIA_REQUEST = 3

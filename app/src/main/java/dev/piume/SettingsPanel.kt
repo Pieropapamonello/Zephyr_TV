@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -45,6 +46,7 @@ import dev.piume.MainActivity.Companion.TMDB_LANG_ROW
 import dev.piume.MainActivity.Companion.TMDB_PROVIDERS_ROW
 import dev.piume.MainActivity.Companion.TMDB_SOURCE_ROW
 import dev.piume.MainActivity.Companion.TMDB_TYPE_ROW
+import dev.piume.MainActivity.Companion.SUBMENU
 import dev.piume.MainActivity.Companion.TOGGLE_OFF
 import dev.piume.MainActivity.Companion.TOGGLE_ON
 import dev.piume.MainActivity.Companion.UNLOCKED_MS
@@ -98,20 +100,15 @@ internal fun MainActivity.sectionTitle(section: Int) = getString(when (section) 
     else -> R.string.settings_section_system
 })
 
+/** The sections, each a page of its own: an arrow says so (a value here would only repeat the page's first row). */
 internal fun MainActivity.renderSettingsHome(focus: Int = 0) {
-    val cwOff = prefs.getStringSet(K.CW_OFF, emptySet())!!.count { pkg -> apps.any { it.pkg == pkg } }
-    val summaries = mapOf(
-        LOOK_SECTION to themeName(),
-        APPS_SECTION to if (lockOn()) getString(R.string.settings_summary_locked) else "",
-        WATCH_SECTION to if (cwOff == 0) getString(R.string.cw_apps_all_on) else getString(R.string.cw_apps_count_off, cwOff),
-        SPOTLIGHT_SECTION to if (prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank()) getString(R.string.state_off) else getString(R.string.state_on),
-        SCREENSAVER_SECTION to screensaverValue(),
-        // The one thing here that needs doing by hand comes first; otherwise the version.
-        SYSTEM_SECTION to if (!homeServiceOn()) getString(R.string.settings_summary_setup) else updatesValue(),
-    )
-    showPage(getString(R.string.plume_settings), summaries.map { (section, value) ->
-        page(sectionTitle(section), value) { renderSettings(section * SECTION) }
+    val sections = listOf(LOOK_SECTION, APPS_SECTION, WATCH_SECTION, SPOTLIGHT_SECTION, SCREENSAVER_SECTION, SYSTEM_SECTION)
+    showPage(getString(R.string.plume_settings), sections.map { section ->
+        page(sectionTitle(section), SUBMENU) { renderSettings(section * SECTION) }
     }, focus, back = null)
+    // The one thing that needs doing by hand still shows on its section: Piume isn't fully set up as the home screen.
+    if (!homeServiceOn()) (settingsList.getChildAt(sections.indexOf(SYSTEM_SECTION)) as? LinearLayout)?.addView(
+        label(getString(R.string.settings_summary_setup), 13f).apply { alpha = 0.6f; setPadding(dp(12), 0, dp(8), 0) }, 1)
 }
 
 /** Shows the section page holding [row], focused on it. */
@@ -564,8 +561,9 @@ internal fun MainActivity.settingsRow(title: String, value: String, action: () -
         isClickable = true
         val name = label(title, 14f)
         val toggled = value == TOGGLE_ON || value == TOGGLE_OFF
+        val submenu = value == SUBMENU
         // The value gives way to the name: capped, so a long one ("Not set: press to enter") is shortened, not the name.
-        val state = label(if (toggled) "" else value, 13f).apply {
+        val state = label(if (toggled || submenu) "" else value, 13f).apply {
             alpha = 0.6f
             maxWidth = dp(170)
             setPadding(dp(12), 0, 0, 0)
@@ -575,7 +573,12 @@ internal fun MainActivity.settingsRow(title: String, value: String, action: () -
             if (childCount > 1) removeViewAt(1)
             addView(switch(value == TOGGLE_ON, lit), LinearLayout.LayoutParams(dp(36), dp(20)))
         }
-        if (toggled) showSwitch(false) else addView(state)
+        val arrow = ImageView(context).apply { setImageResource(R.drawable.ic_chevron_right); setColorFilter(fg) }
+        when {
+            toggled -> showSwitch(false)
+            submenu -> addView(arrow, LinearLayout.LayoutParams(dp(20), dp(20)))
+            else -> addView(state)
+        }
         setOnClickListener { action() }
         setOnFocusChangeListener { _, focused ->
             bg.colors = if (focused) intArrayOf(fg, fg) else intArrayOf(0, 0)
@@ -583,6 +586,7 @@ internal fun MainActivity.settingsRow(title: String, value: String, action: () -
             state.setTextColor(if (focused) onFg else fg)
             state.alpha = if (focused) 0.75f else 0.6f
             if (toggled) showSwitch(focused) // redrawn in the inverted colours on the lit row
+            arrow.setColorFilter(if (focused) onFg else fg)
         }
     }
 }
