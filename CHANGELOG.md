@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.6.1
+
+- The program that is on now shows on the TV channel cards. In 2.6 the TV did not give it to Piume.
+
 ## 2.6
 
 - The TV channel cards show the program that is on now, after the channel number. The bar under the card shows how far into the program you are. The guide comes from the TV.

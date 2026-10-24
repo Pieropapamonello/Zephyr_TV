@@ -321,9 +321,12 @@ internal fun MainActivity.programsOnNow(): Map<Long, OnNow> {
     val now = System.currentTimeMillis()
     val out = HashMap<Long, OnNow>()
     runCatching {
-        contentResolver.query(TvContract.Programs.CONTENT_URI, arrayOf("channel_id", "title", "start_time_utc_millis", "end_time_utc_millis"),
-            "start_time_utc_millis <= ? AND end_time_utc_millis > ?", arrayOf(now.toString(), now.toString()), null)?.use { c ->
+        // A time range in the address, the one filter the TV listings take from an app (a selection is refused).
+        val uri = TvContract.Programs.CONTENT_URI.buildUpon()
+            .appendQueryParameter("start_time", now.toString()).appendQueryParameter("end_time", now.toString()).build()
+        contentResolver.query(uri, arrayOf("channel_id", "title", "start_time_utc_millis", "end_time_utc_millis"), null, null, null)?.use { c ->
             while (c.moveToNext()) {
+                if (c.getLong(2) > now || c.getLong(3) <= now) continue
                 val title = c.getString(1)?.takeIf { it.isNotBlank() } ?: continue
                 val start = c.getLong(2)
                 val end = c.getLong(3)
