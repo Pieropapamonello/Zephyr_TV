@@ -126,6 +126,9 @@ object TmdbClient {
         return t.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
     }
 
+    /** An image path, or null: TMDB sends JSON null for a missing one, which optString would turn into "null". */
+    private fun path(obj: JSONObject, key: String) = if (obj.isNull(key)) null else obj.optString(key).takeIf { it.isNotBlank() }
+
     private fun items(results: org.json.JSONArray, genres: Map<Int, String>, defaultType: String): List<TmdbItem> {
         val list = ArrayList<TmdbItem>()
         for (i in 0 until results.length()) {
@@ -142,12 +145,12 @@ object TmdbClient {
                     id = obj.optLong("id"),
                     title = title,
                     overview = obj.optString("overview"),
-                    backdropPath = obj.optString("backdrop_path").takeIf { it.isNotBlank() },
+                    backdropPath = path(obj, "backdrop_path"),
                     voteAverage = obj.optDouble("vote_average", 0.0),
                     mediaType = obj.optString("media_type", defaultType),
                     genres = names,
                     releaseDate = obj.optString("release_date").ifEmpty { obj.optString("first_air_date") },
-                    posterPath = obj.optString("poster_path").takeIf { it.isNotBlank() },
+                    posterPath = path(obj, "poster_path"),
                 )
             )
         }
