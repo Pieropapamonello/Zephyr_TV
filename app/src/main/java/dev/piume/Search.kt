@@ -171,6 +171,7 @@ internal fun MainActivity.stopListening() {
 internal fun MainActivity.searchTmdb(query: String) {
     val key = prefs.getString(K.TMDB_API_KEY, null) ?: return
     spotlightIo.execute {
+        val channels = runCatching { findChannels(query) }.getOrDefault(emptyList())
         val found = TmdbClient.search(key, query, tmdbLang())
         // Each result's landscape art with its title on it, all at once (one TMDB call each) before showing them.
         val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
@@ -181,37 +182,141 @@ internal fun MainActivity.searchTmdb(query: String) {
             pool.shutdown()
         }
         ui.post {
-            if (found.isEmpty()) return@post Toast.makeText(this, getString(R.string.toast_no_results, query), Toast.LENGTH_SHORT).show()
+            if (found.isEmpty() && channels.isEmpty()) return@post Toast.makeText(this, getString(R.string.toast_no_results, query), Toast.LENGTH_SHORT).show()
             searchQuery = query
             searchResults = found
             searchArt = art
+            searchChannels = channels
             watchApp = null // the tile's cards are new even if it's focused already
             renderApps()
             (0 until appRow.childCount).map { appRow.getChildAt(it) }.firstOrNull { it.tag == SEARCH_PKG }?.requestFocus()
-            Toast.makeText(this, resources.getQuantityString(R.plurals.toast_search_results, found.size, found.size, query), Toast.LENGTH_LONG).show()
+            val n = found.size + channels.size
+            Toast.makeText(this, resources.getQuantityString(R.plurals.toast_search_results, n, n, query), Toast.LENGTH_LONG).show()
         }
     }
 }
 
-/** The results' cards under the apps row: landscape art with the title on it (see TmdbClient.art), and what it is. */
+/**
+ * The results' cards under the apps row: the TV channels it found first, then the films and series, with landscape
+ * art with the title on it (see TmdbClient.art) and what each is.
+ */
 internal fun MainActivity.showSearchResults() {
     val query = searchQuery ?: return
     watchApp = SEARCH_PKG
-    showSections(listOf(Section("search", query, getString(R.string.search_results_for, query), searchResults.map { item ->
+    val channels = searchChannels.takeIf { it.isNotEmpty() }?.let { list ->
+        Section("channels", query, getString(R.string.search_channels_for, query), list.map { d ->
+            Prog(d.name, listOfNotNull(d.number, d.now?.title).joinToString(" · "), d.now?.let { Epg.progress(it) } ?: 0,
+                d.logo, d.intent, d.pkg, badge = d.number, channelPage = d)
+        })
+    }
+    val titles = searchResults.takeIf { it.isNotEmpty() }?.let { found -> Section("search", query, getString(R.string.search_results_for, query), found.map { item ->
         val kind = getString(if (item.mediaType == "tv") R.string.tmdb_badge_tv else R.string.tmdb_badge_movie)
         val year = item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }
         val art = searchArt[item.id]
         Prog(item.title, listOfNotNull(kind, year).joinToString(" · "), 0, art?.backdrop ?: TmdbClient.cardUrl(item.backdropPath), null, null,
             tmdb = item, logo = art?.logo, poster = art?.poster ?: item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" })
-    })))
+    }) }
+    showSections(listOfNotNull(channels, titles))
+}
+
+/** A TV channel the search found: what its card and its page show. */
+internal class ChannelDetail(
+    val name: String, val number: String, val logo: String?, val intent: String, val pkg: String?,
+    val now: Epg.Show?, val next: Epg.Show?,
+)
+
+/**
+ * The tuner channels whose name has [query] in it, or whose number it is, with what's on (the TV's guide, else the
+ * one set in Piume settings). At most 20. Runs off the UI thread.
+ */
+internal fun MainActivity.findChannels(query: String): List<ChannelDetail> {
+    if (checkSelfPermission(MainActivity.TV_LISTINGS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return emptyList()
+    val words = ChannelLogos.normalize(query).takeIf { it.length >= 2 } ?: return emptyList()
+    val number = query.trim().takeIf { it.isNotEmpty() && it.all(Char::isDigit) }?.trimStart('0')
+    val tvApp = apps.firstOrNull { isTvApp(it.pkg) }?.pkg
+    val logos = if (channelLogosOn()) ChannelLogos.saved(filesDir, channelCountry()).orEmpty() else emptyMap()
+    val guide = epgUrl()?.let { Epg.saved(filesDir, it) }
+    val onNow = programsOnNow()
+    return tunerChannels()
+        .filter { ChannelLogos.normalize(it.name).contains(words) || (number != null && it.number.trimStart('0') == number) }
+        .sortedBy { channelKey(it.number) }.take(20)
+        .map { ch ->
+            val epg = guide?.let { Epg.nowAndNext(it, ch.name) }
+            val now = epg?.first ?: onNow[ch.id]?.let { Epg.Show(0, 0, it.title) }
+            ChannelDetail(ch.name, ch.number.trimStart('0').ifEmpty { ch.number }, channelLogo(ch, logos),
+                android.content.Intent(android.content.Intent.ACTION_VIEW, android.media.tv.TvContract.buildChannelUri(ch.id)).toUri(android.content.Intent.URI_INTENT_SCHEME),
+                tvApp, now, epg?.second)
+        }
+}
+
+/**
+ * A channel's page in the side panel, like a film's: its logo across the top (on a blur of itself), what's on with
+ * its time and what it's about, what follows, and Watch on TV.
+ */
+internal fun MainActivity.showChannel(d: ChannelDetail) {
+    if (settingsScrim.visibility != View.VISIBLE) showPanel()
+    val panel = findViewById<LinearLayout>(R.id.settingsPanel)
+    val panelWidth = dp(380) // the panel's width (activity_main.xml)
+    val picture = FrameLayout(this).apply { setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt()) }
+    channelArt(picture, panelWidth, panelWidth * 9 / 16, d.logo, d.number, d.name)
+    val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT)
+    fun hours(s: Epg.Show) = if (s.start > 0) "${time.format(java.util.Date(s.start))} – ${time.format(java.util.Date(s.stop))}" else null
+    val top = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(14), 0, dp(14), dp(12)) // in line with the page title and the rows' names
+        addView(label(getString(R.string.channel_number, d.number), 13f).apply { alpha = 0.7f })
+        d.now?.let { now ->
+            addView(label(now.title, 16f).apply {
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                maxLines = 2
+                setPadding(0, dp(10), 0, 0)
+            })
+            hours(now)?.let { addView(label(it, 13f).apply { alpha = 0.7f; setPadding(0, dp(2), 0, 0) }) }
+            if (now.desc.isNotBlank()) addView(label(now.desc, 13f).apply {
+                maxLines = 8
+                setLineSpacing(0f, 1.15f)
+                setPadding(0, dp(8), 0, 0)
+            })
+        }
+        d.next?.let { next ->
+            addView(label(getString(R.string.channel_next, hours(next)?.substringBefore(" –") ?: "", next.title), 13f).apply {
+                alpha = 0.7f
+                maxLines = 2
+                setPadding(0, dp(10), 0, 0)
+            })
+        }
+    }
+    val rows = listOf(page(getString(R.string.channel_watch)) {
+        closeLauncherSettings()
+        open(Prog(d.name, d.number, 0, null, d.intent, d.pkg))
+    })
+    showPage(d.name, rows, top = top) { closeLauncherSettings() }
+    // Over the panel's padding, so it reaches its edges and the top of the screen; gone with the page.
+    panel.addView(picture, 0, LinearLayout.LayoutParams(panelWidth, panelWidth * 9 / 16).apply {
+        setMargins(-panel.paddingStart, -panel.paddingTop, -panel.paddingEnd, dp(20))
+    })
+    panel.clipToPadding = false
+    pageExit = {
+        panel.removeView(picture)
+        panel.clipToPadding = true
+    }
+    d.pkg?.let { pkg ->
+        runCatching { packageManager.getApplicationIcon(pkg) }.getOrNull()?.let { icon ->
+            (settingsList.getChildAt(1) as? LinearLayout)?.addView(ImageView(this).apply {
+                setImageDrawable(icon)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+            }, 0, LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(12) })
+        }
+    }
 }
 
 /** Closes the search: its tile and cards go, focus goes back to Continue Watching. False when none is open. */
 internal fun MainActivity.endSearch(): Boolean {
     if (searchQuery == null) return false
-    val onIt = currentFocus?.let { it.tag == SEARCH_PKG || (it.getTag(R.id.watchRow) as? Prog)?.tmdb != null } ?: true
+    val onIt = currentFocus?.let { it.tag == SEARCH_PKG || (it.getTag(R.id.watchRow) as? Prog)?.let { p -> p.tmdb != null || p.channelPage != null } == true } ?: true
     searchQuery = null
     searchResults = emptyList()
+    searchChannels = emptyList()
     searchArt = emptyMap()
     if (watchApp == SEARCH_PKG) watchApp = null
     renderApps()

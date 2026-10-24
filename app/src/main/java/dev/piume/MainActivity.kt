@@ -113,7 +113,7 @@ internal const val SEARCH_PKG = "piume:search" // the search results tile, after
 class MainActivity : Activity() {
 
     internal class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable)
-    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val tmdb: TmdbItem? = null, val logo: String? = null, val poster: String? = null)
+    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val tmdb: TmdbItem? = null, val logo: String? = null, val poster: String? = null, val channelPage: ChannelDetail? = null)
 
     internal val prefs by lazy { getSharedPreferences(K.FILE, MODE_PRIVATE) }
     internal val io = Executors.newSingleThreadExecutor()
@@ -184,6 +184,7 @@ class MainActivity : Activity() {
     internal var searchQuery: String? = null // the last search, while its results tile is in the apps row; null for none
     internal var searchResults: List<TmdbItem> = emptyList()
     internal var searchArt: Map<Long, TmdbClient.Art?> = emptyMap() // each result's card art, by TMDB id
+    internal var searchChannels: List<ChannelDetail> = emptyList() // the TV channels the search found
     internal var recognizer: android.speech.SpeechRecognizer? = null // dictating into the search box
     internal var afterMicAccess: (() -> Unit)? = null // what asked, while Android's microphone prompt is up
     internal val appChannelDebounce = Runnable { queryAppChannels(tmdbLastFocusApp) }
@@ -1324,7 +1325,7 @@ class MainActivity : Activity() {
                 appRow.getChildAt(0)?.requestFocus() // show the app just pinned
             }
             v.parent === appRow -> appMenu(v)
-            (v.getTag(R.id.watchRow) as? Prog)?.tmdb != null -> {} // a search result: OK already shows all it has
+            (v.getTag(R.id.watchRow) as? Prog)?.let { it.tmdb != null || it.channelPage != null } == true -> {} // a search result: OK shows all it has
             v.getTag(R.id.watchRow) is Prog -> watchMenu(v, v.getTag(R.id.watchRow) as Prog)
         }
     }

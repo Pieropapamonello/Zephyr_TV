@@ -270,15 +270,28 @@ internal fun MainActivity.isTvApp(pkg: String): Boolean {
  * (Sony's: about 20, often without 1-3) and look different on every TV; these all share one design (see
  * [watchCard]). Empty without a tuner. Runs on the io thread.
  */
-internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<Section> {
-    class Channel(val id: Long, val input: String, val number: String, val name: String)
-    val all = ArrayList<Channel>()
+internal class TunerChannel(val id: Long, val input: String, val number: String, val name: String)
+
+/**
+ * The TV's tuner channels, as many as it lists to apps (not its home-screen rows, nor those it hides). Some come
+ * twice (same number and name, from two broadcasts of it): once is enough. Runs on the io thread.
+ */
+internal fun MainActivity.tunerChannels(): List<TunerChannel> {
+    val all = ArrayList<TunerChannel>()
     contentResolver.query(TvContract.Channels.CONTENT_URI, arrayOf("_id", "input_id", "display_number", "display_name", "browsable", "type"), null, null, null)?.use { c ->
         while (c.moveToNext()) {
             if (c.getString(5) == TvContract.Channels.TYPE_PREVIEW || c.getInt(4) == 0) continue // home-screen rows, hidden channels
-            all += Channel(c.getLong(0), c.getString(1) ?: "", c.getString(2)?.takeIf { it.isNotBlank() } ?: continue, c.getString(3) ?: continue)
+            all += TunerChannel(c.getLong(0), c.getString(1) ?: "", c.getString(2)?.takeIf { it.isNotBlank() } ?: continue, c.getString(3) ?: continue)
         }
     }
+    return all.distinctBy { it.number to it.name }
+}
+
+/** A channel's logo: the TV's own, else iptv-org's from [logos] (see ChannelLogos). */
+internal fun MainActivity.channelLogo(ch: TunerChannel, logos: Map<String, String>) = logo(ch.id) ?: ChannelLogos.match(logos, ch.name)
+
+internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<Section> {
+    val all = tunerChannels()
     val label = appLabel(pkg)
     val tvInputs = getSystemService(TvInputManager::class.java)
     // Logos the TV has none for come from iptv-org's table (see ChannelLogos); fetched in the background the first
@@ -299,8 +312,7 @@ internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<
     val epgUrl = epgUrl()
     val guide = epgUrl?.let { Epg.saved(filesDir, it) }
     if (epgUrl != null && Epg.due(filesDir, epgUrl)) updateEpg(pkg)
-    // The TV lists some channels twice (same number and name, from two broadcasts of it): once is enough.
-    return all.filter { hideKey(pkg, it.name) !in hidden }.distinctBy { it.number to it.name }.groupBy { it.input }.values
+    return all.filter { hideKey(pkg, it.name) !in hidden }.groupBy { it.input }.values
         .map { it.sortedBy { ch -> channelKey(ch.number) } }.sortedBy { channelKey(it.first().number) }
         .map { channels ->
             val input = channels.first().input
@@ -310,7 +322,7 @@ internal fun MainActivity.tunerSections(pkg: String, hidden: Set<String>): List<
                 val number = it.number.trimStart('0').ifEmpty { it.number }
                 val now = onNow[it.id] ?: guide?.let { g -> Epg.now(g, it.name)?.let { (title, progress) -> OnNow(title, progress) } }
                 // Under the card: the number, then what's on, its bar how far in it is.
-                Prog(it.name, listOfNotNull(number, now?.title).joinToString(" · "), now?.progress ?: 0, logo(it.id) ?: ChannelLogos.match(logos, it.name),
+                Prog(it.name, listOfNotNull(number, now?.title).joinToString(" · "), now?.progress ?: 0, channelLogo(it, logos),
                     Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(it.id)).toUri(Intent.URI_INTENT_SCHEME), pkg, badge = it.number)
             })
         }
@@ -600,41 +612,9 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     // A TV channel: the same card on every TV, whatever the TV app's own look. Its logo fills it, large in the
     // middle on a blur of itself (its name and number are under the card); with no logo, or until it's in, the
     // number and name instead.
-    if (p.badge != null) {
-        val number = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            addView(label(p.badge, 30f).apply { gravity = Gravity.CENTER })
-            addView(label(p.title, 13f).apply { gravity = Gravity.CENTER; alpha = 0.8f; setPadding(dp(12), dp(4), dp(12), 0) })
-        }
-        frame.addView(number, MATCH_PARENT, MATCH_PARENT)
-        p.image?.let { uri ->
-            posterIo.execute {
-                val bmp = try {
-                    decode(uri, alpha = true)
-                } catch (e: Exception) {
-                    warn("channel logo failed: $uri ($e)")
-                    null
-                } ?: return@execute
-                val blur = softBlur(bmp)
-                ui.post {
-                    number.visibility = View.GONE
-                    frame.addView(ImageView(this).apply {
-                        scaleType = ImageView.ScaleType.CENTER_CROP
-                        alpha = 0.55f
-                        setImageBitmap(blur)
-                    }, 1, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
-                    frame.addView(ImageView(this).apply {
-                        scaleType = ImageView.ScaleType.FIT_CENTER
-                        setPadding(w / 6, cardHeight / 5, w / 6, cardHeight / 5)
-                        setImageBitmap(bmp)
-                    }, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
-                }
-            }
-        }
-    }
+    if (p.badge != null) channelArt(frame, w, cardHeight, p.image, p.badge, p.title)
     if (p.tmdb != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title)
-    frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: open(p) }
+    frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: p.channelPage?.let { showChannel(it) } ?: open(p) }
     frame.setTag(R.id.watchRow, p) // holding OK hides it (see onHold)
     col.addView(frame, LinearLayout.LayoutParams(w, cardHeight))
     // Thin bar under the poster, card width. Kept (invisible) when there's no progress so titles line up.
@@ -659,6 +639,43 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     }
     if (p.badge == null && p.tmdb == null) loadPoster(img, p.image)
     return col
+}
+
+/**
+ * A TV channel's picture in [frame] ([w] by [h]): its [logo] large in the middle on a blur of itself; with no logo,
+ * or until it's in, its [number] and [name] instead.
+ */
+internal fun MainActivity.channelArt(frame: FrameLayout, w: Int, h: Int, logo: String?, number: String, name: String) {
+    val text = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+        addView(label(number, 30f).apply { gravity = Gravity.CENTER })
+        addView(label(name, 13f).apply { gravity = Gravity.CENTER; alpha = 0.8f; setPadding(dp(12), dp(4), dp(12), 0) })
+    }
+    frame.addView(text, MATCH_PARENT, MATCH_PARENT)
+    val uri = logo ?: return
+    posterIo.execute {
+        val bmp = try {
+            decode(uri, alpha = true)
+        } catch (e: Exception) {
+            warn("channel logo failed: $uri ($e)")
+            null
+        } ?: return@execute
+        val blur = softBlur(bmp)
+        ui.post {
+            text.visibility = View.GONE
+            frame.addView(ImageView(this).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                alpha = 0.55f
+                setImageBitmap(blur)
+            }, frame.indexOfChild(text), FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+            frame.addView(ImageView(this).apply {
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setPadding(w / 6, h / 5, w / 6, h / 5)
+                setImageBitmap(bmp)
+            }, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+        }
+    }
 }
 
 /**

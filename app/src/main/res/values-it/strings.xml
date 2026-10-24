@@ -324,6 +324,10 @@
     <string name="search_results_tile">Risultati: “%1$s”</string>
     <string name="search_results_for">Risultati per “%1$s”</string>
     <string name="toast_mic_needed">Piume ha bisogno del microfono per sentire il titolo</string>
+    <string name="search_channels_for">Canali TV per “%1$s”</string>
+    <string name="channel_number">Canale %1$s</string>
+    <string name="channel_next">A seguire: %1$s %2$s</string>
+    <string name="channel_watch">Guarda in TV</string>
     <string name="toast_no_results">Nessun risultato per “%1$s”</string>
     <plurals name="toast_search_results">
         <item quantity="one">%1$d risultato per “%2$s”. Indietro chiude la ricerca</item>

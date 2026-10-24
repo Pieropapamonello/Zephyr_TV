@@ -324,6 +324,10 @@
     <string name="search_results_tile">Results: “%1$s”</string>
     <string name="search_results_for">Results for “%1$s”</string>
     <string name="toast_mic_needed">Piume needs the microphone to hear the title</string>
+    <string name="search_channels_for">TV channels for “%1$s”</string>
+    <string name="channel_number">Channel %1$s</string>
+    <string name="channel_next">Next: %1$s %2$s</string>
+    <string name="channel_watch">Watch on TV</string>
     <string name="toast_no_results">Nothing found for “%1$s”</string>
     <plurals name="toast_search_results">
         <item quantity="one">%1$d result for “%2$s”. Back closes the search</item>

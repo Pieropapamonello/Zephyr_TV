@@ -13,6 +13,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.8
+
+- Search also finds the TV channels, by name or by number. They show in a row of their own, before the films and series.
+- Press OK on a channel to see its page: the logo, the program that is on now with its time and description, and the next program. Select **Watch on TV** to open the channel.
+
 ## 2.7.2
 
 - Piume also finds channels in a TV guide by their guide ID, like "Rai1.it" or "Canale.5.it".

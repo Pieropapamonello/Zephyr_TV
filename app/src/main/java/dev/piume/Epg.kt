@@ -20,8 +20,8 @@ internal object Epg {
     private const val RETRY_MS = 3600_000L // and after a failure, not before an hour
     private const val KEEP_MS = 24 * 3600_000L // how far ahead programs are kept
 
-    /** One program: when it's on and its title. */
-    internal class Show(val start: Long, val stop: Long, val title: String)
+    /** One program: when it's on, its title and what it's about. */
+    internal class Show(val start: Long, val stop: Long, val title: String, val desc: String = "")
 
     /** The guide as read: XMLTV channel id to its programs in time order, and the names to find those ids by. */
     internal class Guide(val shows: Map<String, List<Show>>, val names: Map<String, String>)
@@ -45,7 +45,7 @@ internal object Epg {
             val p = line.split('\t')
             when {
                 p.size >= 3 && p[0] == "C" -> names += p.drop(2) to p[1]
-                p.size == 5 && p[0] == "P" -> shows.getOrPut(p[1]) { ArrayList() } += Show(p[2].toLong(), p[3].toLong(), p[4])
+                p.size >= 5 && p[0] == "P" -> shows.getOrPut(p[1]) { ArrayList() } += Show(p[2].toLong(), p[3].toLong(), p[4], p.getOrNull(5) ?: "")
             }
         }
         return Guide(shows, ChannelLogos.table(names)).also { guide = url to it }
@@ -75,7 +75,7 @@ internal object Epg {
                 w.write(url)
                 w.newLine()
                 for ((id, all) in names) w.write("C\t$id\t${all.joinToString("\t")}\n")
-                for ((id, list) in shows) for (s in list) w.write("P\t$id\t${s.start}\t${s.stop}\t${s.title}\n")
+                for ((id, list) in shows) for (s in list) w.write("P\t$id\t${s.start}\t${s.stop}\t${s.title}\t${s.desc}\n")
             }
             if (!part.renameTo(f)) throw java.io.IOException("can't save ${f.name}")
             failed(dir).delete()
@@ -131,15 +131,24 @@ internal object Epg {
                     show = if (id != null && start != null && stop != null && stop > from && start < to) Triple(id, start, stop) else null
                 }
                 "title" -> show?.let { (id, start, stop) ->
-                    val title = parser.nextText().replace('\t', ' ').replace('\n', ' ').trim()
+                    val title = flat(parser.nextText())
                     // The first title only (others are translations).
                     if (title.isNotEmpty() && shows[id]?.lastOrNull()?.start != start) shows.getOrPut(id) { ArrayList() } += Show(start, stop, title)
+                }
+                "desc" -> show?.let { (id, start, _) ->
+                    val list = shows[id] ?: return@let
+                    val last = list.last()
+                    // The first description only, cut short: a card's page shows a few lines of it.
+                    if (last.start == start && last.desc.isEmpty()) list[list.size - 1] = Show(last.start, last.stop, last.title, flat(parser.nextText()).take(600))
                 }
             }
         }
         shows.values.forEach { list -> list.sortBy { it.start } }
         return names to shows
     }
+
+    /** On one line, for the saved file's tab-separated rows. */
+    private fun flat(s: String) = s.replace('\t', ' ').replace('\n', ' ').replace('\r', ' ').trim()
 
     /** An XMLTV time ("20261020051000 +0000"), or null. */
     internal fun time(s: String?): Long? {
@@ -153,8 +162,18 @@ internal object Epg {
 
     /** What's on now on the channel called [name], and how far in it is (1 to 100), or null. */
     fun now(guide: Guide, name: String, at: Long = System.currentTimeMillis()): Pair<String, Int>? {
-        val id = ChannelLogos.match(guide.names, name) ?: return null
-        val s = guide.shows[id]?.firstOrNull { it.start <= at && at < it.stop } ?: return null
-        return s.title to ((at - s.start) * 100 / (s.stop - s.start)).toInt().coerceIn(1, 100)
+        val s = nowAndNext(guide, name, at)?.first ?: return null
+        return s.title to progress(s, at)
     }
+
+    /** What's on now on the channel called [name] and what follows it, or null when the guide has nothing on now. */
+    fun nowAndNext(guide: Guide, name: String, at: Long = System.currentTimeMillis()): Pair<Show, Show?>? {
+        val id = ChannelLogos.match(guide.names, name) ?: return null
+        val list = guide.shows[id] ?: return null
+        val i = list.indexOfFirst { it.start <= at && at < it.stop }.takeIf { it >= 0 } ?: return null
+        return list[i] to list.getOrNull(i + 1)
+    }
+
+    /** How far into [s] [at] is, 1 to 100. */
+    fun progress(s: Show, at: Long = System.currentTimeMillis()) = ((at - s.start) * 100 / (s.stop - s.start).coerceAtLeast(1)).toInt().coerceIn(1, 100)
 }
