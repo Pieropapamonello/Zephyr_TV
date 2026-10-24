@@ -13,13 +13,17 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.4.4
+
+- Search results are wide covers with the title on them, in the language that you set for TMDB, or else in English. When TMDB has no such cover, the card shows the logo of the title on the picture.
+- Pictures in the recommendations, like the YouTube ones, fill the card. They have no black bars.
+
 ## 2.4.3
 
 - **YouTube trailer** is the first button in Spotlight and the first item on the page of a search result.
 
 ## 2.4.2
 
-- Search results show as posters, in the language that you set for TMDB.
 - When the Spotlight title has the focus, a soft band goes across the full screen behind it. It has no border.
 - The Spotlight description uses all the width of the screen.
 

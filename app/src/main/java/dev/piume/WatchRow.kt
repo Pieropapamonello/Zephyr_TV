@@ -475,10 +475,9 @@ internal fun MainActivity.nearestCard(row: ViewGroup, from: View): View? {
  */
 internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     val gap = dp(GRID_GAP)
-    // Standard 16:9 aspect ratio prevents cutting off channel numbers and provider badges. A search result is a
-    // poster instead: as tall, 2:3.
-    val cardHeight = (resources.displayMetrics.widthPixels - dp(96) - gap * 3) / 4 * 9 / 16
-    val w = if (p.tmdb != null) cardHeight * 2 / 3 else (resources.displayMetrics.widthPixels - dp(96) - gap * 3) / 4
+    val w = (resources.displayMetrics.widthPixels - dp(96) - gap * 3) / 4
+    // Standard 16:9 aspect ratio prevents cutting off channel numbers and provider badges
+    val cardHeight = w * 9 / 16
     val col = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         clipChildren = false
@@ -521,6 +520,15 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
             frame.addView(logo, FrameLayout.LayoutParams(dp(48), dp(28), Gravity.TOP or Gravity.END).apply { setMargins(0, dp(8), dp(10), 0) })
             posterIo.execute { runCatching { decode(uri) }.getOrNull()?.let { ui.post { logo.setImageBitmap(it) } } }
         }
+    }
+    // A search result on plain art: the title's logo over it, bottom left, on a shade so a light logo still reads.
+    p.logo?.let { uri ->
+        frame.addView(View(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0x99000000.toInt(), 0))
+        }, FrameLayout.LayoutParams(MATCH_PARENT, cardHeight / 2, Gravity.BOTTOM))
+        val logo = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_START; adjustViewBounds = false }
+        frame.addView(logo, FrameLayout.LayoutParams(w / 2, cardHeight / 3, Gravity.BOTTOM or Gravity.START).apply { setMargins(dp(10), 0, 0, dp(10)) })
+        posterIo.execute { runCatching { decode(uri) }.getOrNull()?.let { ui.post { logo.setImageBitmap(it) } } }
     }
     frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: open(p) }
     frame.setTag(R.id.watchRow, p) // holding OK hides it (see onHold)
@@ -611,9 +619,10 @@ internal fun MainActivity.loadPoster(v: ImageView, uri: String?) {
 }
 
 /**
- * Film and show art fills the card (cropped to 16:9). Art that isn't 16:9, or that sits on a plain background
- * (a TV app's channel cards: logo and name on a flat colour), is shown whole instead, inset from the edges on
- * its own background colour, so the name in it doesn't run into the card's border.
+ * Film and show art fills the card, cropped to its shape: also a landscape picture on a landscape card, like
+ * YouTube's 4:3 thumbnails, whose black bars the crop takes off. Art of another shape (a poster on a wide card),
+ * or that sits on a plain background (a TV app's channel cards: logo and name on a flat colour), is shown whole
+ * instead, inset from the edges on its own background colour, so the name in it doesn't run into the border.
  */
 internal fun MainActivity.fitPoster(v: ImageView, bmp: Bitmap) {
     val ratio = bmp.width.toFloat() / bmp.height
@@ -624,7 +633,8 @@ internal fun MainActivity.fitPoster(v: ImageView, bmp: Bitmap) {
     val edge = listOf(0 to 0, r / 2 to 0, r to 0, 0 to b / 2, r to b / 2, 0 to b, r / 2 to b, r to b).map { (x, y) -> bmp.getPixel(x, y) }
     fun near(c1: Int, c2: Int) = Math.abs(Color.red(c1) - Color.red(c2)) + Math.abs(Color.green(c1) - Color.green(c2)) + Math.abs(Color.blue(c1) - Color.blue(c2)) < 24
     val flat = edge.all { Color.alpha(it) == 255 && near(it, edge[0]) }
-    if (Math.abs(ratio / card - 1f) < 0.08f && !flat) {
+    val sameShape = Math.abs(ratio / card - 1f) < 0.08f || (card > 1.2f && ratio in 1.2f..2.4f)
+    if (sameShape && !flat) {
         v.scaleType = ImageView.ScaleType.CENTER_CROP
         v.setPadding(0, 0, 0, 0)
         return

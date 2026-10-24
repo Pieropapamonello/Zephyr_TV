@@ -15,7 +15,6 @@ data class TmdbItem(
     val mediaType: String, // "movie" or "tv"
     val genres: List<String>, // names in the language the list was fetched in
     val releaseDate: String?,
-    val posterPath: String? = null, // in the language asked for, where TMDB has one
 )
 
 object TmdbClient {
@@ -42,6 +41,39 @@ object TmdbClient {
             return emptyList()
         }
         return items(json.optJSONArray("results") ?: return emptyList(), genres(apiKey, language), type)
+    }
+
+    /** A title's landscape art for a card: [backdrop] with the title written on it, or else a plain one and its [logo]. */
+    class Art(val backdrop: String?, val logo: String?)
+
+    private val artCache = java.util.concurrent.ConcurrentHashMap<String, Art>()
+
+    /**
+     * Landscape art with the title on it, in [language] or else English: a backdrop TMDB tags with that language
+     * (designed with the title in it), or the plain backdrop plus the title's logo (a transparent PNG) to lay over
+     * it. Null when TMDB can't be reached.
+     */
+    fun art(apiKey: String, item: TmdbItem, language: String): Art? {
+        val lang = language.substringBefore('-')
+        val key = "${item.mediaType}/${item.id}/$lang"
+        artCache[key]?.let { return it }
+        val json = try {
+            JSONObject(get(apiKey, "/${item.mediaType}/${item.id}/images?include_image_language=$lang,en"))
+        } catch (e: Exception) {
+            warn("TMDB images failed (${redact(e)})")
+            return null
+        }
+        // Best rated first, in the language asked for before English; SVG logos left out (Android can't draw them).
+        fun pick(arr: org.json.JSONArray?): String? {
+            val all = (0 until (arr?.length() ?: 0)).map { arr!!.getJSONObject(it) }.filter { !it.optString("file_path").endsWith(".svg") }
+            return listOf(lang, "en").firstNotNullOfOrNull { l ->
+                all.filter { it.optString("iso_639_1") == l }.maxByOrNull { it.optDouble("vote_average", 0.0) }?.optString("file_path")
+            }
+        }
+        val titled = pick(json.optJSONArray("backdrops"))
+        val art = if (titled != null) Art("https://image.tmdb.org/t/p/w780$titled", null)
+            else Art(cardUrl(item.backdropPath), pick(json.optJSONArray("logos"))?.let { "https://image.tmdb.org/t/p/w300$it" })
+        return art.also { artCache[key] = it }
     }
 
     /** Films and series matching [query], most relevant first (people left out). Empty when none, or TMDB can't be reached. */
@@ -106,8 +138,7 @@ object TmdbClient {
                     voteAverage = obj.optDouble("vote_average", 0.0),
                     mediaType = obj.optString("media_type", defaultType),
                     genres = names,
-                    releaseDate = obj.optString("release_date").ifEmpty { obj.optString("first_air_date") },
-                    posterPath = obj.optString("poster_path").takeIf { it.isNotBlank() },
+                    releaseDate = obj.optString("release_date").ifEmpty { obj.optString("first_air_date") }
                 )
             )
         }
@@ -128,9 +159,6 @@ object TmdbClient {
     }
 
     fun backdropUrl(path: String?): String? = if (path.isNullOrBlank()) null else "$IMAGE_BASE$path"
-
-    /** A title's poster, at card size. */
-    fun posterUrl(path: String?): String? = if (path.isNullOrBlank()) null else "https://image.tmdb.org/t/p/w500$path"
 
     /** The same image at card size. */
     fun cardUrl(path: String?): String? = if (path.isNullOrBlank()) null else "https://image.tmdb.org/t/p/w780$path"

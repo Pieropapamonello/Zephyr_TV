@@ -171,10 +171,19 @@ internal fun MainActivity.searchTmdb(query: String) {
     val key = prefs.getString(K.TMDB_API_KEY, null) ?: return
     spotlightIo.execute {
         val found = TmdbClient.search(key, query, tmdbLang())
+        // Each result's landscape art with its title on it, all at once (one TMDB call each) before showing them.
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
+        val art = try {
+            pool.invokeAll(found.map { item -> java.util.concurrent.Callable { item.id to TmdbClient.art(key, item, tmdbLang()) } })
+                .mapNotNull { runCatching { it.get() }.getOrNull() }.toMap()
+        } finally {
+            pool.shutdown()
+        }
         ui.post {
             if (found.isEmpty()) return@post Toast.makeText(this, getString(R.string.toast_no_results, query), Toast.LENGTH_SHORT).show()
             searchQuery = query
             searchResults = found
+            searchArt = art
             watchApp = null // the tile's cards are new even if it's focused already
             renderApps()
             (0 until appRow.childCount).map { appRow.getChildAt(it) }.firstOrNull { it.tag == SEARCH_PKG }?.requestFocus()
@@ -183,14 +192,16 @@ internal fun MainActivity.searchTmdb(query: String) {
     }
 }
 
-/** The results' cards under the apps row: the poster (in the TMDB language), the title, and what it is (film or series, year). */
+/** The results' cards under the apps row: landscape art with the title on it (see TmdbClient.art), and what it is. */
 internal fun MainActivity.showSearchResults() {
     val query = searchQuery ?: return
     watchApp = SEARCH_PKG
     showSections(listOf(Section("search", query, getString(R.string.search_results_for, query), searchResults.map { item ->
         val kind = getString(if (item.mediaType == "tv") R.string.tmdb_badge_tv else R.string.tmdb_badge_movie)
         val year = item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }
-        Prog(item.title, listOfNotNull(kind, year).joinToString(" · "), 0, TmdbClient.posterUrl(item.posterPath) ?: TmdbClient.cardUrl(item.backdropPath), null, null, tmdb = item)
+        val art = searchArt[item.id]
+        Prog(item.title, listOfNotNull(kind, year).joinToString(" · "), 0, art?.backdrop ?: TmdbClient.cardUrl(item.backdropPath), null, null,
+            tmdb = item, logo = art?.logo)
     })))
 }
 
@@ -200,6 +211,7 @@ internal fun MainActivity.endSearch(): Boolean {
     val onIt = currentFocus?.let { it.tag == SEARCH_PKG || (it.getTag(R.id.watchRow) as? Prog)?.tmdb != null } ?: true
     searchQuery = null
     searchResults = emptyList()
+    searchArt = emptyMap()
     if (watchApp == SEARCH_PKG) watchApp = null
     renderApps()
     if (onIt) appRow.getChildAt(0)?.requestFocus()
