@@ -5,6 +5,7 @@ import android.graphics.Outline
 import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewOutlineProvider
 import android.widget.HorizontalScrollView
 
@@ -34,14 +35,68 @@ class SnapScrollView(context: Context, attrs: AttributeSet?) : HorizontalScrollV
         clipChildren = false // or the row inside clips the first tile's focus lift to its own edge
     }
 
+    // Arrows in the page margins, like Spotlight's, while the row has focus and has more that way. Drawn on the
+    // home rows' section (outside this view, which clips to its own bounds), so they sit in the margins.
+    private var arrows: Pair<ChevronDrawable, ChevronDrawable>? = null
+    private var host: ViewGroup? = null
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        val home = context as? MainActivity ?: return
+        val h = generateSequence(parent as? ViewGroup) { it.parent as? ViewGroup }.firstOrNull { it.id == R.id.bottomSection } ?: return
+        val disc = (home.ground and 0xFFFFFF) or 0x80000000.toInt()
+        val line = resources.displayMetrics.density * 2
+        val pair = ChevronDrawable(ChevronDrawable.LEFT, disc, home.fg, line) to ChevronDrawable(ChevronDrawable.RIGHT, disc, home.fg, line)
+        h.overlay.add(pair.first)
+        h.overlay.add(pair.second)
+        arrows = pair
+        host = h
+        updateArrows()
+    }
+
+    override fun onDetachedFromWindow() {
+        arrows?.let { (l, r) -> host?.overlay?.apply { remove(l); remove(r) } }
+        arrows = null
+        host = null
+        super.onDetachedFromWindow()
+    }
+
+    private fun updateArrows() {
+        val (left, right) = arrows ?: return
+        val h = host ?: return
+        val dp = resources.displayMetrics.density
+        val size = (28 * dp).toInt()
+        val at = offsetIn(this, h)
+        val cy = at[1] + paddingTop + (height - paddingTop - paddingBottom) / 2
+        val start = at[0] + paddingLeft
+        val end = at[0] + width - paddingRight
+        left.setBounds(start - (36 * dp).toInt(), cy - size / 2, start - (8 * dp).toInt(), cy + size / 2)
+        right.setBounds(end + (8 * dp).toInt(), cy - size / 2, end + (36 * dp).toInt(), cy + size / 2)
+        val on = hasFocus()
+        left.alpha = if (on && canScrollHorizontally(-1)) 255 else 0
+        right.alpha = if (on && canScrollHorizontally(1)) 255 else 0
+    }
+
     override fun onScrollChanged(l: Int, t: Int, oldl: Int, oldt: Int) {
         super.onScrollChanged(l, t, oldl, oldt)
         invalidateOutline()
+        updateArrows()
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
         super.onLayout(changed, l, t, r, b)
         invalidateOutline() // the items may have changed: whether there are more either side with them
+        updateArrows()
+    }
+
+    override fun requestChildFocus(child: View?, focused: View?) {
+        super.requestChildFocus(child, focused)
+        post { updateArrows() }
+    }
+
+    override fun clearChildFocus(child: View?) {
+        super.clearChildFocus(child)
+        post { updateArrows() }
     }
 
     override fun computeScrollDeltaToGetChildRectOnScreen(rect: Rect): Int {

@@ -111,7 +111,7 @@ internal fun MainActivity.updateSpotlightFocusState(targetFocus: View?) {
     if (!inSpotlight) spotlightOverview.maxLines = OVERVIEW_LINES
     spotlightOverview.visibility = if (inSpotlight) View.VISIBLE else View.GONE
     spotlightActions.visibility = if (inSpotlight) View.VISIBLE else View.GONE
-    for (arrow in arrayOf(spotlightPrev, spotlightNext)) arrow.animate().alpha(if (inSpotlight) 0.9f else 0.5f).setDuration(220).start()
+    for (arrow in arrayOf(spotlightPrev, spotlightNext)) arrow.animate().alpha(if (inSpotlight) 0.9f else 0f).setDuration(220).start()
     (spotlightInfoBox.background as? TextHalo)?.let { halo ->
         val to = if (targetFocus === spotlightInfoBox) 255 else 0
         if (halo.alpha != to) ValueAnimator.ofInt(halo.alpha, to).setDuration(180).apply { addUpdateListener { halo.alpha = it.animatedValue as Int } }.start()
@@ -239,7 +239,7 @@ internal fun MainActivity.renderSpotlightActions() {
             val btnBg = GradientDrawable().apply {
                 cornerRadius = dp(if (glass) 16 else 8).toFloat() // glass buttons are capsules
                 setColor(rest)
-                if (glass) setStroke(dp(1).coerceAtLeast(1), 0x4DFFFFFF)
+                if (glass) setStroke(1, 0x1FFFFFFF) // a hairline: the glass shows by its tint, not an outline
             }
             background = btnBg
             isFocusable = true

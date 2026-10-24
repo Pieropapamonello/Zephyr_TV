@@ -3,6 +3,7 @@ package dev.piume
 import android.animation.ObjectAnimator
 import android.content.pm.ApplicationInfo
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.os.SystemClock
 import android.view.Gravity
 import android.view.KeyEvent
@@ -62,7 +63,15 @@ internal fun MainActivity.openLauncherSettings(row: Int? = null) {
 
 internal fun MainActivity.showPanel() {
     panelFrom = currentFocus
-    findViewById<View>(R.id.settingsPanel).setBackgroundColor(if (dark) 0xFF09090B.toInt() else 0xFFF7F8FA.toInt())
+    val panel = findViewById<View>(R.id.settingsPanel)
+    // Glass: a smoked pane over the home screen, lit along its inner edge, instead of a solid sheet.
+    if (glass) panel.background = LayerDrawable(arrayOf(
+        GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xD92A2A32.toInt(), 0xE6101014.toInt())),
+        GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(0x1FFFFFFF, 0x00FFFFFF)).apply { setSize(dp(2), 0) },
+    )).apply { setLayerWidth(1, dp(2)) }
+    else panel.setBackgroundColor(if (dark) 0xFF09090B.toInt() else 0xFFF7F8FA.toInt())
+    findViewById<View>(R.id.settingsScrim).setBackgroundColor(if (glass) 0x59000000 else 0x99000000.toInt())
+    panelArrows()
     findViewById<TextView>(R.id.settingsTitle).setTextColor(fg)
     settingsScrim.visibility = View.VISIBLE
     homeFocusable(false)

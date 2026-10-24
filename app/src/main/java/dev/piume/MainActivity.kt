@@ -1768,7 +1768,7 @@ class MainActivity : Activity() {
         // on the edge of a glass pane. Over the content, so a poster gets the rim too.
         val rim = GradientDrawable().apply {
             cornerRadius = radius.toFloat()
-            setStroke(dp(1).coerceAtLeast(1), 0x4DFFFFFF)
+            setStroke(1, 0x1FFFFFFF) // a hairline: a bright outline marks the panes off more than the glass itself
         }
         val gloss = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0x24FFFFFF, 0x08FFFFFF, 0x00FFFFFF)).apply {
             cornerRadius = radius.toFloat()
@@ -1787,7 +1787,7 @@ class MainActivity : Activity() {
         v.setOnLongClickListener { if (!holdFired) fireHold(v); true }
         v.setOnFocusChangeListener { _, focused ->
             sheen.alpha = if (focused) 255 else 0
-            rim.setStroke(dp(if (focused) 2 else 1).coerceAtLeast(1), if (focused) 0xD9FFFFFF.toInt() else 0x4DFFFFFF)
+            rim.setStroke(if (focused) dp(1) else 1, if (focused) 0x99FFFFFF.toInt() else 0x1FFFFFFF)
             if (card) bg.colors = if (focused) cardLit else cardRest
             v.animate()
                 .scaleX(if (focused) lift else 1f).scaleY(if (focused) lift else 1f)

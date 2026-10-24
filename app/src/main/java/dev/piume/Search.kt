@@ -266,12 +266,14 @@ internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = nu
         panel.removeView(picture)
         panel.clipToPadding = true
     }
-    // Back up on the first row, the page scrolls back to its top: nothing above it takes focus to pull it there.
+    // Back up on the first row, the page scrolls back up: nothing above it takes focus to pull it there.
     settingsList.getChildAt(1)?.let { first ->
         val own = first.onFocusChangeListener
         first.setOnFocusChangeListener { v, focused ->
             own?.onFocusChange(v, focused)
-            if (focused) (settingsList.parent as View).post { (settingsList.parent as android.widget.ScrollView).smoothScrollTo(0, 0) }
+            // As far up as the row itself still shows: as much of the description as fits above it.
+            val scroll = settingsList.parent as android.widget.ScrollView
+            if (focused) scroll.post { scroll.smoothScrollTo(0, (v.bottom + dp(8) - scroll.height).coerceAtLeast(0)) }
         }
     }
     // Each row starts with its app's icon, before the name.

@@ -13,6 +13,15 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.4.9
+
+- Arrows show at the sides of the apps row and of the recommendation rows when there are more items that way. They show only on the row that has the focus.
+- The Spotlight arrows show only when Spotlight has the focus.
+- Arrows show at the top and at the bottom of the Piume settings pages when the page has more items that way.
+- In the Glass theme, the edges of the cards and of the Spotlight buttons are thinner and softer.
+- In the Glass theme, the side page (Piume settings, search, the page of a result) is smoked glass over the home screen.
+- On the page of a search result, the first item stays in full view when you go back up to it.
+
 ## 2.4.8
 
 - On the page of a search result, the description shows again when you go back up to the first item.
