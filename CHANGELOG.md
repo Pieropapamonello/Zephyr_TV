@@ -13,6 +13,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.4.12
+
+- Every search result fills its card with a picture. When TMDB has no wide picture, the card shows the poster on a blur of itself. When TMDB has no picture at all, the card shows the logo or the name of the title on a colour.
+- The arrows of the rows are level with the middle of the tiles and the cards.
+
 ## 2.4.11
 
 - The arrows at the sides of the rows and of Spotlight are smaller.

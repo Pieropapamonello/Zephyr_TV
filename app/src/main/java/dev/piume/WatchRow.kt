@@ -521,7 +521,7 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
             posterIo.execute { runCatching { decode(uri) }.getOrNull()?.let { ui.post { logo.setImageBitmap(it) } } }
         }
     }
-    p.logo?.let { addTitleLogo(frame, it, w, cardHeight) }
+    if (p.tmdb != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title)
     frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: open(p) }
     frame.setTag(R.id.watchRow, p) // holding OK hides it (see onHold)
     col.addView(frame, LinearLayout.LayoutParams(w, cardHeight))
@@ -545,8 +545,56 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
             }
         })
     }
-    if (p.badge == null) loadPoster(img, p.image)
+    if (p.badge == null && p.tmdb == null) loadPoster(img, p.image)
     return col
+}
+
+/**
+ * A search result's picture, always filling [frame] ([w] by [h]), from the best art there is: the [backdrop]
+ * (with the [logo] over it when the title isn't written on it); else the [poster] whole in the middle, on a blur
+ * of itself; else a tile of colour (its hue from the [title]) with the logo, or the title, in the middle.
+ */
+internal fun MainActivity.fillArt(frame: FrameLayout, w: Int, h: Int, backdrop: String?, logo: String?, poster: String?, title: String) {
+    fun load(v: ImageView, uri: String, blur: Boolean = false) = posterIo.execute {
+        val bmp = runCatching { decode(uri) }.getOrNull() ?: return@execute
+        // A blur on any Android: shrunk to a few pixels, then drawn large and smoothed.
+        val shown = if (blur) Bitmap.createScaledBitmap(bmp, 12, 18, true) else bmp
+        ui.post { v.setImageBitmap(shown) }
+    }
+    when {
+        backdrop != null -> {
+            frame.addView(ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; load(this, backdrop) }, MATCH_PARENT, MATCH_PARENT)
+            logo?.let { addTitleLogo(frame, it, w, h) }
+        }
+        poster != null -> {
+            frame.addView(ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; load(this, poster, blur = true) }, MATCH_PARENT, MATCH_PARENT)
+            frame.addView(View(this).apply { setBackgroundColor(0x40000000) }, MATCH_PARENT, MATCH_PARENT)
+            frame.addView(ImageView(this).apply {
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setPadding(0, dp(6), 0, dp(6))
+                load(this, poster)
+            }, MATCH_PARENT, MATCH_PARENT)
+        }
+        else -> {
+            val hue = (title.hashCode() and 0x7FFFFFFF) % 360f
+            frame.addView(View(this).apply {
+                background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(
+                    Color.HSVToColor(floatArrayOf(hue, 0.45f, 0.42f)), Color.HSVToColor(floatArrayOf((hue + 40) % 360, 0.55f, 0.18f))))
+            }, MATCH_PARENT, MATCH_PARENT)
+            if (logo != null) frame.addView(ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER; load(this, logo) },
+                FrameLayout.LayoutParams(w * 3 / 4, h / 2, Gravity.CENTER))
+            else frame.addView(TextView(this).apply {
+                text = title
+                textSize = 18f
+                setTextColor(Color.WHITE)
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                maxLines = 3
+                ellipsize = TextUtils.TruncateAt.END
+                setPadding(dp(16), 0, dp(16), 0)
+            }, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+        }
+    }
 }
 
 /** A search result on plain art: the title's logo over it, bottom left, on a shade so a light logo still reads. */

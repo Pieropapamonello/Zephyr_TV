@@ -202,7 +202,7 @@ internal fun MainActivity.showSearchResults() {
         val year = item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }
         val art = searchArt[item.id]
         Prog(item.title, listOfNotNull(kind, year).joinToString(" · "), 0, art?.backdrop ?: TmdbClient.cardUrl(item.backdropPath), null, null,
-            tmdb = item, logo = art?.logo)
+            tmdb = item, logo = art?.logo, poster = art?.poster ?: item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" })
     })))
 }
 
@@ -234,10 +234,8 @@ internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = nu
     val panel = findViewById<LinearLayout>(R.id.settingsPanel)
     val panelWidth = dp(380) // the panel's width (activity_main.xml)
     val picture = FrameLayout(this).apply { setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt()) }
-    val img = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
-    picture.addView(img, MATCH_PARENT, MATCH_PARENT)
-    loadPoster(img, art?.backdrop ?: TmdbClient.cardUrl(item.backdropPath))
-    art?.logo?.let { addTitleLogo(picture, it, panelWidth, panelWidth * 9 / 16) }
+    fillArt(picture, panelWidth, panelWidth * 9 / 16, art?.backdrop ?: TmdbClient.cardUrl(item.backdropPath), art?.logo,
+        art?.poster ?: item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }, item.title)
     val top = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(14), 0, dp(14), dp(12)) // in line with the page title and the rows' names

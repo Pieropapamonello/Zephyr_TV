@@ -72,7 +72,10 @@ class SnapScrollView(context: Context, attrs: AttributeSet?) : HorizontalScrollV
         val dp = resources.displayMetrics.density
         val size = (ARROW_DP * dp).toInt()
         val at = offsetIn(this, h)
-        val cy = at[1] + paddingTop + (height - paddingTop - paddingBottom) / 2
+        // Level with the middle of the row's items (an app tile, a card's picture), not the row with its text.
+        val item = generateSequence(getChildAt(0)) { (it as? ViewGroup)?.takeIf { g -> !g.isFocusable && g.childCount > 0 }?.getChildAt(0) }
+            .firstOrNull { it.isFocusable }
+        val cy = if (item != null) offsetIn(item, h)[1] + item.height / 2 else at[1] + paddingTop + (height - paddingTop - paddingBottom) / 2
         val start = at[0] + paddingLeft
         val end = at[0] + width - paddingRight
         // Centred in the page margin's half nearest the row, like Spotlight's.
