@@ -15,7 +15,7 @@ import dev.piume.MainActivity.Prog
  */
 class PlayingListener : NotificationListenerService()
 
-// What's playing now, from Android's media sessions: the first row of the Play queue tile, above Continue Watching.
+// What's playing now, from Android's media sessions: the first cards of the Continue Watching row.
 // Functions of MainActivity, kept here by topic; their state lives in MainActivity.
 
 internal fun MainActivity.listenerComponent() = ComponentName(this, PlayingListener::class.java)
@@ -65,29 +65,66 @@ internal fun MainActivity.mediaSessions(): List<MediaController> = runCatching {
  * app) and whether it's paused, the art, and how far in it is. OK opens the app. Sessions with nothing loaded
  * are left out.
  */
-internal fun MainActivity.nowPlaying(): List<Prog> = mediaSessions()
-    .filter { it.playbackState?.state in setOf(PlaybackState.STATE_PLAYING, PlaybackState.STATE_PAUSED, PlaybackState.STATE_BUFFERING) }
-    .sortedByDescending { it.playbackState?.state == PlaybackState.STATE_PLAYING }
-    .mapNotNull { c ->
-        val meta = c.metadata ?: return@mapNotNull null
-        val title = meta.getString(MediaMetadata.METADATA_KEY_TITLE)?.takeIf { it.isNotBlank() }
-            ?: meta.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-        val who = listOf(MediaMetadata.METADATA_KEY_ARTIST, MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, MediaMetadata.METADATA_KEY_ALBUM)
-            .firstNotNullOfOrNull { meta.getString(it)?.takeIf { s -> s.isNotBlank() } } ?: appLabel(c.packageName)
-        val paused = c.playbackState?.state == PlaybackState.STATE_PAUSED
-        val duration = meta.getLong(MediaMetadata.METADATA_KEY_DURATION)
-        val position = c.playbackState?.position ?: 0
-        val progress = if (duration > 0 && position > 0) (position * 100 / duration).toInt().coerceIn(1, 100) else 0
-        // The art as a bitmap the session holds, kept under a key of its own for the card (see loadPoster); else its address.
-        val bitmap = listOf(MediaMetadata.METADATA_KEY_ART, MediaMetadata.METADATA_KEY_ALBUM_ART, MediaMetadata.METADATA_KEY_DISPLAY_ICON)
-            .firstNotNullOfOrNull { meta.getBitmap(it) }
-        val image = if (bitmap != null) "session:${c.packageName}:${title.hashCode()}".also { posters.put(it, bitmap) }
-            else listOf(MediaMetadata.METADATA_KEY_ART_URI, MediaMetadata.METADATA_KEY_ALBUM_ART_URI, MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI)
-                .firstNotNullOfOrNull { meta.getString(it)?.takeIf { s -> s.isNotBlank() } }
-        val sub = if (paused) getString(R.string.playing_paused, who) else who
-        val launch = packageManager.getLeanbackLaunchIntentForPackage(c.packageName) ?: packageManager.getLaunchIntentForPackage(c.packageName)
-        Prog(title, sub, progress, image, launch?.toUri(android.content.Intent.URI_INTENT_SCHEME), c.packageName)
-    }
+internal fun MainActivity.nowPlaying(): List<Prog> {
+    val closed = prefs.getStringSet(K.HIDDEN_PLAYING, emptySet())!!
+    val playingAgain = HashSet<String>()
+    val list = mediaSessions()
+        .filter { it.playbackState?.state in setOf(PlaybackState.STATE_PLAYING, PlaybackState.STATE_PAUSED, PlaybackState.STATE_BUFFERING) }
+        .filterNot { pausedLong(it) }
+        .sortedByDescending { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+        .mapNotNull { c ->
+            val meta = c.metadata ?: return@mapNotNull null
+            val title = meta.getString(MediaMetadata.METADATA_KEY_TITLE)?.takeIf { it.isNotBlank() }
+                ?: meta.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            // Closed from the row: left out while it stays paused; playing it again brings it back.
+            val key = hideKey(c.packageName, title)
+            if (key in closed) {
+                if (c.playbackState?.state != PlaybackState.STATE_PLAYING) return@mapNotNull null
+                playingAgain += key
+            }
+            val who = listOf(MediaMetadata.METADATA_KEY_ARTIST, MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, MediaMetadata.METADATA_KEY_ALBUM)
+                .firstNotNullOfOrNull { meta.getString(it)?.takeIf { s -> s.isNotBlank() } } ?: appLabel(c.packageName)
+            val paused = c.playbackState?.state == PlaybackState.STATE_PAUSED
+            val duration = meta.getLong(MediaMetadata.METADATA_KEY_DURATION)
+            val position = c.playbackState?.position ?: 0
+            val progress = if (duration > 0 && position > 0) (position * 100 / duration).toInt().coerceIn(1, 100) else 0
+            // The art as a bitmap the session holds, kept under a key of its own for the card (see loadPoster); else its address.
+            val bitmap = listOf(MediaMetadata.METADATA_KEY_ART, MediaMetadata.METADATA_KEY_ALBUM_ART, MediaMetadata.METADATA_KEY_DISPLAY_ICON)
+                .firstNotNullOfOrNull { meta.getBitmap(it) }
+            val image = if (bitmap != null) "session:${c.packageName}:${title.hashCode()}".also { posters.put(it, bitmap) }
+                else listOf(MediaMetadata.METADATA_KEY_ART_URI, MediaMetadata.METADATA_KEY_ALBUM_ART_URI, MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI)
+                    .firstNotNullOfOrNull { meta.getString(it)?.takeIf { s -> s.isNotBlank() } }
+            val sub = if (paused) getString(R.string.playing_paused, who) else who
+            val launch = packageManager.getLeanbackLaunchIntentForPackage(c.packageName) ?: packageManager.getLaunchIntentForPackage(c.packageName)
+            Prog(title, sub, progress, image, launch?.toUri(android.content.Intent.URI_INTENT_SCHEME), c.packageName, playing = true)
+        }
+    if (playingAgain.isNotEmpty()) prefs.edit().putStringSet(K.HIDDEN_PLAYING, closed - playingAgain).apply()
+    return list
+}
+
+/** How long a paused track stays in the row: after that it's something left behind (Spotify keeps it for days). */
+private const val PAUSED_KEPT_MS = 6 * 3600_000L
+
+/**
+ * Paused for longer than [PAUSED_KEPT_MS]. The session's last position update is when it paused (its clock is
+ * elapsedRealtime); an app that keeps updating it simply stays.
+ */
+private fun pausedLong(c: MediaController): Boolean {
+    val s = c.playbackState ?: return false
+    if (s.state != PlaybackState.STATE_PAUSED || s.lastPositionUpdateTime <= 0) return false
+    return android.os.SystemClock.elapsedRealtime() - s.lastPositionUpdateTime > PAUSED_KEPT_MS
+}
+
+/**
+ * Hold OK on a playing card, Close: stops it in its app (most end the session; some only pause) and leaves it out
+ * of the row until it plays again.
+ */
+internal fun MainActivity.closePlaying(p: Prog) {
+    mediaSessions().firstOrNull { it.packageName == p.pkg }?.let { runCatching { it.transportControls.stop() } }
+    val closed = (prefs.getStringSet(K.HIDDEN_PLAYING, emptySet())!! + hideKey(p.pkg, p.title)).toList().takeLast(20).toSet()
+    prefs.edit().putStringSet(K.HIDDEN_PLAYING, closed).apply()
+    playingRefresh.run()
+}
 
 /** Rebuilds the Play queue rows when what's playing changes (another track, play, pause, stop), while they show. */
 internal fun MainActivity.watchSessions() {

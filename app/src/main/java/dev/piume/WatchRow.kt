@@ -57,7 +57,7 @@ internal fun MainActivity.refreshWatchNext() {
             if (tmdbLastFocusApp != null) return@post // focus moved on to an app meanwhile: its rows, not these
             watchTitle.text = getString(R.string.continue_watching)
             watchApp = CW_PKG
-            sectionCounts[CW_PKG] = listOf(playing, list).count { it.isNotEmpty() }
+            sectionCounts[CW_PKG] = if (playing.isEmpty() && list.isEmpty()) 0 else 1
             showWatchNext(list, playing)
         }
     }
@@ -514,10 +514,9 @@ internal fun MainActivity.timeLeft(ms: Long): String {
     return if (min >= 60) getString(R.string.time_left_hr_min, min / 60, min % 60) else getString(R.string.time_left_min, min)
 }
 
-/** The Play queue tile's rows: what's playing now (see nowPlaying), then Continue Watching; each only when it has some. */
+/** The Play queue tile's row: what's playing now (see nowPlaying) first, then Continue Watching, in one row. */
 internal fun MainActivity.showWatchNext(list: List<Prog>, playing: List<Prog> = emptyList()) = showSections(listOfNotNull(
-    playing.takeIf { it.isNotEmpty() }?.let { getString(R.string.now_playing).let { t -> Section("playing", t, t, it) } },
-    list.takeIf { it.isNotEmpty() }?.let { getString(R.string.continue_watching).let { t -> Section("", t, t, it) } },
+    (playing + list).takeIf { it.isNotEmpty() }?.let { getString(R.string.continue_watching).let { t -> Section("", t, t, it) } },
 ))
 
 /**

@@ -39,6 +39,7 @@ internal object K {
 
     // Continue Watching
     const val HIDDEN_WATCH = "hidden_watch"
+    const val HIDDEN_PLAYING = "hidden_playing" // paused tracks closed from the row, "<package>/<title>"; shown again once they play
     const val CW_OFF = "cw_off"
     const val SECTIONS_OFF = "sections_off" // "pkg/section" of the app sections turned off
     const val CHANNEL_LOGOS = "channel_logos" // logos from iptv-org for channels the TV has none for

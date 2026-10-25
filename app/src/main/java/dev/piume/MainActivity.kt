@@ -114,7 +114,7 @@ internal const val SEARCH_PKG = "piume:search" // the search results tile, after
 class MainActivity : Activity() {
 
     internal class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable, val offline: Boolean = false)
-    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val tmdb: TmdbItem? = null, val logo: String? = null, val poster: String? = null, val channelPage: ChannelDetail? = null, val channelId: Long? = null)
+    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val tmdb: TmdbItem? = null, val logo: String? = null, val poster: String? = null, val channelPage: ChannelDetail? = null, val channelId: Long? = null, val playing: Boolean = false)
 
     internal val prefs by lazy { getSharedPreferences(K.FILE, MODE_PRIVATE) }
     internal val io = Executors.newSingleThreadExecutor()
@@ -1447,6 +1447,10 @@ class MainActivity : Activity() {
 
     /** Hold OK on a Continue Watching card: hide the show, or open its app rather than the episode. */
     internal fun watchMenu(v: View, p: Prog) {
+        if (p.playing) return holdMenu(v, listOfNotNull(
+            getString(R.string.menu_close_playing) to { closePlaying(p) },
+            getString(R.string.menu_open) to { v.performClick(); Unit },
+        ))
         holdMenu(v, listOfNotNull(
             if (locked()) null else getString(R.string.menu_remove_from_cw) to { hideWatch(p) },
             if (!locked()) null else getString(R.string.unlock_to_edit) to { unlock { v.requestFocus(); watchMenu(v, p) } },

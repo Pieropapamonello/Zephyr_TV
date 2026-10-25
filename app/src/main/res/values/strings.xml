@@ -161,6 +161,7 @@
     <string name="menu_app_info">App info</string>
     <string name="menu_remove_from_cw">Remove from Continue Watching</string>
     <string name="menu_open_app">Open app</string>
+    <string name="menu_close_playing">Close</string>
     <string name="removed_from_row_toast">Removed from Favourites. It\'s still in All apps.</string>
 
     <!-- Time left -->
@@ -339,7 +340,6 @@
     <string name="now_playing_on">Piume sees what\'s playing in other apps.</string>
     <string name="now_playing_help">To show what\'s playing in other apps, Piume needs notification access. This TV lets only the system give it: run this command once from a computer, then come back.</string>
     <string name="play_queue">Play queue</string>
-    <string name="now_playing">Playing now</string>
     <string name="playing_paused">%1$s · Paused</string>
     <string name="toast_no_results">Nothing found for “%1$s”</string>
     <plurals name="toast_search_results">

@@ -13,6 +13,12 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## Unreleased
+
+- What is playing now shows in the **Continue Watching** row, before the shows. It is no longer a row of its own.
+- Hold OK on a playing item and select **Close** to stop it and remove it from the row. It comes back when it plays again.
+- A track that stays paused for more than 6 hours goes from the row automatically.
+
 ## 3.0.6
 
 - **Playing now** changes when the track changes, also with apps like Spotify that do not tell other apps about it.
