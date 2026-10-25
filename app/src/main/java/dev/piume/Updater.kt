@@ -40,8 +40,19 @@ internal fun newerVersion(a: String, b: String): Boolean {
  * update it. Network: call both off the UI thread.
  */
 internal object Updater {
-    /** The newest release's version ("1.4"), from its tag ("v1.4"). Throws when GitHub can't be asked. */
-    fun latest(repo: String): String = Http.json("https://api.github.com/repos/$repo/releases/latest").getString("tag_name").removePrefix("v")
+    /**
+     * The newest release's version ("1.4"), from its tag ("v1.4"); with [beta], the newest of the betas too
+     * (pre-releases, which releases/latest leaves out). Throws when GitHub can't be asked.
+     */
+    fun latest(repo: String, beta: Boolean = false): String {
+        if (!beta) return Http.json("https://api.github.com/repos/$repo/releases/latest").getString("tag_name").removePrefix("v")
+        val list = org.json.JSONArray(Http.text("https://api.github.com/repos/$repo/releases?per_page=20", mapOf("Accept" to "application/json")))
+        return newest((0 until list.length()).map { list.getJSONObject(it) }.filter { !it.optBoolean("draft") }.map { it.getString("tag_name").removePrefix("v") })
+            ?: throw java.io.IOException("no releases")
+    }
+
+    /** The newest of [versions], or null when there are none. */
+    internal fun newest(versions: List<String>): String? = versions.fold(null as String?) { best, v -> if (best == null || newerVersion(v, best)) v else best }
 
     /** Downloads release [ver] and hands it to Android, which reports to InstallResult. Throws if the download fails. */
     fun install(context: Context, repo: String, ver: String) {
