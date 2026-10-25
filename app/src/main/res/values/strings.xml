@@ -161,6 +161,7 @@
     <string name="menu_app_info">App info</string>
     <string name="menu_remove_from_cw">Remove from Continue Watching</string>
     <string name="menu_open_app">Open app</string>
+    <string name="menu_details">Details</string>
     <string name="menu_close_playing">Close</string>
     <string name="removed_from_row_toast">Removed from Favourites. It\'s still in All apps.</string>
 

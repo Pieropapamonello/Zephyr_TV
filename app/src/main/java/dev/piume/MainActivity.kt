@@ -1452,6 +1452,7 @@ class MainActivity : Activity() {
             getString(R.string.menu_open) to { v.performClick(); Unit },
         ))
         holdMenu(v, listOfNotNull(
+            p.channelId?.let { id -> getString(R.string.menu_details) to { showChannelDetails(id) } },
             if (locked()) null else getString(R.string.menu_remove_from_cw) to { hideWatch(p) },
             if (!locked()) null else getString(R.string.unlock_to_edit) to { unlock { v.requestFocus(); watchMenu(v, p) } },
             p.pkg?.let { pkg ->

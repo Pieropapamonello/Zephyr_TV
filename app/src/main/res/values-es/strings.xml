@@ -161,6 +161,7 @@
     <string name="menu_app_info">Información de la app</string>
     <string name="menu_remove_from_cw">Quitar de Seguir viendo</string>
     <string name="menu_open_app">Abrir app</string>
+    <string name="menu_details">Detalles</string>
     <string name="menu_close_playing">Cerrar</string>
     <string name="removed_from_row_toast">Quitada de Favoritos. Sigue en Todas las apps.</string>
 

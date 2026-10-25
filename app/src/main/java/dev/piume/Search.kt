@@ -277,20 +277,30 @@ internal fun MainActivity.findChannels(query: String): List<ChannelDetail> {
     if (checkSelfPermission(MainActivity.TV_LISTINGS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return emptyList()
     val words = ChannelLogos.normalize(query).takeIf { it.length >= 2 } ?: return emptyList()
     val number = query.trim().takeIf { it.isNotEmpty() && it.all(Char::isDigit) }?.trimStart('0')
+    return channelDetails(tunerChannels()
+        .filter { ChannelLogos.normalize(it.name).contains(words) || (number != null && it.number.trimStart('0') == number) }
+        .sortedBy { channelKey(it.number) }.take(20))
+}
+
+/** What [channels]' pages show: logo, what's on now and next (the guide set in Piume settings, else the TV's). Off the UI thread. */
+internal fun MainActivity.channelDetails(channels: List<TunerChannel>): List<ChannelDetail> {
     val tvApp = apps.firstOrNull { isTvApp(it.pkg) }?.pkg
     val logos = if (channelLogosOn()) ChannelLogos.saved(filesDir, channelCountry()).orEmpty() else emptyMap()
     val guide = epgUrl()?.let { Epg.saved(filesDir, it) }
     val onNow = programsOnNow()
-    return tunerChannels()
-        .filter { ChannelLogos.normalize(it.name).contains(words) || (number != null && it.number.trimStart('0') == number) }
-        .sortedBy { channelKey(it.number) }.take(20)
-        .map { ch ->
-            val epg = guide?.let { Epg.nowAndNext(it, ch.name) }
-            val now = epg?.first ?: onNow[ch.id]?.let { Epg.Show(0, 0, it.title) }
-            ChannelDetail(ch.name, ch.number.trimStart('0').ifEmpty { ch.number }, channelLogo(ch, logos),
-                android.content.Intent(android.content.Intent.ACTION_VIEW, android.media.tv.TvContract.buildChannelUri(ch.id)).toUri(android.content.Intent.URI_INTENT_SCHEME),
-                tvApp, now, epg?.second)
-        }
+    return channels.map { ch ->
+        val epg = guide?.let { Epg.nowAndNext(it, ch.name) }
+        val now = epg?.first ?: onNow[ch.id]?.let { Epg.Show(0, 0, it.title) }
+        ChannelDetail(ch.name, ch.number.trimStart('0').ifEmpty { ch.number }, channelLogo(ch, logos),
+            android.content.Intent(android.content.Intent.ACTION_VIEW, android.media.tv.TvContract.buildChannelUri(ch.id)).toUri(android.content.Intent.URI_INTENT_SCHEME),
+            tvApp, now, epg?.second)
+    }
+}
+
+/** Hold OK on a channel card, Details: the channel's page, as search shows it. */
+internal fun MainActivity.showChannelDetails(id: Long) = io.execute {
+    val d = tunerChannels().firstOrNull { it.id == id }?.let { channelDetails(listOf(it)).first() } ?: return@execute
+    ui.post { showChannel(d) }
 }
 
 /**

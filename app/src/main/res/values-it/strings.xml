@@ -161,6 +161,7 @@
     <string name="menu_app_info">Info app</string>
     <string name="menu_remove_from_cw">Rimuovi da Continua a guardare</string>
     <string name="menu_open_app">Apri app</string>
+    <string name="menu_details">Dettagli</string>
     <string name="menu_close_playing">Chiudi</string>
     <string name="removed_from_row_toast">Rimossa dai Preferiti. È ancora presente in Tutte le app.</string>
 
