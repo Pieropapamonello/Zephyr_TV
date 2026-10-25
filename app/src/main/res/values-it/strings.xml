@@ -12,7 +12,7 @@
     <string name="toast_no_inputs">Nessun ingresso TV trovato</string>
 
     <!-- Home screen sections -->
-    <string name="continue_watching">Continua a guardare</string>
+    <string name="continue_watching">Continua la riproduzione</string>
 
     <!-- Edit mode -->
     <string name="edit_apps_row">Modifica Preferiti</string>
@@ -74,7 +74,7 @@
     <string name="hidden_shows_none">Nessun elemento nascosto</string>
     <string name="hidden_shows_count">%1$d nascosti</string>
 
-    <string name="setting_cw_apps">App Continua a guardare</string>
+    <string name="setting_cw_apps">App Continua la riproduzione</string>
     <string name="cw_apps_all_on">Tutte attive</string>
     <string name="cw_apps_count_off">%1$d disattivate</string>
 
@@ -195,7 +195,7 @@
     <string name="toast_update_permission">Abilita Piume nell\'elenco successivo, quindi premi di nuovo Aggiornamenti</string>
     <string name="toast_update_download_failed">Impossibile scaricare l\'aggiornamento. Controlla la connessione e riprova.</string>
     <string name="toast_update_install_failed">Installazione dell\'aggiornamento non riuscita</string>
-    <string name="toast_no_cw_apps">Nessuna app installata supporta Continua a guardare</string>
+    <string name="toast_no_cw_apps">Nessuna app installata supporta Continua la riproduzione</string>
     <string name="toast_hidden_from_cw">Nascosto da questa sezione</string>
 
     <!-- TMDB Spotlight & Channels -->

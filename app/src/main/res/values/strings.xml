@@ -12,7 +12,7 @@
     <string name="toast_no_inputs">No TV inputs found</string>
 
     <!-- Home screen sections -->
-    <string name="continue_watching">Continue Watching</string>
+    <string name="continue_watching">Continue Playing</string>
 
     <!-- Edit mode -->
     <string name="edit_apps_row">Edit Favourites</string>
@@ -74,7 +74,7 @@
     <string name="hidden_shows_none">None hidden</string>
     <string name="hidden_shows_count">%1$d hidden</string>
 
-    <string name="setting_cw_apps">Continue Watching apps</string>
+    <string name="setting_cw_apps">Continue Playing apps</string>
     <string name="cw_apps_all_on">All on</string>
     <string name="cw_apps_count_off">%1$d off</string>
 
@@ -195,7 +195,7 @@
     <string name="toast_update_permission">Turn on Piume in the next list, then press Updates again</string>
     <string name="toast_update_download_failed">Couldn\'t download the update. Check the connection and try again.</string>
     <string name="toast_update_install_failed">Update failed to install</string>
-    <string name="toast_no_cw_apps">No installed apps support Continue Watching</string>
+    <string name="toast_no_cw_apps">No installed apps support Continue Playing</string>
     <string name="toast_hidden_from_cw">Hidden from this section</string>
 
     <!-- TMDB Spotlight & Channels -->

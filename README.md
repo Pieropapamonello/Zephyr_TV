@@ -29,7 +29,7 @@ Piume replaces the cluttered stock home screen with the two things you actually 
 
 - **Tiny and fast.** A 0.5 MB APK with no third-party libraries. It uses about 50–70 MB of RAM and has no extra background services.
 - **Home button support on Google TV.** The Home button opens Piume directly, even on devices where the system launcher can't be replaced. Holding Home still opens the Google TV dashboard.
-- **Play queue.** The first tile shows what's playing now in any app (Spotify, YouTube…) with its art and progress, then **Continue Watching**: resume shows and films from Android TV's Watch Next list and from apps that publish their own "Continue Watching" channel, such as Stremio.
+- **Play queue.** The first tile shows what's playing now in any app (Spotify, YouTube…) with its art and progress, then **Continue Playing**: resume shows and films from Android TV's Watch Next list and from apps that publish their own "Continue Watching" channel, such as Stremio.
 - **App sections.** Each row an app puts on the home screen (for example YouTube's Recommended and Trending) is its own section under your Favourites. Hold OK on the app and select **Visible sections** to choose them. The TV app shows all the TV's channels from channel 1, one section per tuner, 10 at a time as you move along.
 - **Favourites.** Your apps as monochrome logos (or the same logos in brand colour) in a single row, with names on focus, always or never. Rearrange it by holding OK, sort by most used, or hide apps you don't use (they stay in All apps). An optional PIN locks the layout so small hands can't rearrange it.
 - **HDMI inputs as apps.** A console or set-top box that names itself over HDMI-CEC (for example "PlayStation 5") gets its own tile, which switches the TV to that input.
@@ -91,7 +91,7 @@ On first launch Piume walks you through making Home open it. To run it again, op
 | **Home button** | Turn the switch on. In the Accessibility screen that opens, select **Piume: Home button** and turn it on. |
 | **Default launcher** | Press OK and choose **Piume** in the dialog. |
 
-Allow the **TV listings** permission when asked; Continue Watching needs it.
+Allow the **TV listings** permission when asked; Continue Playing needs it.
 
 > [!NOTE]
 > Android shows the same generic warning for every accessibility service. Piume's service only listens for the Home key and for the system launcher appearing. It cannot read screen content.
@@ -133,9 +133,9 @@ Android 13 and newer grey out the Accessibility switch for apps installed outsid
 | Choose an app's sections on the home screen | Hold **OK** on the app, then **Visible sections** |
 | Switch to the Glass theme | **Settings → Appearance & wallpapers → Theme → Glass** |
 | Rearrange apps | Hold **OK** on an app, or use **Settings → Favourites → Edit Favourites** |
-| Hide an item from Continue Watching or an app's section | Hold **OK** on its card, then **Remove from this section** |
+| Hide an item from Continue Playing or an app's section | Hold **OK** on its card, then **Remove from this section** |
 | Remove an app from Favourites | Hold **OK** on it, then **Remove from Favourites** (it stays in *All apps*) |
-| Choose which apps feed Continue Watching | **Settings → Content → Continue Watching apps** |
+| Choose which apps feed Continue Playing | **Settings → Content → Continue Playing apps** |
 | Pin an app from *All apps* to the front | Open **All apps**, hold **OK** on the app (this also unhides it) |
 | Hide apps from Favourites | **Settings → Favourites → Apps in Favourites** |
 | Show app names always, on focus or never | **Settings → Favourites → App names** |
@@ -200,7 +200,7 @@ Select **Settings → Screensaver** to switch to Gallery. Piume downloads the pa
 ## Privacy
 
 Piume has no analytics, no ads and no account. It only connects to the internet to:
-- load poster images for your Continue Watching items
+- load poster images for your Continue Playing items
 - check this repository's GitHub releases for a new version, once a day, and download it when you choose to update
 - download the Gallery paintings from Plume Launcher's releases, **only if you choose that screensaver**
 - fetch the weather, **only if you turn it on**. It looks up your approximate location from your IP address via [ipwho.is](https://ipwho.is), then gets the forecast from [Open-Meteo](https://open-meteo.com). A city you pick by hand is looked up with Open-Meteo's geocoding instead.
@@ -221,9 +221,9 @@ Check that **Settings → System → Home button** is on. If the app was force-s
 </details>
 
 <details>
-<summary><b>Continue Watching is empty</b></summary>
+<summary><b>Continue Playing is empty</b></summary>
 
-Make sure the TV listings permission is allowed (**Settings → Apps → Piume → Permissions**), and that the app you watch publishes to Android TV's Watch Next list. Check **Settings → Content → Continue Watching apps** in Piume too.
+Make sure the TV listings permission is allowed (**Settings → Apps → Piume → Permissions**), and that the app you watch publishes to Android TV's Watch Next list. Check **Settings → Content → Continue Playing apps** in Piume too.
 </details>
 
 <details>

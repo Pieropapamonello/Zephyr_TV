@@ -29,7 +29,7 @@ Piume sostituisce la Home di serie, piena di elementi, con le due cose che usi d
 
 - **Piccolo e veloce.** Un APK da 0,5 MB senza librerie di terze parti. Usa circa 50–70 MB di RAM e non ha servizi in background aggiuntivi.
 - **Tasto Home su Google TV.** Il tasto Home apre direttamente Piume, anche sui dispositivi dove il launcher di sistema non si può sostituire. Tenendo premuto Home si apre ancora la dashboard di Google TV.
-- **Coda di riproduzione.** Il primo riquadro mostra cosa sta suonando ora in qualsiasi app (Spotify, YouTube…) con copertina e avanzamento, poi **Continua a guardare**: riprendi serie e film dalla lista "Guarda dopo" di Android TV e dalle app che pubblicano un proprio canale "Continua a guardare", come Stremio.
+- **Coda di riproduzione.** Il primo riquadro mostra cosa sta suonando ora in qualsiasi app (Spotify, YouTube…) con copertina e avanzamento, poi **Continua la riproduzione**: riprendi serie e film dalla lista "Guarda dopo" di Android TV e dalle app che pubblicano un proprio canale "Continua a guardare", come Stremio.
 - **Sezioni delle app.** Ogni riga che un'app mette in Home (per esempio "Consigliati" e "Tendenze" di YouTube) è una sezione sotto i Preferiti. Tieni premuto OK sull'app e scegli **Sezioni visibili** per sceglierle. L'app TV mostra tutti i canali della TV dal canale 1, una sezione per ogni sintonizzatore, 10 alla volta mentre scorri.
 - **Preferiti.** Le tue app come loghi monocromatici (o gli stessi loghi a colori) in una sola riga, con i nomi al focus, sempre o mai. Riordinala tenendo premuto OK, ordinala per uso, o nascondi le app che non usi (restano in Tutte le app). Un PIN facoltativo blocca il layout, così i più piccoli non possono riordinarlo.
 - **Ingressi HDMI come app.** Una console o un decoder che si presenta via HDMI-CEC (per esempio "PlayStation 5") ha una sua tessera, che porta la TV su quell'ingresso.
@@ -91,7 +91,7 @@ Al primo avvio Piume ti guida per fare in modo che Home lo apra. Per ripeterla, 
 | **Tasto Home** | Attiva l'interruttore. Nella schermata Accessibilità che si apre, seleziona **Piume: tasto Home** e attivalo. |
 | **Launcher predefinito** | Premi OK e scegli **Piume** nella finestra. |
 
-Consenti il permesso **programmi TV** quando richiesto: serve a Continua a guardare.
+Consenti il permesso **programmi TV** quando richiesto: serve a Continua la riproduzione.
 
 > [!NOTE]
 > Android mostra lo stesso avviso generico per ogni servizio di accessibilità. Il servizio di Piume ascolta solo il tasto Home e la comparsa del launcher di sistema. Non può leggere il contenuto dello schermo.
@@ -133,9 +133,9 @@ Android 13 e successivi disattivano l'interruttore di Accessibilità per le app 
 | Scegliere le sezioni di un'app in Home | Tieni premuto **OK** sull'app, poi **Sezioni visibili** |
 | Passare al tema Vetro | **Impostazioni → Aspetto e sfondi → Tema → Vetro** |
 | Riordinare le app | Tieni premuto **OK** su un'app, oppure usa **Impostazioni → Preferiti → Modifica Preferiti** |
-| Nascondere un elemento di Continua a guardare o della sezione di un'app | Tieni premuto **OK** sulla sua scheda, poi **Rimuovi da questa sezione** |
+| Nascondere un elemento di Continua la riproduzione o della sezione di un'app | Tieni premuto **OK** sulla sua scheda, poi **Rimuovi da questa sezione** |
 | Togliere un'app dai Preferiti | Tieni premuto **OK** sull'app, poi **Rimuovi dai Preferiti** (resta in *Tutte le app*) |
-| Scegliere le app di Continua a guardare | **Impostazioni → Contenuti → App Continua a guardare** |
+| Scegliere le app di Continua la riproduzione | **Impostazioni → Contenuti → App Continua la riproduzione** |
 | Mettere un'app di *Tutte le app* in testa alla riga | Apri **Tutte le app** e tieni premuto **OK** sull'app (la rende anche di nuovo visibile) |
 | Nascondere app dai Preferiti | **Impostazioni → Preferiti → App nei Preferiti** |
 | Mostrare i nomi delle app sempre, al focus o mai | **Impostazioni → Preferiti → Nomi delle app** |
@@ -200,7 +200,7 @@ Seleziona **Impostazioni → Salvaschermo** per passare a Galleria. Piume scaric
 ## Privacy
 
 Piume non ha statistiche, pubblicità né account. Si collega a internet solo per:
-- caricare le locandine degli elementi di Continua a guardare
+- caricare le locandine degli elementi di Continua la riproduzione
 - controllare le release di questo repository su GitHub, una volta al giorno, e scaricare la nuova versione quando scegli di aggiornare
 - scaricare i dipinti della Galleria dalle release di Plume Launcher, **solo se scegli quel salvaschermo**
 - ottenere il meteo, **solo se lo attivi**. Trova la tua posizione approssimativa dall'indirizzo IP tramite [ipwho.is](https://ipwho.is), poi ottiene le previsioni da [Open-Meteo](https://open-meteo.com). Una città scelta a mano viene cercata invece con la geocodifica di Open-Meteo.
@@ -221,9 +221,9 @@ Controlla che **Impostazioni → Sistema → Tasto Home** sia attivo. Se l'app �
 </details>
 
 <details>
-<summary><b>Continua a guardare è vuoto</b></summary>
+<summary><b>Continua la riproduzione è vuota</b></summary>
 
-Controlla che il permesso programmi TV sia consentito (**Impostazioni → App → Piume → Autorizzazioni**) e che l'app che usi pubblichi nella lista "Guarda dopo" di Android TV. Controlla anche **Impostazioni → Contenuti → App Continua a guardare** in Piume.
+Controlla che il permesso programmi TV sia consentito (**Impostazioni → App → Piume → Autorizzazioni**) e che l'app che usi pubblichi nella lista "Guarda dopo" di Android TV. Controlla anche **Impostazioni → Contenuti → App Continua la riproduzione** in Piume.
 </details>
 
 <details>

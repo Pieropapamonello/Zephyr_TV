@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- The row **Continue Watching** is now called **Continue Playing**, because it also shows music and other things that play.
+
 ## 4.0.0-beta.2
 
 - This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.
