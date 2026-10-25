@@ -15,15 +15,27 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+## 4.0.0
+
+- Piume can show the TV channels of Stremio add-ons, for example OMG+ TV. Piume settings have a new section, **Stremio add-ons**.
+- Select **Add an add-on** and scan the QR code. Paste the address of the add-on's manifest on your phone. To type it with the remote, select **Type the address with the remote**.
+- The channels of an add-on show as rows. The first row has all the channels. Then each category has a row of its own.
+- Select **TV channels** to choose where the rows show: **In the TV app**, **In an IPTV app** or **An app per add-on**. Without a TV app, they show in the IPTV app. An app per add-on has the add-on's name and logo.
+- Select an add-on and then **Move up** or **Move down** to change the order of its rows.
+- The cards show the program on now with a progress bar, as the add-on gives it. Logos come from the add-on first, then from iptv-org.
+- Select a channel to play it in the new Piume player. CH+ and CH- change the channel. You can also type the channel number, or press the Last channel key.
+- When a channel loads, the player shows its logo and name. If a stream does not work, the player tries the next stream automatically.
+- Press OK to show the banner with the program on now, the stream and its resolution. Press OK again to see the full description and what is next.
+- When the banner shows, press Down, Left or Right to go to its buttons: **Pause**, **Audio**, **Subtitles** and **Stream**.
+- When the banner does not show, Left and Right change the stream. Hold OK (or press Menu) to see the audio tracks and the subtitles. Piume remembers the languages you choose.
+- The channel you watched last shows in **Continue Playing**. Select the tile of an add-on (or the IPTV app) to watch it again.
+- Search finds the channels of the add-ons too. Search works also without a TMDB key.
+- Hold OK on a channel of an add-on and select **Details** to see what the add-on tells about it.
+- The row **Continue Watching** is now called **Continue Playing**, because it also shows music and other things that play.
 - On the home screen, press Back on a card in a lower section to go back to the first section of the app.
-
-- The cards of the add-on channels show what is on now as the player does, with its progress bar. Piume asks the add-on for the cards that show.
-
-- In the player, Up and Down no longer change the channel. Use CH+ and CH- to change the channel. Up and Down show the banner. When the banner shows, they go to its buttons.
-- The player banner no longer shows **OK · more**. Press OK again to see the full description, as before.
-
-- **Stremio add-ons → Add an add-on** shows the QR code at once, as the other settings do. Scan it and paste the address on your phone. To type the address with the remote, select **Type the address with the remote**.
-- The add-on rows show what is on now more correctly. Piume reads the channels again after 5 minutes, not after 15 minutes.
+- The lists of rows and sections in Piume settings have **Select all** and **Deselect all**.
+- The backup includes the add-ons.
+- Piume is larger: about 1.2 MB. The player needs the extra space.
 
 ## 4.0.0-beta.9
 
