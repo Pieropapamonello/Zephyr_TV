@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- When a channel loads, the player shows its logo and name in the middle of the screen. Below them it shows **Loading stream 1 of 3**, when the channel has more than one stream. If a stream does not work, the player tries the next one automatically. If no stream works, it shows **No stream available**.
+
 ## 4.0.0-beta.6
 
 - This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.

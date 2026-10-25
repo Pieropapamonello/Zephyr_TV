@@ -87,7 +87,10 @@ class PlayerActivity : Activity() {
     }
 
     private lateinit var surface: SurfaceView
-    private lateinit var status: TextView
+    private lateinit var status: TextView // under the channel's logo and name while it loads: which stream, or none works
+    private lateinit var loading: LinearLayout // in the middle while a channel loads: its logo, name and the status
+    private lateinit var loadLogo: ImageView
+    private lateinit var loadName: TextView
     private lateinit var banner: LinearLayout
     private lateinit var logo: ImageView
     private lateinit var title: TextView
@@ -158,8 +161,21 @@ class PlayerActivity : Activity() {
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         surface = SurfaceView(this)
         root.addView(surface, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER))
-        status = text(20f).apply { gravity = Gravity.CENTER }
-        root.addView(status, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        // While a channel loads: its logo and name in the middle, and under them the stream being tried, or that
+        // none works.
+        loadLogo = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER }
+        loadName = text(28f, bold = true).apply { gravity = Gravity.CENTER; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
+        status = text(18f).apply { gravity = Gravity.CENTER; alpha = 0.8f; setPadding(0, dp(10), 0, 0) }
+        loading = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(48), 0, dp(48), 0)
+            addView(loadLogo, LinearLayout.LayoutParams(dp(240), dp(135)).apply { bottomMargin = dp(16) })
+            addView(loadName, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+            addView(status, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+            visibility = View.GONE
+        }
+        root.addView(loading, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         subtitles = FrameLayout(this)
         root.addView(subtitles, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER))
 
@@ -297,10 +313,13 @@ class PlayerActivity : Activity() {
     }
 
     /** The channel's logo in the banner: the add-on's, then Piume's own; downloaded once, kept while the player is open. */
-    private fun showLogo(c: Channel) {
+    private fun showLogo(c: Channel) = logoInto(logo, c) { title.text == c.name }
+
+    /** [c]'s logo in [view]: the add-on's, then Piume's own; downloaded once, set if [still] holds when it arrives. */
+    private fun logoInto(view: ImageView, c: Channel, still: () -> Boolean) {
         val known = c.logos.firstNotNullOfOrNull { logos[it] }
-        logo.setImageBitmap(known)
-        logo.visibility = if (c.logos.isEmpty()) View.GONE else View.VISIBLE
+        view.setImageBitmap(known)
+        view.visibility = if (c.logos.isEmpty()) View.GONE else View.VISIBLE
         if (known != null || c.logos.isEmpty()) return
         ahead.execute {
             val bmp = c.logos.firstNotNullOfOrNull { uri ->
@@ -309,13 +328,26 @@ class PlayerActivity : Activity() {
                     BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.also { logos[uri] = it }
                 }.getOrNull()
             } ?: return@execute
-            ui.post { if (title.text == c.name) logo.setImageBitmap(bmp) }
+            ui.post { if (still()) view.setImageBitmap(bmp) }
         }
     }
 
+    /**
+     * The channel tuned in the middle of the screen, its logo and name over [text] (Loading…, Loading stream 2 of
+     * 3…, or that none works); null takes it away, once the picture plays.
+     */
     private fun say(text: String?) {
+        if (text == null) {
+            loading.visibility = View.GONE
+            return
+        }
+        val c = channels[at]
+        if (loadName.text.toString() != c.name) {
+            loadName.text = c.name
+            logoInto(loadLogo, c) { loadName.text.toString() == c.name }
+        }
         status.text = text
-        status.visibility = if (text == null) View.GONE else View.VISIBLE
+        loading.visibility = View.VISIBLE
     }
 
     // ---------- remote ----------
@@ -684,8 +716,8 @@ class PlayerActivity : Activity() {
         tried = -1
         attempts = 0
         release()
-        say(null)
-        showBanner(i)
+        say(getString(R.string.player_loading))
+        if (banner.visibility == View.VISIBLE) showBanner(i) // zapping: the banner keeps up with it; else the middle says it all
         net.execute {
             val list = streamsOf(c)
             ui.post {
@@ -720,12 +752,11 @@ class PlayerActivity : Activity() {
         ui.removeCallbacks(stuck)
         if (streams.isEmpty() || ++attempts > streams.size) {
             release()
-            if (shown == at) showBanner(at, stay = true)
             return say(getString(R.string.player_no_streams))
         }
         tried = Math.floorMod(tried + 1, streams.size)
         val s = streams[tried]
-        if (tried > 0 || attempts > 1) say(getString(R.string.player_stream_n, tried + 1, streams.size))
+        say(if (streams.size > 1) getString(R.string.player_stream_n, tried + 1, streams.size) else getString(R.string.player_loading))
         val tuning = tune
         val n = tried
         net.execute {
