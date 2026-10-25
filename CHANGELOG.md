@@ -15,6 +15,9 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+## 4.0.0-beta.3
+
+- This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.
 - Logos and what is on come from the add-on first. Piume uses the logos from iptv-org and your TV guide only when the add-on has none, or when its logo does not load.
 - In the player, CH+ and CH- (or Up and Down) go to the next and previous channel of the row. You can also type the channel number, or press the Last channel key.
 - In the player, Left and Right change to another stream of the same channel. A stream that stops or does not start goes to the next stream automatically.
@@ -23,6 +26,15 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - Search finds the channels of the add-ons too, in the same row as the TV channels. It works also without a TMDB key.
 - Hold OK on a channel of an add-on and select **Details** to see what the add-on tells about it.
 - The row **Continue Watching** is now called **Continue Playing**, because it also shows music and other things that play.
+- Piume settings have a new section, **Stremio add-ons**. Select **Add an add-on** and type the address of the add-on's manifest. You can also paste it on your phone.
+- The TV channels of an add-on show as rows. The first row has all the channels. Then each category has a row of its own.
+- Select **TV channels** to choose where the rows show: **In the TV app**, **In an IPTV app** or **An app per add-on**. Without a TV app, they show in the IPTV app.
+- An app per add-on has the add-on's name and logo, from its manifest.
+- Select a channel to play it in the Piume player. If a stream does not play, the player tries the next stream.
+- The cards show the program on now, if the add-on gives it.
+- Piume reads the channels of each add-on again every 15 minutes.
+- The backup includes the add-ons.
+- Piume is larger: about 1.2 MB. The player needs the extra space.
 
 ## 4.0.0-beta.2
 
