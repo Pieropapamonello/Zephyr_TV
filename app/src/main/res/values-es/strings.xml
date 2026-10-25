@@ -101,6 +101,8 @@
     <string name="setting_lock_layout">Bloquear diseño</string>
     <string name="state_on">Activado</string>
     <string name="state_off">Desactivado</string>
+    <string name="toggles_all_on">Seleccionar todo</string>
+    <string name="toggles_all_off">Deseleccionar todo</string>
     <string name="state_shown">Visible</string>
     <string name="state_hidden">Oculta</string>
 

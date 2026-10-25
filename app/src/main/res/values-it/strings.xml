@@ -101,6 +101,8 @@
     <string name="setting_lock_layout">Blocco layout</string>
     <string name="state_on">Attivo</string>
     <string name="state_off">Disattivo</string>
+    <string name="toggles_all_on">Seleziona tutto</string>
+    <string name="toggles_all_off">Deseleziona tutto</string>
     <string name="state_shown">Visibile</string>
     <string name="state_hidden">Nascosta</string>
 

@@ -205,8 +205,11 @@ class PlayerActivity : Activity() {
             addView(position)
             addView(clock, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(24) })
         }
+        // Nothing clips the buttons, which grow a little with the focus (see button).
         val info = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            clipChildren = false
+            clipToPadding = false
             addView(head)
             addView(onNow)
             addView(bar, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(4)).apply { topMargin = dp(8) })
@@ -217,6 +220,8 @@ class PlayerActivity : Activity() {
         }
         banner = LinearLayout(this).apply {
             gravity = Gravity.TOP
+            clipChildren = false
+            clipToPadding = false
             setPadding(dp(48), dp(48), dp(48), dp(32))
             background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0xE6000000.toInt(), 0xB3000000.toInt(), 0x00000000))
             addView(logo, LinearLayout.LayoutParams(dp(160), dp(90)).apply { marginEnd = dp(24) })

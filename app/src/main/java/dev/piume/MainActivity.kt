@@ -1642,13 +1642,26 @@ class MainActivity : Activity() {
         }
     }
 
-    /** A page of on/off rows saved as the set of keys that are off; [done] runs on Back. */
+    /**
+     * A page of on/off rows saved as the set of keys that are off; [done] runs on Back. With two rows or more, the
+     * first turns them all on (Select all), or all off once they all are (Deselect all).
+     */
     internal fun toggles(title: String, items: List<Pair<String, String>>, pref: String, on: String, off: String, focus: Int = 0, done: () -> Unit) {
         val offSet = prefs.getStringSet(pref, emptySet())!!
-        showPage(title, items.mapIndexed { i, (name, key) ->
+        val keys = items.map { it.second }
+        val all = if (items.size < 2) emptyList() else listOf(
+            if (keys.any { it in offSet }) page(getString(R.string.toggles_all_on)) {
+                prefs.edit().putStringSet(pref, offSet - keys.toSet()).apply()
+                toggles(title, items, pref, on, off, 0, done)
+            } else page(getString(R.string.toggles_all_off)) {
+                prefs.edit().putStringSet(pref, offSet + keys).apply()
+                toggles(title, items, pref, on, off, 0, done)
+            }
+        )
+        showPage(title, all + items.mapIndexed { i, (name, key) ->
             page(name, if (key in offSet) off else on) {
                 prefs.edit().putStringSet(pref, if (key in offSet) offSet - key else offSet + key).apply()
-                toggles(title, items, pref, on, off, i, done)
+                toggles(title, items, pref, on, off, i + all.size, done)
             }
         }, focus, back = done)
     }

@@ -101,6 +101,8 @@
     <string name="setting_lock_layout">Verrouiller la disposition</string>
     <string name="state_on">Activé</string>
     <string name="state_off">Désactivé</string>
+    <string name="toggles_all_on">Tout sélectionner</string>
+    <string name="toggles_all_off">Tout désélectionner</string>
     <string name="state_shown">Visible</string>
     <string name="state_hidden">Masquée</string>
 

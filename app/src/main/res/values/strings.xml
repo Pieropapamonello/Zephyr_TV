@@ -101,6 +101,8 @@
     <string name="setting_lock_layout">Lock layout</string>
     <string name="state_on">On</string>
     <string name="state_off">Off</string>
+    <string name="toggles_all_on">Select all</string>
+    <string name="toggles_all_off">Deselect all</string>
     <string name="state_shown">Shown</string>
     <string name="state_hidden">Hidden</string>
 
