@@ -14,8 +14,8 @@ android {
         applicationId = "dev.piume"
         minSdk = 26
         targetSdk = 36
-        versionCode = 55
-        versionName = "4.0.0-beta.4"
+        versionCode = 56
+        versionName = "4.0.0-beta.5"
         // What's new: only this version's section of CHANGELOG.md ships, one entry per line, without ** marks.
         val notes = rootProject.file("CHANGELOG.md").readText().replace("\r", "")
             .substringAfter("\n## $versionName\n", "").substringBefore("\n## ")
