@@ -31,10 +31,11 @@ import java.io.IOException
 
 /**
  * The search page: a box to type in with the remote, dictation into that box, the TV's own assistant, and a QR
- * code to type on a phone instead. Without a TMDB key there's nothing to search, so the TV's assistant opens.
+ * code to type on a phone instead. Without a TMDB key or Stremio add-ons there's nothing to search, so the TV's
+ * assistant opens.
  */
 internal fun MainActivity.openSearch() {
-    if (prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank()) return assistant()
+    if (prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank() && addonUrls().isEmpty()) return assistant()
     showPanel()
     fun go(query: String) {
         if (query.isBlank()) return
@@ -170,10 +171,11 @@ internal fun MainActivity.stopListening() {
  * and their cards show under it. Back, or holding OK on the tile, closes it (endSearch).
  */
 internal fun MainActivity.searchTmdb(query: String) {
-    val key = prefs.getString(K.TMDB_API_KEY, null) ?: return
+    // Without a TMDB key, the TV channels only (the tuner's and the add-ons').
+    val key = prefs.getString(K.TMDB_API_KEY, null)?.takeIf { it.isNotBlank() }
     spotlightIo.execute {
         val channels = runCatching { findChannels(query) }.getOrDefault(emptyList())
-        val found = TmdbClient.search(key, query, tmdbLang())
+        val found = if (key == null) emptyList() else TmdbClient.search(key, query, tmdbLang())
         // The results show at once, on the plain art the search gives; their art with the title on it follows.
         ui.post {
             if (found.isEmpty() && channels.isEmpty()) return@post Toast.makeText(this, getString(R.string.toast_no_results, query), Toast.LENGTH_SHORT).show()
@@ -187,6 +189,7 @@ internal fun MainActivity.searchTmdb(query: String) {
             val n = found.size + channels.size
             Toast.makeText(this, resources.getQuantityString(R.plurals.toast_search_results, n, n, query), Toast.LENGTH_LONG).show()
         }
+        if (key == null) return@execute
         // Each result's landscape art with its title on it, all at once (one TMDB call each).
         val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
         val art = try {
@@ -252,7 +255,7 @@ internal fun MainActivity.showSearchResults() {
     }
     val channels = searchChannels.takeIf { it.isNotEmpty() }?.let { list ->
         Section("channels", query, getString(R.string.search_channels_for, query), list.map { d ->
-            Prog(d.name, listOfNotNull(d.number, d.now?.title).joinToString(" · "), d.now?.let { Epg.progress(it) } ?: 0,
+            Prog(d.name, listOfNotNull(d.number, d.now?.title).filter { it.isNotEmpty() }.joinToString(" · "), d.now?.let { Epg.progress(it) } ?: 0,
                 d.logo, d.intent, d.pkg, badge = d.number, channelPage = d)
         })
     }
@@ -267,6 +270,7 @@ internal fun MainActivity.showSearchResults() {
 internal class ChannelDetail(
     val name: String, val number: String, val logo: String?, val intent: String, val pkg: String?,
     val now: Epg.Show?, val next: Epg.Show?,
+    val addon: AddonChannel? = null, // a Stremio add-on's channel: Watch plays it in Piume's player
 )
 
 /**
@@ -274,12 +278,14 @@ internal class ChannelDetail(
  * one set in Piume settings). At most 20. Runs off the UI thread.
  */
 internal fun MainActivity.findChannels(query: String): List<ChannelDetail> {
-    if (checkSelfPermission(MainActivity.TV_LISTINGS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return emptyList()
     val words = ChannelLogos.normalize(query).takeIf { it.length >= 2 } ?: return emptyList()
     val number = query.trim().takeIf { it.isNotEmpty() && it.all(Char::isDigit) }?.trimStart('0')
-    return channelDetails(tunerChannels()
-        .filter { ChannelLogos.normalize(it.name).contains(words) || (number != null && it.number.trimStart('0') == number) }
-        .sortedBy { channelKey(it.number) }.take(20))
+    // The tuner's channels, then the Stremio add-ons' (see Addons): one row, the same cards.
+    val tuner = if (checkSelfPermission(MainActivity.TV_LISTINGS) != android.content.pm.PackageManager.PERMISSION_GRANTED) emptyList()
+        else channelDetails(tunerChannels()
+            .filter { ChannelLogos.normalize(it.name).contains(words) || (number != null && it.number.trimStart('0') == number) }
+            .sortedBy { channelKey(it.number) }.take(20))
+    return (tuner + findAddonChannels(words)).take(40)
 }
 
 /** What [channels]' pages show: logo, what's on now and next (the guide set in Piume settings, else the TV's). Off the UI thread. */
@@ -312,13 +318,15 @@ internal fun MainActivity.showChannel(d: ChannelDetail) {
     val panel = findViewById<LinearLayout>(R.id.settingsPanel)
     val panelWidth = dp(380) // the panel's width (activity_main.xml)
     val picture = FrameLayout(this).apply { setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt()) }
-    channelArt(picture, panelWidth, panelWidth * 9 / 16, d.number, d.name) { d.logo }
+    channelArt(picture, panelWidth, panelWidth * 9 / 16, d.number, d.name) {
+        listOfNotNull(d.logo, d.addon?.let { ChannelLogos.match(channelLogoTable(), d.name) })
+    }
     val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT)
     fun hours(s: Epg.Show) = if (s.start > 0) "${time.format(java.util.Date(s.start))} – ${time.format(java.util.Date(s.stop))}" else null
     val top = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(14), 0, dp(14), dp(12)) // in line with the page title and the rows' names
-        addView(label(getString(R.string.channel_number, d.number), 13f).apply { alpha = 0.7f })
+        if (d.number.isNotEmpty()) addView(label(getString(R.string.channel_number, d.number), 13f).apply { alpha = 0.7f })
         d.now?.let { now ->
             addView(label(now.title, 16f).apply {
                 typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -340,9 +348,10 @@ internal fun MainActivity.showChannel(d: ChannelDetail) {
             })
         }
     }
-    val rows = listOf(page(getString(R.string.channel_watch)) {
+    val rows = listOf(page(getString(if (d.addon != null) R.string.channel_play else R.string.channel_watch)) {
         closeLauncherSettings()
-        open(Prog(d.name, d.number, 0, null, d.intent, d.pkg))
+        val p = Prog(d.name, d.number, 0, null, d.intent, d.pkg, addon = d.addon)
+        if (d.addon != null) playAddonChannel(p) else open(p)
     })
     showPage(d.name, rows, top = top) { closeLauncherSettings() }
     // Over the panel's padding, so it reaches its edges and the top of the screen; gone with the page.

@@ -78,7 +78,7 @@ internal fun MainActivity.queryWatchNext(): List<Prog> {
     val channels = continueChannels().flatMap { id ->
         readPrograms(TvContract.buildPreviewProgramsUriForChannel(id), hidden).map { (_, p) -> prefs.getLong("t_${p.pkg}", 0) to p }
     }
-    val all = watchNext + channels
+    val all = watchNext + channels + listOfNotNull(lastChannelCard(hidden)) // and the Stremio add-on channel last played
     publishingPkgs = all.mapNotNull { it.second.pkg }.toSet()
     val off = prefs.getStringSet(K.CW_OFF, emptySet())!!
     return newestPerApp(all.filter { it.second.pkg !in off }.distinctBy { it.second.intent ?: it.second.title }, PER_APP) { it.pkg }
@@ -671,12 +671,17 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     // A TV channel: the same card on every TV, whatever the TV app's own look. Its logo fills it, large in the
     // middle on a blur of itself (its name and number are under the card); with no logo, or until it's in, the
     // number and name instead.
+    // The logos to try in turn: the card's own (an add-on's), the TV's, then Piume's own by name.
     if (p.badge != null) channelArt(frame, w, cardHeight, p.badge, p.title) {
-        // An add-on's channel without a logo of its own (or with a placeholder) finds one by name, like a tuner's.
-        p.image ?: p.channelId?.let { id -> logo(id) } ?: ChannelLogos.match(channelLogoTable(), p.title)
+        listOfNotNull(p.image, p.channelId?.let { id -> logo(id) }, ChannelLogos.match(channelLogoTable(), p.title)).distinct()
     }
     if (p.tmdb != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title)
-    frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: p.channelPage?.let { showChannel(it) } ?: p.addon?.let { playAddonChannel(p) } ?: open(p) }
+    frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: p.channelPage?.let { showChannel(it) } ?: p.addon?.let {
+        // The row's channels, for CH+ and CH- in the player, when it's a row of them (not Continue Playing).
+        val row = ((col.parent as? ViewGroup)?.getTag(R.id.watchScroll) as? RowCards)?.items
+            ?.takeIf { items -> items.all { it.addon != null } }?.mapNotNull { it.addon }
+        playAddonChannel(p, row)
+    } ?: open(p) }
     frame.setTag(R.id.watchRow, p) // holding OK hides it (see onHold)
     col.addView(frame, LinearLayout.LayoutParams(w, cardHeight))
     // Thin bar under the poster, card width. Kept (invisible) when there's no progress so titles line up.
@@ -711,7 +716,7 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
  * A TV channel's picture in [frame] ([w] by [h]): its [logo] (found on a background thread) large in the middle on a
  * blur of itself; with no logo, or until it's in, its [number] and [name] instead.
  */
-internal fun MainActivity.channelArt(frame: FrameLayout, w: Int, h: Int, number: String, name: String, logo: () -> String?) {
+internal fun MainActivity.channelArt(frame: FrameLayout, w: Int, h: Int, number: String, name: String, logo: () -> List<String>) {
     val text = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
@@ -720,14 +725,16 @@ internal fun MainActivity.channelArt(frame: FrameLayout, w: Int, h: Int, number:
     }
     frame.addView(text, MATCH_PARENT, MATCH_PARENT)
     posterIo.execute {
-        val uri = logo() ?: return@execute // looked up here, off the UI thread: the TV's own, then iptv-org's
+        // Looked up here, off the UI thread, and tried in turn: the first that loads is the one.
         // Kept on disk (see channelLogoFiles) and in memory: a logo is downloaded once, not each time its card is.
-        val bmp = posters.get(uri) ?: try {
-            val file = channelLogoFiles.get(uri) { openStream(it) }
-            decode(android.net.Uri.fromFile(file).toString(), alpha = true)?.also { posters.put(uri, it) }
-        } catch (e: Exception) {
-            warn("channel logo failed: $uri ($e)")
-            null
+        val bmp = logo().firstNotNullOfOrNull { uri ->
+            posters.get(uri) ?: try {
+                val file = channelLogoFiles.get(uri) { openStream(it) }
+                decode(android.net.Uri.fromFile(file).toString(), alpha = true)?.also { posters.put(uri, it) }
+            } catch (e: Exception) {
+                warn("channel logo failed: $uri ($e)")
+                null
+            }
         } ?: return@execute
         val blur = softBlur(bmp)
         ui.post {

@@ -1069,7 +1069,7 @@ class MainActivity : Activity() {
                 if (allApps.visibility == View.VISIBLE) {
                     closeAllApps()
                     appRow.findViewWithTag<View>(a.pkg)?.requestFocus()
-                } else if (watchApp == a.pkg) firstCard()?.requestFocus()
+                } else if (!playLastChannel(a.pkg) && watchApp == a.pkg) firstCard()?.requestFocus()
             }
             a.pkg.startsWith(HDMI) -> tile(name, a.icon, true, a.pkg,
                 tint = BRAND_COLOURS[hdmiIcon(a.label, true)]?.takeIf { colour }) { launch(a) }
@@ -1460,9 +1460,10 @@ class MainActivity : Activity() {
         ))
         holdMenu(v, listOfNotNull(
             p.channelId?.let { id -> getString(R.string.menu_details) to { showChannelDetails(id) } },
+            p.addon?.let { c -> getString(R.string.menu_details) to { showAddonChannelDetails(c); Unit } },
             if (locked()) null else getString(R.string.menu_remove_from_cw) to { hideWatch(p) },
             if (!locked()) null else getString(R.string.unlock_to_edit) to { unlock { v.requestFocus(); watchMenu(v, p) } },
-            p.pkg?.let { pkg ->
+            p.pkg?.takeIf { !it.startsWith(STREMIO) }?.let { pkg ->
                 getString(R.string.menu_open_app) to {
                     (packageManager.getLeanbackLaunchIntentForPackage(pkg) ?: packageManager.getLaunchIntentForPackage(pkg))
                         ?.let { startActivity(it) }

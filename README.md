@@ -27,7 +27,7 @@ Piume replaces the cluttered stock home screen with the two things you actually 
 
 ## Highlights
 
-- **Tiny and fast.** A 0.5 MB APK with no third-party libraries. It uses about 50–70 MB of RAM and has no extra background services.
+- **Tiny and fast.** A 1.2 MB APK whose one library is the player for Stremio add-ons' channels (Media3). It uses about 50–70 MB of RAM and has no extra background services.
 - **Home button support on Google TV.** The Home button opens Piume directly, even on devices where the system launcher can't be replaced. Holding Home still opens the Google TV dashboard.
 - **Play queue.** The first tile shows what's playing now in any app (Spotify, YouTube…) with its art and progress, then **Continue Playing**: resume shows and films from Android TV's Watch Next list and from apps that publish their own "Continue Watching" channel, such as Stremio.
 - **App sections.** Each row an app puts on the home screen (for example YouTube's Recommended and Trending) is its own section under your Favourites. Hold OK on the app and select **Visible sections** to choose them. The TV app shows all the TV's channels from channel 1, one section per tuner, 10 at a time as you move along.
@@ -39,7 +39,8 @@ Piume replaces the cluttered stock home screen with the two things you actually 
 - **Optional weather** under the clock, and a 12- or 24-hour clock.
 - **Night mode.** Between the hours you choose, the home screen goes darker and Spotlight stops.
 - **TV channels with logos and what's on.** Each channel card shows the channel's logo, from the TV or else from [iptv-org](https://github.com/iptv-org/database), and the program on now with a progress bar, from a TV guide in XMLTV format that you choose.
-- **Search** from the top bar: type with the remote, say it, or type on your phone. Films, series and TV channels show in their own rows under a **Results** tile in your Favourites. OK on a film or series shows its description, the trailer and the apps that have it; OK on a channel shows what's on and **Watch on TV**.
+- **TV channels from Stremio add-ons.** Add an add-on by its manifest's address (for example an [OMG+ TV](https://github.com/mccoy88f/OMG-Premium-TV) configuration) in **Settings → Stremio add-ons**. Its channels show as rows, all of them and then one per category, in the TV app, in an IPTV app or in an app of their own. They play in Piume's own player: CH+ and CH- (or Up and Down) change channel, Left and Right change stream, OK shows what's on. Logos and what's on come from the add-on, else from iptv-org and your TV guide. The channel you watched last shows in **Continue Playing**.
+- **Search** from the top bar: type with the remote, say it, or type on your phone. Films, series and TV channels (the TV's and the add-ons') show in their own rows under a **Results** tile in your Favourites. OK on a film or series shows its description, the trailer and the apps that have it; OK on a channel shows what's on and **Watch on TV**.
 - **Your phone as a keyboard.** Scan a QR code to send a wallpaper, type the TMDB key or list, a search or the TV guide's address, save a settings backup, or restore one.
 - **Status at a glance.** A red dot on the network icon when there's no internet; a red dot on Piume settings when an update is ready, and on each item that leads to it.
 - **Updates itself.** Piume checks its GitHub releases once a day and installs new versions from its settings. The first update asks you to allow installs from Piume.
@@ -63,7 +64,7 @@ Measured with Plume Launcher 1.3, the version Piume is based on, on a Hisense Go
 
 | | Plume 1.3 | Projectivy Launcher | Google TV launcher |
 |---|---|---|---|
-| APK size | **0.4 MB** | ~10–14 MB | ~25 MB |
+| APK size | **1.2 MB** | ~10–14 MB | ~25 MB |
 | RAM while running | **~50–70 MB** | ~65–70 MB | ~93 MB, plus a ~22 MB helper process |
 | Extra background services | **None** | 2 | 1 always-on helper |
 | Return to home from an app | **~95 ms** | – | – |
@@ -191,7 +192,7 @@ Android lets only system apps read the TV's own program guide, so for what's on 
 
 ### Backup and restore
 
-**Settings → System → Backup and restore** saves your settings to your phone as a small file, and sends one back to restore them. The backup has your layout, theme, Spotlight settings and TMDB key, but not your photos or the lock PIN. Keep it private: it has your TMDB key.
+**Settings → System → Backup and restore** saves your settings to your phone as a small file, and sends one back to restore them. The backup has your layout, theme, Spotlight settings, TMDB key and Stremio add-ons, but not your photos or the lock PIN. Keep it private: it has your TMDB key and your add-ons' addresses.
 
 ### Gallery screensaver
 
@@ -207,6 +208,7 @@ Piume has no analytics, no ads and no account. It only connects to the internet 
 - show TMDB Spotlight and search, **only if you enter a TMDB API key**. It fetches the titles of the list you choose (or your own), search results, their genres, images, trailers, IMDb ids and streaming services from [TMDB](https://www.themoviedb.org).
 - download TV channel logos, **only for channels the TV has none for, and unless you turn it off**: the channel list from [iptv-org](https://iptv-org.github.io/api/) once a month, and each logo once from where iptv-org points (mostly Wikimedia and imgur).
 - download a TV guide, **only if you enter its address**, twice a day.
+- read the channels of the Stremio add-ons **you add**, every 15 minutes while the home screen is open, and their streams, logos and what's on when you watch.
 
 The phone screens (**Add from phone…**, the TMDB key and list, search, the TV guide's address, backup and restore) run a small page on the TV itself, reachable only on your home network, only while that screen is open, and only at a long random address in its QR code. What you send goes straight between your phone and the TV and nowhere else. Android's own backup doesn't copy Piume's settings.
 

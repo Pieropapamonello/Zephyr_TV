@@ -165,16 +165,45 @@ internal object Stremio {
     }
 
     /**
-     * A channel logo worth downloading, or null: not a placeholder with the channel's name on a flat colour (better
-     * the channel's real logo by name, see ChannelLogos), not an address cut short ("…/images?q").
+     * The add-on's logo for a channel, its own placeholder too (it chose it): null only when it isn't a web address
+     * or it's cut short ("…/images?q"). Piume's own (see ChannelLogos) is the fallback, for none or one that won't load.
      */
     internal fun logo(url: String?): String? {
         if (url == null || !(url.startsWith("http://") || url.startsWith("https://"))) return null
-        val host = Uri.host(url)
-        if (host == "placehold.co" || host.endsWith("dummyimage.com")) return null
         val query = url.substringAfter('?', "")
         if (url.contains('?') && (query.isEmpty() || !query.contains('='))) return null
         return url
+    }
+
+    /** What the add-on tells about a channel on its page: what's on and next ([description]), and what's on in short. */
+    internal class Meta(val description: String?, val now: String?)
+
+    /** Channel [id]'s page from the add-on. Throws when the add-on can't be asked. */
+    fun meta(base: String, type: String, id: String): Meta = meta(Http.json("$base/meta/${enc(type)}/${enc(id)}.json"))
+
+    internal fun meta(answer: JSONObject): Meta {
+        val m = answer.optJSONObject("meta") ?: return Meta(null, null)
+        val now = text(m, "releaseInfo")?.takeIf { !it.equals("LIVE", ignoreCase = true) }
+        // Without a guide OMG says only "Channel: <name> - ID: <id>": nothing to tell, the fallback guide tells more.
+        val description = text(m, "description")?.takeIf { now != null }
+            ?.lines()?.map { it.trim() }?.filterIndexed { i, line -> line.isNotEmpty() || i == 0 }?.joinToString("\n")
+        return Meta(description, now)
+    }
+
+    /**
+     * How far into the program on now [at] is (1 to 100), from the first "HH:MM - HH:MM" in an add-on's description
+     * (OMG writes "⏰ 05:00 - 00:30"), on today's clock (an end before the start is after midnight). Null without one.
+     */
+    internal fun progress(description: String?, at: java.util.Calendar = java.util.Calendar.getInstance()): Int? {
+        val m = Regex("""(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})""").find(description ?: return null) ?: return null
+        val (h1, m1, h2, m2) = m.destructured
+        val now = at.get(java.util.Calendar.HOUR_OF_DAY) * 60 + at.get(java.util.Calendar.MINUTE)
+        val start = h1.toInt() * 60 + m1.toInt()
+        var end = h2.toInt() * 60 + m2.toInt()
+        if (end <= start) end += 24 * 60
+        val t = if (now < start && now + 24 * 60 < end) now + 24 * 60 else now
+        if (t < start || t >= end) return null
+        return ((t - start) * 100 / (end - start)).coerceIn(1, 100)
     }
 
     /** The ways to play channel [id], in the add-on's order (best first); those without a web address are left out. */

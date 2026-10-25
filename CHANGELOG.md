@@ -15,6 +15,13 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- Logos and what is on come from the add-on first. Piume uses the logos from iptv-org and your TV guide only when the add-on has none, or when its logo does not load.
+- In the player, CH+ and CH- (or Up and Down) go to the next and previous channel of the row. You can also type the channel number, or press the Last channel key.
+- In the player, Left and Right change to another stream of the same channel. A stream that stops or does not start goes to the next stream automatically.
+- In the player, OK or Info shows the channel's logo, its number in the row, the time, the program on now with a progress bar, what is next and the stream.
+- The channel you watched last shows in **Continue Playing**. Select the tile of an add-on (or the IPTV app) to watch it again.
+- Search finds the channels of the add-ons too, in the same row as the TV channels. It works also without a TMDB key.
+- Hold OK on a channel of an add-on and select **Details** to see what the add-on tells about it.
 - The row **Continue Watching** is now called **Continue Playing**, because it also shows music and other things that play.
 
 ## 4.0.0-beta.2

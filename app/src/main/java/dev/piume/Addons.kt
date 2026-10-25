@@ -20,6 +20,8 @@ import dev.piume.MainActivity.Companion.SUBMENU
 /** App.pkg prefix of the add-ons' tiles: "stremio:iptv" for the IPTV app, "stremio:<add-on id>" for an add-on's own. */
 internal const val STREMIO = "stremio:"
 internal const val IPTV_PKG = STREMIO + "iptv"
+/** The Continue Playing card of the channel last played: hiding it there keeps the channel in its add-on's rows. */
+private const val LAST_PKG = STREMIO + "last"
 
 /** A card that's an add-on's channel: the add-on (its manifest's address) and the channel in it. */
 internal class AddonChannel(val addon: String, val item: Stremio.Item)
@@ -81,7 +83,13 @@ internal fun MainActivity.addonsUnder(pkg: String): List<String> {
  */
 internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<Section> {
     val own = pkg.startsWith(STREMIO) && pkg != IPTV_PKG
-    return addonsUnder(pkg).flatMap { url ->
+    val urls = addonsUnder(pkg)
+    // What's on: the add-on's own, else the guide set in Piume settings (by the channel's name).
+    val guide = if (urls.isEmpty()) null else epgUrl()?.let { url ->
+        if (Epg.due(filesDir, url)) updateEpg(pkg)
+        Epg.saved(filesDir, url)
+    }
+    return urls.flatMap { url ->
         if (Stremio.due(filesDir, url)) updateAddon(url, pkg)
         val listing = Stremio.saved(filesDir, url) ?: return@flatMap emptyList()
         val catalogs = listing.addon.catalogs.size
@@ -93,7 +101,8 @@ internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<
             }
             // Hidden as hideWatch keys it: the card has no app.
             val items = row.items.filter { hideKey(null, it.name) !in hidden }.map { item ->
-                Prog(item.name, item.now ?: "", 0, item.logo, null, null, badge = "", addon = AddonChannel(url, item))
+                val now = if (item.now == null) guide?.let { Epg.now(it, item.name) } else null
+                Prog(item.name, item.now ?: now?.first ?: "", now?.second ?: 0, item.logo, null, null, badge = "", addon = AddonChannel(url, item))
             }
             if (items.isEmpty()) null
             else Section("stremio:${listing.addon.id}:${row.catalog.id}:${row.genre.orEmpty()}", name, name, items)
@@ -159,19 +168,90 @@ internal fun MainActivity.addonsChanged() {
     refreshApps()
 }
 
-/** OK on an add-on's channel: Piume's player plays it (see PlayerActivity). */
-internal fun MainActivity.playAddonChannel(p: Prog) {
+/**
+ * The channels to zap through from [c]: those of the row it was picked in ([row], when there's one), else the
+ * whole catalog it's in, else [c] alone.
+ */
+internal fun MainActivity.zapList(c: AddonChannel, row: List<AddonChannel>?): List<AddonChannel> {
+    row?.takeIf { list -> list.any { it.item.id == c.item.id } }?.let { return it }
+    val rows = Stremio.saved(filesDir, c.addon)?.rows.orEmpty().filter { it.genre == null }
+    return rows.firstOrNull { r -> r.items.any { it.id == c.item.id } }?.items?.map { AddonChannel(c.addon, it) } ?: listOf(c)
+}
+
+/**
+ * OK on an add-on's channel: Piume's player plays it (see PlayerActivity), with the channels around it ([row]: the
+ * cards of the row it's in) for CH+ and CH-. Each channel's logo: the add-on's, then Piume's own by name.
+ */
+internal fun MainActivity.playAddonChannel(p: Prog, row: List<AddonChannel>? = null) {
     val c = p.addon ?: return
+    val list = zapList(c, row)
     val base = Stremio.saved(filesDir, c.addon)?.addon?.base ?: c.addon.removeSuffix("/manifest.json")
+    val logos = channelLogoTable()
+    fun strings(f: (AddonChannel) -> String?) = ArrayList(list.map { f(it).orEmpty() })
     try {
         startActivity(Intent(this, PlayerActivity::class.java)
+            .putExtra(PlayerActivity.ADDON, c.addon)
             .putExtra(PlayerActivity.BASE, base)
-            .putExtra(PlayerActivity.TYPE, c.item.type)
-            .putExtra(PlayerActivity.ID, c.item.id)
-            .putExtra(PlayerActivity.NAME, c.item.name))
+            .putExtra(PlayerActivity.INDEX, list.indexOfFirst { it.item.id == c.item.id }.coerceAtLeast(0))
+            .putStringArrayListExtra(PlayerActivity.TYPES, strings { it.item.type })
+            .putStringArrayListExtra(PlayerActivity.IDS, strings { it.item.id })
+            .putStringArrayListExtra(PlayerActivity.NAMES, strings { it.item.name })
+            .putStringArrayListExtra(PlayerActivity.NOWS, strings { it.item.now })
+            .putStringArrayListExtra(PlayerActivity.LOGOS, strings { it.item.logo })
+            .putStringArrayListExtra(PlayerActivity.FALLBACK_LOGOS, strings { ChannelLogos.match(logos, it.item.name) }))
     } catch (e: Exception) {
         warn("player didn't open ($e)")
     }
+}
+
+/** The channel last played (written by PlayerActivity, in its own process: a file, not the preferences). */
+internal fun MainActivity.lastAddonChannel(): Pair<Long, AddonChannel>? = runCatching {
+    val o = org.json.JSONObject(java.io.File(filesDir, PlayerActivity.LAST_FILE).readText())
+    val addon = o.getString("addon").takeIf { it in addonUrls() } ?: return null
+    o.getLong("at") to AddonChannel(addon, Stremio.Item(o.getString("type"), o.getString("id"), o.getString("name"), o.optString("logo").ifEmpty { null }, null))
+}.getOrNull()
+
+/** The channel last played as a Continue Playing card: the add-on's name under it. Off the UI thread. */
+internal fun MainActivity.lastChannelCard(hidden: Set<String>): Pair<Long, Prog>? {
+    val (at, c) = lastAddonChannel() ?: return null
+    if (hideKey(LAST_PKG, c.item.name) in hidden) return null
+    val name = Stremio.saved(filesDir, c.addon)?.addon?.name.orEmpty()
+    return at to Prog(c.item.name, name, 0, c.item.logo, null, LAST_PKG, badge = "", addon = c)
+}
+
+/** OK on an add-on's tile (or the IPTV app's): the channel last played among its add-ons, if any. */
+internal fun MainActivity.playLastChannel(pkg: String): Boolean {
+    val (_, c) = lastAddonChannel() ?: return false
+    if (c.addon !in addonsUnder(pkg)) return false
+    playAddonChannel(Prog(c.item.name, "", 0, c.item.logo, null, null, badge = "", addon = c))
+    return true
+}
+
+/** The add-ons' channels whose name has [words] (normalized, see ChannelLogos) in it, for the search. Off the UI thread. */
+internal fun MainActivity.findAddonChannels(words: String): List<ChannelDetail> {
+    val logos = channelLogoTable()
+    val guide = epgUrl()?.let { Epg.saved(filesDir, it) }
+    return addonUrls().flatMap { url ->
+        Stremio.saved(filesDir, url)?.rows.orEmpty().filter { it.genre == null }.flatMap { r -> r.items.map { url to it } }
+    }.filter { (_, item) -> ChannelLogos.normalize(item.name).contains(words) }.distinctBy { it.second.name }.map { (url, item) ->
+        addonDetail(AddonChannel(url, item), logos, guide, null)
+    }
+}
+
+/** An add-on's channel as its page shows it: the add-on's logo and guide first, Piume's own after ([meta]: its page from the add-on). */
+internal fun addonDetail(c: AddonChannel, logos: Map<String, String>, guide: Epg.Guide?, meta: Stremio.Meta?): ChannelDetail {
+    val epg = guide?.let { Epg.nowAndNext(it, c.item.name) }
+    val own = (meta?.now ?: c.item.now)?.let { Epg.Show(0, 0, it, meta?.description.orEmpty()) }
+    return ChannelDetail(c.item.name, "", c.item.logo ?: ChannelLogos.match(logos, c.item.name), "", null,
+        own ?: epg?.first, if (own == null) epg?.second else null, addon = c)
+}
+
+/** Hold OK on an add-on's channel, Details: its page, with what the add-on tells about it. */
+internal fun MainActivity.showAddonChannelDetails(c: AddonChannel) = netIo.execute {
+    val base = Stremio.saved(filesDir, c.addon)?.addon?.base ?: return@execute
+    val meta = runCatching { Stremio.meta(base, c.item.type, c.item.id) }.getOrNull()
+    val d = addonDetail(c, channelLogoTable(), epgUrl()?.let { Epg.saved(filesDir, it) }, meta)
+    ui.post { showChannel(d) }
 }
 
 /** Whether Piume may read the TV listings (the TV app's channels and other apps' rows): add-on tiles don't need to. */

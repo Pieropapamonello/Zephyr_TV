@@ -41,7 +41,7 @@ class StremioTest {
         assertEquals("In onda: RaiNews24", items[0].now)
         assertNull(items[1].now) // "LIVE": no guide for it
         assertEquals("https://raw.githubusercontent.com/tv-logo/rai-1-it.png", items[0].logo)
-        assertNull(items[1].logo) // a placeholder: the logo is found by name instead
+        assertEquals("https://placehold.co/500x500/590b8a/ffffff/png?text=EU", items[1].logo) // the add-on's placeholder is its choice
         assertNull(items[2].logo) // cut short
     }
 
@@ -69,6 +69,26 @@ class StremioTest {
         val ts = ByteArray(376).also { it[0] = 0x47; it[188] = 0x47 }
         assertEquals("ts", Stremio.format("application/octet-stream", "https://x/s/token", ts))
         assertNull(Stremio.format("video/mp4", "https://x/s/token", "....ftypisom".toByteArray()))
+    }
+
+    // As OMG answers for a channel's page: what's on in short, then on and next; without a guide, a line with its id.
+    @Test fun readsWhatTheAddOnSaysIsOn() {
+        val meta = Stremio.meta(JSONObject("""{"meta":{"id":"tv|rai1.it","releaseInfo":"RaiNews24 (05:00)",
+            "description":"📺 IN ONDA ORA:\nRaiNews24\n\nNOTIZIARIO.\n\n⏰ 05:00 - 00:30\n\n• 11:15 - A Sua immagine"}}"""))
+        assertEquals("RaiNews24 (05:00)", meta.now)
+        assertEquals("📺 IN ONDA ORA:\nRaiNews24\nNOTIZIARIO.\n⏰ 05:00 - 00:30\n• 11:15 - A Sua immagine", meta.description)
+        val none = Stremio.meta(JSONObject("""{"meta":{"id":"tv|x","releaseInfo":"LIVE","description":"Channel: X - ID: x"}}"""))
+        assertNull(none.now)
+        assertNull(none.description)
+    }
+
+    @Test fun findsHowFarIntoTheProgramItIs() {
+        fun at(h: Int, m: Int) = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, h); set(java.util.Calendar.MINUTE, m) }
+        assertEquals(50, Stremio.progress("⏰ 20:00 - 22:00", at(21, 0)))
+        assertEquals(50, Stremio.progress("⏰ 23:00 - 01:00", at(0, 0))) // past midnight
+        assertEquals(25, Stremio.progress("⏰ 23:00 - 01:00", at(23, 30)))
+        assertNull(Stremio.progress("⏰ 20:00 - 22:00", at(23, 0)))
+        assertNull(Stremio.progress("no times here", at(21, 0)))
     }
 
     @Test fun encodesPathsAsStremioClientsDo() {

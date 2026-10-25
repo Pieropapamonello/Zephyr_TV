@@ -396,4 +396,7 @@
     <string name="player_loading">Chargement…</string>
     <string name="player_no_streams">Aucun flux de cette chaîne ne fonctionne pour le moment.</string>
     <string name="player_stream_n">Essai du flux %1$d sur %2$d…</string>
+    <string name="player_channel_n">%1$d / %2$d</string>
+    <string name="player_stream">Flux %1$d sur %2$d · %3$s</string>
+    <string name="channel_play">Regarder</string>
 </resources>

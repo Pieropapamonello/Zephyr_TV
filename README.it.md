@@ -27,7 +27,7 @@ Piume sostituisce la Home di serie, piena di elementi, con le due cose che usi d
 
 ## In breve
 
-- **Piccolo e veloce.** Un APK da 0,5 MB senza librerie di terze parti. Usa circa 50–70 MB di RAM e non ha servizi in background aggiuntivi.
+- **Piccolo e veloce.** Un APK da 1,2 MB, con una sola libreria: il player per i canali degli addon Stremio (Media3). Usa circa 50–70 MB di RAM e non ha servizi in background aggiuntivi.
 - **Tasto Home su Google TV.** Il tasto Home apre direttamente Piume, anche sui dispositivi dove il launcher di sistema non si può sostituire. Tenendo premuto Home si apre ancora la dashboard di Google TV.
 - **Coda di riproduzione.** Il primo riquadro mostra cosa sta suonando ora in qualsiasi app (Spotify, YouTube…) con copertina e avanzamento, poi **Continua la riproduzione**: riprendi serie e film dalla lista "Guarda dopo" di Android TV e dalle app che pubblicano un proprio canale "Continua a guardare", come Stremio.
 - **Sezioni delle app.** Ogni riga che un'app mette in Home (per esempio "Consigliati" e "Tendenze" di YouTube) è una sezione sotto i Preferiti. Tieni premuto OK sull'app e scegli **Sezioni visibili** per sceglierle. L'app TV mostra tutti i canali della TV dal canale 1, una sezione per ogni sintonizzatore, 10 alla volta mentre scorri.
@@ -39,7 +39,8 @@ Piume sostituisce la Home di serie, piena di elementi, con le due cose che usi d
 - **Meteo facoltativo** sotto l'orologio, e orologio a 12 o 24 ore.
 - **Modalità notte.** Nelle ore che scegli la Home diventa più scura e In evidenza si ferma.
 - **Canali TV con loghi e programma in onda.** Ogni scheda di canale mostra il logo del canale, dalla TV o altrimenti da [iptv-org](https://github.com/iptv-org/database), e il programma in onda con la barra di avanzamento, da una guida TV in formato XMLTV che scegli tu.
-- **Ricerca** dalla barra in alto: scrivi con il telecomando, parla, o scrivi dal telefono. Film, serie e canali TV compaiono in righe separate sotto un riquadro **Risultati** nei Preferiti. OK su un film o una serie mostra descrizione, trailer e app che lo hanno; OK su un canale mostra il programma in onda e **Guarda in TV**.
+- **Canali TV dagli addon Stremio.** Aggiungi un addon con l'indirizzo del suo manifest (per esempio una configurazione di [OMG+ TV](https://github.com/mccoy88f/OMG-Premium-TV)) in **Impostazioni → Addon Stremio**. I suoi canali compaiono come righe, tutti e poi una per categoria, nell'app TV, in un'app IPTV o in un'app tutta loro. Si guardano nel player di Piume: CH+ e CH- (o su e giù) cambiano canale, sinistra e destra cambiano stream, OK mostra il programma in onda. Loghi e programmi vengono dall'addon, altrimenti da iptv-org e dalla tua guida TV. L'ultimo canale guardato compare in **Continua la riproduzione**.
+- **Ricerca** dalla barra in alto: scrivi con il telecomando, parla, o scrivi dal telefono. Film, serie e canali TV (della TV e degli addon) compaiono in righe separate sotto un riquadro **Risultati** nei Preferiti. OK su un film o una serie mostra descrizione, trailer e app che lo hanno; OK su un canale mostra il programma in onda e **Guarda in TV**.
 - **Il telefono come tastiera.** Inquadra un codice QR per inviare uno sfondo, scrivere la chiave o la lista TMDB, una ricerca o l'indirizzo della guida TV, salvare un backup delle impostazioni o ripristinarne uno.
 - **Stato a colpo d'occhio.** Un pallino rosso sull'icona della rete quando manca internet; un pallino rosso sulle impostazioni di Piume quando c'è un aggiornamento, e su ogni voce che porta lì.
 - **Si aggiorna da solo.** Piume controlla le sue release su GitHub una volta al giorno e installa le nuove versioni dalle sue impostazioni. Il primo aggiornamento ti chiede di consentire le installazioni da Piume.
@@ -63,7 +64,7 @@ Misurato con Plume Launcher 1.3, la versione su cui si basa Piume, su una Hisens
 
 | | Plume 1.3 | Projectivy Launcher | Launcher di Google TV |
 |---|---|---|---|
-| Dimensione APK | **0,4 MB** | ~10–14 MB | ~25 MB |
+| Dimensione APK | **1,2 MB** | ~10–14 MB | ~25 MB |
 | RAM in uso | **~50–70 MB** | ~65–70 MB | ~93 MB, più un processo di supporto da ~22 MB |
 | Servizi in background aggiuntivi | **Nessuno** | 2 | 1 processo sempre attivo |
 | Ritorno alla Home da un'app | **~95 ms** | – | – |
@@ -191,7 +192,7 @@ Android lascia leggere la guida programmi della TV solo alle app di sistema, qui
 
 ### Backup e ripristino
 
-**Impostazioni → Sistema → Backup e ripristino** salva le impostazioni sul telefono in un piccolo file, e ne rimanda uno alla TV per ripristinarle. Il backup contiene layout, tema, impostazioni di In evidenza e chiave TMDB, ma non le foto né il PIN di blocco. Tienilo privato: contiene la chiave TMDB.
+**Impostazioni → Sistema → Backup e ripristino** salva le impostazioni sul telefono in un piccolo file, e ne rimanda uno alla TV per ripristinarle. Il backup contiene layout, tema, impostazioni di In evidenza, chiave TMDB e addon Stremio, ma non le foto né il PIN di blocco. Tienilo privato: contiene la chiave TMDB e gli indirizzi dei tuoi addon.
 
 ### Salvaschermo Galleria
 
@@ -207,6 +208,7 @@ Piume non ha statistiche, pubblicità né account. Si collega a internet solo pe
 - mostrare In evidenza TMDB e la ricerca, **solo se inserisci una chiave API TMDB**. Scarica da [TMDB](https://www.themoviedb.org) i titoli della lista che scegli (o della tua), i risultati delle ricerche, i generi, le immagini, i trailer, gli id IMDb e i servizi di streaming.
 - scaricare i loghi dei canali TV, **solo per i canali di cui la TV non ha il logo, e se non lo disattivi**: l'elenco dei canali da [iptv-org](https://iptv-org.github.io/api/) una volta al mese, e ogni logo una volta da dove lo indica iptv-org (per lo più Wikimedia e imgur).
 - scaricare una guida TV, **solo se ne inserisci l'indirizzo**, due volte al giorno.
+- leggere i canali degli addon Stremio **che aggiungi tu**, ogni 15 minuti mentre la home è aperta, e i loro stream, loghi e programmi quando guardi un canale.
 
 Le schermate per il telefono (**Aggiungi dal telefono…**, chiave e lista TMDB, ricerca, indirizzo della guida TV, backup e ripristino) avviano una piccola pagina sulla TV stessa, raggiungibile solo dalla rete di casa, solo mentre quella schermata è aperta e solo a un lungo indirizzo casuale presente nel codice QR. Quello che invii passa direttamente tra telefono e TV, e da nessun'altra parte. Il backup di Android non copia le impostazioni di Piume.
 
