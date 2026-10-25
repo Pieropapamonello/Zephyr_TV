@@ -15,6 +15,9 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- In the player, press OK to show the banner. Then Up and Down go to the buttons **Pause**, **Audio**, **Subtitles** and **Stream**. They do not change the channel. When the banner is not shown, Up and Down change the channel as before.
+- The player banner shows the resolution of the stream next to its name, for example **1080p** or **4K**.
+
 ## 4.0.0-beta.8
 
 - This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.

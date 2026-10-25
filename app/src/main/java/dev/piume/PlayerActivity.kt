@@ -50,8 +50,8 @@ import org.json.JSONObject
  * channel. For each it asks the add-on for its streams and plays the first that works; Left/Right go to the
  * channel's other streams, and one that fails or stays stuck gives way to the next by itself (round the list, until
  * each was tried). OK or Info shows what's on, in short; OK again shows all of it (the add-on's guide, else the one
- * set in Piume settings). With the banner up, Left/Right reach its buttons: Play/Pause, then Audio, Subtitles and
- * Stream, each opening its list to pick from (holding OK, or Menu, opens audio and subtitles together). The audio and subtitles
+ * set in Piume settings). With the banner up, Left/Right reach its buttons (and Up/Down too, once OK brought it up:
+ * they zap only while it's down or zapping): Play/Pause, then Audio, Subtitles and Stream, each opening its list to pick from (holding OK, or Menu, opens audio and subtitles together). The audio and subtitles
  * picked are kept by language, for the next channels and the next time.
  *
  * Media3's ExoPlayer plays them, the one library Piume ships, for HLS and DASH as the TV's own player doesn't do
@@ -77,6 +77,7 @@ class PlayerActivity : Activity() {
     private var tried = -1 // the stream playing, or being tried
     private var attempts = 0 // streams tried since the channel was tuned, or one was picked: all of them, and it's none
     private var expanded = false // the banner shows all of what's on, not just its first line
+    private var asked = false // the banner is up as OK (or a pause) brought it, not as a zap shows it: Up/Down reach its buttons
     private var tune = 0 // counts tunings, so an answer for a channel left meanwhile is dropped
     private var typed = "" // number keys pressed so far
     private val fetched = ConcurrentHashMap<String, Pair<Long, List<Stremio.Stream>>>() // channel id to its streams, and when
@@ -116,6 +117,7 @@ class PlayerActivity : Activity() {
 
     private val hideBanner = Runnable {
         expanded = false
+        asked = false
         unfocusButtons()
         banner.animate().alpha(0f).setDuration(250).withEndAction { banner.visibility = View.GONE }.start()
     }
@@ -256,11 +258,7 @@ class PlayerActivity : Activity() {
         position.text = getString(R.string.player_channel_n, i + 1, channels.size)
         clock.text = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date())
         fillGuide(c)
-        val playing = streams.getOrNull(tried)?.takeIf { i == at }
-        source.text = if (playing != null)
-            getString(R.string.player_stream, tried + 1, streams.size, playing.title)
-                .let { if (player?.playWhenReady == false) getString(R.string.player_paused) + "  ·  " + it else it }
-        else getString(R.string.player_loading)
+        fillSource(i)
         fillTrackLine(i)
         fillButtons(i)
         showLogo(c)
@@ -277,6 +275,29 @@ class PlayerActivity : Activity() {
             val meta = runCatching { Stremio.meta(base, c.type, c.id) }.getOrNull() ?: return@execute
             pages[c.id] = meta
             ui.post { if (shown == i && banner.visibility == View.VISIBLE) fillGuide(c) }
+        }
+    }
+
+    /** The stream playing on channel [i] and its picture's resolution ("Stream 1 of 2 · RAI 1 · 1080p"), or Loading. */
+    private fun fillSource(i: Int) {
+        val playing = streams.getOrNull(tried)?.takeIf { i == at }
+        source.text = if (playing != null)
+            listOfNotNull(getString(R.string.player_stream, tried + 1, streams.size, playing.title), resolution()).joinToString(" · ")
+                .let { if (player?.playWhenReady == false) getString(R.string.player_paused) + "  ·  " + it else it }
+        else getString(R.string.player_loading)
+    }
+
+    /** "720p", "1080p", "4K": the picture's lines (its width, for a wide film cropped shorter); null before it plays. */
+    private fun resolution(): String? {
+        val size = player?.videoSize ?: return null
+        if (size.width == 0 || size.height == 0) return null
+        val lines = maxOf(size.height, size.width * 9 / 16)
+        return when {
+            lines >= 2100 -> "4K"
+            lines >= 1400 -> "1440p"
+            lines >= 1000 -> "1080p"
+            lines >= 700 -> "720p"
+            else -> "${size.height}p"
         }
     }
 
@@ -369,11 +390,23 @@ class PlayerActivity : Activity() {
                 return super.onKeyDown(keyCode, event)
             }
             KeyEvent.KEYCODE_BACK -> { hideBanner.run(); return true }
+            // Up/Down stay on the buttons: on them, they never zap.
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                ui.removeCallbacks(hideBanner)
+                ui.postDelayed(hideBanner, BUTTONS_MS)
+                return true
+            }
         }
         // The banner up (and done fading in) with buttons: Left/Right reach them; otherwise they change the stream.
         if ((keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) && banner.visibility == View.VISIBLE &&
             banner.alpha >= 1f && shown == at && buttons.childCount > 0) {
             focusButton(if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 0 else buttons.childCount - 1)
+            return true
+        }
+        // The banner up as OK brought it: Up/Down reach the buttons too (Play/Pause first), not the next channel.
+        if ((keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) && asked && banner.visibility == View.VISIBLE &&
+            shown == at && buttons.childCount > 0) {
+            focusButton(0)
             return true
         }
         when (keyCode) {
@@ -421,8 +454,8 @@ class PlayerActivity : Activity() {
 
     /** OK: the banner, in short; again, all of what's on; again, away. */
     private fun okPressed() = when {
-        banner.visibility != View.VISIBLE || banner.alpha < 1f -> showBanner(shown)
-        !expanded && !more.text.isNullOrEmpty() -> { expanded = true; showBanner(shown, stay = true) }
+        banner.visibility != View.VISIBLE || banner.alpha < 1f -> { asked = shown == at; showBanner(shown) }
+        !expanded && !more.text.isNullOrEmpty() -> { expanded = true; asked = shown == at; showBanner(shown, stay = true) }
         else -> hideBanner.run()
     }
 
@@ -494,6 +527,7 @@ class PlayerActivity : Activity() {
         if (p.playWhenReady == play) return
         p.playWhenReady = play
         ui.removeCallbacks(stuck) // a pause isn't a stream that's stuck
+        asked = true
         showBanner(at, stay = !play)
     }
 
@@ -707,6 +741,7 @@ class PlayerActivity : Activity() {
     private fun zapTo(i: Int, delay: Long) {
         shown = i
         expanded = false
+        asked = false
         showBanner(i)
         ui.removeCallbacks(zapNow)
         ui.postDelayed(zapNow, delay)
@@ -823,7 +858,10 @@ class PlayerActivity : Activity() {
                 next()
             }
 
-            override fun onVideoSizeChanged(size: VideoSize) = fit(size)
+            override fun onVideoSizeChanged(size: VideoSize) {
+                fit(size)
+                if (banner.visibility == View.VISIBLE && shown == at) fillSource(at)
+            }
 
             override fun onCues(cueGroup: CueGroup) = showCues(cueGroup.cues)
 
