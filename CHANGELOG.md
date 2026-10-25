@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- The settings section **Continue Watching** is now called **Content**.
+- Hold OK on a card: **Remove from this section** replaces **Remove from Continue Watching**, because it works in every section. After it, the same section shows again. Before, the home screen went back to Continue Watching.
 - Hold OK on a TV channel and select **Details** to see its page: the logo, the program on now with its time and description, what is next, and **Watch on TV**. It is the same page that search shows.
 - In **All apps**, an app in the first or last column shows all of its tile when it has the focus. Before, its edge was cut.
 - Piume settings have a new section, **TV & IPTV**. It has the TV inputs, the channel logos and the TV guide. Before, they were in **Apps row** and **Continue Watching**.

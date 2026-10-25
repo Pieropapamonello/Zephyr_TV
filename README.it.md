@@ -133,9 +133,9 @@ Android 13 e successivi disattivano l'interruttore di Accessibilità per le app 
 | Scegliere le sezioni di un'app in Home | Tieni premuto **OK** sull'app, poi **Sezioni visibili** |
 | Passare al tema Vetro | **Impostazioni → Aspetto e sfondi → Tema → Vetro** |
 | Riordinare le app | Tieni premuto **OK** su un'app, oppure usa **Impostazioni → Preferiti → Modifica Preferiti** |
-| Nascondere un elemento di Continua a guardare | Tieni premuto **OK** sulla sua scheda, poi **Rimuovi da Continua a guardare** |
+| Nascondere un elemento di Continua a guardare o della sezione di un'app | Tieni premuto **OK** sulla sua scheda, poi **Rimuovi da questa sezione** |
 | Togliere un'app dai Preferiti | Tieni premuto **OK** sull'app, poi **Rimuovi dai Preferiti** (resta in *Tutte le app*) |
-| Scegliere le app di Continua a guardare | **Impostazioni → Continua a guardare → App Continua a guardare** |
+| Scegliere le app di Continua a guardare | **Impostazioni → Contenuti → App Continua a guardare** |
 | Mettere un'app di *Tutte le app* in testa alla riga | Apri **Tutte le app** e tieni premuto **OK** sull'app (la rende anche di nuovo visibile) |
 | Nascondere app dai Preferiti | **Impostazioni → Preferiti → App nei Preferiti** |
 | Mostrare i nomi delle app sempre, al focus o mai | **Impostazioni → Preferiti → Nomi delle app** |
@@ -210,7 +210,7 @@ Piume non ha statistiche, pubblicità né account. Si collega a internet solo pe
 
 Le schermate per il telefono (**Aggiungi dal telefono…**, chiave e lista TMDB, ricerca, indirizzo della guida TV, backup e ripristino) avviano una piccola pagina sulla TV stessa, raggiungibile solo dalla rete di casa, solo mentre quella schermata è aperta e solo a un lungo indirizzo casuale presente nel codice QR. Quello che invii passa direttamente tra telefono e TV, e da nessun'altra parte. Il backup di Android non copia le impostazioni di Piume.
 
-La Coda di riproduzione mostra cosa sta suonando leggendo le sessioni multimediali di Android, che Piume vede perché attiva per sé un servizio di accesso alle notifiche (Android lo lascia concedere solo al sistema: esegui una volta `adb shell cmd notification allow_listener dev.piume/dev.piume.PlayingListener`; **Impostazioni → Continua a guardare → Mostra cosa sta suonando** dice se è attivo). Non legge nessuna notifica, e quello che stai ascoltando resta sulla TV.
+La Coda di riproduzione mostra cosa sta suonando leggendo le sessioni multimediali di Android, che Piume vede perché attiva per sé un servizio di accesso alle notifiche (Android lo lascia concedere solo al sistema: esegui una volta `adb shell cmd notification allow_listener dev.piume/dev.piume.PlayingListener`; **Impostazioni → Contenuti → Mostra cosa sta suonando** dice se è attivo). Non legge nessuna notifica, e quello che stai ascoltando resta sulla TV.
 
 ## Risoluzione dei problemi
 
@@ -223,7 +223,7 @@ Controlla che **Impostazioni → Sistema → Tasto Home** sia attivo. Se l'app �
 <details>
 <summary><b>Continua a guardare è vuoto</b></summary>
 
-Controlla che il permesso programmi TV sia consentito (**Impostazioni → App → Piume → Autorizzazioni**) e che l'app che usi pubblichi nella lista "Guarda dopo" di Android TV. Controlla anche **Impostazioni → Continua a guardare → App Continua a guardare** in Piume.
+Controlla che il permesso programmi TV sia consentito (**Impostazioni → App → Piume → Autorizzazioni**) e che l'app che usi pubblichi nella lista "Guarda dopo" di Android TV. Controlla anche **Impostazioni → Contenuti → App Continua a guardare** in Piume.
 </details>
 
 <details>

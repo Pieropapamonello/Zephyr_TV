@@ -159,7 +159,7 @@
     <string name="menu_move">Déplacer</string>
     <string name="menu_remove_from_row">Retirer des Favoris</string>
     <string name="menu_app_info">Infos sur l\'appli</string>
-    <string name="menu_remove_from_cw">Retirer de Continuer à regarder</string>
+    <string name="menu_remove_from_cw">Retirer de cette section</string>
     <string name="menu_open_app">Ouvrir l\'appli</string>
     <string name="menu_details">Détails</string>
     <string name="menu_close_playing">Fermer</string>
@@ -196,7 +196,7 @@
     <string name="toast_update_download_failed">Impossible de télécharger la mise à jour. Vérifiez la connexion et réessayez.</string>
     <string name="toast_update_install_failed">L\'installation de la mise à jour a échoué</string>
     <string name="toast_no_cw_apps">Aucune appli installée ne prend en charge Continuer à regarder</string>
-    <string name="toast_hidden_from_cw">Masqué de Continuer à regarder</string>
+    <string name="toast_hidden_from_cw">Masqué de cette section</string>
 
     <!-- TMDB Spotlight & Channels -->
     <string name="setting_tmdb">À la une TMDB</string>
@@ -224,6 +224,7 @@
     <string name="tmdb_api_key_hint">Collez ou saisissez votre clé API v3 TMDB</string>
     <string name="settings_section_look">Apparence et fonds d\'écran</string>
     <string name="settings_section_apps">Favoris</string>
+    <string name="settings_section_content">Contenus</string>
     <string name="settings_section_tv">TV et IPTV</string>
     <string name="settings_section_system">Système</string>
     <string name="settings_summary_setup">Bouton Accueil à activer</string>

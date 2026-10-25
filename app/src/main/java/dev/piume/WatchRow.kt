@@ -155,12 +155,17 @@ internal fun MainActivity.readPrograms(uri: Uri, hidden: Set<String>): List<Pair
 
 internal fun MainActivity.hideKey(pkg: String?, title: String) = "$pkg/$title"
 
-/** We can't delete another app's Watch Next row, so hiding is a local filter. */
+/**
+ * Hold OK on a card, Remove from this section. We can't delete another app's rows, so hiding is a local filter;
+ * the rows on screen (Continue Watching, or the app's sections) are read again without it.
+ */
 internal fun MainActivity.hideWatch(p: Prog) {
     val hidden = prefs.getStringSet(K.HIDDEN_WATCH, emptySet())!! + hideKey(p.pkg, p.title)
     prefs.edit().putStringSet(K.HIDDEN_WATCH, hidden).apply()
     Toast.makeText(this, getString(R.string.toast_hidden_from_cw), Toast.LENGTH_SHORT).show()
-    refreshWatchNext()
+    watchKey = null
+    val app = watchApp
+    if (app == null || app == CW_PKG || app == SEARCH_PKG) refreshWatchNext() else queryAppChannels(app)
 }
 
 internal fun MainActivity.queryAppChannels(pkg: String?) {

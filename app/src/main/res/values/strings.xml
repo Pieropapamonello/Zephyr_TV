@@ -70,7 +70,7 @@
     <string name="phone_epg_intro">Paste the address of a TV guide in XMLTV format (.xml or .xml.gz).</string>
     <string name="phone_epg_bad">That isn\'t a web address. It starts with http:// or https://.</string>
     <string name="phone_epg_saved">Address saved on the TV. The guide is downloading.</string>
-    <string name="setting_restore_hidden_shows">Restore hidden shows</string>
+    <string name="setting_restore_hidden_shows">Restore hidden items</string>
     <string name="hidden_shows_none">None hidden</string>
     <string name="hidden_shows_count">%1$d hidden</string>
 
@@ -159,7 +159,7 @@
     <string name="menu_move">Move</string>
     <string name="menu_remove_from_row">Remove from Favourites</string>
     <string name="menu_app_info">App info</string>
-    <string name="menu_remove_from_cw">Remove from Continue Watching</string>
+    <string name="menu_remove_from_cw">Remove from this section</string>
     <string name="menu_open_app">Open app</string>
     <string name="menu_details">Details</string>
     <string name="menu_close_playing">Close</string>
@@ -196,7 +196,7 @@
     <string name="toast_update_download_failed">Couldn\'t download the update. Check the connection and try again.</string>
     <string name="toast_update_install_failed">Update failed to install</string>
     <string name="toast_no_cw_apps">No installed apps support Continue Watching</string>
-    <string name="toast_hidden_from_cw">Hidden from Continue Watching</string>
+    <string name="toast_hidden_from_cw">Hidden from this section</string>
 
     <!-- TMDB Spotlight & Channels -->
     <string name="setting_tmdb">TMDB Spotlight</string>
@@ -224,6 +224,7 @@
     <string name="tmdb_api_key_hint">Paste or type your TMDB v3 API Key</string>
     <string name="settings_section_look">Appearance &amp; wallpapers</string>
     <string name="settings_section_apps">Favourites</string>
+    <string name="settings_section_content">Content</string>
     <string name="settings_section_tv">TV &amp; IPTV</string>
     <string name="settings_section_system">System</string>
     <string name="settings_summary_setup">Home button to turn on</string>

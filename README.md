@@ -133,9 +133,9 @@ Android 13 and newer grey out the Accessibility switch for apps installed outsid
 | Choose an app's sections on the home screen | Hold **OK** on the app, then **Visible sections** |
 | Switch to the Glass theme | **Settings → Appearance & wallpapers → Theme → Glass** |
 | Rearrange apps | Hold **OK** on an app, or use **Settings → Favourites → Edit Favourites** |
-| Hide a Continue Watching item | Hold **OK** on its card, then **Remove from Continue Watching** |
+| Hide an item from Continue Watching or an app's section | Hold **OK** on its card, then **Remove from this section** |
 | Remove an app from Favourites | Hold **OK** on it, then **Remove from Favourites** (it stays in *All apps*) |
-| Choose which apps feed Continue Watching | **Settings → Continue Watching → Continue Watching apps** |
+| Choose which apps feed Continue Watching | **Settings → Content → Continue Watching apps** |
 | Pin an app from *All apps* to the front | Open **All apps**, hold **OK** on the app (this also unhides it) |
 | Hide apps from Favourites | **Settings → Favourites → Apps in Favourites** |
 | Show app names always, on focus or never | **Settings → Favourites → App names** |
@@ -210,7 +210,7 @@ Piume has no analytics, no ads and no account. It only connects to the internet 
 
 The phone screens (**Add from phone…**, the TMDB key and list, search, the TV guide's address, backup and restore) run a small page on the TV itself, reachable only on your home network, only while that screen is open, and only at a long random address in its QR code. What you send goes straight between your phone and the TV and nowhere else. Android's own backup doesn't copy Piume's settings.
 
-The Play queue shows what's playing from Android's media sessions, which Piume can see because it turns on a notification listener for itself (Android lets only the system allow it: run `adb shell cmd notification allow_listener dev.piume/dev.piume.PlayingListener` once; **Settings → Continue Watching → Show what's playing** shows whether it's on). It reads no notifications, and what's playing stays on the TV.
+The Play queue shows what's playing from Android's media sessions, which Piume can see because it turns on a notification listener for itself (Android lets only the system allow it: run `adb shell cmd notification allow_listener dev.piume/dev.piume.PlayingListener` once; **Settings → Content → Show what's playing** shows whether it's on). It reads no notifications, and what's playing stays on the TV.
 
 ## Troubleshooting
 
@@ -223,7 +223,7 @@ Check that **Settings → System → Home button** is on. If the app was force-s
 <details>
 <summary><b>Continue Watching is empty</b></summary>
 
-Make sure the TV listings permission is allowed (**Settings → Apps → Piume → Permissions**), and that the app you watch publishes to Android TV's Watch Next list. Check **Settings → Continue Watching → Continue Watching apps** in Piume too.
+Make sure the TV listings permission is allowed (**Settings → Apps → Piume → Permissions**), and that the app you watch publishes to Android TV's Watch Next list. Check **Settings → Content → Continue Watching apps** in Piume too.
 </details>
 
 <details>

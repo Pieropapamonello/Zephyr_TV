@@ -101,7 +101,7 @@ internal fun MainActivity.closeLauncherSettings() {
 internal fun MainActivity.sectionTitle(section: Int) = getString(when (section) {
     LOOK_SECTION -> R.string.settings_section_look
     APPS_SECTION -> R.string.settings_section_apps
-    WATCH_SECTION -> R.string.continue_watching
+    WATCH_SECTION -> R.string.settings_section_content
     TV_SECTION -> R.string.settings_section_tv
     SPOTLIGHT_SECTION -> R.string.setting_tmdb
     SCREENSAVER_SECTION -> R.string.setting_screensaver

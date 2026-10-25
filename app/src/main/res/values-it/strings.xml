@@ -159,7 +159,7 @@
     <string name="menu_move">Sposta</string>
     <string name="menu_remove_from_row">Rimuovi dai Preferiti</string>
     <string name="menu_app_info">Info app</string>
-    <string name="menu_remove_from_cw">Rimuovi da Continua a guardare</string>
+    <string name="menu_remove_from_cw">Rimuovi da questa sezione</string>
     <string name="menu_open_app">Apri app</string>
     <string name="menu_details">Dettagli</string>
     <string name="menu_close_playing">Chiudi</string>
@@ -196,7 +196,7 @@
     <string name="toast_update_download_failed">Impossibile scaricare l\'aggiornamento. Controlla la connessione e riprova.</string>
     <string name="toast_update_install_failed">Installazione dell\'aggiornamento non riuscita</string>
     <string name="toast_no_cw_apps">Nessuna app installata supporta Continua a guardare</string>
-    <string name="toast_hidden_from_cw">Nascosto da Continua a guardare</string>
+    <string name="toast_hidden_from_cw">Nascosto da questa sezione</string>
 
     <!-- TMDB Spotlight & Channels -->
     <string name="setting_tmdb">In evidenza TMDB</string>
@@ -224,6 +224,7 @@
     <string name="tmdb_api_key_hint">Incolla o inserisci la tua API Key v3 di TMDB</string>
     <string name="settings_section_look">Aspetto e sfondi</string>
     <string name="settings_section_apps">Preferiti</string>
+    <string name="settings_section_content">Contenuti</string>
     <string name="settings_section_tv">TV e IPTV</string>
     <string name="settings_section_system">Sistema</string>
     <string name="settings_summary_setup">Tasto Home da attivare</string>
