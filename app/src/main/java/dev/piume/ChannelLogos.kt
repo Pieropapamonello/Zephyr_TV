@@ -137,11 +137,19 @@ internal object ChannelLogos {
     private fun letters(s: String) = normalize(s).filter { it.isLetter() }
     private fun digits(s: String) = normalize(s).filter { it.isDigit() }
 
+    // Compiled once: names are matched by the thousand (an IPTV add-on's channels, see Addons).
+    private val looseEnd = Regex("(tv|channel|television)$")
+    private val numberEnd = Regex("[0-9]+$")
+    private val marks = Regex("\\p{M}+")
+    private val quality = Regex("\\b(hd|fhd|uhd|sd)\\b")
+    private val other = Regex("[^a-z0-9+]")
+    private val spaces = Regex("\\s+")
+
     /** Without a closing "tv", "channel" or "television": "TeleAmbiente TV" is also "TELEAMBIENTE". */
-    internal fun loose(key: String) = key.replace(Regex("(tv|channel|television)$"), "")
+    internal fun loose(key: String) = key.replace(looseEnd, "")
 
     /** Without a closing number, when 7 letters or more stay: "Telepace 1" is also "TELEPACE" (but "Canale 5" isn't "Canale"). */
-    internal fun stem(key: String) = key.replace(Regex("[0-9]+$"), "").takeIf { it.length >= 7 && it != key }
+    internal fun stem(key: String) = key.replace(numberEnd, "").takeIf { it.length >= 7 && it != key }
 
     /** Each item of the JSON array at [url], read one at a time with [item] so the whole file never sits in memory. */
     private fun read(url: String, item: (JsonReader) -> Unit) = Http.open(url).use { stream ->
@@ -177,8 +185,8 @@ internal object ChannelLogos {
      * ("Canale 5 HD" and "CANALE5" are one). "+1" and "4K" stay: those are channels of their own ("Rai 4K").
      */
     internal fun normalize(name: String): String {
-        val plain = Normalizer.normalize(name, Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "").lowercase()
-        return plain.replace(Regex("\\b(hd|fhd|uhd|sd)\\b"), "").replace(Regex("[^a-z0-9+]"), "")
+        val plain = Normalizer.normalize(name, Normalizer.Form.NFD).replace(marks, "").lowercase()
+        return plain.replace(quality, "").replace(other, "")
     }
 
     /**
@@ -190,7 +198,7 @@ internal object ChannelLogos {
     internal fun match(table: Map<String, String>, name: String): String? {
         fun look(key: String) = table[key] ?: table["~$key"] ?: table["~${loose(key)}"]
         look(normalize(name))?.let { return it }
-        val words = name.trim().split(Regex("\\s+"))
+        val words = name.trim().split(spaces)
         for (n in words.size - 1 downTo 2) look(normalize(words.take(n).joinToString(" ")))?.let { return it }
         if (words.size >= 2) {
             val rest = normalize(words.drop(1).joinToString(" "))

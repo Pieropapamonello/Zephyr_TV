@@ -32,13 +32,14 @@ class StremioTest {
 
     @Test fun readsTheChannelsOfACatalogPage() {
         val page = JSONObject("""{"metas":[
-            {"id":"tv|rai1.it","type":"tv","name":"RAI 1","logo":"https://raw.githubusercontent.com/tv-logo/rai-1-it.png","releaseInfo":"In onda: RaiNews24"},
+            {"id":"tv|rai1.it","type":"tv","name":"RAI 1","logo":"https://raw.githubusercontent.com/tv-logo/rai-1-it.png","releaseInfo":"In onda: RaiNews24","genre":["Rai","ITALIA"]},
             {"id":"tv|eurosport1.it","type":"tv","name":"EUROSPORT 1","poster":"https://placehold.co/500x500/590b8a/ffffff/png?text=EU","releaseInfo":"LIVE"},
             {"id":"tv|111tv","type":"tv","name":"111 TV","logo":"https://encrypted-tbn0.gstatic.com/images?q"},
             {"id":"","name":"no id"}]}""")
         val items = Stremio.items(page)
         assertEquals(listOf("RAI 1", "EUROSPORT 1", "111 TV"), items.map { it.name })
         assertEquals("In onda: RaiNews24", items[0].now)
+        assertEquals(listOf("Rai", "ITALIA"), items[0].genres) // the category rows come from these, without asking again
         assertNull(items[1].now) // "LIVE": no guide for it
         assertEquals("https://raw.githubusercontent.com/tv-logo/rai-1-it.png", items[0].logo)
         assertEquals("https://placehold.co/500x500/590b8a/ffffff/png?text=EU", items[1].logo) // the add-on's placeholder is its choice

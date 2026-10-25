@@ -23,6 +23,19 @@ internal const val IPTV_PKG = STREMIO + "iptv"
 /** The Continue Playing card of the channel last played: hiding it there keeps the channel in its add-on's rows. */
 private const val LAST_PKG = STREMIO + "last"
 
+/**
+ * The add-ons' own thread, for building their rows: an IPTV add-on has thousands of channels, and the apps' rows
+ * (on MainActivity.io) mustn't wait behind them.
+ */
+internal val addonIo: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor()
+
+/** The rows last built under each tile, and what they were built from: built again only when that changes. */
+private class Built(val from: String, val sections: List<Section>)
+@Volatile private var built: Map<String, Built> = emptyMap()
+
+/** What's on is worked out again this often (the progress under the cards moves on). */
+private const val GUIDE_MS = 5 * 60_000L
+
 /** A card that's an add-on's channel: the add-on (its manifest's address) and the channel in it. */
 internal class AddonChannel(val addon: String, val item: Stremio.Item)
 
@@ -84,14 +97,20 @@ internal fun MainActivity.addonsUnder(pkg: String): List<String> {
 internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<Section> {
     val own = pkg.startsWith(STREMIO) && pkg != IPTV_PKG
     val urls = addonsUnder(pkg)
+    if (urls.isEmpty()) return emptyList()
     // What's on: the add-on's own, else the guide set in Piume settings (by the channel's name).
-    val guide = if (urls.isEmpty()) null else epgUrl()?.let { url ->
+    val guide = epgUrl()?.let { url ->
         if (Epg.due(filesDir, url)) updateEpg(pkg)
         Epg.saved(filesDir, url)
     }
-    return urls.flatMap { url ->
-        if (Stremio.due(filesDir, url)) updateAddon(url, pkg)
-        val listing = Stremio.saved(filesDir, url) ?: return@flatMap emptyList()
+    urls.forEach { if (Stremio.due(filesDir, it)) updateAddon(it, pkg) }
+    val listings = urls.mapNotNull { url -> Stremio.saved(filesDir, url)?.let { url to it } }
+    // The same add-ons, guide and hidden channels as last time, in the same few minutes: the same rows (the same
+    // cards, so showSections keeps them on screen as they are).
+    val from = listOf(pkg, addonsTv(), listings.joinToString { (u, l) -> "$u@${l.at}" }, System.identityHashCode(guide),
+        hidden.hashCode(), System.currentTimeMillis() / GUIDE_MS).joinToString("|")
+    built[pkg]?.takeIf { it.from == from }?.let { return it.sections }
+    return listings.flatMap { (url, listing) ->
         val catalogs = listing.addon.catalogs.size
         listing.rows.mapNotNull { row ->
             val name = when {
@@ -105,9 +124,9 @@ internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<
                 Prog(item.name, item.now ?: now?.first ?: "", now?.second ?: 0, item.logo, null, null, badge = "", addon = AddonChannel(url, item))
             }
             if (items.isEmpty()) null
-            else Section("stremio:${listing.addon.id}:${row.catalog.id}:${row.genre.orEmpty()}", name, name, items)
+            else Section("stremio:${listing.addon.id}:${row.catalog.id}:${row.genre.orEmpty()}", name, name, items, stamp = "$from/${items.size}")
         }
-    }
+    }.also { built = built + (pkg to Built(from, it)) }
 }
 
 /**

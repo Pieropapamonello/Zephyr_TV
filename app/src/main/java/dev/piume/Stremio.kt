@@ -26,14 +26,14 @@ internal object Stremio {
         val base get() = url.removeSuffix("/manifest.json")
     }
 
-    /** A channel in a catalog: what to ask the streams for, its name and logo, and what's on (if the add-on says). */
-    internal class Item(val type: String, val id: String, val name: String, val logo: String?, val now: String?)
+    /** A channel in a catalog: what to ask the streams for, its name and logo, what's on (if the add-on says), its categories. */
+    internal class Item(val type: String, val id: String, val name: String, val logo: String?, val now: String?, val genres: List<String> = emptyList())
 
     /** One row: a catalog, whole ([genre] null) or one of its categories. */
     internal class Row(val catalog: Catalog, val genre: String?, val items: List<Item>)
 
-    /** What's saved for an add-on: its manifest and rows. */
-    internal class Listing(val addon: Addon, val rows: List<Row>)
+    /** What's saved for an add-on: its manifest and rows, and when it was read ([at]: it tells one reading from the next). */
+    internal class Listing(val addon: Addon, val rows: List<Row>, val at: Long = 0)
 
     /** A way to play a channel: the address, its name ("Rai 1 (2)") and the headers the player must send. */
     internal class Stream(val url: String, val title: String, val headers: Map<String, String>)
@@ -57,7 +57,8 @@ internal object Stremio {
     private fun key(url: String) = MessageDigest.getInstance("SHA-1").digest(url.toByteArray())
         .joinToString("") { "%02x".format(it) }.take(16)
 
-    private fun file(dir: File, url: String) = File(dir, "stremio_${key(url)}.json")
+    // v2: each channel once, rows as lists of ids (an IPTV add-on has thousands, most in two rows or more).
+    private fun file(dir: File, url: String) = File(dir, "stremio2_${key(url)}.json")
     private fun failed(dir: File, url: String) = File(dir, "stremio_${key(url)}.failed")
 
     /** What's saved for the add-on at [url], or null when nothing is yet. Reads the disk the first time. */
@@ -65,7 +66,7 @@ internal object Stremio {
         listings[url]?.let { return it }
         val f = file(dir, url)
         if (!f.exists()) return null
-        val listing = runCatching { listing(url, JSONObject(f.readText())) }.getOrNull() ?: return null
+        val listing = runCatching { listing(url, JSONObject(f.readText()), f.lastModified()) }.getOrNull() ?: return null
         listings = listings + (url to listing)
         return listing
     }
@@ -95,19 +96,21 @@ internal object Stremio {
         try {
             val manifest = Http.json(url)
             val addon = addon(url, manifest)
-            val rows = addon.catalogs.flatMap { c -> (listOf<String?>(null) + c.genres).map { g -> Row(c, g, items(addon, c, g)) } }
-                .filter { it.items.isNotEmpty() }
-            val saved = JSONObject().put("manifest", manifest).put("rows", JSONArray(rows.map { row ->
-                JSONObject().put("catalog", row.catalog.id).put("type", row.catalog.type).put("genre", row.genre ?: JSONObject.NULL)
-                    .put("items", JSONArray(row.items.map { JSONObject().put("type", it.type).put("id", it.id).put("name", it.name)
-                        .put("logo", it.logo ?: JSONObject.NULL).put("now", it.now ?: JSONObject.NULL) }))
-            }))
+            val rows = addon.catalogs.flatMap { c -> rows(addon, c) }.filter { it.items.isNotEmpty() }
+            val items = rows.flatMap { it.items }.distinctBy { it.id }
+            val saved = JSONObject().put("manifest", manifest)
+                .put("items", JSONArray(items.map { JSONObject().put("type", it.type).put("id", it.id).put("name", it.name)
+                    .put("logo", it.logo ?: JSONObject.NULL).put("now", it.now ?: JSONObject.NULL) }))
+                .put("rows", JSONArray(rows.map { row ->
+                    JSONObject().put("catalog", row.catalog.id).put("genre", row.genre ?: JSONObject.NULL).put("ids", JSONArray(row.items.map { it.id }))
+                }))
             val f = file(dir, url)
             val part = File(dir, f.name + ".part")
             part.writeText(saved.toString())
             if (!part.renameTo(f)) throw java.io.IOException("can't save ${f.name}")
             failed(dir, url).delete()
-            return Listing(addon, rows).also { listings = listings + (url to it) }
+            File(dir, "stremio_${key(url)}.json").delete() // v1's
+            return Listing(addon, rows, f.lastModified()).also { listings = listings + (url to it) }
         } catch (e: Exception) {
             warn("Stremio add-on failed: ${Uri.host(url)} ($e)")
             failed(dir, url).apply { writeText(url); setLastModified(System.currentTimeMillis()) }
@@ -137,6 +140,16 @@ internal object Stremio {
         return Addon(url, m.optString("id").ifBlank { url }, m.optString("name").ifBlank { Uri.host(url) }, text(m, "logo"), catalogs)
     }
 
+    /**
+     * A catalog's rows: the whole of it, then one per category. When its channels say their categories (OMG's do),
+     * those rows come from the whole one, without asking again for each; else each category is asked for.
+     */
+    private fun rows(addon: Addon, c: Catalog): List<Row> {
+        val all = items(addon, c, null)
+        val known = all.any { it.genres.isNotEmpty() }
+        return listOf(Row(c, null, all)) + c.genres.map { g -> Row(c, g, if (known) all.filter { g in it.genres } else items(addon, c, g)) }
+    }
+
     /** A catalog's channels, all its pages: whole, or those of one [genre]. */
     private fun items(addon: Addon, c: Catalog, genre: String?): List<Item> {
         val out = LinkedHashMap<String, Item>()
@@ -160,7 +173,8 @@ internal object Stremio {
             val name = m.optString("name").trim().takeIf { it.isNotEmpty() } ?: return@mapNotNull null
             // "LIVE" is what OMG says when it has no guide for the channel: nothing to show.
             val now = text(m, "releaseInfo")?.takeIf { !it.equals("LIVE", ignoreCase = true) }
-            Item(m.optString("type").ifBlank { "tv" }, id, name, logo(text(m, "logo") ?: text(m, "poster")), now)
+            val genres = (m.optJSONArray("genre") ?: m.optJSONArray("genres"))?.let { g -> (0 until g.length()).map { g.optString(it) } }.orEmpty()
+            Item(m.optString("type").ifBlank { "tv" }, id, name, logo(text(m, "logo") ?: text(m, "poster")), now, genres)
         }
     }
 
@@ -276,16 +290,18 @@ internal object Stremio {
         }
     }
 
-    private fun listing(url: String, saved: JSONObject): Listing {
+    private fun listing(url: String, saved: JSONObject, at: Long): Listing {
         val addon = addon(url, saved.getJSONObject("manifest"))
+        val list = saved.optJSONArray("items") ?: JSONArray()
+        val items = (0 until list.length()).mapNotNull { list.optJSONObject(it) }.associate {
+            it.optString("id") to Item(it.optString("type"), it.optString("id"), it.optString("name"), text(it, "logo"), text(it, "now"))
+        }
         val rows = saved.optJSONArray("rows") ?: JSONArray()
         return Listing(addon, (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }.mapNotNull { r ->
             val catalog = addon.catalogs.firstOrNull { it.id == r.optString("catalog") } ?: return@mapNotNull null
-            val items = r.optJSONArray("items") ?: JSONArray()
-            Row(catalog, text(r, "genre"), (0 until items.length()).mapNotNull { items.optJSONObject(it) }.map {
-                Item(it.optString("type"), it.optString("id"), it.optString("name"), text(it, "logo"), text(it, "now"))
-            })
-        })
+            val ids = r.optJSONArray("ids") ?: JSONArray()
+            Row(catalog, text(r, "genre"), (0 until ids.length()).mapNotNull { items[ids.optString(it)] })
+        }, at)
     }
 
     /** A string field, or null when it's missing, null or blank (optString would say "null"). */

@@ -175,7 +175,8 @@ internal fun MainActivity.queryAppChannels(pkg: String?) {
         refreshWatchNext()
         return
     }
-    io.execute {
+    // An add-on's tile on the add-ons' own thread: thousands of channels mustn't hold up the other apps' rows.
+    (if (pkg.startsWith(STREMIO)) addonIo else io).execute {
         val hidden = prefs.getStringSet(K.HIDDEN_WATCH, emptySet())!!
         // The TV app shows its channel list, a section per tuner (none, on a TV without one), then the add-ons'
         // channels if they show there; an add-on's tile, its channels; any other app, a section per row it
@@ -205,7 +206,7 @@ internal fun MainActivity.queryAppChannels(pkg: String?) {
 }
 
 /** One row under the apps: [name] alone in the visible-sections list, [title] ("YouTube: Trending") over the row. */
-internal class Section(val key: String, val name: String, val title: String, val items: List<Prog>)
+internal class Section(val key: String, val name: String, val title: String, val items: List<Prog>, val stamp: String? = null) // stamp: stands for the items when they're many (see showSections)
 
 internal fun sectionKey(pkg: String, s: Section) = "$pkg/${s.key}"
 
@@ -459,7 +460,7 @@ internal fun MainActivity.hideWatchRow() {
 internal fun MainActivity.showLoading(pkg: String) {
     if (pkg == watchApp) return // its rows are already there (e.g. focus back up from them)
     watchApp = null
-    val rows = sectionCounts[pkg] ?: 1
+    val rows = (sectionCounts[pkg] ?: 1).coerceAtMost(3) // the screen shows three at most
     if (rows == 0) return hideWatchRow()
     val key = "loading:$pkg/$rows"
     if (watchKey == key) return
@@ -536,7 +537,8 @@ internal fun MainActivity.showWatchNext(list: List<Prog>, playing: List<Prog> = 
  * BottomSection), and the page slides up to them as focus goes down (keepInView).
  */
 internal fun MainActivity.showSections(sections: List<Section>) {
-    val key = sections.joinToString("||") { s -> s.title + "#" + s.items.joinToString("|") { "${it.title}/${it.sub}/${it.progress}/${it.image}" } }
+    // What's shown, to tell whether it changed. An add-on's thousands of channels go by their stamp instead.
+    val key = sections.joinToString("||") { s -> s.title + "#" + (s.stamp ?: s.items.joinToString("|") { "${it.title}/${it.sub}/${it.progress}/${it.image}" }) }
     if (key == watchKey) { // unchanged: keep views (and focus) as they are, just fill in missing posters
         sections.firstOrNull()?.let { watchTitle.text = it.title } // a caller may have set its own meanwhile
         retryPosters()
@@ -555,7 +557,9 @@ internal fun MainActivity.showSections(sections: List<Section>) {
         if (i == 0) watchTitle.text = s.title
         val row = if (i == 0) watchRow else sectionRow(s.title)
         row.setTag(R.id.watchScroll, RowCards(s.items))
-        moreCards(row) // the first page; the rest as focus nears the end (see watchCard)
+        // The first page of the first rows; the rest as focus nears the end of a row, or the rows above them (see
+        // watchCard). An IPTV add-on can have a hundred rows: built all at once, they'd hold up the screen.
+        if (i < ROWS_AHEAD + 1) moreCards(row)
     }
     if (focusedRow >= 0) {
         val row = cardRows().let { it.getOrNull(focusedRow) ?: it.last() }
@@ -569,6 +573,9 @@ internal class RowCards(var items: List<Prog>, var built: Int = 0)
 
 /** Cards built at a time in a row: a page more each time focus nears its end, so long rows (all the channels) open at once. */
 private const val PAGE = 10
+
+/** Rows built below the one in focus: those further down get their cards as focus comes near. */
+private const val ROWS_AHEAD = 2
 
 /**
  * Builds the next page of [row]'s cards (see RowCards). ~16 ms per card and only four show at once: four per frame,
@@ -663,7 +670,13 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
             lastCard = frame
             showRowLabel(frame, false)
             // Three from the end of what's built: the next page, so moving on never waits.
-            (col.parent as? ViewGroup)?.let { row -> if (row.indexOfChild(col) >= row.childCount - 3) moreCards(row) }
+            (col.parent as? ViewGroup)?.let { row ->
+                if (row.indexOfChild(col) >= row.childCount - 3) moreCards(row)
+                // And the rows below, before focus goes down to them.
+                val rows = cardRows()
+                val at = rows.indexOf(row)
+                if (at >= 0) rows.drop(at + 1).take(ROWS_AHEAD).forEach { r -> if ((r.getTag(R.id.watchScroll) as? RowCards)?.built == 0) moreCards(r) }
+            }
         }
     }
     frame.contentDescription = p.title
