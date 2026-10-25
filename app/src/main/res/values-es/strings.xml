@@ -227,7 +227,7 @@
     <string name="settings_section_look">Apariencia y fondos</string>
     <string name="settings_section_apps">Favoritos</string>
     <string name="settings_section_content">Contenidos</string>
-    <string name="settings_section_tv">TV e IPTV</string>
+    <string name="settings_section_tv">TV y EPG</string>
     <string name="settings_section_system">Sistema</string>
     <string name="settings_summary_setup">Falta activar el botón Inicio</string>
     <string name="setting_tmdb_cycle">Siguiente título cada</string>

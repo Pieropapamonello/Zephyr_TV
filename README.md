@@ -146,8 +146,8 @@ Android 13 and newer grey out the Accessibility switch for apps installed outsid
 | Show trending films and series on top (TMDB Spotlight) | **Settings → TMDB Spotlight → TMDB API Key** (type it on the TV or from your phone) |
 | Choose what Spotlight shows (trending, popular, top rated, in cinemas…) | **Settings → TMDB Spotlight → Spotlight shows** |
 | Show your own TMDB list in Spotlight | **Settings → TMDB Spotlight → Spotlight shows → My TMDB list** |
-| Show what's on under the TV channels | **Settings → TV & IPTV → TV guide (XMLTV)** |
-| Turn the channel logos from iptv-org on or off, or get the latest | **Settings → TV & IPTV → Channel logos (iptv-org)**, **Update the channel logos** |
+| Show what's on under the TV channels | **Settings → TV & EPG → TV guide (XMLTV)** |
+| Turn the channel logos from iptv-org on or off, or get the latest | **Settings → TV & EPG → Channel logos (iptv-org)**, **Update the channel logos** |
 | Clock in 12 or 24 hours | **Settings → Appearance & wallpapers → Clock** |
 | Night mode | **Settings → Appearance & wallpapers → Night mode** |
 | Back up or restore your settings | **Settings → System → Backup and restore** |
@@ -188,7 +188,7 @@ Each title has buttons for Nuvio and Stremio (always shown, when installed), its
 
 The TV app's section shows every channel the TV has tuned, in number order. Its logo comes from the TV, or, when the TV has none, from [iptv-org](https://github.com/iptv-org/database), a public-domain list of TV channels: Piume downloads the list for your country the first time and then once a month, matches the channels by name, and keeps the logos on the TV. **Update the channel logos** gets the latest now.
 
-Android lets only system apps read the TV's own program guide, so for what's on Piume uses a TV guide from the internet, in XMLTV format (`.xml` or `.xml.gz`). Enter its address in **Settings → TV & IPTV → TV guide (XMLTV)**, or paste it on your phone. Piume downloads it twice a day and keeps the next day of it; each channel card then shows the program on now with a progress bar, and a channel's page in search shows its time, description and what's next. For Italy, `https://iptv-epg.org/files/epg-it.xml.gz` covers the national channels.
+Android lets only system apps read the TV's own program guide, so for what's on Piume uses a TV guide from the internet, in XMLTV format (`.xml` or `.xml.gz`). Enter its address in **Settings → TV & EPG → TV guide (XMLTV)**, or paste it on your phone. Piume downloads it twice a day and keeps the next day of it; each channel card then shows the program on now with a progress bar, and a channel's page in search shows its time, description and what's next. For Italy, `https://iptv-epg.org/files/epg-it.xml.gz` covers the national channels.
 
 ### Backup and restore
 

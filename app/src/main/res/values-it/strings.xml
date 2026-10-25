@@ -227,7 +227,7 @@
     <string name="settings_section_look">Aspetto e sfondi</string>
     <string name="settings_section_apps">Preferiti</string>
     <string name="settings_section_content">Contenuti</string>
-    <string name="settings_section_tv">TV e IPTV</string>
+    <string name="settings_section_tv">TV e EPG</string>
     <string name="settings_section_system">Sistema</string>
     <string name="settings_summary_setup">Tasto Home da attivare</string>
     <string name="setting_tmdb_cycle">Titolo successivo ogni</string>

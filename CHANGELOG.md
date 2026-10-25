@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- The settings section **TV & IPTV** is now called **TV & EPG**.
+
 ## 4.0.0
 
 - Piume can show the TV channels of Stremio add-ons, for example OMG+ TV. Piume settings have a new section, **Stremio add-ons**.
