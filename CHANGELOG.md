@@ -15,6 +15,9 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- In the player, hold OK (or press Menu) to choose the audio track and the subtitles. The banner shows which ones play. Piume remembers the languages you choose for the next channels. The audio and subtitles keys of the remote also work.
+- The player shows subtitles, also the picture subtitles that many IPTV streams have.
+
 ## 4.0.0-beta.5
 
 - This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.

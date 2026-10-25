@@ -22,12 +22,19 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.ScrollView
 import androidx.annotation.OptIn
+import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
+import androidx.media3.common.text.Cue
+import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -43,7 +50,8 @@ import org.json.JSONObject
  * channel. For each it asks the add-on for its streams and plays the first that works; Left/Right go to the
  * channel's other streams, and one that fails or stays stuck gives way to the next by itself (round the list, until
  * each was tried). OK or Info shows what's on, in short; OK again shows all of it (the add-on's guide, else the one
- * set in Piume settings).
+ * set in Piume settings). Holding OK (or Menu) opens the audio tracks and subtitles to pick from; the choice is
+ * kept by language, for the next channels and the next time.
  *
  * Media3's ExoPlayer plays them, the one library Piume ships, for HLS and DASH as the TV's own player doesn't do
  * reliably. It runs in a process of its own (":player" in the manifest), so a stream or a decoder that hangs or
@@ -89,6 +97,16 @@ class PlayerActivity : Activity() {
     private lateinit var more: TextView
     private lateinit var source: TextView
     private lateinit var hint: TextView
+    private lateinit var trackLine: TextView // in the banner: the audio track and subtitles playing
+    private lateinit var subtitles: FrameLayout // over the picture, its size: the subtitles' cues
+    private lateinit var tracksPanel: LinearLayout // Audio and subtitles, on the right
+    private lateinit var tracksList: LinearLayout
+
+    /** The audio and subtitle languages picked, for every channel: a file only this process writes (see pick). */
+    private val choices by lazy { getSharedPreferences(CHOICES_FILE, MODE_PRIVATE) }
+
+    /** One audio or subtitle track of the stream playing, as the panel lists it. */
+    private class Track(val group: Tracks.Group, val index: Int, val name: String, val selected: Boolean)
 
     private val hideBanner = Runnable {
         expanded = false
@@ -138,6 +156,8 @@ class PlayerActivity : Activity() {
         root.addView(surface, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER))
         status = text(20f).apply { gravity = Gravity.CENTER }
         root.addView(status, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        subtitles = FrameLayout(this)
+        root.addView(subtitles, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER))
 
         // The banner: across the bottom, on a shade so it reads over any picture.
         logo = ImageView(this).apply {
@@ -159,6 +179,7 @@ class PlayerActivity : Activity() {
         more = text(14f).apply { alpha = 0.85f; maxLines = 14; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(8), 0, 0) }
         source = text(12f).apply { alpha = 0.6f; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(8), 0, 0) }
         hint = text(12f).apply { alpha = 0.6f; isSingleLine = true; setPadding(0, dp(4), 0, 0) }
+        trackLine = text(12f).apply { alpha = 0.6f; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(4), 0, 0) }
         val head = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             addView(title, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
@@ -172,6 +193,7 @@ class PlayerActivity : Activity() {
             addView(bar, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(4)).apply { topMargin = dp(8) })
             addView(more)
             addView(source)
+            addView(trackLine)
             addView(hint)
         }
         banner = LinearLayout(this).apply {
@@ -183,6 +205,18 @@ class PlayerActivity : Activity() {
             visibility = View.GONE
         }
         root.addView(banner, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
+
+        // Audio and subtitles: a side panel over the picture, its rows picked with Up/Down and OK.
+        tracksList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        tracksPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(28), dp(40), dp(28), dp(28))
+            setBackgroundColor(0xF0101014.toInt())
+            addView(text(22f, bold = true).apply { text = getString(R.string.player_tracks_title); setPadding(dp(14), 0, 0, dp(16)) })
+            addView(ScrollView(this@PlayerActivity).apply { isVerticalScrollBarEnabled = false; addView(tracksList) })
+            visibility = View.GONE
+        }
+        root.addView(tracksPanel, FrameLayout.LayoutParams(dp(380), FrameLayout.LayoutParams.MATCH_PARENT, Gravity.END))
         setContentView(root)
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
@@ -202,6 +236,7 @@ class PlayerActivity : Activity() {
         source.text = if (playing != null)
             getString(R.string.player_stream, tried + 1, streams.size, playing.title).let { if (streams.size > 1) "$it   ◀ ▶" else it }
         else getString(R.string.player_loading)
+        fillTrackLine(i)
         showLogo(c)
         if (banner.visibility != View.VISIBLE) {
             banner.alpha = 0f
@@ -278,18 +313,22 @@ class PlayerActivity : Activity() {
     // ---------- remote ----------
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        // Audio and subtitles open: its rows take the arrows and OK; Back closes it.
+        if (tracksPanel.visibility == View.VISIBLE) {
+            if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_MENU) closeTracks() else return super.onKeyDown(keyCode, event)
+            return true
+        }
         when (keyCode) {
             KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_DPAD_UP -> zap(+1)
             KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_DPAD_DOWN -> zap(-1)
             KeyEvent.KEYCODE_DPAD_LEFT -> otherStream(-1)
             KeyEvent.KEYCODE_DPAD_RIGHT -> otherStream(+1)
-            // OK: the banner, in short; again, all of what's on; again, away.
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_INFO, KeyEvent.KEYCODE_GUIDE -> when {
-                event.repeatCount > 0 -> {}
-                banner.visibility != View.VISIBLE || banner.alpha < 1f -> showBanner(shown)
-                !expanded && !more.text.isNullOrEmpty() -> { expanded = true; showBanner(shown, stay = true) }
-                else -> hideBanner.run()
-            }
+            // OK acts once let go (see onKeyUp), as holding it opens Audio and subtitles (onKeyLongPress).
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (event.repeatCount == 0) event.startTracking()
+            KeyEvent.KEYCODE_INFO, KeyEvent.KEYCODE_GUIDE -> if (event.repeatCount == 0) okPressed()
+            KeyEvent.KEYCODE_MENU -> openTracks()
+            KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK -> cycle(C.TRACK_TYPE_AUDIO)
+            KeyEvent.KEYCODE_CAPTIONS -> cycle(C.TRACK_TYPE_TEXT)
             KeyEvent.KEYCODE_LAST_CHANNEL -> if (previous in channels.indices) zapTo(previous, delay = 0)
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY -> player?.let { p ->
                 p.playWhenReady = if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) !p.playWhenReady else keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
@@ -307,6 +346,191 @@ class PlayerActivity : Activity() {
             else -> return super.onKeyDown(keyCode, event)
         }
         return true
+    }
+
+    override fun onKeyLongPress(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode != KeyEvent.KEYCODE_DPAD_CENTER && keyCode != KeyEvent.KEYCODE_ENTER && keyCode != KeyEvent.KEYCODE_NUMPAD_ENTER) return super.onKeyLongPress(keyCode, event)
+        openTracks()
+        return true
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (tracksPanel.visibility == View.VISIBLE) return super.onKeyUp(keyCode, event)
+        if (keyCode != KeyEvent.KEYCODE_DPAD_CENTER && keyCode != KeyEvent.KEYCODE_ENTER && keyCode != KeyEvent.KEYCODE_NUMPAD_ENTER) return super.onKeyUp(keyCode, event)
+        if (event.isTracking && !event.isCanceled) okPressed() // a hold opened the panel instead
+        return true
+    }
+
+    /** OK: the banner, in short; again, all of what's on; again, away. */
+    private fun okPressed() = when {
+        banner.visibility != View.VISIBLE || banner.alpha < 1f -> showBanner(shown)
+        !expanded && !more.text.isNullOrEmpty() -> { expanded = true; showBanner(shown, stay = true) }
+        else -> hideBanner.run()
+    }
+
+    // ---------- audio and subtitles ----------
+
+    /** The stream's audio or subtitle tracks the TV can play, in the stream's order, each named for the panel. */
+    private fun tracks(type: Int): List<Track> {
+        val p = player ?: return emptyList()
+        var n = 0
+        return p.currentTracks.groups.filter { it.type == type }.flatMap { g ->
+            (0 until g.length).filter { g.isTrackSupported(it) }.map { i -> Track(g, i, trackName(g.getTrackFormat(i), ++n), g.isTrackSelected(i)) }
+        }
+    }
+
+    /** "Italiano 5.1", "English (forced)": the track's language (or label, or number), and what tells it from others. */
+    private fun trackName(f: Format, n: Int): String {
+        val locale = resources.configuration.locales[0]
+        val lang = f.language?.takeIf { it.isNotBlank() && it != C.LANGUAGE_UNDETERMINED }
+            ?.let { java.util.Locale.forLanguageTag(it).getDisplayLanguage(locale).takeIf { d -> d.isNotBlank() && d != it } }
+            ?.replaceFirstChar { it.titlecase(locale) }
+        val name = listOfNotNull(lang, f.label?.takeIf { it.isNotBlank() && !it.equals(lang, ignoreCase = true) }).joinToString(" · ")
+            .ifEmpty { getString(R.string.player_track_n, n) }
+        val sound = when (f.channelCount) { 1 -> "Mono"; 6 -> "5.1"; 8 -> "7.1"; else -> null }
+        val forced = if (f.selectionFlags and C.SELECTION_FLAG_FORCED != 0) getString(R.string.player_track_forced) else null
+        return listOfNotNull(name, sound, forced).joinToString(" ")
+    }
+
+    /** In the banner, under the stream: the audio track and subtitles playing, and how to change them. */
+    private fun fillTrackLine(i: Int) {
+        val audio = tracks(C.TRACK_TYPE_AUDIO)
+        val subs = tracks(C.TRACK_TYPE_TEXT)
+        if (i != at || (audio.size < 2 && subs.isEmpty())) {
+            trackLine.visibility = View.GONE
+            return
+        }
+        val sound = audio.firstOrNull { it.selected }?.name ?: audio.firstOrNull()?.name ?: "–"
+        val shownSubs = subs.firstOrNull { it.selected }?.name ?: getString(R.string.player_subtitles_off)
+        trackLine.text = getString(R.string.player_tracks_line, sound, shownSubs)
+        trackLine.visibility = View.VISIBLE
+    }
+
+    /** Hold OK, or Menu: the panel, its rows the audio tracks, then Off and the subtitles; focus on what's playing. */
+    private fun openTracks() {
+        if (player == null) return showBanner(shown)
+        hideBanner.run()
+        tracksList.removeAllViews()
+        val audio = tracks(C.TRACK_TYPE_AUDIO)
+        val subs = tracks(C.TRACK_TYPE_TEXT)
+        var focus: View? = null
+        fun heading(res: Int) = tracksList.addView(text(13f).apply {
+            this.text = getString(res)
+            alpha = 0.6f
+            setPadding(dp(14), dp(16), 0, dp(6))
+        })
+        fun row(name: String, on: Boolean, pick: () -> Unit) = TextView(this).apply {
+            this.text = if (on) "✓  $name" else "     $name"
+            textSize = 16f
+            isSingleLine = true
+            ellipsize = TextUtils.TruncateAt.END
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            isFocusable = true
+            isClickable = true
+            val bg = GradientDrawable().apply { cornerRadius = dp(8).toFloat() }
+            background = bg
+            setTextColor(Color.WHITE)
+            setOnFocusChangeListener { _, has ->
+                bg.setColor(if (has) Color.WHITE else Color.TRANSPARENT)
+                setTextColor(if (has) Color.BLACK else Color.WHITE)
+            }
+            setOnClickListener { pick(); closeTracks() }
+            tracksList.addView(this)
+            if (on && focus == null) focus = this
+        }
+        heading(R.string.player_audio)
+        if (audio.isEmpty()) row(getString(R.string.player_track_n, 1), true) {}
+        audio.forEach { t -> row(t.name, t.selected) { pick(t, C.TRACK_TYPE_AUDIO) } }
+        heading(R.string.player_subtitles)
+        row(getString(R.string.player_subtitles_off), subs.none { it.selected }) { subtitlesOff() }
+        subs.forEach { t -> row(t.name, t.selected) { pick(t, C.TRACK_TYPE_TEXT) } }
+        tracksPanel.visibility = View.VISIBLE
+        (focus ?: tracksList.getChildAt(1))?.requestFocus()
+    }
+
+    private fun closeTracks() {
+        tracksPanel.visibility = View.GONE
+        tracksList.removeAllViews()
+    }
+
+    /** Plays track [t], and keeps its language for the channels after this one (and the next time). */
+    private fun pick(t: Track, type: Int) {
+        val p = player ?: return
+        val lang = t.group.getTrackFormat(t.index).language
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(type, false)
+            .setOverrideForType(TrackSelectionOverride(t.group.mediaTrackGroup, t.index))
+            .apply { if (type == C.TRACK_TYPE_AUDIO) setPreferredAudioLanguage(lang) else setPreferredTextLanguage(lang) }
+            .build()
+        val key = if (type == C.TRACK_TYPE_AUDIO) AUDIO_LANG else TEXT_LANG
+        choices.edit().apply { if (lang != null) putString(key, lang) else if (type == C.TRACK_TYPE_AUDIO) remove(key) else putString(key, "und") }.apply()
+    }
+
+    private fun subtitlesOff() {
+        val p = player ?: return
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+            .clearOverridesOfType(C.TRACK_TYPE_TEXT).setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
+        choices.edit().putString(TEXT_LANG, "").apply()
+        showCues(emptyList())
+    }
+
+    /** The remote's audio or subtitles key: the next track (subtitles: after the last, off), shown in the banner. */
+    private fun cycle(type: Int) {
+        val list = tracks(type)
+        val on = list.indexOfFirst { it.selected }
+        when {
+            type == C.TRACK_TYPE_TEXT && on == list.size - 1 && on >= 0 -> subtitlesOff()
+            list.isNotEmpty() && (type == C.TRACK_TYPE_TEXT || list.size > 1) -> pick(list[(on + 1) % list.size], type)
+        }
+        ui.postDelayed({ showBanner(shown) }, 300) // once the player has switched
+    }
+
+    /** The languages picked before, as preferences for a new stream's player: Off stays off. */
+    private fun applyChoices(p: ExoPlayer) {
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon().apply {
+            choices.getString(AUDIO_LANG, null)?.let { setPreferredAudioLanguage(it) }
+            when (val t = choices.getString(TEXT_LANG, null)) {
+                null -> {}
+                "" -> setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                else -> setPreferredTextLanguage(t).setSelectUndeterminedTextLanguage(true)
+            }
+        }.build()
+    }
+
+    /**
+     * The subtitles on screen: text ones in a caption at the bottom, picture ones (DVB, common on IPTV) where the
+     * stream places them, over the picture's own area.
+     */
+    private fun showCues(cues: List<Cue>) {
+        subtitles.removeAllViews()
+        val w = subtitles.width
+        val h = subtitles.height
+        val lines = ArrayList<CharSequence>()
+        for (c in cues) {
+            val bmp = c.bitmap
+            if (bmp == null) {
+                c.text?.let { lines += it }
+                continue
+            }
+            if (w == 0 || h == 0) continue
+            val cw = if (c.size != Cue.DIMEN_UNSET) (c.size * w).toInt() else bmp.width
+            val ch = if (c.bitmapHeight != Cue.DIMEN_UNSET) (c.bitmapHeight * h).toInt() else cw * bmp.height / maxOf(1, bmp.width)
+            val x = if (c.position != Cue.DIMEN_UNSET) (c.position * w).toInt() else w / 2
+            val y = if (c.line != Cue.DIMEN_UNSET && c.lineType == Cue.LINE_TYPE_FRACTION) (c.line * h).toInt() else h - dp(32)
+            val left = when (c.positionAnchor) { Cue.ANCHOR_TYPE_MIDDLE -> x - cw / 2; Cue.ANCHOR_TYPE_END -> x - cw; else -> if (c.position == Cue.DIMEN_UNSET) x - cw / 2 else x }
+            val top = when (c.lineAnchor) { Cue.ANCHOR_TYPE_MIDDLE -> y - ch / 2; Cue.ANCHOR_TYPE_END -> y - ch; else -> if (c.line == Cue.DIMEN_UNSET) y - ch else y }
+            subtitles.addView(ImageView(this).apply { setImageBitmap(bmp); scaleType = ImageView.ScaleType.FIT_XY },
+                FrameLayout.LayoutParams(cw, ch).apply { leftMargin = left; topMargin = top })
+        }
+        if (lines.isNotEmpty()) subtitles.addView(text(22f).apply {
+            text = TextUtils.join("\n", lines)
+            gravity = Gravity.CENTER
+            setShadowLayer(4f, 0f, 1f, Color.BLACK)
+            setBackgroundColor(0x99000000.toInt())
+            setPadding(dp(10), dp(4), dp(10), dp(4))
+        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+            bottomMargin = dp(40)
+        })
     }
 
     /** CH+ / CH-: the banner moves on at once; the channel is tuned once the keys rest (holding one runs through). */
@@ -405,6 +629,7 @@ class PlayerActivity : Activity() {
         s.headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.let { http.setUserAgent(it.value) }
         val p = ExoPlayer.Builder(this).setMediaSourceFactory(DefaultMediaSourceFactory(http)).build()
         player = p
+        applyChoices(p)
         p.setVideoSurfaceView(surface)
         p.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
@@ -435,6 +660,12 @@ class PlayerActivity : Activity() {
             }
 
             override fun onVideoSizeChanged(size: VideoSize) = fit(size)
+
+            override fun onCues(cueGroup: CueGroup) = showCues(cueGroup.cues)
+
+            override fun onTracksChanged(tracks: Tracks) {
+                if (banner.visibility == View.VISIBLE && shown == at) fillTrackLine(at)
+            }
         })
         val item = MediaItem.Builder().setUri(s.url).apply {
             when (format) {
@@ -453,6 +684,7 @@ class PlayerActivity : Activity() {
         ui.removeCallbacks(stuck)
         player?.release()
         player = null
+        if (::subtitles.isInitialized) subtitles.removeAllViews()
     }
 
     /** The picture as large as the screen allows, at its own shape (black bars rather than stretched). */
@@ -463,6 +695,7 @@ class PlayerActivity : Activity() {
         val (w, h) = if (root.width.toFloat() / root.height > ratio) (root.height * ratio).toInt() to root.height
             else root.width to (root.width / ratio).toInt()
         surface.layoutParams = (surface.layoutParams as FrameLayout.LayoutParams).apply { width = w; height = h }
+        subtitles.layoutParams = (subtitles.layoutParams as FrameLayout.LayoutParams).apply { width = w; height = h } // placed over the picture
     }
 
     /** The channel that plays, for Continue Playing and the add-on's tile (see Addons.lastAddonChannel): a file both processes read. */
@@ -502,6 +735,9 @@ class PlayerActivity : Activity() {
         const val LOGOS = "logos" // the add-on's
         const val FALLBACK_LOGOS = "fallback_logos" // Piume's own, by name (see ChannelLogos)
         const val LAST_FILE = "last_channel.json"
+        private const val CHOICES_FILE = "player" // not K.FILE: the home screen's process writes that one whole
+        private const val AUDIO_LANG = "audio_lang"
+        private const val TEXT_LANG = "text_lang" // "" for off; none for the stream's own choice
         private const val BANNER_MS = 5000L
         private const val ZAP_MS = 700L // the keys rest this long before the channel is tuned
         private const val STUCK_MS = 15_000L // buffering longer than this: the next stream

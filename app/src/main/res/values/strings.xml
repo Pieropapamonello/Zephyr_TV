@@ -401,5 +401,12 @@
     <string name="player_stream">Stream %1$d of %2$d · %3$s</string>
     <string name="player_more">OK · more</string>
     <string name="player_less">OK · less</string>
+    <string name="player_tracks_title">Audio and subtitles</string>
+    <string name="player_audio">Audio</string>
+    <string name="player_subtitles">Subtitles</string>
+    <string name="player_subtitles_off">Off</string>
+    <string name="player_track_n">Track %1$d</string>
+    <string name="player_track_forced">(forced)</string>
+    <string name="player_tracks_line">Audio: %1$s · Subtitles: %2$s · hold OK to change</string>
     <string name="channel_play">Watch</string>
 </resources>

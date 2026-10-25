@@ -402,5 +402,12 @@
     <string name="player_stream">Flux %1$d sur %2$d · %3$s</string>
     <string name="player_more">OK · plus d\'infos</string>
     <string name="player_less">OK · moins d\'infos</string>
+    <string name="player_tracks_title">Audio et sous-titres</string>
+    <string name="player_audio">Audio</string>
+    <string name="player_subtitles">Sous-titres</string>
+    <string name="player_subtitles_off">Désactivés</string>
+    <string name="player_track_n">Piste %1$d</string>
+    <string name="player_track_forced">(forcés)</string>
+    <string name="player_tracks_line">Audio : %1$s · Sous-titres : %2$s · maintenez OK pour changer</string>
     <string name="channel_play">Regarder</string>
 </resources>
