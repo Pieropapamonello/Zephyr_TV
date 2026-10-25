@@ -41,8 +41,9 @@ import org.json.JSONObject
  * Piume's player, for the Stremio add-ons' TV channels (see Addons). It gets the channels of the row the user
  * picked from, plays the one picked and zaps through the others: CH+/CH- (or Up/Down), the number keys, Last
  * channel. For each it asks the add-on for its streams and plays the first that works; Left/Right go to the
- * channel's other streams, and one that fails or stays stuck gives way to the next by itself. OK or Info shows
- * what's on: the add-on's guide, else the one set in Piume settings.
+ * channel's other streams, and one that fails or stays stuck gives way to the next by itself (round the list, until
+ * each was tried). OK or Info shows what's on, in short; OK again shows all of it (the add-on's guide, else the one
+ * set in Piume settings).
  *
  * Media3's ExoPlayer plays them, the one library Piume ships, for HLS and DASH as the TV's own player doesn't do
  * reliably. It runs in a process of its own (":player" in the manifest), so a stream or a decoder that hangs or
@@ -65,6 +66,8 @@ class PlayerActivity : Activity() {
     private var previous = -1 // for Last channel
     private var streams: List<Stremio.Stream> = emptyList()
     private var tried = -1 // the stream playing, or being tried
+    private var attempts = 0 // streams tried since the channel was tuned, or one was picked: all of them, and it's none
+    private var expanded = false // the banner shows all of what's on, not just its first line
     private var tune = 0 // counts tunings, so an answer for a channel left meanwhile is dropped
     private var typed = "" // number keys pressed so far
     private val fetched = ConcurrentHashMap<String, Pair<Long, List<Stremio.Stream>>>() // channel id to its streams, and when
@@ -85,8 +88,12 @@ class PlayerActivity : Activity() {
     private lateinit var bar: ProgressBar
     private lateinit var more: TextView
     private lateinit var source: TextView
+    private lateinit var hint: TextView
 
-    private val hideBanner = Runnable { banner.animate().alpha(0f).setDuration(250).withEndAction { banner.visibility = View.GONE }.start() }
+    private val hideBanner = Runnable {
+        expanded = false
+        banner.animate().alpha(0f).setDuration(250).withEndAction { banner.visibility = View.GONE }.start()
+    }
     private val zapNow = Runnable { if (shown != at) play(shown) }
     private val goTyped = Runnable {
         typed.toIntOrNull()?.let { n -> if (n in 1..channels.size) zapTo(n - 1, delay = 0) }
@@ -149,8 +156,9 @@ class PlayerActivity : Activity() {
                 ClipDrawable(GradientDrawable().apply { cornerRadius = dp(2).toFloat(); setColor(Color.WHITE) }, Gravity.START, ClipDrawable.HORIZONTAL),
             )).apply { setId(0, android.R.id.background); setId(1, android.R.id.progress) }
         }
-        more = text(14f).apply { alpha = 0.85f; maxLines = 4; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(8), 0, 0) }
+        more = text(14f).apply { alpha = 0.85f; maxLines = 14; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(8), 0, 0) }
         source = text(12f).apply { alpha = 0.6f; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(8), 0, 0) }
+        hint = text(12f).apply { alpha = 0.6f; isSingleLine = true; setPadding(0, dp(4), 0, 0) }
         val head = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             addView(title, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
@@ -164,6 +172,7 @@ class PlayerActivity : Activity() {
             addView(bar, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(4)).apply { topMargin = dp(8) })
             addView(more)
             addView(source)
+            addView(hint)
         }
         banner = LinearLayout(this).apply {
             gravity = Gravity.TOP
@@ -179,15 +188,19 @@ class PlayerActivity : Activity() {
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
     }
 
-    /** Shows the banner for channel [i] (for a while, or until hidden with [stay]), filling in what's known so far. */
+    /**
+     * Shows the banner for channel [i] (for a while, or until hidden with [stay]), filling in what's known so far: in
+     * short, or all of what's on once OK [expanded] it.
+     */
     private fun showBanner(i: Int, stay: Boolean = false) {
         val c = channels[i]
         title.text = c.name
         position.text = getString(R.string.player_channel_n, i + 1, channels.size)
         clock.text = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date())
         fillGuide(c)
-        source.text = if (i == at && tried >= 0 && streams.isNotEmpty())
-            getString(R.string.player_stream, tried + 1, streams.size, streams[tried].title).let { if (streams.size > 1) "$it   ◀ ▶" else it }
+        val playing = streams.getOrNull(tried)?.takeIf { i == at }
+        source.text = if (playing != null)
+            getString(R.string.player_stream, tried + 1, streams.size, playing.title).let { if (streams.size > 1) "$it   ◀ ▶" else it }
         else getString(R.string.player_loading)
         showLogo(c)
         if (banner.visibility != View.VISIBLE) {
@@ -197,7 +210,7 @@ class PlayerActivity : Activity() {
         banner.animate().cancel()
         banner.animate().alpha(1f).setDuration(150).start()
         ui.removeCallbacks(hideBanner)
-        if (!stay) ui.postDelayed(hideBanner, BANNER_MS)
+        if (!stay && !expanded) ui.postDelayed(hideBanner, BANNER_MS)
         // The add-on's page for the channel, for what's on and next: once, in the background.
         if (!pages.containsKey(c.id)) ahead.execute {
             val meta = runCatching { Stremio.meta(base, c.type, c.id) }.getOrNull() ?: return@execute
@@ -232,7 +245,10 @@ class PlayerActivity : Activity() {
             }
         }
         onNow.visibility = if (onNow.text.isNullOrEmpty()) View.GONE else View.VISIBLE
-        more.visibility = if (more.text.isNullOrEmpty()) View.GONE else View.VISIBLE
+        // All of it only once OK asks: over a channel playing, the banner stays short.
+        more.visibility = if (expanded && !more.text.isNullOrEmpty()) View.VISIBLE else View.GONE
+        hint.text = if (more.text.isNullOrEmpty()) "" else getString(if (expanded) R.string.player_less else R.string.player_more)
+        hint.visibility = if (hint.text.isNullOrEmpty()) View.GONE else View.VISIBLE
         bar.visibility = if (progress == null) View.GONE else View.VISIBLE
         bar.progress = progress ?: 0
     }
@@ -267,8 +283,13 @@ class PlayerActivity : Activity() {
             KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_DPAD_DOWN -> zap(-1)
             KeyEvent.KEYCODE_DPAD_LEFT -> otherStream(-1)
             KeyEvent.KEYCODE_DPAD_RIGHT -> otherStream(+1)
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_INFO, KeyEvent.KEYCODE_GUIDE ->
-                if (banner.visibility == View.VISIBLE && event.repeatCount == 0 && keyCode != KeyEvent.KEYCODE_INFO) hideBanner.run() else showBanner(shown)
+            // OK: the banner, in short; again, all of what's on; again, away.
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_INFO, KeyEvent.KEYCODE_GUIDE -> when {
+                event.repeatCount > 0 -> {}
+                banner.visibility != View.VISIBLE || banner.alpha < 1f -> showBanner(shown)
+                !expanded && !more.text.isNullOrEmpty() -> { expanded = true; showBanner(shown, stay = true) }
+                else -> hideBanner.run()
+            }
             KeyEvent.KEYCODE_LAST_CHANNEL -> if (previous in channels.indices) zapTo(previous, delay = 0)
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY -> player?.let { p ->
                 p.playWhenReady = if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) !p.playWhenReady else keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
@@ -296,6 +317,7 @@ class PlayerActivity : Activity() {
 
     private fun zapTo(i: Int, delay: Long) {
         shown = i
+        expanded = false
         showBanner(i)
         ui.removeCallbacks(zapNow)
         ui.postDelayed(zapNow, delay)
@@ -305,6 +327,7 @@ class PlayerActivity : Activity() {
     private fun otherStream(step: Int) {
         if (streams.size < 2 || shown != this.at) return showBanner(shown)
         tried = Math.floorMod(tried + step, streams.size) - 1
+        attempts = 0
         next()
     }
 
@@ -319,6 +342,7 @@ class PlayerActivity : Activity() {
         val tuning = ++tune
         streams = emptyList()
         tried = -1
+        attempts = 0
         release()
         say(null)
         showBanner(i)
@@ -348,16 +372,20 @@ class PlayerActivity : Activity() {
         }
     }
 
-    /** Tries the stream after the one that failed (the first, at the start); with none left, says so. */
+    /**
+     * Tries the stream after the one that failed (the first, at the start), going round the list; once each was
+     * tried since the channel was tuned (or one was picked), says none works.
+     */
     private fun next() {
         ui.removeCallbacks(stuck)
-        tried++
-        val s = streams.getOrNull(tried) ?: run {
+        if (streams.isEmpty() || ++attempts > streams.size) {
             release()
             if (shown == at) showBanner(at, stay = true)
             return say(getString(R.string.player_no_streams))
         }
-        if (tried > 0) say(getString(R.string.player_stream_n, tried + 1, streams.size))
+        tried = Math.floorMod(tried + 1, streams.size)
+        val s = streams[tried]
+        if (tried > 0 || attempts > 1) say(getString(R.string.player_stream_n, tried + 1, streams.size))
         val tuning = tune
         val n = tried
         net.execute {

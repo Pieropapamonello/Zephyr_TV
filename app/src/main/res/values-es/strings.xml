@@ -400,5 +400,7 @@
     <string name="player_stream_n">Probando el stream %1$d de %2$d…</string>
     <string name="player_channel_n">%1$d / %2$d</string>
     <string name="player_stream">Stream %1$d de %2$d · %3$s</string>
+    <string name="player_more">OK · más información</string>
+    <string name="player_less">OK · menos información</string>
     <string name="channel_play">Ver</string>
 </resources>

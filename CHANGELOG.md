@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- In the player, the banner shows only the program on now and the stream. Press OK again to see the full description and what is next.
+- In the player, Right no longer closes the player when the other stream does not work. The player tries the next stream, also the ones before it.
 - In **Stremio add-ons**, select an add-on and then **Move up** or **Move down** to change the order. In the TV app and the IPTV app, the rows of the first add-on show first.
 
 ## 4.0.0-beta.4
