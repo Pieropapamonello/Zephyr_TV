@@ -400,8 +400,6 @@
     <string name="player_stream_n">Loading stream %1$d of %2$d…</string>
     <string name="player_channel_n">%1$d / %2$d</string>
     <string name="player_stream">Stream %1$d of %2$d · %3$s</string>
-    <string name="player_more">OK · more</string>
-    <string name="player_less">OK · less</string>
     <string name="player_tracks_title">Audio and subtitles</string>
     <string name="player_audio">Audio</string>
     <string name="player_subtitles">Subtitles</string>

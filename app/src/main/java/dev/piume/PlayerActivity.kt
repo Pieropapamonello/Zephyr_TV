@@ -46,12 +46,11 @@ import org.json.JSONObject
 
 /**
  * Piume's player, for the Stremio add-ons' TV channels (see Addons). It gets the channels of the row the user
- * picked from, plays the one picked and zaps through the others: CH+/CH- (or Up/Down), the number keys, Last
+ * picked from, plays the one picked and zaps through the others: CH+/CH- (never Up/Down), the number keys, Last
  * channel. For each it asks the add-on for its streams and plays the first that works; Left/Right go to the
  * channel's other streams, and one that fails or stays stuck gives way to the next by itself (round the list, until
  * each was tried). OK or Info shows what's on, in short; OK again shows all of it (the add-on's guide, else the one
- * set in Piume settings). With the banner up, Left/Right reach its buttons (and Up/Down too, once OK brought it up:
- * they zap only while it's down or zapping): Play/Pause, then Audio, Subtitles and Stream, each opening its list to pick from (holding OK, or Menu, opens audio and subtitles together). The audio and subtitles
+ * set in Piume settings). Up/Down show the banner, and with it up reach its buttons, as Left/Right do: Play/Pause, then Audio, Subtitles and Stream, each opening its list to pick from (holding OK, or Menu, opens audio and subtitles together). The audio and subtitles
  * picked are kept by language, for the next channels and the next time.
  *
  * Media3's ExoPlayer plays them, the one library Piume ships, for HLS and DASH as the TV's own player doesn't do
@@ -77,7 +76,6 @@ class PlayerActivity : Activity() {
     private var tried = -1 // the stream playing, or being tried
     private var attempts = 0 // streams tried since the channel was tuned, or one was picked: all of them, and it's none
     private var expanded = false // the banner shows all of what's on, not just its first line
-    private var asked = false // the banner is up as OK (or a pause) brought it, not as a zap shows it: Up/Down reach its buttons
     private var tune = 0 // counts tunings, so an answer for a channel left meanwhile is dropped
     private var typed = "" // number keys pressed so far
     private val fetched = ConcurrentHashMap<String, Pair<Long, List<Stremio.Stream>>>() // channel id to its streams, and when
@@ -101,7 +99,6 @@ class PlayerActivity : Activity() {
     private lateinit var bar: ProgressBar
     private lateinit var more: TextView
     private lateinit var source: TextView
-    private lateinit var hint: TextView
     private lateinit var trackLine: TextView // in the banner: the audio track and subtitles playing
     private lateinit var subtitles: FrameLayout // over the picture, its size: the subtitles' cues
     private lateinit var tracksPanel: LinearLayout // Audio and subtitles, on the right
@@ -117,7 +114,6 @@ class PlayerActivity : Activity() {
 
     private val hideBanner = Runnable {
         expanded = false
-        asked = false
         unfocusButtons()
         banner.animate().alpha(0f).setDuration(250).withEndAction { banner.visibility = View.GONE }.start()
     }
@@ -201,7 +197,6 @@ class PlayerActivity : Activity() {
         }
         more = text(14f).apply { alpha = 0.85f; maxLines = 14; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(8), 0, 0) }
         source = text(12f).apply { alpha = 0.6f; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(8), 0, 0) }
-        hint = text(12f).apply { alpha = 0.6f; isSingleLine = true; setPadding(0, dp(4), 0, 0) }
         trackLine = text(12f).apply { alpha = 0.6f; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(4), 0, 0) }
         buttons = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; clipChildren = false }
         val head = LinearLayout(this).apply {
@@ -218,7 +213,6 @@ class PlayerActivity : Activity() {
             addView(more)
             addView(source)
             addView(trackLine)
-            addView(hint)
             addView(buttons, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(14) })
         }
         banner = LinearLayout(this).apply {
@@ -329,8 +323,6 @@ class PlayerActivity : Activity() {
         onNow.visibility = if (onNow.text.isNullOrEmpty()) View.GONE else View.VISIBLE
         // All of it only once OK asks: over a channel playing, the banner stays short.
         more.visibility = if (expanded && !more.text.isNullOrEmpty()) View.VISIBLE else View.GONE
-        hint.text = if (more.text.isNullOrEmpty()) "" else getString(if (expanded) R.string.player_less else R.string.player_more)
-        hint.visibility = if (hint.text.isNullOrEmpty()) View.GONE else View.VISIBLE
         bar.visibility = if (progress == null) View.GONE else View.VISIBLE
         bar.progress = progress ?: 0
     }
@@ -403,15 +395,15 @@ class PlayerActivity : Activity() {
             focusButton(if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 0 else buttons.childCount - 1)
             return true
         }
-        // The banner up as OK brought it: Up/Down reach the buttons too (Play/Pause first), not the next channel.
-        if ((keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) && asked && banner.visibility == View.VISIBLE &&
-            shown == at && buttons.childCount > 0) {
-            focusButton(0)
+        // Up/Down never zap (CH+/CH- do): they bring the banner up, then reach its buttons (Play/Pause first).
+        if (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+            if (banner.visibility != View.VISIBLE || banner.alpha < 1f) showBanner(shown)
+            else if (shown == at && buttons.childCount > 0) focusButton(0)
             return true
         }
         when (keyCode) {
-            KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_DPAD_UP -> zap(+1)
-            KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_DPAD_DOWN -> zap(-1)
+            KeyEvent.KEYCODE_CHANNEL_UP -> zap(+1)
+            KeyEvent.KEYCODE_CHANNEL_DOWN -> zap(-1)
             KeyEvent.KEYCODE_DPAD_LEFT -> otherStream(-1)
             KeyEvent.KEYCODE_DPAD_RIGHT -> otherStream(+1)
             // OK acts once let go (see onKeyUp), as holding it opens Audio and subtitles (onKeyLongPress).
@@ -454,8 +446,8 @@ class PlayerActivity : Activity() {
 
     /** OK: the banner, in short; again, all of what's on; again, away. */
     private fun okPressed() = when {
-        banner.visibility != View.VISIBLE || banner.alpha < 1f -> { asked = shown == at; showBanner(shown) }
-        !expanded && !more.text.isNullOrEmpty() -> { expanded = true; asked = shown == at; showBanner(shown, stay = true) }
+        banner.visibility != View.VISIBLE || banner.alpha < 1f -> showBanner(shown)
+        !expanded && !more.text.isNullOrEmpty() -> { expanded = true; showBanner(shown, stay = true) }
         else -> hideBanner.run()
     }
 
@@ -527,7 +519,6 @@ class PlayerActivity : Activity() {
         if (p.playWhenReady == play) return
         p.playWhenReady = play
         ui.removeCallbacks(stuck) // a pause isn't a stream that's stuck
-        asked = true
         showBanner(at, stay = !play)
     }
 
@@ -741,7 +732,6 @@ class PlayerActivity : Activity() {
     private fun zapTo(i: Int, delay: Long) {
         shown = i
         expanded = false
-        asked = false
         showBanner(i)
         ui.removeCallbacks(zapNow)
         ui.postDelayed(zapNow, delay)

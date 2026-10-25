@@ -698,15 +698,16 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     frame.setTag(R.id.watchRow, p) // holding OK hides it (see onHold)
     col.addView(frame, LinearLayout.LayoutParams(w, cardHeight))
     // Thin bar under the poster, card width. Kept (invisible) when there's no progress so titles line up.
-    col.addView(ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+    val bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
         max = 100
         progress = p.progress
         progressDrawable = progressBarDrawable()
         visibility = if (p.progress > 0) View.VISIBLE else View.INVISIBLE
-    }, LinearLayout.LayoutParams(w, dp(3)).apply { topMargin = dp(6) })
+    }
+    col.addView(bar, LinearLayout.LayoutParams(w, dp(3)).apply { topMargin = dp(6) })
     col.addView(title)
     val icon = sourceIcon(p.pkg)
-    if (p.sub.isNotEmpty() || icon != null) {
+    if (p.sub.isNotEmpty() || icon != null || p.addon != null) {
         col.addView(label(p.sub, 12f).apply {
             details = this
             alpha = 0.8f
@@ -722,6 +723,14 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
         })
     }
     if (p.badge == null && p.tmdb == null) loadPoster(img, p.image)
+    // An add-on's channel: what's on as the player shows it (its times, so its bar), once the add-on tells.
+    p.addon?.let { c ->
+        addonOnNow(c) { now, progress ->
+            details?.text = now
+            bar.progress = progress
+            bar.visibility = View.VISIBLE
+        }
+    }
     return col
 }
 

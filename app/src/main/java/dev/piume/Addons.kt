@@ -39,6 +39,35 @@ private const val GUIDE_MS = 5 * 60_000L
 /** A card that's an add-on's channel: the add-on (its manifest's address) and the channel in it. */
 internal class AddonChannel(val addon: String, val item: Stremio.Item)
 
+/**
+ * The add-ons' pages of the channels whose cards show, and when each came: what's on with its times, as the player
+ * shows it (the catalog says only the title). Asked on a thread of their own, a few at a time.
+ */
+private val channelPages = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Stremio.Meta>>()
+private val pageIo: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newFixedThreadPool(3)
+
+/**
+ * What's on [c] as the player shows it, for its card: the add-on's page for the channel, its program and how far
+ * in it is. A page from the last few minutes is used while its program is on; else it's asked in the background.
+ * [show] hears it on the main thread, only when the page has a program on now.
+ */
+internal fun MainActivity.addonOnNow(c: AddonChannel, show: (String, Int) -> Unit) {
+    val key = "${c.addon}|${c.item.id}"
+    fun use(meta: Stremio.Meta): Boolean {
+        val progress = Stremio.progress(meta.description) ?: return false
+        show(meta.now ?: return false, progress)
+        return true
+    }
+    channelPages[key]?.let { (at, meta) ->
+        if (System.currentTimeMillis() - at < GUIDE_MS && (meta.description == null || use(meta))) return
+    }
+    pageIo.execute {
+        val meta = runCatching { Stremio.meta(c.addon.removeSuffix("/manifest.json"), c.item.type, c.item.id) }.getOrNull() ?: return@execute
+        channelPages[key] = System.currentTimeMillis() to meta
+        ui.post { use(meta) }
+    }
+}
+
 /** The add-ons' manifest addresses, in the order they were added. */
 internal fun MainActivity.addonUrls(): List<String> = prefs.getString(K.ADDONS, "")!!.lines().filter { it.isNotBlank() }
 

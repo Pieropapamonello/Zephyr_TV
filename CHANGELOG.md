@@ -15,6 +15,11 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- The cards of the add-on channels show what is on now as the player does, with its progress bar. Piume asks the add-on for the cards that show.
+
+- In the player, Up and Down no longer change the channel. Use CH+ and CH- to change the channel. Up and Down show the banner. When the banner shows, they go to its buttons.
+- The player banner no longer shows **OK · more**. Press OK again to see the full description, as before.
+
 - **Stremio add-ons → Add an add-on** shows the QR code at once, as the other settings do. Scan it and paste the address on your phone. To type the address with the remote, select **Type the address with the remote**.
 - The add-on rows show what is on now more correctly. Piume reads the channels again after 5 minutes, not after 15 minutes.
 
