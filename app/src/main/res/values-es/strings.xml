@@ -408,6 +408,8 @@
     <string name="player_subtitles_off">Desactivados</string>
     <string name="player_track_n">Pista %1$d</string>
     <string name="player_track_forced">(forzados)</string>
-    <string name="player_tracks_line">Audio: %1$s · Subtítulos: %2$s · mantén OK para cambiar</string>
+    <string name="player_tracks_line">Audio: %1$s · Subtítulos: %2$s</string>
+    <string name="player_streams">Stream</string>
+    <string name="player_stream_row">%1$d · %2$s</string>
     <string name="channel_play">Ver</string>
 </resources>

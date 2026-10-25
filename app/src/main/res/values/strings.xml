@@ -407,6 +407,8 @@
     <string name="player_subtitles_off">Off</string>
     <string name="player_track_n">Track %1$d</string>
     <string name="player_track_forced">(forced)</string>
-    <string name="player_tracks_line">Audio: %1$s · Subtitles: %2$s · hold OK to change</string>
+    <string name="player_tracks_line">Audio: %1$s · Subtitles: %2$s</string>
+    <string name="player_streams">Stream</string>
+    <string name="player_stream_row">%1$d · %2$s</string>
     <string name="channel_play">Watch</string>
 </resources>

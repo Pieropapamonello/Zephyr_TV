@@ -50,8 +50,9 @@ import org.json.JSONObject
  * channel. For each it asks the add-on for its streams and plays the first that works; Left/Right go to the
  * channel's other streams, and one that fails or stays stuck gives way to the next by itself (round the list, until
  * each was tried). OK or Info shows what's on, in short; OK again shows all of it (the add-on's guide, else the one
- * set in Piume settings). Holding OK (or Menu) opens the audio tracks and subtitles to pick from; the choice is
- * kept by language, for the next channels and the next time.
+ * set in Piume settings). With the banner up, Left/Right reach its buttons: Audio, Subtitles and Stream, each
+ * opening its list to pick from (holding OK, or Menu, opens audio and subtitles together). The audio and subtitles
+ * picked are kept by language, for the next channels and the next time.
  *
  * Media3's ExoPlayer plays them, the one library Piume ships, for HLS and DASH as the TV's own player doesn't do
  * reliably. It runs in a process of its own (":player" in the manifest), so a stream or a decoder that hangs or
@@ -100,7 +101,9 @@ class PlayerActivity : Activity() {
     private lateinit var trackLine: TextView // in the banner: the audio track and subtitles playing
     private lateinit var subtitles: FrameLayout // over the picture, its size: the subtitles' cues
     private lateinit var tracksPanel: LinearLayout // Audio and subtitles, on the right
+    private lateinit var tracksTitle: TextView
     private lateinit var tracksList: LinearLayout
+    private lateinit var buttons: LinearLayout // in the banner: Audio, Subtitles, Stream; reached with Left/Right
 
     /** The audio and subtitle languages picked, for every channel: a file only this process writes (see pick). */
     private val choices by lazy { getSharedPreferences(CHOICES_FILE, MODE_PRIVATE) }
@@ -110,6 +113,7 @@ class PlayerActivity : Activity() {
 
     private val hideBanner = Runnable {
         expanded = false
+        unfocusButtons()
         banner.animate().alpha(0f).setDuration(250).withEndAction { banner.visibility = View.GONE }.start()
     }
     private val zapNow = Runnable { if (shown != at) play(shown) }
@@ -180,6 +184,7 @@ class PlayerActivity : Activity() {
         source = text(12f).apply { alpha = 0.6f; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(8), 0, 0) }
         hint = text(12f).apply { alpha = 0.6f; isSingleLine = true; setPadding(0, dp(4), 0, 0) }
         trackLine = text(12f).apply { alpha = 0.6f; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(4), 0, 0) }
+        buttons = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; clipChildren = false }
         val head = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             addView(title, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
@@ -195,6 +200,7 @@ class PlayerActivity : Activity() {
             addView(source)
             addView(trackLine)
             addView(hint)
+            addView(buttons, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(14) })
         }
         banner = LinearLayout(this).apply {
             gravity = Gravity.TOP
@@ -212,7 +218,8 @@ class PlayerActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(28), dp(40), dp(28), dp(28))
             setBackgroundColor(0xF0101014.toInt())
-            addView(text(22f, bold = true).apply { text = getString(R.string.player_tracks_title); setPadding(dp(14), 0, 0, dp(16)) })
+            tracksTitle = text(22f, bold = true).apply { setPadding(dp(14), 0, 0, dp(16)) }
+            addView(tracksTitle)
             addView(ScrollView(this@PlayerActivity).apply { isVerticalScrollBarEnabled = false; addView(tracksList) })
             visibility = View.GONE
         }
@@ -234,9 +241,10 @@ class PlayerActivity : Activity() {
         fillGuide(c)
         val playing = streams.getOrNull(tried)?.takeIf { i == at }
         source.text = if (playing != null)
-            getString(R.string.player_stream, tried + 1, streams.size, playing.title).let { if (streams.size > 1) "$it   ◀ ▶" else it }
+            getString(R.string.player_stream, tried + 1, streams.size, playing.title)
         else getString(R.string.player_loading)
         fillTrackLine(i)
+        fillButtons(i)
         showLogo(c)
         if (banner.visibility != View.VISIBLE) {
             banner.alpha = 0f
@@ -245,7 +253,7 @@ class PlayerActivity : Activity() {
         banner.animate().cancel()
         banner.animate().alpha(1f).setDuration(150).start()
         ui.removeCallbacks(hideBanner)
-        if (!stay && !expanded) ui.postDelayed(hideBanner, BANNER_MS)
+        if (!stay && !expanded) ui.postDelayed(hideBanner, if (buttonFocused()) BUTTONS_MS else BANNER_MS)
         // The add-on's page for the channel, for what's on and next: once, in the background.
         if (!pages.containsKey(c.id)) ahead.execute {
             val meta = runCatching { Stremio.meta(base, c.type, c.id) }.getOrNull() ?: return@execute
@@ -318,6 +326,22 @@ class PlayerActivity : Activity() {
             if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_MENU) closeTracks() else return super.onKeyDown(keyCode, event)
             return true
         }
+        // On the banner's buttons: Left/Right move along them and OK opens one (the buttons' own handling); the
+        // banner stays up while they're used.
+        if (buttonFocused()) when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                ui.removeCallbacks(hideBanner)
+                ui.postDelayed(hideBanner, BUTTONS_MS)
+                return super.onKeyDown(keyCode, event)
+            }
+            KeyEvent.KEYCODE_BACK -> { hideBanner.run(); return true }
+        }
+        // The banner up (and done fading in) with buttons: Left/Right reach them; otherwise they change the stream.
+        if ((keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) && banner.visibility == View.VISIBLE &&
+            banner.alpha >= 1f && shown == at && buttons.childCount > 0) {
+            focusButton(if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 0 else buttons.childCount - 1)
+            return true
+        }
         when (keyCode) {
             KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_DPAD_UP -> zap(+1)
             KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_DPAD_DOWN -> zap(-1)
@@ -355,7 +379,7 @@ class PlayerActivity : Activity() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        if (tracksPanel.visibility == View.VISIBLE) return super.onKeyUp(keyCode, event)
+        if (tracksPanel.visibility == View.VISIBLE || buttonFocused()) return super.onKeyUp(keyCode, event)
         if (keyCode != KeyEvent.KEYCODE_DPAD_CENTER && keyCode != KeyEvent.KEYCODE_ENTER && keyCode != KeyEvent.KEYCODE_NUMPAD_ENTER) return super.onKeyUp(keyCode, event)
         if (event.isTracking && !event.isCanceled) okPressed() // a hold opened the panel instead
         return true
@@ -406,46 +430,138 @@ class PlayerActivity : Activity() {
         trackLine.visibility = View.VISIBLE
     }
 
-    /** Hold OK, or Menu: the panel, its rows the audio tracks, then Off and the subtitles; focus on what's playing. */
-    private fun openTracks() {
+    // ---------- the banner's buttons ----------
+
+    /** The banner's buttons for channel [i] once it plays: Audio with two tracks or more, Subtitles with any, Stream with two or more. */
+    private fun fillButtons(i: Int) {
+        val keep = (currentFocus?.parent === buttons).let { if (it) buttons.indexOfChild(currentFocus) else -1 }
+        val list = if (i != at || player == null) emptyList() else listOfNotNull(
+            if (tracks(C.TRACK_TYPE_AUDIO).size > 1) Triple(R.drawable.ic_audio, R.string.player_audio) { openTracks(C.TRACK_TYPE_AUDIO) } else null,
+            if (tracks(C.TRACK_TYPE_TEXT).isNotEmpty()) Triple(R.drawable.ic_subtitles, R.string.player_subtitles) { openTracks(C.TRACK_TYPE_TEXT) } else null,
+            if (streams.size > 1) Triple(R.drawable.ic_stream, R.string.player_streams) { openStreams() } else null,
+        )
+        val now = (0 until buttons.childCount).map { buttons.getChildAt(it).tag }
+        if (now == list.map { it.second }) return // the same: leave them (and focus) as they are
+        buttons.removeAllViews()
+        list.forEach { (icon, label, action) -> buttons.addView(button(icon, getString(label), action).apply { tag = label }) }
+        buttons.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
+        if (keep >= 0) focusButton(minOf(keep, buttons.childCount - 1))
+    }
+
+    /** A pill with an icon and its name, lit white while it has the focus; focusable only once Left/Right reach it. */
+    private fun button(icon: Int, label: String, action: () -> Unit) = LinearLayout(this).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(14), dp(8), dp(18), dp(8))
+        val bg = GradientDrawable().apply { cornerRadius = dp(20).toFloat(); setColor(0x33FFFFFF) }
+        background = bg
+        val img = ImageView(this@PlayerActivity).apply { setImageResource(icon) }
+        val name = text(14f).apply { text = label; setShadowLayer(0f, 0f, 0f, 0) }
+        addView(img, LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(8) })
+        addView(name)
+        isFocusable = false
+        isClickable = true
+        setOnClickListener { action() }
+        setOnFocusChangeListener { v, has ->
+            bg.setColor(if (has) Color.WHITE else 0x33FFFFFF)
+            img.setColorFilter(if (has) Color.BLACK else Color.WHITE)
+            name.setTextColor(if (has) Color.BLACK else Color.WHITE)
+            v.animate().scaleX(if (has) 1.06f else 1f).scaleY(if (has) 1.06f else 1f).setDuration(120).start()
+        }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(12) }
+    }
+
+    private fun buttonFocused() = ::buttons.isInitialized && currentFocus?.parent === buttons
+
+    /** Makes the buttons reachable and puts the focus on the [n]th; the banner stays up a while longer. */
+    private fun focusButton(n: Int) {
+        for (k in 0 until buttons.childCount) buttons.getChildAt(k).isFocusable = true
+        buttons.getChildAt(n)?.requestFocus()
+        ui.removeCallbacks(hideBanner)
+        ui.postDelayed(hideBanner, BUTTONS_MS)
+    }
+
+    /** The buttons out of reach again (not focusable, so the window can't hand them the focus by itself). */
+    private fun unfocusButtons() {
+        if (!::buttons.isInitialized) return
+        for (k in 0 until buttons.childCount) buttons.getChildAt(k).isFocusable = false
+    }
+
+    /** Stream: the channel's streams, as the add-on lists them; the one picked plays (then the next ones, if it fails). */
+    private fun openStreams() {
+        if (streams.size < 2) return
+        openPanel(getString(R.string.player_streams)) { row ->
+            streams.forEachIndexed { k, s ->
+                row(getString(R.string.player_stream_row, k + 1, s.title), k == tried) {
+                    tried = k - 1
+                    attempts = 0
+                    next()
+                }
+            }
+        }
+    }
+
+    /** Hold OK, or Menu (both lists), or a button (the audio tracks, or Off and the subtitles); focus on what's playing. */
+    private fun openTracks(type: Int? = null) {
         if (player == null) return showBanner(shown)
-        hideBanner.run()
-        tracksList.removeAllViews()
         val audio = tracks(C.TRACK_TYPE_AUDIO)
         val subs = tracks(C.TRACK_TYPE_TEXT)
-        var focus: View? = null
-        fun heading(res: Int) = tracksList.addView(text(13f).apply {
-            this.text = getString(res)
-            alpha = 0.6f
-            setPadding(dp(14), dp(16), 0, dp(6))
-        })
-        fun row(name: String, on: Boolean, pick: () -> Unit) = TextView(this).apply {
-            this.text = if (on) "✓  $name" else "     $name"
-            textSize = 16f
-            isSingleLine = true
-            ellipsize = TextUtils.TruncateAt.END
-            setPadding(dp(14), dp(12), dp(14), dp(12))
-            isFocusable = true
-            isClickable = true
-            val bg = GradientDrawable().apply { cornerRadius = dp(8).toFloat() }
-            background = bg
-            setTextColor(Color.WHITE)
-            setOnFocusChangeListener { _, has ->
-                bg.setColor(if (has) Color.WHITE else Color.TRANSPARENT)
-                setTextColor(if (has) Color.BLACK else Color.WHITE)
-            }
-            setOnClickListener { pick(); closeTracks() }
-            tracksList.addView(this)
-            if (on && focus == null) focus = this
+        val title = when (type) {
+            C.TRACK_TYPE_AUDIO -> R.string.player_audio
+            C.TRACK_TYPE_TEXT -> R.string.player_subtitles
+            else -> R.string.player_tracks_title
         }
-        heading(R.string.player_audio)
-        if (audio.isEmpty()) row(getString(R.string.player_track_n, 1), true) {}
-        audio.forEach { t -> row(t.name, t.selected) { pick(t, C.TRACK_TYPE_AUDIO) } }
-        heading(R.string.player_subtitles)
-        row(getString(R.string.player_subtitles_off), subs.none { it.selected }) { subtitlesOff() }
-        subs.forEach { t -> row(t.name, t.selected) { pick(t, C.TRACK_TYPE_TEXT) } }
+        openPanel(getString(title)) { row ->
+            fun heading(res: Int) = tracksList.addView(text(13f).apply {
+                this.text = getString(res)
+                alpha = 0.6f
+                setPadding(dp(14), dp(16), 0, dp(6))
+            })
+            if (type != C.TRACK_TYPE_TEXT) {
+                if (type == null) heading(R.string.player_audio)
+                if (audio.isEmpty()) row(getString(R.string.player_track_n, 1), true) {}
+                audio.forEach { t -> row(t.name, t.selected) { pick(t, C.TRACK_TYPE_AUDIO) } }
+            }
+            if (type != C.TRACK_TYPE_AUDIO) {
+                if (type == null) heading(R.string.player_subtitles)
+                row(getString(R.string.player_subtitles_off), subs.none { it.selected }) { subtitlesOff() }
+                subs.forEach { t -> row(t.name, t.selected) { pick(t, C.TRACK_TYPE_TEXT) } }
+            }
+        }
+    }
+
+    /**
+     * The side panel titled [title], its rows added by [fill] through the row maker it's given (a name, whether it's
+     * the one playing, what picking it does); focus on the one playing.
+     */
+    private fun openPanel(title: String, fill: ((String, Boolean, () -> Unit) -> Unit) -> Unit) {
+        hideBanner.run()
+        tracksTitle.text = title
+        tracksList.removeAllViews()
+        var focus: View? = null
+        fun row(name: String, on: Boolean, pick: () -> Unit) {
+            TextView(this).apply {
+                this.text = if (on) "✓  $name" else "     $name"
+                textSize = 16f
+                isSingleLine = true
+                ellipsize = TextUtils.TruncateAt.END
+                setPadding(dp(14), dp(12), dp(14), dp(12))
+                isFocusable = true
+                isClickable = true
+                val bg = GradientDrawable().apply { cornerRadius = dp(8).toFloat() }
+                background = bg
+                setTextColor(Color.WHITE)
+                setOnFocusChangeListener { _, has ->
+                    bg.setColor(if (has) Color.WHITE else Color.TRANSPARENT)
+                    setTextColor(if (has) Color.BLACK else Color.WHITE)
+                }
+                setOnClickListener { pick(); closeTracks() }
+                tracksList.addView(this)
+                if (on && focus == null) focus = this
+            }
+        }
+        fill(::row)
         tracksPanel.visibility = View.VISIBLE
-        (focus ?: tracksList.getChildAt(1))?.requestFocus()
+        (focus ?: (0 until tracksList.childCount).map { tracksList.getChildAt(it) }.firstOrNull { it.isFocusable })?.requestFocus()
     }
 
     private fun closeTracks() {
@@ -664,7 +780,7 @@ class PlayerActivity : Activity() {
             override fun onCues(cueGroup: CueGroup) = showCues(cueGroup.cues)
 
             override fun onTracksChanged(tracks: Tracks) {
-                if (banner.visibility == View.VISIBLE && shown == at) fillTrackLine(at)
+                if (banner.visibility == View.VISIBLE && shown == at) { fillTrackLine(at); fillButtons(at) }
             }
         })
         val item = MediaItem.Builder().setUri(s.url).apply {
@@ -739,6 +855,7 @@ class PlayerActivity : Activity() {
         private const val AUDIO_LANG = "audio_lang"
         private const val TEXT_LANG = "text_lang" // "" for off; none for the stream's own choice
         private const val BANNER_MS = 5000L
+        private const val BUTTONS_MS = 10_000L // the banner stays up this long after a key on its buttons
         private const val ZAP_MS = 700L // the keys rest this long before the channel is tuned
         private const val STUCK_MS = 15_000L // buffering longer than this: the next stream
         private const val FRESH_MS = 90_000L // fetched streams are used this long (their addresses can expire)

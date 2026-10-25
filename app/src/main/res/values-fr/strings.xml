@@ -408,6 +408,8 @@
     <string name="player_subtitles_off">Désactivés</string>
     <string name="player_track_n">Piste %1$d</string>
     <string name="player_track_forced">(forcés)</string>
-    <string name="player_tracks_line">Audio : %1$s · Sous-titres : %2$s · maintenez OK pour changer</string>
+    <string name="player_tracks_line">Audio : %1$s · Sous-titres : %2$s</string>
+    <string name="player_streams">Flux</string>
+    <string name="player_stream_row">%1$d · %2$s</string>
     <string name="channel_play">Regarder</string>
 </resources>
