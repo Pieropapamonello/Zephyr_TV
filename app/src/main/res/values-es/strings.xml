@@ -161,6 +161,7 @@
     <string name="menu_app_info">Información de la app</string>
     <string name="menu_remove_from_cw">Quitar de Seguir viendo</string>
     <string name="menu_open_app">Abrir app</string>
+    <string name="menu_close_playing">Cerrar</string>
     <string name="removed_from_row_toast">Quitada de Favoritos. Sigue en Todas las apps.</string>
 
     <!-- Time left -->
@@ -339,7 +340,6 @@
     <string name="now_playing_on">Piume ve lo que suena en otras apps.</string>
     <string name="now_playing_help">Para mostrar lo que suena en otras apps, Piume necesita acceso a las notificaciones. En esta TV solo el sistema puede darlo: ejecuta una vez este comando desde un ordenador y vuelve aquí.</string>
     <string name="play_queue">Cola de reproducción</string>
-    <string name="now_playing">Reproduciendo ahora</string>
     <string name="playing_paused">%1$s · En pausa</string>
     <string name="toast_no_results">No se ha encontrado nada para “%1$s”</string>
     <plurals name="toast_search_results">

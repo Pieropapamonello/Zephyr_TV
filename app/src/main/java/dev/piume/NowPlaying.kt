@@ -23,9 +23,14 @@ internal fun MainActivity.listenerComponent() = ComponentName(this, PlayingListe
 /** The adb command that lets Piume see what's playing (Android lets only the system grant it; no app can). */
 internal const val LISTENER_GRANT = "cmd notification allow_listener dev.piume/dev.piume.PlayingListener"
 
-/** Whether Piume may see the media sessions (its listener is allowed). */
+/** Whether Piume may see the media sessions (its listener is allowed). Android 8.0 has no call for it: its setting then. */
 internal fun MainActivity.listenerAllowed(): Boolean =
-    getSystemService(android.app.NotificationManager::class.java).isNotificationListenerAccessGranted(listenerComponent())
+    if (android.os.Build.VERSION.SDK_INT >= 27) {
+        getSystemService(android.app.NotificationManager::class.java).isNotificationListenerAccessGranted(listenerComponent())
+    } else {
+        Settings.Secure.getString(contentResolver, "enabled_notification_listeners").orEmpty().split(':')
+            .any { ComponentName.unflattenFromString(it) == listenerComponent() }
+    }
 
 /**
  * Where to allow it: Android's notification access screen, where the TV has one (most hide it); otherwise the adb

@@ -161,6 +161,7 @@
     <string name="menu_app_info">Infos sur l\'appli</string>
     <string name="menu_remove_from_cw">Retirer de Continuer à regarder</string>
     <string name="menu_open_app">Ouvrir l\'appli</string>
+    <string name="menu_close_playing">Fermer</string>
     <string name="removed_from_row_toast">Retirée des Favoris. Elle reste dans Toutes les applis.</string>
 
     <!-- Time left -->
@@ -339,7 +340,6 @@
     <string name="now_playing_on">Piume voit ce qui est lu dans les autres applis.</string>
     <string name="now_playing_help">Pour afficher ce qui est lu dans les autres applis, Piume a besoin de l\'accès aux notifications. Sur cette TV, seul le système peut le donner : exécutez une fois cette commande depuis un ordinateur, puis revenez ici.</string>
     <string name="play_queue">File de lecture</string>
-    <string name="now_playing">En cours de lecture</string>
     <string name="playing_paused">%1$s · En pause</string>
     <string name="toast_no_results">Aucun résultat pour « %1$s »</string>
     <plurals name="toast_search_results">
