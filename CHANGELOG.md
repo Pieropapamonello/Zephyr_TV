@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- On the home screen, press Back on a card in a lower section to go back to the first section of the app.
+
 - The cards of the add-on channels show what is on now as the player does, with its progress bar. Piume asks the add-on for the cards that show.
 
 - In the player, Up and Down no longer change the channel. Use CH+ and CH- to change the channel. Up and Down show the banner. When the banner shows, they go to its buttons.

@@ -428,12 +428,17 @@ class MainActivity : Activity() {
         appRow.getChildAt(0)?.requestFocus()
     }
 
-    @Deprecated("Home screen: Back only closes overlays")
+    @Deprecated("Home screen: Back only closes overlays, and goes back up to an app's first section")
     override fun onBackPressed() {
         when {
             settingsScrim.visibility == View.VISIBLE -> pageBack?.invoke() ?: closeLauncherSettings()
             allApps.visibility == View.VISIBLE -> closeAllApps()
-            else -> endSearch()
+            endSearch() -> {}
+            // On a card in a section further down (an IPTV add-on's categories): the first section's first card.
+            currentFocus?.parent?.parent.let { row -> row is ViewGroup && row !== watchRow && row in cardRows() } -> {
+                watchScroll.scrollTo(0, 0)
+                firstCard()?.requestFocus()
+            }
         }
     }
 
