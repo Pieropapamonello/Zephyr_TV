@@ -358,11 +358,13 @@
         </dev.piume.BottomSection>
     </LinearLayout>
 
-    <!-- All apps: hidden until the Apps tile is pressed; Back closes it. -->
+    <!-- All apps: hidden until the Apps tile is pressed; Back closes it. Children unclipped, or the grid is cut
+         to its own width and a focused tile in the first or last column loses the edge it lifts into the margin. -->
     <ScrollView
         android:id="@+id/allApps"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:clipChildren="false"
         android:clipToPadding="false"
         android:paddingStart="48dp"
         android:paddingTop="28dp"

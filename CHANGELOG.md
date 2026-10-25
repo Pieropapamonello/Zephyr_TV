@@ -15,6 +15,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- In **All apps**, an app in the first or last column shows all of its tile when it has the focus. Before, its edge was cut.
 - Piume settings have a new section, **TV & IPTV**. It has the TV inputs, the channel logos and the TV guide. Before, they were in **Apps row** and **Continue Watching**.
 - What is playing now shows in the **Continue Watching** row, before the shows. It is no longer a row of its own.
 - Hold OK on a playing item and select **Close** to stop it and remove it from the row. It comes back when it plays again.
