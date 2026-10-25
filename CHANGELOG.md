@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+## 4.0.1
+
 - The settings section **TV & IPTV** is now called **TV & EPG**.
 
 ## 4.0.0
