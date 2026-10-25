@@ -369,4 +369,30 @@
     <string name="phone_list_hint">https://www.themoviedb.org/list/…</string>
     <string name="phone_list_saved">Liste enregistrée sur la TV : %1$d titres.</string>
     <string name="phone_list_bad">Ce n\'est pas une liste TMDB publique, ou elle est vide.</string>
+
+    <!-- Stremio add-ons -->
+    <string name="settings_section_addons">Extensions Stremio</string>
+    <string name="setting_addons_tv">Chaînes TV</string>
+    <string name="addons_tv_tv">Dans l\'app TV</string>
+    <string name="addons_tv_iptv">Dans une app IPTV</string>
+    <string name="addons_tv_apps">Une app par extension</string>
+    <string name="setting_addon_add">Ajouter une extension</string>
+    <string name="addon_hint">https://…/manifest.json</string>
+    <string name="addon_intro">L\'adresse du manifeste d\'une extension Stremio. Ses chaînes TV s\'affichent en rangées : toutes, puis une rangée par catégorie.</string>
+    <string name="addon_checking">Lecture de l\'extension…</string>
+    <string name="toast_addon_added">%1$s ajoutée : %2$d chaînes</string>
+    <string name="toast_addon_failed">Impossible de lire l\'extension. Vérifiez l\'adresse.</string>
+    <string name="toast_addon_no_tv">Cette extension n\'a pas de chaînes TV.</string>
+    <string name="toast_addon_updated">Extension mise à jour : %1$d chaînes</string>
+    <string name="toast_addon_removed">Extension supprimée</string>
+    <string name="addon_update">Mettre à jour</string>
+    <string name="addon_remove">Supprimer</string>
+    <string name="iptv_app">IPTV</string>
+    <string name="addon_phone_waiting">En attente de l\'adresse depuis le téléphone…</string>
+    <string name="phone_addon_title">Adresse de l\'extension Stremio</string>
+    <string name="phone_addon_intro">Collez l\'adresse d\'une extension Stremio (son manifest.json).</string>
+    <string name="phone_addon_saved">Adresse reçue. La TV ajoute l\'extension.</string>
+    <string name="player_loading">Chargement…</string>
+    <string name="player_no_streams">Aucun flux de cette chaîne ne fonctionne pour le moment.</string>
+    <string name="player_stream_n">Essai du flux %1$d sur %2$d…</string>
 </resources>

@@ -17,6 +17,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import dev.piume.MainActivity.Companion.ALIGN_ROW
+import dev.piume.MainActivity.Companion.ADDONS_SECTION
 import dev.piume.MainActivity.Companion.APPS_SECTION
 import dev.piume.MainActivity.Companion.CHOSEN
 import dev.piume.MainActivity.Companion.CLOCK_ROW
@@ -103,6 +104,7 @@ internal fun MainActivity.sectionTitle(section: Int) = getString(when (section) 
     APPS_SECTION -> R.string.settings_section_apps
     WATCH_SECTION -> R.string.settings_section_content
     TV_SECTION -> R.string.settings_section_tv
+    ADDONS_SECTION -> R.string.settings_section_addons
     SPOTLIGHT_SECTION -> R.string.setting_tmdb
     SCREENSAVER_SECTION -> R.string.setting_screensaver
     else -> R.string.settings_section_system
@@ -110,7 +112,7 @@ internal fun MainActivity.sectionTitle(section: Int) = getString(when (section) 
 
 /** The sections, each a page of its own: an arrow says so (a value here would only repeat the page's first row). */
 internal fun MainActivity.renderSettingsHome(focus: Int = 0) {
-    val sections = listOf(LOOK_SECTION, APPS_SECTION, WATCH_SECTION, TV_SECTION, SPOTLIGHT_SECTION, SCREENSAVER_SECTION, SYSTEM_SECTION)
+    val sections = listOf(LOOK_SECTION, APPS_SECTION, WATCH_SECTION, TV_SECTION, ADDONS_SECTION, SPOTLIGHT_SECTION, SCREENSAVER_SECTION, SYSTEM_SECTION)
     showPage(getString(R.string.plume_settings), sections.map { section ->
         page(sectionTitle(section), SUBMENU) { renderSettings(section * SECTION) }
     }, focus, back = null)
@@ -292,6 +294,7 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
         },
         page(getString(R.string.setting_epg), epgUrl()?.let { Uri.parse(it).host } ?: getString(R.string.state_off)) { configureEpg() },
     )
+    ADDONS_SECTION -> addonRows()
     SPOTLIGHT_SECTION -> spotlightRows()
     SCREENSAVER_SECTION -> listOf(
         page(getString(R.string.setting_screensaver), screensaverValue()) { pickScreensaver() },
@@ -320,7 +323,7 @@ internal fun MainActivity.spotlightRows(): List<Triple<String, String, () -> Uni
         else -> getString(R.string.tmdb_type_all)
     }
     val offSet = prefs.getStringSet(K.TMDB_DEFAULT_APPS, emptySet()) ?: emptySet()
-    val availableApps = apps.filter { !it.pkg.startsWith(HDMI) && it.pkg != CW_PKG }
+    val availableApps = apps.filter { !it.pkg.startsWith(HDMI) && !it.pkg.startsWith(STREMIO) && it.pkg != CW_PKG }
     val activeCount = availableApps.count { it.pkg !in offSet }
     val every = spotlightEvery()
     return listOf(
@@ -392,22 +395,7 @@ internal fun MainActivity.saveTmdbKey(key: String) {
  * once; Clear turns the guide off.
  */
 internal fun MainActivity.configureEpg() {
-    val input = EditText(this).apply {
-        setText(epgUrl() ?: "")
-        hint = getString(R.string.epg_hint)
-        setTextColor(fg)
-        setHintTextColor(if (dark) 0x66FFFFFF else 0x66000000)
-        isSingleLine = true
-        inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
-        setPadding(dp(14), dp(10), dp(14), dp(10))
-        val bg = GradientDrawable().apply {
-            cornerRadius = dp(8).toFloat()
-            setColor(field)
-            setStroke(dp(1), fieldEdge())
-        }
-        background = bg
-        setOnFocusChangeListener { _, focused -> bg.setStroke(if (focused) dp(2) else dp(1), if (focused) fg else fieldEdge()) }
-    }
+    val input = urlField(epgUrl() ?: "", getString(R.string.epg_hint))
     val box = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, dp(12), 0, dp(12))
@@ -426,6 +414,30 @@ internal fun MainActivity.configureEpg() {
         },
     )
     showPage(getString(R.string.setting_epg), rows, top = box, back = { renderSettings(EPG_ROW) })
+    downFrom(input)
+}
+
+/** A box for a web address, typed with the remote: framed like the other settings boxes. */
+internal fun MainActivity.urlField(value: String, hint: String): EditText =
+    EditText(this).apply {
+        setText(value)
+        this.hint = hint
+        setTextColor(fg)
+        setHintTextColor(if (dark) 0x66FFFFFF else 0x66000000)
+        isSingleLine = true
+        inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
+        setPadding(dp(14), dp(10), dp(14), dp(10))
+        val bg = GradientDrawable().apply {
+            cornerRadius = dp(8).toFloat()
+            setColor(field)
+            setStroke(dp(1), fieldEdge())
+        }
+        background = bg
+        setOnFocusChangeListener { _, focused -> bg.setStroke(if (focused) dp(2) else dp(1), if (focused) fg else fieldEdge()) }
+    }
+
+/** Focuses [input], the box at the top of the page, with Down going on to the first row under it. */
+internal fun MainActivity.downFrom(input: EditText) {
     // The TV keyboard keeps Down for itself while the box has focus, even with the keyboard put away.
     val first = settingsList.getChildAt(1)
     input.setOnKeyListener { _, key, e -> (key == KeyEvent.KEYCODE_DPAD_DOWN && e.action == KeyEvent.ACTION_DOWN).also { if (it) first.requestFocus() } }

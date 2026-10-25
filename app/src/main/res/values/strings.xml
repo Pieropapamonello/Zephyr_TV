@@ -368,4 +368,30 @@
     <string name="phone_list_hint">https://www.themoviedb.org/list/…</string>
     <string name="phone_list_saved">List saved on the TV: %1$d titles.</string>
     <string name="phone_list_bad">That isn\'t a public TMDB list, or it\'s empty.</string>
+
+    <!-- Stremio add-ons -->
+    <string name="settings_section_addons">Stremio add-ons</string>
+    <string name="setting_addons_tv">TV channels</string>
+    <string name="addons_tv_tv">In the TV app</string>
+    <string name="addons_tv_iptv">In an IPTV app</string>
+    <string name="addons_tv_apps">An app per add-on</string>
+    <string name="setting_addon_add">Add an add-on</string>
+    <string name="addon_hint">https://…/manifest.json</string>
+    <string name="addon_intro">The address of a Stremio add-on\'s manifest. Its TV channels show as rows: all of them, then one row per category.</string>
+    <string name="addon_checking">Reading the add-on…</string>
+    <string name="toast_addon_added">%1$s added: %2$d channels</string>
+    <string name="toast_addon_failed">Couldn\'t read the add-on. Check the address.</string>
+    <string name="toast_addon_no_tv">This add-on has no TV channels.</string>
+    <string name="toast_addon_updated">Add-on updated: %1$d channels</string>
+    <string name="toast_addon_removed">Add-on removed</string>
+    <string name="addon_update">Update now</string>
+    <string name="addon_remove">Remove</string>
+    <string name="iptv_app">IPTV</string>
+    <string name="addon_phone_waiting">Waiting for the address from your phone…</string>
+    <string name="phone_addon_title">Stremio add-on address</string>
+    <string name="phone_addon_intro">Paste the address of a Stremio add-on (its manifest.json).</string>
+    <string name="phone_addon_saved">Address received. The TV is adding the add-on.</string>
+    <string name="player_loading">Loading…</string>
+    <string name="player_no_streams">No stream of this channel works right now.</string>
+    <string name="player_stream_n">Trying stream %1$d of %2$d…</string>
 </resources>

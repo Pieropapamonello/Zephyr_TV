@@ -114,7 +114,7 @@ internal const val SEARCH_PKG = "piume:search" // the search results tile, after
 class MainActivity : Activity() {
 
     internal class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable, val offline: Boolean = false)
-    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val tmdb: TmdbItem? = null, val logo: String? = null, val poster: String? = null, val channelPage: ChannelDetail? = null, val channelId: Long? = null, val playing: Boolean = false)
+    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val tmdb: TmdbItem? = null, val logo: String? = null, val poster: String? = null, val channelPage: ChannelDetail? = null, val channelId: Long? = null, val playing: Boolean = false, val addon: AddonChannel? = null)
 
     internal val prefs by lazy { getSharedPreferences(K.FILE, MODE_PRIVATE) }
     internal val io = Executors.newSingleThreadExecutor()
@@ -872,7 +872,7 @@ class MainActivity : Activity() {
             inputsInApps() -> hdmiInputs().filter { !it.offline }
             else -> emptyList()
         }
-        return installed + hdmi
+        return installed + hdmi + addonApps()
     }
 
     internal val inputCallback = object : TvInputManager.TvInputCallback() {
@@ -1064,6 +1064,13 @@ class MainActivity : Activity() {
         val colour = colourIcons()
         val t = when {
             custom != null -> tile(name, custom, false, a.pkg) { launch(a) }
+            // An add-on's tile (see addonApps): OK goes down to its channels; from All apps, to its tile in the row.
+            a.pkg.startsWith(STREMIO) -> tile(name, a.icon, a.icon !is android.graphics.drawable.BitmapDrawable, a.pkg) {
+                if (allApps.visibility == View.VISIBLE) {
+                    closeAllApps()
+                    appRow.findViewWithTag<View>(a.pkg)?.requestFocus()
+                } else if (watchApp == a.pkg) firstCard()?.requestFocus()
+            }
             a.pkg.startsWith(HDMI) -> tile(name, a.icon, true, a.pkg,
                 tint = BRAND_COLOURS[hdmiIcon(a.label, true)]?.takeIf { colour }) { launch(a) }
             logo != null -> tile(name.takeIf { !logo.second }, getDrawable(logo.first)!!, true, a.pkg,
@@ -1439,7 +1446,7 @@ class MainActivity : Activity() {
             sectionCache?.takeIf { it.first == pkg && it.second.isNotEmpty() }?.let { (_, sections) ->
                 getString(R.string.menu_sections) to { pickSections(pkg, sections) }
             },
-            if (pkg.startsWith(HDMI)) null else getString(R.string.menu_app_info) to {
+            if (pkg.startsWith(HDMI) || pkg.startsWith(STREMIO)) null else getString(R.string.menu_app_info) to {
                 openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkg, null))
             },
         ))
@@ -1934,6 +1941,7 @@ class MainActivity : Activity() {
         const val SCREENSAVER_SECTION = 4
         const val SYSTEM_SECTION = 5
         const val TV_SECTION = 6 // listed after Continue Watching (see renderSettingsHome)
+        const val ADDONS_SECTION = 7 // listed after TV
         const val THEME_ROW = LOOK_SECTION * SECTION
         const val LIGHT_WP_ROW = THEME_ROW + 1
         const val DARK_WP_ROW = THEME_ROW + 2
@@ -1958,6 +1966,9 @@ class MainActivity : Activity() {
         const val INPUTS_IN_APPS_ROW = TV_SECTION * SECTION + 1
         const val CHANNEL_LOGOS_ROW = TV_SECTION * SECTION + 2
         const val EPG_ROW = TV_SECTION * SECTION + 4
+        const val ADDONS_TV_ROW = ADDONS_SECTION * SECTION
+        const val ADDON_ADD_ROW = ADDONS_TV_ROW + 1
+        const val ADDON_ROWS = ADDONS_TV_ROW + 2 // then one row per add-on
         const val TMDB_KEY_ROW = SPOTLIGHT_SECTION * SECTION
         const val TMDB_SOURCE_ROW = TMDB_KEY_ROW + 1
         const val TMDB_LIST_ROW = TMDB_KEY_ROW + 2

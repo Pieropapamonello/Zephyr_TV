@@ -45,6 +45,10 @@ internal object K {
     const val CHANNEL_LOGOS = "channel_logos" // logos from iptv-org for channels the TV has none for
     const val EPG_URL = "epg_url" // an XMLTV guide's address, for what's on (see Epg)
 
+    // Stremio add-ons
+    const val ADDONS = "addons" // the add-ons' manifest addresses, in order, one per line (see Addons)
+    const val ADDONS_TV = "addons_tv" // where their TV channels show: "tv" (the TV app), "iptv" (one IPTV app), "apps" (an app each)
+
     // Spotlight
     const val TMDB_API_KEY = "tmdb_api_key"
     const val TMDB_LANG = "tmdb_lang"

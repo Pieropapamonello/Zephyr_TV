@@ -4,7 +4,8 @@ plugins {
     id("com.android.application")
 }
 
-// No dependencies on purpose: framework Views only, to keep RAM and APK size minimal.
+// No dependencies on purpose: framework Views only, to keep RAM and APK size minimal. One exception, the player
+// for the Stremio add-ons' channels (see dependencies).
 android {
     namespace = "dev.piume"
     compileSdk = 36
@@ -56,5 +57,11 @@ android {
 }
 
 dependencies {
+    // The one exception to "no dependencies": Media3's ExoPlayer, for the Stremio add-ons' channels (see PlayerActivity).
+    val media3 = "1.11.1"
+    implementation("androidx.media3:media3-exoplayer:$media3")
+    implementation("androidx.media3:media3-exoplayer-hls:$media3")
+    implementation("androidx.media3:media3-exoplayer-dash:$media3")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20250517") // Android's own org.json is only stubs in unit tests
 }

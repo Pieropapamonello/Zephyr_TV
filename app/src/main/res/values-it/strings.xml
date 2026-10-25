@@ -369,4 +369,30 @@
     <string name="phone_list_hint">https://www.themoviedb.org/list/…</string>
     <string name="phone_list_saved">Lista salvata sulla TV: %1$d titoli.</string>
     <string name="phone_list_bad">Non è una lista TMDB pubblica, oppure è vuota.</string>
+
+    <!-- Stremio add-ons -->
+    <string name="settings_section_addons">Addon Stremio</string>
+    <string name="setting_addons_tv">Canali TV</string>
+    <string name="addons_tv_tv">Nell\'app TV</string>
+    <string name="addons_tv_iptv">In un\'app IPTV</string>
+    <string name="addons_tv_apps">Un\'app per addon</string>
+    <string name="setting_addon_add">Aggiungi un addon</string>
+    <string name="addon_hint">https://…/manifest.json</string>
+    <string name="addon_intro">L\'indirizzo del manifest di un addon Stremio. I suoi canali TV compaiono come righe: tutti, poi una riga per categoria.</string>
+    <string name="addon_checking">Lettura dell\'addon…</string>
+    <string name="toast_addon_added">%1$s aggiunto: %2$d canali</string>
+    <string name="toast_addon_failed">Impossibile leggere l\'addon. Controlla l\'indirizzo.</string>
+    <string name="toast_addon_no_tv">Questo addon non ha canali TV.</string>
+    <string name="toast_addon_updated">Addon aggiornato: %1$d canali</string>
+    <string name="toast_addon_removed">Addon rimosso</string>
+    <string name="addon_update">Aggiorna ora</string>
+    <string name="addon_remove">Rimuovi</string>
+    <string name="iptv_app">IPTV</string>
+    <string name="addon_phone_waiting">In attesa dell\'indirizzo dal telefono…</string>
+    <string name="phone_addon_title">Indirizzo dell\'addon Stremio</string>
+    <string name="phone_addon_intro">Incolla l\'indirizzo di un addon Stremio (il suo manifest.json).</string>
+    <string name="phone_addon_saved">Indirizzo ricevuto. La TV sta aggiungendo l\'addon.</string>
+    <string name="player_loading">Caricamento…</string>
+    <string name="player_no_streams">Nessuno stream di questo canale funziona in questo momento.</string>
+    <string name="player_stream_n">Provo lo stream %1$d di %2$d…</string>
 </resources>

@@ -369,4 +369,30 @@
     <string name="phone_list_hint">https://www.themoviedb.org/list/…</string>
     <string name="phone_list_saved">Lista guardada en la TV: %1$d títulos.</string>
     <string name="phone_list_bad">No es una lista pública de TMDB, o está vacía.</string>
+
+    <!-- Stremio add-ons -->
+    <string name="settings_section_addons">Complementos de Stremio</string>
+    <string name="setting_addons_tv">Canales de TV</string>
+    <string name="addons_tv_tv">En la app de TV</string>
+    <string name="addons_tv_iptv">En una app IPTV</string>
+    <string name="addons_tv_apps">Una app por complemento</string>
+    <string name="setting_addon_add">Añadir un complemento</string>
+    <string name="addon_hint">https://…/manifest.json</string>
+    <string name="addon_intro">La dirección del manifiesto de un complemento de Stremio. Sus canales de TV aparecen como filas: todos, y luego una fila por categoría.</string>
+    <string name="addon_checking">Leyendo el complemento…</string>
+    <string name="toast_addon_added">%1$s añadido: %2$d canales</string>
+    <string name="toast_addon_failed">No se pudo leer el complemento. Revisa la dirección.</string>
+    <string name="toast_addon_no_tv">Este complemento no tiene canales de TV.</string>
+    <string name="toast_addon_updated">Complemento actualizado: %1$d canales</string>
+    <string name="toast_addon_removed">Complemento eliminado</string>
+    <string name="addon_update">Actualizar ahora</string>
+    <string name="addon_remove">Eliminar</string>
+    <string name="iptv_app">IPTV</string>
+    <string name="addon_phone_waiting">Esperando la dirección desde el teléfono…</string>
+    <string name="phone_addon_title">Dirección del complemento de Stremio</string>
+    <string name="phone_addon_intro">Pega la dirección de un complemento de Stremio (su manifest.json).</string>
+    <string name="phone_addon_saved">Dirección recibida. La TV está añadiendo el complemento.</string>
+    <string name="player_loading">Cargando…</string>
+    <string name="player_no_streams">Ningún stream de este canal funciona ahora mismo.</string>
+    <string name="player_stream_n">Probando el stream %1$d de %2$d…</string>
 </resources>

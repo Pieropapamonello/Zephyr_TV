@@ -216,7 +216,7 @@ internal fun MainActivity.titleApps(): List<App> {
     }
     for (app in apps) {
         if (candidateApps.size >= 5) break
-        if (app.pkg !in offSet && !app.pkg.startsWith(HDMI) && app.pkg != CW_PKG && candidateApps.none { it.pkg == app.pkg }) {
+        if (app.pkg !in offSet && !app.pkg.startsWith(HDMI) && !app.pkg.startsWith(STREMIO) && app.pkg != CW_PKG && candidateApps.none { it.pkg == app.pkg }) {
             candidateApps.add(app)
         }
     }

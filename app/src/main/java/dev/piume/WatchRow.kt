@@ -169,17 +169,24 @@ internal fun MainActivity.hideWatch(p: Prog) {
 }
 
 internal fun MainActivity.queryAppChannels(pkg: String?) {
-    if (pkg == null || checkSelfPermission(TV_LISTINGS) != PackageManager.PERMISSION_GRANTED) {
+    // An add-on's tile, or the TV app with the add-ons' channels in it, has rows without the TV listings too.
+    if (pkg == null || (!readsListings() && !pkg.startsWith(STREMIO) && addonsUnder(pkg).isEmpty())) {
         ui.post { watchTitle.text = getString(R.string.continue_watching) }
         refreshWatchNext()
         return
     }
     io.execute {
         val hidden = prefs.getStringSet(K.HIDDEN_WATCH, emptySet())!!
-        // The TV app shows its channel list, a section per tuner (none, on a TV without one); any other app, a
-        // section per row it publishes for the home screen. Each can be turned off (see pickSections).
-        val tv = isTvApp(pkg)
-        val all = if (tv) tunerSections(pkg, hidden) else appSections(pkg, hidden)
+        // The TV app shows its channel list, a section per tuner (none, on a TV without one), then the add-ons'
+        // channels if they show there; an add-on's tile, its channels; any other app, a section per row it
+        // publishes for the home screen. Each can be turned off (see pickSections).
+        val tv = !pkg.startsWith(STREMIO) && isTvApp(pkg)
+        val own = when {
+            pkg.startsWith(STREMIO) || !readsListings() -> emptyList()
+            tv -> tunerSections(pkg, hidden)
+            else -> appSections(pkg, hidden)
+        }
+        val all = own + addonSections(pkg, hidden)
         val off = prefs.getStringSet(K.SECTIONS_OFF, emptySet())!!
         val shown = all.filter { sectionKey(pkg, it) !in off }
         ui.post {
@@ -665,10 +672,11 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     // middle on a blur of itself (its name and number are under the card); with no logo, or until it's in, the
     // number and name instead.
     if (p.badge != null) channelArt(frame, w, cardHeight, p.badge, p.title) {
-        p.image ?: p.channelId?.let { id -> logo(id) ?: ChannelLogos.match(channelLogoTable(), p.title) }
+        // An add-on's channel without a logo of its own (or with a placeholder) finds one by name, like a tuner's.
+        p.image ?: p.channelId?.let { id -> logo(id) } ?: ChannelLogos.match(channelLogoTable(), p.title)
     }
     if (p.tmdb != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title)
-    frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: p.channelPage?.let { showChannel(it) } ?: open(p) }
+    frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: p.channelPage?.let { showChannel(it) } ?: p.addon?.let { playAddonChannel(p) } ?: open(p) }
     frame.setTag(R.id.watchRow, p) // holding OK hides it (see onHold)
     col.addView(frame, LinearLayout.LayoutParams(w, cardHeight))
     // Thin bar under the poster, card width. Kept (invisible) when there's no progress so titles line up.
@@ -707,7 +715,7 @@ internal fun MainActivity.channelArt(frame: FrameLayout, w: Int, h: Int, number:
     val text = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
-        addView(label(number, 30f).apply { gravity = Gravity.CENTER })
+        if (number.isNotEmpty()) addView(label(number, 30f).apply { gravity = Gravity.CENTER }) // an add-on's channels have none
         addView(label(name, 13f).apply { gravity = Gravity.CENTER; alpha = 0.8f; setPadding(dp(12), dp(4), dp(12), 0) })
     }
     frame.addView(text, MATCH_PARENT, MATCH_PARENT)
