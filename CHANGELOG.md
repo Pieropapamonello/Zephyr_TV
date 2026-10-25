@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- The player banner has a **Pause** button, first before **Audio**. Press it to pause the channel, and again (**Play**) to play it. While the channel is paused, the banner stays and shows **Paused**. A live channel that is paused for a long time goes back to the live broadcast when it plays again.
+
 ## 4.0.0-beta.7
 
 - This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.

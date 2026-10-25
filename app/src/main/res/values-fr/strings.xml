@@ -410,6 +410,9 @@
     <string name="player_track_forced">(forcés)</string>
     <string name="player_tracks_line">Audio : %1$s · Sous-titres : %2$s</string>
     <string name="player_streams">Flux</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_play">Lecture</string>
+    <string name="player_paused">En pause</string>
     <string name="player_stream_row">%1$d · %2$s</string>
     <string name="channel_play">Regarder</string>
 </resources>

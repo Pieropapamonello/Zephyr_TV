@@ -410,6 +410,9 @@
     <string name="player_track_forced">(forzati)</string>
     <string name="player_tracks_line">Audio: %1$s · Sottotitoli: %2$s</string>
     <string name="player_streams">Stream</string>
+    <string name="player_pause">Pausa</string>
+    <string name="player_play">Riproduci</string>
+    <string name="player_paused">In pausa</string>
     <string name="player_stream_row">%1$d · %2$s</string>
     <string name="channel_play">Guarda</string>
 </resources>

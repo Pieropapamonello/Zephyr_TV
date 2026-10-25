@@ -50,8 +50,8 @@ import org.json.JSONObject
  * channel. For each it asks the add-on for its streams and plays the first that works; Left/Right go to the
  * channel's other streams, and one that fails or stays stuck gives way to the next by itself (round the list, until
  * each was tried). OK or Info shows what's on, in short; OK again shows all of it (the add-on's guide, else the one
- * set in Piume settings). With the banner up, Left/Right reach its buttons: Audio, Subtitles and Stream, each
- * opening its list to pick from (holding OK, or Menu, opens audio and subtitles together). The audio and subtitles
+ * set in Piume settings). With the banner up, Left/Right reach its buttons: Play/Pause, then Audio, Subtitles and
+ * Stream, each opening its list to pick from (holding OK, or Menu, opens audio and subtitles together). The audio and subtitles
  * picked are kept by language, for the next channels and the next time.
  *
  * Media3's ExoPlayer plays them, the one library Piume ships, for HLS and DASH as the TV's own player doesn't do
@@ -125,6 +125,7 @@ class PlayerActivity : Activity() {
         typed = ""
     }
     private val stuck = Runnable {
+        if (player?.playWhenReady == false) return@Runnable // paused: waiting is what it's asked to do
         warn("stream ${tried + 1} stuck, trying the next")
         next()
     }
@@ -258,6 +259,7 @@ class PlayerActivity : Activity() {
         val playing = streams.getOrNull(tried)?.takeIf { i == at }
         source.text = if (playing != null)
             getString(R.string.player_stream, tried + 1, streams.size, playing.title)
+                .let { if (player?.playWhenReady == false) getString(R.string.player_paused) + "  ·  " + it else it }
         else getString(R.string.player_loading)
         fillTrackLine(i)
         fillButtons(i)
@@ -387,7 +389,7 @@ class PlayerActivity : Activity() {
             KeyEvent.KEYCODE_CAPTIONS -> cycle(C.TRACK_TYPE_TEXT)
             KeyEvent.KEYCODE_LAST_CHANNEL -> if (previous in channels.indices) zapTo(previous, delay = 0)
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY -> player?.let { p ->
-                p.playWhenReady = if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) !p.playWhenReady else keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
+                setPlaying(if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) !p.playWhenReady else keyCode == KeyEvent.KEYCODE_MEDIA_PLAY)
             }
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
                 typed = (typed + (keyCode - KeyEvent.KEYCODE_0)).takeLast(4)
@@ -467,7 +469,10 @@ class PlayerActivity : Activity() {
     /** The banner's buttons for channel [i] once it plays: Audio with two tracks or more, Subtitles with any, Stream with two or more. */
     private fun fillButtons(i: Int) {
         val keep = (currentFocus?.parent === buttons).let { if (it) buttons.indexOfChild(currentFocus) else -1 }
+        val paused = player?.playWhenReady == false
         val list = if (i != at || player == null) emptyList() else listOfNotNull(
+            if (paused) Triple(R.drawable.ic_play, R.string.player_play) { setPlaying(true) }
+            else Triple(R.drawable.ic_pause, R.string.player_pause) { setPlaying(false) },
             if (tracks(C.TRACK_TYPE_AUDIO).size > 1) Triple(R.drawable.ic_audio, R.string.player_audio) { openTracks(C.TRACK_TYPE_AUDIO) } else null,
             if (tracks(C.TRACK_TYPE_TEXT).isNotEmpty()) Triple(R.drawable.ic_subtitles, R.string.player_subtitles) { openTracks(C.TRACK_TYPE_TEXT) } else null,
             if (streams.size > 1) Triple(R.drawable.ic_stream, R.string.player_streams) { openStreams() } else null,
@@ -478,6 +483,18 @@ class PlayerActivity : Activity() {
         list.forEach { (icon, label, action) -> buttons.addView(button(icon, getString(label), action).apply { tag = label }) }
         buttons.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
         if (keep >= 0) focusButton(minOf(keep, buttons.childCount - 1))
+    }
+
+    /**
+     * Play or pause the channel (the button, or the remote's media keys). Paused, the banner stays up and says so; a
+     * live stream paused past what it keeps catches up with the broadcast when it plays again (see onPlayerError).
+     */
+    private fun setPlaying(play: Boolean) {
+        val p = player ?: return
+        if (p.playWhenReady == play) return
+        p.playWhenReady = play
+        ui.removeCallbacks(stuck) // a pause isn't a stream that's stuck
+        showBanner(at, stay = !play)
     }
 
     /** A pill with an icon and its name, lit white while it has the focus; focusable only once Left/Right reach it. */
