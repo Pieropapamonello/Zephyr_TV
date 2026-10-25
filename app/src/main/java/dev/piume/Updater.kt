@@ -10,15 +10,28 @@ import android.os.Build
 /** The action MainActivity gets an install's outcome under (from InstallResult). */
 internal const val UPDATE_STATUS = "dev.piume.UPDATE_STATUS"
 
-/** "1.10" > "1.9" > "1.2.1" > "1.2": compared number by number, missing parts count as 0. */
+/**
+ * "1.10" > "1.9" > "1.2.1" > "1.2": compared number by number, missing parts count as 0. A beta comes before its
+ * release, and betas in their order: "4.0" > "4.0.0-beta.2" > "4.0.0-beta.1" > "3.1".
+ */
 internal fun newerVersion(a: String, b: String): Boolean {
-    val x = a.split('.').map { it.toIntOrNull() ?: 0 }
-    val y = b.split('.').map { it.toIntOrNull() ?: 0 }
-    for (i in 0 until maxOf(x.size, y.size)) {
-        val d = x.getOrElse(i) { 0 } - y.getOrElse(i) { 0 }
-        if (d != 0) return d > 0
+    fun numbers(s: String) = s.split('.').map { it.filter(Char::isDigit).toIntOrNull() ?: 0 }
+    fun compare(x: List<Int>, y: List<Int>): Int {
+        for (i in 0 until maxOf(x.size, y.size)) {
+            val d = x.getOrElse(i) { 0 } - y.getOrElse(i) { 0 }
+            if (d != 0) return d
+        }
+        return 0
     }
-    return false
+    val d = compare(numbers(a.substringBefore('-')), numbers(b.substringBefore('-')))
+    if (d != 0) return d > 0
+    val (pa, pb) = a.substringAfter('-', "") to b.substringAfter('-', "")
+    return when {
+        pa == pb -> false
+        pa.isEmpty() -> true // the release, after its betas
+        pb.isEmpty() -> false
+        else -> compare(numbers(pa), numbers(pb)) > 0
+    }
 }
 
 /**

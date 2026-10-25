@@ -15,6 +15,19 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+## 4.0.0-beta.1
+
+- This version is a beta. Piume does not offer it as an update. To try it, install Piume.apk by hand.
+- Piume settings have a new section, **Stremio add-ons**. Select **Add an add-on** and type the address of the add-on's manifest. You can also paste it on your phone.
+- The TV channels of an add-on show as rows. The first row has all the channels. Then each category has a row of its own.
+- Select **TV channels** to choose where the rows show: **In the TV app**, **In an IPTV app** or **An app per add-on**. Without a TV app, they show in the IPTV app.
+- An app per add-on has the add-on's name and logo, from its manifest.
+- Select a channel to play it in the Piume player. If a stream does not play, the player tries the next stream.
+- The cards show the program on now, if the add-on gives it.
+- Piume reads the channels of each add-on again every 15 minutes.
+- The backup includes the add-ons.
+- Piume is larger: about 1.2 MB. The player needs the extra space.
+
 ## 3.1
 
 - The settings section **Continue Watching** is now called **Content**.
