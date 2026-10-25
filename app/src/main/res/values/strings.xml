@@ -387,6 +387,8 @@
     <string name="toast_addon_removed">Add-on removed</string>
     <string name="addon_update">Update now</string>
     <string name="addon_remove">Remove</string>
+    <string name="addon_move_up">Move up</string>
+    <string name="addon_move_down">Move down</string>
     <string name="iptv_app">IPTV</string>
     <string name="addon_phone_waiting">Waiting for the address from your phone…</string>
     <string name="phone_addon_title">Stremio add-on address</string>

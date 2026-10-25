@@ -388,6 +388,8 @@
     <string name="toast_addon_removed">Complemento eliminado</string>
     <string name="addon_update">Actualizar ahora</string>
     <string name="addon_remove">Eliminar</string>
+    <string name="addon_move_up">Subir</string>
+    <string name="addon_move_down">Bajar</string>
     <string name="iptv_app">IPTV</string>
     <string name="addon_phone_waiting">Esperando la dirección desde el teléfono…</string>
     <string name="phone_addon_title">Dirección del complemento de Stremio</string>

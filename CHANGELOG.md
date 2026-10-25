@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- In **Stremio add-ons**, select an add-on and then **Move up** or **Move down** to change the order. In the TV app and the IPTV app, the rows of the first add-on show first.
+
 ## 4.0.0-beta.4
 
 - This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.

@@ -293,7 +293,7 @@ internal fun MainActivity.addonRows(): List<Triple<String, String, () -> Unit>> 
         },
         page(getString(R.string.setting_addon_add), SUBMENU) { configureAddon() },
     ) + addonUrls().mapIndexed { i, url ->
-        page(Stremio.saved(filesDir, url)?.addon?.name ?: url, SUBMENU) { addonPage(url, ADDON_ROWS + i) }
+        page(Stremio.saved(filesDir, url)?.addon?.name ?: url, SUBMENU) { addonPage(url) }
     }
 }
 
@@ -337,10 +337,31 @@ internal fun MainActivity.addonFromPhone() {
     }, status) { configureAddon() }
 }
 
-/** One add-on's page, from its row ([row]) in the section: read it again now, or remove it. */
-internal fun MainActivity.addonPage(url: String, row: Int) {
+/**
+ * Moves the add-on at [url] [step] places in the list: where several show together (the TV app, the IPTV app),
+ * their rows come in this order.
+ */
+internal fun MainActivity.moveAddon(url: String, step: Int) {
+    val urls = addonUrls().toMutableList()
+    val from = urls.indexOf(url)
+    val to = from + step
+    if (from < 0 || to !in urls.indices) return
+    urls.removeAt(from)
+    urls.add(to, url)
+    saveAddonUrls(urls)
+    addonsChanged()
+}
+
+/**
+ * One add-on's page, from its row in the section: read it again now, move it up or down the list (the order its
+ * rows come in), or remove it. [focus] is the row to focus by its name (after a move, the same move again).
+ */
+internal fun MainActivity.addonPage(url: String, focus: Int? = null) {
     val name = Stremio.saved(filesDir, url)?.addon?.name ?: url
-    showPage(name, listOf(
+    val urls = addonUrls()
+    val at = urls.indexOf(url)
+    val row = ADDON_ROWS + at
+    val rows = listOfNotNull(
         page(getString(R.string.addon_update)) {
             Toast.makeText(this, getString(R.string.addon_checking), Toast.LENGTH_SHORT).show()
             updateAddon(url, null) { listing ->
@@ -350,9 +371,16 @@ internal fun MainActivity.addonPage(url: String, row: Int) {
                 watchKey = null
             }
         },
+        if (at > 0) page(getString(R.string.addon_move_up)) { moveAddon(url, -1); addonPage(url, R.string.addon_move_up) } else null,
+        if (at < urls.size - 1) page(getString(R.string.addon_move_down)) { moveAddon(url, +1); addonPage(url, R.string.addon_move_down) } else null,
         page(getString(R.string.addon_remove)) {
             removeAddon(url)
             renderSettings(ADDON_ADD_ROW)
         },
-    ), top = label(url, 12f).apply { alpha = 0.6f; setPadding(dp(4), dp(8), dp(4), dp(8)) }, back = { renderSettings(row) })
+    )
+    // After a move, the same move again (or the other one, at the top or bottom of the list).
+    val shown = rows.map { it.first }
+    val index = focus?.let { f -> shown.indexOf(getString(f)).takeIf { it >= 0 }
+        ?: shown.indexOfFirst { it == getString(R.string.addon_move_up) || it == getString(R.string.addon_move_down) } } ?: 0
+    showPage(name, rows, index.coerceAtLeast(0), top = label(url, 12f).apply { alpha = 0.6f; setPadding(dp(4), dp(8), dp(4), dp(8)) }, back = { renderSettings(row) })
 }
