@@ -104,7 +104,9 @@ class PlayerActivity : Activity() {
     private lateinit var tracksPanel: LinearLayout // Audio and subtitles, on the right
     private lateinit var tracksTitle: TextView
     private lateinit var tracksList: LinearLayout
-    private lateinit var buttons: LinearLayout // in the banner: Audio, Subtitles, Stream; reached with Left/Right
+    private lateinit var buttons: LinearLayout // in the banner, right of the stream and audio lines: icons for Pause, Audio, Subtitles, Stream
+    private lateinit var desc: LinearLayout // in the banner: what's on, focused once OK brings it up (OK there: all of it)
+    private lateinit var lines: LinearLayout // the stream and audio lines, the buttons as tall as both
 
     /** The audio and subtitle languages picked, for every channel: a file only this process writes (see pick). */
     private val choices by lazy { getSharedPreferences(CHOICES_FILE, MODE_PRIVATE) }
@@ -114,7 +116,7 @@ class PlayerActivity : Activity() {
 
     private val hideBanner = Runnable {
         expanded = false
-        unfocusButtons()
+        unfocusBanner()
         banner.animate().alpha(0f).setDuration(250).withEndAction { banner.visibility = View.GONE }.start()
     }
     private val zapNow = Runnable { if (shown != at) play(shown) }
@@ -187,7 +189,7 @@ class PlayerActivity : Activity() {
         title = text(24f, bold = true).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
         position = text(14f).apply { alpha = 0.7f; setPadding(dp(12), 0, 0, 0) }
         clock = text(18f)
-        onNow = text(16f).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(6), 0, 0) }
+        onNow = text(16f).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END }
         bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
             progressDrawable = LayerDrawable(arrayOf(
@@ -196,9 +198,41 @@ class PlayerActivity : Activity() {
             )).apply { setId(0, android.R.id.background); setId(1, android.R.id.progress) }
         }
         more = text(14f).apply { alpha = 0.85f; maxLines = 14; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(8), 0, 0) }
-        source = text(12f).apply { alpha = 0.6f; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(8), 0, 0) }
+        source = text(12f).apply { alpha = 0.6f; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
         trackLine = text(12f).apply { alpha = 0.6f; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(4), 0, 0) }
         buttons = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; clipChildren = false }
+        // What's on: framed while it has the focus, so it's clear OK there shows all of it.
+        val descBg = GradientDrawable().apply { cornerRadius = dp(10).toFloat(); setColor(Color.TRANSPARENT) }
+        desc = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(6), dp(12), dp(10))
+            background = descBg
+            addView(onNow)
+            addView(bar, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(4)).apply { topMargin = dp(8) })
+            addView(more)
+            isFocusable = false
+            isClickable = true
+            setOnClickListener { toggleMore() }
+            setOnFocusChangeListener { _, has ->
+                descBg.setColor(if (has) 0x26FFFFFF else Color.TRANSPARENT)
+                descBg.setStroke(if (has) dp(2) else 0, Color.WHITE)
+            }
+        }
+        lines = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(source)
+            addView(trackLine)
+            addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+                if (bottom - top != oldBottom - oldTop) buttons.post { sizeButtons() }
+            }
+        }
+        val foot = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            clipChildren = false
+            clipToPadding = false
+            addView(lines, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(buttons, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(16) })
+        }
         val head = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             addView(title, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
@@ -211,12 +245,12 @@ class PlayerActivity : Activity() {
             clipChildren = false
             clipToPadding = false
             addView(head)
-            addView(onNow)
-            addView(bar, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(4)).apply { topMargin = dp(8) })
-            addView(more)
-            addView(source)
-            addView(trackLine)
-            addView(buttons, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(14) })
+            // Its frame's padding out to the side, so its text lines up with the title.
+            addView(desc, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                marginStart = -dp(12)
+                marginEnd = -dp(12)
+            })
+            addView(foot, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
         }
         banner = LinearLayout(this).apply {
             gravity = Gravity.TOP
@@ -268,7 +302,7 @@ class PlayerActivity : Activity() {
         banner.animate().cancel()
         banner.animate().alpha(1f).setDuration(150).start()
         ui.removeCallbacks(hideBanner)
-        if (!stay && !expanded) ui.postDelayed(hideBanner, if (buttonFocused()) BUTTONS_MS else BANNER_MS)
+        if (!stay && !expanded) ui.postDelayed(hideBanner, if (bannerFocused()) BUTTONS_MS else BANNER_MS)
         // The add-on's page for the channel, for what's on and next: once, in the background.
         if (!pages.containsKey(c.id)) ahead.execute {
             val meta = runCatching { Stremio.meta(base, c.type, c.id) }.getOrNull() ?: return@execute
@@ -330,6 +364,15 @@ class PlayerActivity : Activity() {
         more.visibility = if (expanded && !more.text.isNullOrEmpty()) View.VISIBLE else View.GONE
         bar.visibility = if (progress == null) View.GONE else View.VISIBLE
         bar.progress = progress ?: 0
+        desc.visibility = if (onNow.visibility == View.VISIBLE || bar.visibility == View.VISIBLE) View.VISIBLE else View.GONE
+    }
+
+    /** OK on what's on: all of it (the description, what's next), or back to its first line. */
+    private fun toggleMore() {
+        if (more.text.isNullOrEmpty()) return
+        expanded = !expanded
+        fillGuide(channels[shown])
+        keepUp()
     }
 
     /** The channel's logo in the banner: the add-on's, then Piume's own; downloaded once, kept while the player is open. */
@@ -378,21 +421,20 @@ class PlayerActivity : Activity() {
             if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_MENU) closeTracks() else return super.onKeyDown(keyCode, event)
             return true
         }
-        // On the banner's buttons: Left/Right move along them and OK opens one (the buttons' own handling); the
-        // banner stays up while they're used.
-        if (buttonFocused()) when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                ui.removeCallbacks(hideBanner)
-                ui.postDelayed(hideBanner, BUTTONS_MS)
-                return super.onKeyDown(keyCode, event)
-            }
+        // The banner in use (OK, Up or Down brought it up): the focus is on what's on or on a button. Down goes to
+        // the buttons, Up back to what's on, Left/Right along the buttons; OK picks (the views' own handling). It
+        // stays up while it's used.
+        if (bannerFocused()) when (keyCode) {
             KeyEvent.KEYCODE_BACK -> { hideBanner.run(); return true }
-            // Up/Down stay on the buttons: on them, they never zap.
-            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                ui.removeCallbacks(hideBanner)
-                ui.postDelayed(hideBanner, BUTTONS_MS)
+            KeyEvent.KEYCODE_DPAD_UP -> { if (buttonFocused()) focusDesc() else keepUp(); return true }
+            KeyEvent.KEYCODE_DPAD_DOWN -> { if (!buttonFocused() && buttons.childCount > 0) focusButton(0) else keepUp(); return true }
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                val step = if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                val n = buttons.childCount
+                if (n > 0) focusButton(if (buttonFocused()) (buttons.indexOfChild(currentFocus) + step).coerceIn(0, n - 1) else if (step > 0) 0 else n - 1)
                 return true
             }
+            KeyEvent.KEYCODE_INFO, KeyEvent.KEYCODE_GUIDE -> { hideBanner.run(); return true }
         }
         // The banner up (and done fading in) with buttons: Left/Right reach them; otherwise they change the stream.
         if ((keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) && banner.visibility == View.VISIBLE &&
@@ -400,10 +442,9 @@ class PlayerActivity : Activity() {
             focusButton(if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 0 else buttons.childCount - 1)
             return true
         }
-        // Up/Down never zap (CH+/CH- do): they bring the banner up, then reach its buttons (Play/Pause first).
+        // Up/Down never zap (CH+/CH- do): they bring the banner up, as OK does.
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-            if (banner.visibility != View.VISIBLE || banner.alpha < 1f) showBanner(shown)
-            else if (shown == at && buttons.childCount > 0) focusButton(0)
+            okPressed()
             return true
         }
         when (keyCode) {
@@ -443,17 +484,19 @@ class PlayerActivity : Activity() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        if (tracksPanel.visibility == View.VISIBLE || buttonFocused()) return super.onKeyUp(keyCode, event)
+        if (tracksPanel.visibility == View.VISIBLE || bannerFocused()) return super.onKeyUp(keyCode, event)
         if (keyCode != KeyEvent.KEYCODE_DPAD_CENTER && keyCode != KeyEvent.KEYCODE_ENTER && keyCode != KeyEvent.KEYCODE_NUMPAD_ENTER) return super.onKeyUp(keyCode, event)
         if (event.isTracking && !event.isCanceled) okPressed() // a hold opened the panel instead
         return true
     }
 
-    /** OK: the banner, in short; again, all of what's on; again, away. */
-    private fun okPressed() = when {
-        banner.visibility != View.VISIBLE || banner.alpha < 1f -> showBanner(shown)
-        !expanded && !more.text.isNullOrEmpty() -> { expanded = true; showBanner(shown, stay = true) }
-        else -> hideBanner.run()
+    /**
+     * OK (or Up, Down, Info) with the banner down, or up as a zap shows it: the banner, the focus on what's on (so it's
+     * clear where OK goes next: all of it), else on the first button. Once in use, the banner's views take OK.
+     */
+    private fun okPressed() {
+        showBanner(shown)
+        if (shown == at) focusDesc()
     }
 
     // ---------- audio and subtitles ----------
@@ -512,6 +555,8 @@ class PlayerActivity : Activity() {
         buttons.removeAllViews()
         list.forEach { (icon, label, action) -> buttons.addView(button(icon, getString(label), action).apply { tag = label }) }
         buttons.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
+        sizeButtons()
+        if (bannerFocused() || keep >= 0) reachable() // in use: the new ones too
         if (keep >= 0) focusButton(minOf(keep, buttons.childCount - 1))
     }
 
@@ -527,41 +572,77 @@ class PlayerActivity : Activity() {
         showBanner(at, stay = !play)
     }
 
-    /** A pill with an icon and its name, lit white while it has the focus; focusable only once Left/Right reach it. */
-    private fun button(icon: Int, label: String, action: () -> Unit) = LinearLayout(this).apply {
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(14), dp(8), dp(18), dp(8))
-        val bg = GradientDrawable().apply { cornerRadius = dp(20).toFloat(); setColor(0x33FFFFFF) }
+    /**
+     * A square icon (its name for TalkBack), lit white while it has the focus; focusable only once the banner is in
+     * use. As tall as the stream and audio lines beside it (see sizeButtons).
+     */
+    private fun button(icon: Int, label: String, action: () -> Unit) = ImageView(this).apply {
+        setImageResource(icon)
+        contentDescription = label
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        val bg = GradientDrawable().apply { cornerRadius = dp(10).toFloat(); setColor(0x33FFFFFF) }
         background = bg
-        val img = ImageView(this@PlayerActivity).apply { setImageResource(icon) }
-        val name = text(14f).apply { text = label; setShadowLayer(0f, 0f, 0f, 0) }
-        addView(img, LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(8) })
-        addView(name)
         isFocusable = false
         isClickable = true
         setOnClickListener { action() }
         setOnFocusChangeListener { v, has ->
             bg.setColor(if (has) Color.WHITE else 0x33FFFFFF)
-            img.setColorFilter(if (has) Color.BLACK else Color.WHITE)
-            name.setTextColor(if (has) Color.BLACK else Color.WHITE)
-            v.animate().scaleX(if (has) 1.06f else 1f).scaleY(if (has) 1.06f else 1f).setDuration(120).start()
+            setColorFilter(if (has) Color.BLACK else Color.WHITE)
+            v.animate().scaleX(if (has) 1.08f else 1f).scaleY(if (has) 1.08f else 1f).setDuration(120).start()
         }
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(12) }
+        layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginStart = dp(10) }
+    }
+
+    /** The buttons square, as tall as the stream and audio lines together (one line when there's no audio line). */
+    private fun sizeButtons() {
+        val h = maxOf(lines.height, dp(32))
+        for (k in 0 until buttons.childCount) {
+            val b = buttons.getChildAt(k)
+            val lp = b.layoutParams as LinearLayout.LayoutParams
+            if (lp.width == h && lp.height == h) continue
+            lp.width = h
+            lp.height = h
+            b.layoutParams = lp
+            b.setPadding(h / 4, h / 4, h / 4, h / 4)
+        }
     }
 
     private fun buttonFocused() = ::buttons.isInitialized && currentFocus?.parent === buttons
 
-    /** Makes the buttons reachable and puts the focus on the [n]th; the banner stays up a while longer. */
-    private fun focusButton(n: Int) {
-        for (k in 0 until buttons.childCount) buttons.getChildAt(k).isFocusable = true
-        buttons.getChildAt(n)?.requestFocus()
+    /** The banner in use: the focus on what's on or one of its buttons. */
+    private fun bannerFocused() = ::desc.isInitialized && (currentFocus === desc || buttonFocused())
+
+    /** The banner up a while longer (as long as all of what's on shows, when it does): it's in use. */
+    private fun keepUp() {
         ui.removeCallbacks(hideBanner)
-        ui.postDelayed(hideBanner, BUTTONS_MS)
+        if (!expanded) ui.postDelayed(hideBanner, BUTTONS_MS)
     }
 
-    /** The buttons out of reach again (not focusable, so the window can't hand them the focus by itself). */
-    private fun unfocusButtons() {
+    /** Makes the banner's views reachable: what's on and the buttons. */
+    private fun reachable() {
+        desc.isFocusable = true
+        for (k in 0 until buttons.childCount) buttons.getChildAt(k).isFocusable = true
+    }
+
+    /** The focus on what's on (else, with nothing on, on the first button); the banner stays up a while longer. */
+    private fun focusDesc() {
+        if (desc.visibility != View.VISIBLE) return if (buttons.childCount > 0) focusButton(0) else Unit
+        reachable()
+        desc.requestFocus()
+        keepUp()
+    }
+
+    /** The focus on the [n]th button; the banner stays up a while longer. */
+    private fun focusButton(n: Int) {
+        reachable()
+        buttons.getChildAt(n)?.requestFocus()
+        keepUp()
+    }
+
+    /** What's on and the buttons out of reach again (not focusable, so the window can't hand them the focus by itself). */
+    private fun unfocusBanner() {
         if (!::buttons.isInitialized) return
+        desc.isFocusable = false
         for (k in 0 until buttons.childCount) buttons.getChildAt(k).isFocusable = false
     }
 

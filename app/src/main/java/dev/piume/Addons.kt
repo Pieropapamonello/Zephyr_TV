@@ -264,13 +264,18 @@ internal fun MainActivity.lastChannelCard(hidden: Set<String>): Pair<Long, Prog>
     val (at, c) = lastAddonChannel() ?: return null
     if (hideKey(LAST_PKG, c.item.name) in hidden) return null
     val addon = Stremio.saved(filesDir, c.addon)?.addon
-    // Marked with the tile it plays from, as the other cards are with their app: the add-on's, the IPTV app's, the TV app's.
-    val tile = when (addonsTv()) {
-        "apps" -> addon?.let { STREMIO + it.id }
+    // Marked with the tile it plays from, as the other cards are with their app.
+    return at to Prog(c.item.name, addon?.name.orEmpty(), 0, c.item.logo, null, LAST_PKG, badge = "", addon = c, icon = addonTile(c)?.pkg)
+}
+
+/** The tile [c]'s channels show under, as addonsTv puts them: the add-on's own app, the IPTV app, or the TV app. */
+internal fun MainActivity.addonTile(c: AddonChannel): MainActivity.App? {
+    val pkg = when (addonsTv()) {
+        "apps" -> Stremio.saved(filesDir, c.addon)?.addon?.let { STREMIO + it.id }
         "iptv" -> IPTV_PKG
-        else -> apps.firstOrNull { isTvApp(it.pkg) }?.pkg
+        else -> return apps.firstOrNull { !it.pkg.startsWith(STREMIO) && isTvApp(it.pkg) }
     }
-    return at to Prog(c.item.name, addon?.name.orEmpty(), 0, c.item.logo, null, LAST_PKG, badge = "", addon = c, icon = tile)
+    return apps.firstOrNull { it.pkg == pkg }
 }
 
 /** OK on an add-on's tile (or the IPTV app's): the channel last played among its add-ons, if any. */

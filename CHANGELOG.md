@@ -15,6 +15,10 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- In the player, OK puts a frame on the program on now. Press OK again to see the full description. Press Down to go to the buttons, and Up to go back to the program.
+- The player buttons are now icons. They are on the right, next to the stream line and the audio line.
+- In search, the page of an add-on channel shows the app it plays from, with its icon. For example, **Watch on OMG+ TV - DDT**.
+
 - In **Continue Playing**, the card of the add-on channel you watched last has a small icon, as the other cards do. It is the icon of the app it plays from: the add-on's app, the IPTV app or the TV app.
 
 ## 4.0.1

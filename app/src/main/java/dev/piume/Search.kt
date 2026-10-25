@@ -348,7 +348,10 @@ internal fun MainActivity.showChannel(d: ChannelDetail) {
             })
         }
     }
-    val rows = listOf(page(getString(if (d.addon != null) R.string.channel_play else R.string.channel_watch)) {
+    // An add-on's channel: Watch on the tile it shows under (its own app, the IPTV app, the TV app), with its icon.
+    val tile = d.addon?.let { addonTile(it) }
+    val watch = tile?.let { getString(R.string.tmdb_search_on, it.label) } ?: getString(if (d.addon != null) R.string.channel_play else R.string.channel_watch)
+    val rows = listOf(page(watch) {
         closeLauncherSettings()
         val p = Prog(d.name, d.number, 0, null, d.intent, d.pkg, addon = d.addon)
         if (d.addon != null) playAddonChannel(p) else open(p)
@@ -363,14 +366,13 @@ internal fun MainActivity.showChannel(d: ChannelDetail) {
         panel.removeView(picture)
         panel.clipToPadding = true
     }
-    d.pkg?.let { pkg ->
-        runCatching { packageManager.getApplicationIcon(pkg) }.getOrNull()?.let { icon ->
-            (settingsList.getChildAt(1) as? LinearLayout)?.addView(ImageView(this).apply {
-                setImageDrawable(icon)
-                scaleType = ImageView.ScaleType.FIT_CENTER
-            }, 0, LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(12) })
-        }
-    }
+    val icon = (d.pkg ?: tile?.pkg?.takeIf { !it.startsWith(STREMIO) })?.let { pkg -> runCatching { packageManager.getApplicationIcon(pkg) }.getOrNull() }
+        // A virtual tile's: its logo, or the TV mark in a grey that reads on the row lit or not.
+        ?: tile?.icon?.constantState?.newDrawable(resources)?.mutate()?.apply { if (this !is android.graphics.drawable.BitmapDrawable) setTint(0xFF8E8E93.toInt()) }
+    if (icon != null) (settingsList.getChildAt(1) as? LinearLayout)?.addView(ImageView(this).apply {
+        setImageDrawable(icon)
+        scaleType = ImageView.ScaleType.FIT_CENTER
+    }, 0, LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(12) })
 }
 
 /** Closes the search: its tile and cards go, focus goes back to Continue Watching. False when none is open. */
