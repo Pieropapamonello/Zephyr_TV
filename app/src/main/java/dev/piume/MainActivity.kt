@@ -1932,6 +1932,7 @@ class MainActivity : Activity() {
         const val SPOTLIGHT_SECTION = 3
         const val SCREENSAVER_SECTION = 4
         const val SYSTEM_SECTION = 5
+        const val TV_SECTION = 6 // listed after Continue Watching (see renderSettingsHome)
         const val THEME_ROW = LOOK_SECTION * SECTION
         const val LIGHT_WP_ROW = THEME_ROW + 1
         const val DARK_WP_ROW = THEME_ROW + 2
@@ -1949,13 +1950,13 @@ class MainActivity : Activity() {
         const val ALIGN_ROW = APPS_SECTION * SECTION + 3
         const val NAMES_ROW = APPS_SECTION * SECTION + 4
         const val ICONS_ROW = APPS_SECTION * SECTION + 5
-        const val INPUTS_MODE_ROW = APPS_SECTION * SECTION + 6
-        const val INPUTS_IN_APPS_ROW = APPS_SECTION * SECTION + 7
-        const val LOCK_ROW = APPS_SECTION * SECTION + 8
+        const val LOCK_ROW = APPS_SECTION * SECTION + 6
         const val CW_APPS_ROW = WATCH_SECTION * SECTION
         const val HIDDEN_ROW = WATCH_SECTION * SECTION + 1
-        const val CHANNEL_LOGOS_ROW = WATCH_SECTION * SECTION + 3
-        const val EPG_ROW = WATCH_SECTION * SECTION + 5
+        const val INPUTS_MODE_ROW = TV_SECTION * SECTION
+        const val INPUTS_IN_APPS_ROW = TV_SECTION * SECTION + 1
+        const val CHANNEL_LOGOS_ROW = TV_SECTION * SECTION + 2
+        const val EPG_ROW = TV_SECTION * SECTION + 4
         const val TMDB_KEY_ROW = SPOTLIGHT_SECTION * SECTION
         const val TMDB_SOURCE_ROW = TMDB_KEY_ROW + 1
         const val TMDB_LIST_ROW = TMDB_KEY_ROW + 2

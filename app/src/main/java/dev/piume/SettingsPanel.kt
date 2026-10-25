@@ -56,6 +56,7 @@ import dev.piume.MainActivity.Companion.SUBMENU
 import dev.piume.MainActivity.Companion.TOGGLE_OFF
 import dev.piume.MainActivity.Companion.TOGGLE_ON
 import dev.piume.MainActivity.Companion.UNLOCKED_MS
+import dev.piume.MainActivity.Companion.TV_SECTION
 import dev.piume.MainActivity.Companion.WATCH_SECTION
 import dev.piume.MainActivity.Companion.WEATHER_ROW
 import dev.piume.MainActivity.Companion.WEATHER_UNITS_ROW
@@ -101,6 +102,7 @@ internal fun MainActivity.sectionTitle(section: Int) = getString(when (section) 
     LOOK_SECTION -> R.string.settings_section_look
     APPS_SECTION -> R.string.settings_section_apps
     WATCH_SECTION -> R.string.continue_watching
+    TV_SECTION -> R.string.settings_section_tv
     SPOTLIGHT_SECTION -> R.string.setting_tmdb
     SCREENSAVER_SECTION -> R.string.setting_screensaver
     else -> R.string.settings_section_system
@@ -108,7 +110,7 @@ internal fun MainActivity.sectionTitle(section: Int) = getString(when (section) 
 
 /** The sections, each a page of its own: an arrow says so (a value here would only repeat the page's first row). */
 internal fun MainActivity.renderSettingsHome(focus: Int = 0) {
-    val sections = listOf(LOOK_SECTION, APPS_SECTION, WATCH_SECTION, SPOTLIGHT_SECTION, SCREENSAVER_SECTION, SYSTEM_SECTION)
+    val sections = listOf(LOOK_SECTION, APPS_SECTION, WATCH_SECTION, TV_SECTION, SPOTLIGHT_SECTION, SCREENSAVER_SECTION, SYSTEM_SECTION)
     showPage(getString(R.string.plume_settings), sections.map { section ->
         page(sectionTitle(section), SUBMENU) { renderSettings(section * SECTION) }
     }, focus, back = null)
@@ -237,17 +239,6 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                 renderApps()
                 renderSettings(ICONS_ROW)
             },
-            page(getString(R.string.setting_inputs_mode), if (inputsMode() == "apps") getString(R.string.inputs_mode_apps) else getString(R.string.inputs_mode_menu)) {
-                val next = if (inputsMode() == "apps") "menu" else "apps"
-                prefs.edit().putString(K.INPUTS_MODE, next).apply()
-                applyInputsMode()
-                renderSettings(INPUTS_MODE_ROW)
-            },
-            page(getString(R.string.setting_inputs_in_apps), toggle(inputsInApps())) {
-                prefs.edit().putBoolean(K.INPUTS_IN_APPS, !inputsInApps()).apply()
-                applyInputsMode()
-                renderSettings(INPUTS_IN_APPS_ROW)
-            },
             page(getString(R.string.setting_lock_layout), toggle(lockOn())) {
                 if (!lockOn()) return@page setLock()
                 prefs.edit().remove(K.LOCK_PIN).apply()
@@ -271,22 +262,36 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                 if (listenerAllowed()) Toast.makeText(this, getString(R.string.now_playing_on), Toast.LENGTH_SHORT).show()
                 else allowListener { renderSettings(WATCH_SECTION * SECTION) }
             },
-            page(getString(R.string.setting_channel_logos), toggle(channelLogosOn())) {
-                prefs.edit().putBoolean(K.CHANNEL_LOGOS, !channelLogosOn()).apply()
-                watchKey = null
-                renderSettings(CHANNEL_LOGOS_ROW)
-            },
-            page(getString(R.string.setting_channel_logos_update)) {
-                Toast.makeText(this, getString(R.string.searching), Toast.LENGTH_SHORT).show()
-                updateChannelLogos(null) { n ->
-                    watchKey = null
-                    Toast.makeText(this, if (n == null) getString(R.string.toast_channel_logos_failed)
-                        else getString(R.string.toast_channel_logos_updated, n), Toast.LENGTH_LONG).show()
-                }
-            },
-            page(getString(R.string.setting_epg), epgUrl()?.let { Uri.parse(it).host } ?: getString(R.string.state_off)) { configureEpg() },
         )
     }
+    // The TV's own side: its inputs (HDMI and the like) and its channels, with their logos and guide.
+    TV_SECTION -> listOf(
+        page(getString(R.string.setting_inputs_mode), if (inputsMode() == "apps") getString(R.string.inputs_mode_apps) else getString(R.string.inputs_mode_menu)) {
+            val next = if (inputsMode() == "apps") "menu" else "apps"
+            prefs.edit().putString(K.INPUTS_MODE, next).apply()
+            applyInputsMode()
+            renderSettings(INPUTS_MODE_ROW)
+        },
+        page(getString(R.string.setting_inputs_in_apps), toggle(inputsInApps())) {
+            prefs.edit().putBoolean(K.INPUTS_IN_APPS, !inputsInApps()).apply()
+            applyInputsMode()
+            renderSettings(INPUTS_IN_APPS_ROW)
+        },
+        page(getString(R.string.setting_channel_logos), toggle(channelLogosOn())) {
+            prefs.edit().putBoolean(K.CHANNEL_LOGOS, !channelLogosOn()).apply()
+            watchKey = null
+            renderSettings(CHANNEL_LOGOS_ROW)
+        },
+        page(getString(R.string.setting_channel_logos_update)) {
+            Toast.makeText(this, getString(R.string.searching), Toast.LENGTH_SHORT).show()
+            updateChannelLogos(null) { n ->
+                watchKey = null
+                Toast.makeText(this, if (n == null) getString(R.string.toast_channel_logos_failed)
+                    else getString(R.string.toast_channel_logos_updated, n), Toast.LENGTH_LONG).show()
+            }
+        },
+        page(getString(R.string.setting_epg), epgUrl()?.let { Uri.parse(it).host } ?: getString(R.string.state_off)) { configureEpg() },
+    )
     SPOTLIGHT_SECTION -> spotlightRows()
     SCREENSAVER_SECTION -> listOf(
         page(getString(R.string.setting_screensaver), screensaverValue()) { pickScreensaver() },

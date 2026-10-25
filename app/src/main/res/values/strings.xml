@@ -223,6 +223,7 @@
     <string name="tmdb_api_key_hint">Paste or type your TMDB v3 API Key</string>
     <string name="settings_section_look">Appearance &amp; wallpapers</string>
     <string name="settings_section_apps">Favourites</string>
+    <string name="settings_section_tv">TV &amp; IPTV</string>
     <string name="settings_section_system">System</string>
     <string name="settings_summary_setup">Home button to turn on</string>
     <string name="setting_tmdb_cycle">Next title every</string>

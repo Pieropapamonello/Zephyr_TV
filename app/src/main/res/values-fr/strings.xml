@@ -223,6 +223,7 @@
     <string name="tmdb_api_key_hint">Collez ou saisissez votre clé API v3 TMDB</string>
     <string name="settings_section_look">Apparence et fonds d\'écran</string>
     <string name="settings_section_apps">Favoris</string>
+    <string name="settings_section_tv">TV et IPTV</string>
     <string name="settings_section_system">Système</string>
     <string name="settings_summary_setup">Bouton Accueil à activer</string>
     <string name="setting_tmdb_cycle">Titre suivant toutes les</string>

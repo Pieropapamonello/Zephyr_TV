@@ -145,8 +145,8 @@ Android 13 e successivi disattivano l'interruttore di Accessibilità per le app 
 | Mostrare film e serie di tendenza in alto (In evidenza TMDB) | **Impostazioni → In evidenza TMDB → API Key TMDB** (scrivila sulla TV o dal telefono) |
 | Scegliere cosa mostra In evidenza (tendenze, popolari, più votati, al cinema…) | **Impostazioni → In evidenza TMDB → In evidenza mostra** |
 | Mostrare la tua lista TMDB in In evidenza | **Impostazioni → In evidenza TMDB → In evidenza mostra → La mia lista TMDB** |
-| Mostrare il programma in onda sotto i canali TV | **Impostazioni → Continua a guardare → Guida TV (XMLTV)** |
-| Attivare o disattivare i loghi dei canali da iptv-org, o scaricare gli ultimi | **Impostazioni → Continua a guardare → Loghi dei canali (iptv-org)**, **Aggiorna i loghi dei canali** |
+| Mostrare il programma in onda sotto i canali TV | **Impostazioni → TV e IPTV → Guida TV (XMLTV)** |
+| Attivare o disattivare i loghi dei canali da iptv-org, o scaricare gli ultimi | **Impostazioni → TV e IPTV → Loghi dei canali (iptv-org)**, **Aggiorna i loghi dei canali** |
 | Orologio a 12 o 24 ore | **Impostazioni → Aspetto e sfondi → Orologio** |
 | Modalità notte | **Impostazioni → Aspetto e sfondi → Modalità notte** |
 | Salvare o ripristinare le impostazioni | **Impostazioni → Sistema → Backup e ripristino** |
@@ -187,7 +187,7 @@ Ogni titolo ha i pulsanti per Nuvio e Stremio (sempre presenti, se installati), 
 
 La sezione dell'app TV mostra tutti i canali sintonizzati, in ordine di numero. Il logo viene dalla TV oppure, se la TV non lo ha, da [iptv-org](https://github.com/iptv-org/database), un elenco di canali TV di pubblico dominio: Piume scarica l'elenco del tuo paese la prima volta e poi una volta al mese, abbina i canali per nome e tiene i loghi sulla TV. **Aggiorna i loghi dei canali** scarica subito gli ultimi.
 
-Android lascia leggere la guida programmi della TV solo alle app di sistema, quindi per il programma in onda Piume usa una guida TV da internet, in formato XMLTV (`.xml` o `.xml.gz`). Inserisci l'indirizzo in **Impostazioni → Continua a guardare → Guida TV (XMLTV)**, oppure incollalo dal telefono. Piume la scarica due volte al giorno e ne tiene il giorno successivo; ogni scheda di canale mostra il programma in onda con la barra di avanzamento, e la pagina di un canale nella ricerca mostra orario, descrizione e programma successivo. Per l'Italia, `https://iptv-epg.org/files/epg-it.xml.gz` copre i canali nazionali.
+Android lascia leggere la guida programmi della TV solo alle app di sistema, quindi per il programma in onda Piume usa una guida TV da internet, in formato XMLTV (`.xml` o `.xml.gz`). Inserisci l'indirizzo in **Impostazioni → TV e IPTV → Guida TV (XMLTV)**, oppure incollalo dal telefono. Piume la scarica due volte al giorno e ne tiene il giorno successivo; ogni scheda di canale mostra il programma in onda con la barra di avanzamento, e la pagina di un canale nella ricerca mostra orario, descrizione e programma successivo. Per l'Italia, `https://iptv-epg.org/files/epg-it.xml.gz` copre i canali nazionali.
 
 ### Backup e ripristino
 
