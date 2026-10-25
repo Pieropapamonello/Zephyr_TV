@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- In **Continue Playing**, the card of the add-on channel you watched last has a small icon, as the other cards do. It is the icon of the app it plays from: the add-on's app, the IPTV app or the TV app.
+
 ## 4.0.1
 
 - The settings section **TV & IPTV** is now called **TV & EPG**.

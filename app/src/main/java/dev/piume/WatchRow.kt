@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -514,6 +515,10 @@ internal fun MainActivity.placeholderCard(gapBefore: Boolean, delay: Long): View
 
 internal fun MainActivity.sourceIcon(pkg: String?): Drawable? {
     if (pkg == null) return null
+    // An add-on's tile (or the IPTV app's): its icon, as the apps row shows it.
+    if (pkg.startsWith(STREMIO)) return apps.firstOrNull { it.pkg == pkg }?.icon?.constantState?.newDrawable(resources)?.mutate()?.apply {
+        if (this is BitmapDrawable) colorFilter = GREYSCALE else setTint(fg)
+    }
     LOGOS[pkg]?.takeIf { !it.second }?.let { return getDrawable(it.first)!!.mutate().apply { setTint(fg) } }
     return try {
         packageManager.getApplicationIcon(pkg).mutate().apply { colorFilter = GREYSCALE }
@@ -706,7 +711,7 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     }
     col.addView(bar, LinearLayout.LayoutParams(w, dp(3)).apply { topMargin = dp(6) })
     col.addView(title)
-    val icon = sourceIcon(p.pkg)
+    val icon = sourceIcon(p.icon ?: p.pkg)
     if (p.sub.isNotEmpty() || icon != null || p.addon != null) {
         col.addView(label(p.sub, 12f).apply {
             details = this

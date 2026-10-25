@@ -263,8 +263,14 @@ internal fun MainActivity.lastAddonChannel(): Pair<Long, AddonChannel>? = runCat
 internal fun MainActivity.lastChannelCard(hidden: Set<String>): Pair<Long, Prog>? {
     val (at, c) = lastAddonChannel() ?: return null
     if (hideKey(LAST_PKG, c.item.name) in hidden) return null
-    val name = Stremio.saved(filesDir, c.addon)?.addon?.name.orEmpty()
-    return at to Prog(c.item.name, name, 0, c.item.logo, null, LAST_PKG, badge = "", addon = c)
+    val addon = Stremio.saved(filesDir, c.addon)?.addon
+    // Marked with the tile it plays from, as the other cards are with their app: the add-on's, the IPTV app's, the TV app's.
+    val tile = when (addonsTv()) {
+        "apps" -> addon?.let { STREMIO + it.id }
+        "iptv" -> IPTV_PKG
+        else -> apps.firstOrNull { isTvApp(it.pkg) }?.pkg
+    }
+    return at to Prog(c.item.name, addon?.name.orEmpty(), 0, c.item.logo, null, LAST_PKG, badge = "", addon = c, icon = tile)
 }
 
 /** OK on an add-on's tile (or the IPTV app's): the channel last played among its add-ons, if any. */
