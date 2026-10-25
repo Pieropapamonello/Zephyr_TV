@@ -15,8 +15,40 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+## 4.0.0-beta.9
+
+- This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.
 - In the player, press OK to show the banner. Then Up and Down go to the buttons **Pause**, **Audio**, **Subtitles** and **Stream**. They do not change the channel. When the banner is not shown, Up and Down change the channel as before.
 - The player banner shows the resolution of the stream next to its name, for example **1080p** or **4K**.
+- The player banner has a **Pause** button, first before **Audio**. Press it to pause the channel, and again (**Play**) to play it. While the channel is paused, the banner stays and shows **Paused**. A live channel that is paused for a long time goes back to the live broadcast when it plays again.
+- When a channel loads, the player shows its logo and name in the middle of the screen. Below them it shows **Loading stream 1 of 3**, when the channel has more than one stream. If a stream does not work, the player tries the next one automatically. If no stream works, it shows **No stream available**.
+- The player banner has the buttons **Audio**, **Subtitles** and **Stream**. While the banner shows, press Left or Right to go to them, then OK to open the list and choose. When the banner is not shown, Left and Right change the stream as before.
+- Hold OK (or press Menu) to see the audio tracks and the subtitles together. The banner shows which ones play. Piume remembers the languages you choose for the next channels. The audio and subtitles keys of the remote also work.
+- The player shows subtitles, also the picture subtitles that many IPTV streams have.
+- In the player, the banner shows only the program on now and the stream. Press OK again to see the full description and what is next.
+- In the player, Right no longer closes the player when the other stream does not work. The player tries the next stream, also the ones before it.
+- In **Stremio add-ons**, select an add-on and then **Move up** or **Move down** to change the order. In the TV app and the IPTV app, the rows of the first add-on show first.
+- The rows of a large IPTV add-on no longer stop the other apps. Before, while Piume loaded them, no app showed its rows.
+- Piume keeps the rows of an add-on. When you go back to its tile, they show at once. Before, Piume loaded them again each time.
+- Rows far down get their cards when you come near them. With many categories, the home screen stays smooth.
+- Piume reads each add-on with fewer requests and keeps less on the TV.
+- Logos and what is on come from the add-on first. Piume uses the logos from iptv-org and your TV guide only when the add-on has none, or when its logo does not load.
+- In the player, CH+ and CH- (or Up and Down) go to the next and previous channel of the row. You can also type the channel number, or press the Last channel key.
+- In the player, Left and Right change to another stream of the same channel. A stream that stops or does not start goes to the next stream automatically.
+- In the player, OK or Info shows the channel's logo, its number in the row, the time, the program on now with a progress bar, what is next and the stream.
+- The channel you watched last shows in **Continue Playing**. Select the tile of an add-on (or the IPTV app) to watch it again.
+- Search finds the channels of the add-ons too, in the same row as the TV channels. It works also without a TMDB key.
+- Hold OK on a channel of an add-on and select **Details** to see what the add-on tells about it.
+- The row **Continue Watching** is now called **Continue Playing**, because it also shows music and other things that play.
+- Piume settings have a new section, **Stremio add-ons**. Select **Add an add-on** and type the address of the add-on's manifest. You can also paste it on your phone.
+- The TV channels of an add-on show as rows. The first row has all the channels. Then each category has a row of its own.
+- Select **TV channels** to choose where the rows show: **In the TV app**, **In an IPTV app** or **An app per add-on**. Without a TV app, they show in the IPTV app.
+- An app per add-on has the add-on's name and logo, from its manifest.
+- Select a channel to play it in the Piume player. If a stream does not play, the player tries the next stream.
+- The cards show the program on now, if the add-on gives it.
+- Piume reads the channels of each add-on again every 15 minutes.
+- The backup includes the add-ons.
+- Piume is larger: about 1.2 MB. The player needs the extra space.
 
 ## 4.0.0-beta.8
 
