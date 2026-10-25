@@ -391,6 +391,7 @@
     <string name="addon_move_up">Sposta su</string>
     <string name="addon_move_down">Sposta giù</string>
     <string name="iptv_app">IPTV</string>
+    <string name="addon_type">Scrivi l\'indirizzo con il telecomando</string>
     <string name="addon_phone_waiting">In attesa dell\'indirizzo dal telefono…</string>
     <string name="phone_addon_title">Indirizzo dell\'addon Stremio</string>
     <string name="phone_addon_intro">Incolla l\'indirizzo di un addon Stremio (il suo manifest.json).</string>

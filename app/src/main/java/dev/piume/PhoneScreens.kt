@@ -49,9 +49,13 @@ internal fun MainActivity.phoneFooter(): String {
 /**
  * A settings page with a QR code that opens [task] on a phone on the same Wi-Fi, for anything easier done on a
  * phone than with a remote (a photo, a long key). The link works while the page is open; [status] shows under
- * the code, for the task to report what arrived. [back] leaves the page.
+ * the code, for the task to report what arrived. [more] rows come before Done (another way to do it); [back]
+ * leaves the page.
  */
-internal fun MainActivity.showPhoneLink(title: String, task: PhoneTask, status: TextView, back: () -> Unit) {
+internal fun MainActivity.showPhoneLink(
+    title: String, task: PhoneTask, status: TextView,
+    more: List<Triple<String, String, () -> Unit>> = emptyList(), back: () -> Unit,
+) {
     val ip = lanAddress() ?: return Toast.makeText(this, getString(R.string.toast_connect_network), Toast.LENGTH_LONG).show()
     val link = try {
         PhoneLink(cacheDir, task)
@@ -73,7 +77,7 @@ internal fun MainActivity.showPhoneLink(title: String, task: PhoneTask, status: 
         })
         addView(status.apply { gravity = Gravity.CENTER; maxLines = 2; setPadding(0, dp(12), 0, 0) })
     }
-    showPage(title, listOf(page(getString(R.string.dialog_done)) { back() }), top = box, back = back)
+    showPage(title, more + page(getString(R.string.dialog_done)) { back() }, top = box, back = back)
     pageExit = {
         link.stop()
         if (upload === link) upload = null

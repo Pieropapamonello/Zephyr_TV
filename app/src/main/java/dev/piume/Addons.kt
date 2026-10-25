@@ -291,7 +291,7 @@ internal fun MainActivity.addonRows(): List<Triple<String, String, () -> Unit>> 
             if (next == "apps") addonUrls().forEach { updateAddon(it, null) }
             renderSettings(ADDONS_TV_ROW)
         },
-        page(getString(R.string.setting_addon_add), SUBMENU) { configureAddon() },
+        page(getString(R.string.setting_addon_add), SUBMENU) { addonFromPhone() },
     ) + addonUrls().mapIndexed { i, url ->
         page(Stremio.saved(filesDir, url)?.addon?.name ?: url, SUBMENU) { addonPage(url) }
     }
@@ -303,7 +303,7 @@ internal fun MainActivity.addonsTvName(mode: String) = getString(when (mode) {
     else -> R.string.addons_tv_apps
 })
 
-/** An add-on's manifest address: typed with the remote or sent from a phone. Saving adds it once it answers. */
+/** An add-on's manifest address typed with the remote (see addonFromPhone). Saving adds it once it answers. */
 internal fun MainActivity.configureAddon() {
     val input = urlField("", getString(R.string.addon_hint))
     val box = LinearLayout(this).apply {
@@ -313,17 +313,19 @@ internal fun MainActivity.configureAddon() {
         addView(label(getString(R.string.addon_intro), 12f).apply { alpha = 0.6f; maxLines = 4; setPadding(dp(4), dp(10), dp(4), 0) })
     }
     val rows = listOf(
-        page(getString(R.string.setting_epg_phone)) { addonFromPhone() },
         page(getString(R.string.dialog_save)) {
             addAddon(input.text?.toString().orEmpty()) { refreshSettings(ADDON_ADD_ROW) }
             renderSettings(ADDON_ADD_ROW)
         },
     )
-    showPage(getString(R.string.setting_addon_add), rows, top = box, back = { renderSettings(ADDON_ADD_ROW) })
+    showPage(getString(R.string.setting_addon_add), rows, top = box, back = { addonFromPhone() })
     downFrom(input)
 }
 
-/** The add-on's address pasted on a phone: added like the Save row does. */
+/**
+ * Add an add-on: a QR code first, as the other addresses and keys, since a long address is easier pasted on a
+ * phone; typing it with the remote is the row under it. Added like the Save row does.
+ */
 internal fun MainActivity.addonFromPhone() {
     val status = label(getString(R.string.addon_phone_waiting), 14f)
     val page = PhonePages.text(phoneTexts(R.string.phone_addon_title, R.string.phone_addon_intro), getString(R.string.addon_hint))
@@ -334,7 +336,7 @@ internal fun MainActivity.addonFromPhone() {
             addAddon(url)
         }
         200 to getString(R.string.phone_addon_saved)
-    }, status) { configureAddon() }
+    }, status, listOf(page(getString(R.string.addon_type)) { configureAddon() })) { renderSettings(ADDON_ADD_ROW) }
 }
 
 /**

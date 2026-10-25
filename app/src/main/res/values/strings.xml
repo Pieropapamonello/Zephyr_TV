@@ -390,6 +390,7 @@
     <string name="addon_move_up">Move up</string>
     <string name="addon_move_down">Move down</string>
     <string name="iptv_app">IPTV</string>
+    <string name="addon_type">Type the address with the remote</string>
     <string name="addon_phone_waiting">Waiting for the address from your phone…</string>
     <string name="phone_addon_title">Stremio add-on address</string>
     <string name="phone_addon_intro">Paste the address of a Stremio add-on (its manifest.json).</string>

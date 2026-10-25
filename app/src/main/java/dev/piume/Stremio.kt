@@ -14,7 +14,7 @@ import org.json.JSONObject
  * quarter of an hour, so the rows show at once and what's on stays fresh. Network and disk: off the UI thread.
  */
 internal object Stremio {
-    private const val MAX_AGE_MS = 15 * 60_000L // the channels are read again after this long ("on now" goes stale)
+    private const val MAX_AGE_MS = 5 * 60_000L // the channels are read again after this long ("on now" goes stale)
     private const val RETRY_MS = 5 * 60_000L // and after a failure, not before five minutes
     private const val MAX_PAGES = 40 // a catalog's pages read at most (100 channels each, on OMG)
 

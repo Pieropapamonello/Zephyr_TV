@@ -15,6 +15,9 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- **Stremio add-ons → Add an add-on** shows the QR code at once, as the other settings do. Scan it and paste the address on your phone. To type the address with the remote, select **Type the address with the remote**.
+- The add-on rows show what is on now more correctly. Piume reads the channels again after 5 minutes, not after 15 minutes.
+
 ## 4.0.0-beta.9
 
 - This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.

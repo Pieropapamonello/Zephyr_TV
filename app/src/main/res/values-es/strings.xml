@@ -391,6 +391,7 @@
     <string name="addon_move_up">Subir</string>
     <string name="addon_move_down">Bajar</string>
     <string name="iptv_app">IPTV</string>
+    <string name="addon_type">Escribir la dirección con el mando</string>
     <string name="addon_phone_waiting">Esperando la dirección desde el teléfono…</string>
     <string name="phone_addon_title">Dirección del complemento de Stremio</string>
     <string name="phone_addon_intro">Pega la dirección de un complemento de Stremio (su manifest.json).</string>
