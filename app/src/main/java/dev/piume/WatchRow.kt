@@ -191,7 +191,7 @@ internal fun MainActivity.queryAppChannels(pkg: String?) {
         }
         val all = own + addonSections(pkg, hidden) + titleSections(pkg, hidden)
         val off = prefs.getStringSet(K.SECTIONS_OFF, emptySet())!!
-        val shown = all.filter { sectionKey(pkg, it) !in off }
+        val shown = all.filter { sectionKey(pkg, it) !in off }.map { renamed(pkg, it) }
         ui.post {
             sectionCache = pkg to all
             sectionCounts[pkg] = shown.size
@@ -232,15 +232,68 @@ internal fun MainActivity.appSections(pkg: String, hidden: Set<String>): List<Se
     }
 }
 
+/** The names the user gave sections, by sectionKey. */
+internal fun MainActivity.sectionNames(): Map<String, String> = runCatching {
+    val o = org.json.JSONObject(prefs.getString(K.SECTION_NAMES, null) ?: return emptyMap())
+    o.keys().asSequence().associateWith { o.getString(it) }
+}.getOrDefault(emptyMap())
+
+/** [s] with the name the user gave it, over the row ("YouTube: <name>") and in the lists of sections; else [s] itself. */
+internal fun MainActivity.renamed(pkg: String, s: Section, names: Map<String, String> = sectionNames()): Section {
+    val name = names[sectionKey(pkg, s)] ?: return s
+    val title = if (s.title.endsWith(s.name)) s.title.dropLast(s.name.length) + name else name
+    return Section(s.key, name, title, s.items, s.stamp)
+}
+
 /** Hold OK on an app, Visible sections: its rows under the apps, each on or off. Back applies the choice. */
 internal fun MainActivity.pickSections(pkg: String, sections: List<Section>) {
     showPanel()
-    toggles(getString(R.string.app_section, appLabel(pkg), getString(R.string.menu_sections)), sections.map { it.name to sectionKey(pkg, it) },
+    toggles(getString(R.string.app_section, appLabel(pkg), getString(R.string.menu_sections)), sections.map { renamed(pkg, it).name to sectionKey(pkg, it) },
         K.SECTIONS_OFF, getString(R.string.state_shown), getString(R.string.state_hidden)) {
         closeLauncherSettings()
         watchKey = null
         queryAppChannels(pkg)
     }
+}
+
+/**
+ * Hold OK on an app, Rename sections: its rows under the apps, OK on one to give it a name of one's own (or its
+ * own back). Back shows the rows with their new names. [focus]: the row to focus, after a rename.
+ */
+internal fun MainActivity.renameSections(pkg: String, sections: List<Section>, focus: Int = 0) {
+    showPanel()
+    val names = sectionNames()
+    showPage(getString(R.string.app_section, appLabel(pkg), getString(R.string.menu_rename_sections)), sections.mapIndexed { i, s ->
+        page(renamed(pkg, s, names).name) { renameSection(pkg, sections, i) }
+    }, focus) {
+        closeLauncherSettings()
+        watchKey = null
+        queryAppChannels(pkg)
+    }
+}
+
+/** One section's name, typed with the remote: Save keeps it (blank: its own), Original name gives its own back. */
+private fun MainActivity.renameSection(pkg: String, sections: List<Section>, i: Int) {
+    val s = sections[i]
+    val key = sectionKey(pkg, s)
+    val input = urlField(renamed(pkg, s).name, s.name).apply { inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES }
+    val box = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(0, dp(12), 0, dp(12))
+        addView(input)
+        addView(label(getString(R.string.section_rename_intro, s.name), 12f).apply { alpha = 0.6f; maxLines = 4; setPadding(dp(4), dp(10), dp(4), 0) })
+    }
+    fun save(name: String?) {
+        val o = org.json.JSONObject(sectionNames())
+        if (name.isNullOrBlank() || name == s.name) o.remove(key) else o.put(key, name)
+        prefs.edit().apply { if (o.length() == 0) remove(K.SECTION_NAMES) else putString(K.SECTION_NAMES, o.toString()) }.apply()
+        renameSections(pkg, sections, i)
+    }
+    showPage(renamed(pkg, s).name, listOf(
+        page(getString(R.string.dialog_save)) { save(input.text?.toString()?.trim()) },
+        page(getString(R.string.section_original_name)) { save(null) },
+    ), top = box, back = { renameSections(pkg, sections, i) })
+    downFrom(input)
 }
 
 /**

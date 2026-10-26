@@ -27,7 +27,7 @@ internal object Stremio {
     private const val VOD_AGE_MS = 6 * 3600_000L // films' and series' catalogs are read again after this long
     private const val VOD_PAGES = 2 // a film or series catalog's pages read (Cinemeta: 50 a page)
 
-    /** Stremio's own catalog add-on: the films' and series' library (IMDb's), on by default (see MainActivity.cinemetaOn). */
+    /** Stremio's own catalog add-on: the films' and series' library (IMDb's), always on, its address can be changed (see MainActivity.cinemetaUrl). */
     const val CINEMETA = "https://v3-cinemeta.strem.io/manifest.json"
 
     /**
@@ -60,9 +60,9 @@ internal object Stremio {
         val streamsVod get() = provides("stream", "movie") || provides("stream", "series")
     }
 
-    /** A film or series in a catalog: its type and id (IMDb's, for most), name, art and year. */
+    /** A film or series in a catalog: its type and id (IMDb's, for most), name, art, year, genres and rating (IMDb's, "7.5"). */
     internal class Title(val type: String, val id: String, val name: String, val poster: String?, val background: String?,
-                         val logo: String?, val year: String?)
+                         val logo: String?, val year: String?, val genres: List<String> = emptyList(), val rating: String? = null)
 
     /** A catalog of films or series, its first pages: what's under the Films or Series tile, or the add-on's own. */
     internal class Shelf(val catalog: Catalog, val titles: List<Title>)
@@ -278,7 +278,8 @@ internal object Stremio {
 
     // ---------- films and series ----------
 
-    private fun shelfFile(dir: File, url: String) = File(dir, "stremio_vod_${key(url)}.json")
+    // v2: with each title's genres and rating.
+    private fun shelfFile(dir: File, url: String) = File(dir, "stremio_vod2_${key(url)}.json")
 
     /** Whether the add-on's film and series catalogs are missing or a few hours old. */
     fun vodDue(dir: File, url: String): Boolean {
@@ -322,9 +323,11 @@ internal object Stremio {
             JSONObject().put("type", shelf.catalog.type).put("catalog", shelf.catalog.id).put("metas", JSONArray(shelf.titles.map { t ->
                 JSONObject().put("type", t.type).put("id", t.id).put("name", t.name).put("poster", t.poster ?: JSONObject.NULL)
                     .put("background", t.background ?: JSONObject.NULL).put("logo", t.logo ?: JSONObject.NULL).put("releaseInfo", t.year ?: JSONObject.NULL)
+                    .put("genres", JSONArray(t.genres)).put("imdbRating", t.rating ?: JSONObject.NULL)
             }))
         })).toString())
         if (!part.renameTo(f)) throw java.io.IOException("can't save ${f.name}")
+        File(dir, "stremio_vod_${key(addon.url)}.json").delete() // the first version's
         shelves = shelves + (addon.url to (f.lastModified() to out))
         return out
     }
@@ -341,7 +344,9 @@ internal object Stremio {
         val type = m.optString("type").ifBlank { fallbackType ?: return null }
         if (type != "movie" && type != "series") return null
         val year = (text(m, "releaseInfo") ?: text(m, "year"))?.take(9)
-        return Title(type, id, name, logo(text(m, "poster")), logo(text(m, "background")), logo(text(m, "logo")), year)
+        val genres = (m.optJSONArray("genres") ?: m.optJSONArray("genre"))?.let { g -> (0 until g.length()).map { g.optString(it) } }.orEmpty()
+            .filter { it.isNotBlank() }
+        return Title(type, id, name, logo(text(m, "poster")), logo(text(m, "background")), logo(text(m, "logo")), year, genres, text(m, "imdbRating"))
     }
 
     /** The titles of a searchable catalog for [query]. Throws when the add-on can't be asked. */

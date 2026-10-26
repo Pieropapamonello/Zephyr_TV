@@ -1452,6 +1452,9 @@ class MainActivity : Activity() {
             sectionCache?.takeIf { it.first == pkg && it.second.isNotEmpty() }?.let { (_, sections) ->
                 getString(R.string.menu_sections) to { pickSections(pkg, sections) }
             },
+            sectionCache?.takeIf { it.first == pkg && it.second.isNotEmpty() }?.let { (_, sections) ->
+                getString(R.string.menu_rename_sections) to { renameSections(pkg, sections) }
+            },
             if (pkg.startsWith(HDMI) || pkg.startsWith(STREMIO)) null else getString(R.string.menu_app_info) to {
                 openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkg, null))
             },

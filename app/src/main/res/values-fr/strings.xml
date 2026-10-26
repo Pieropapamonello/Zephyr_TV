@@ -221,6 +221,9 @@
     <string name="section_channels">Chaînes</string>
     <string name="section_recommended">Recommandés</string>
     <string name="menu_sections">Sections visibles</string>
+    <string name="menu_rename_sections">Renommer les sections</string>
+    <string name="section_rename_intro">Nom d\'origine : %1$s. Enregistrez avec le champ vide pour le garder.</string>
+    <string name="section_original_name">Nom d\'origine</string>
     <string name="dialog_save">Enregistrer</string>
     <string name="dialog_clear">Supprimer</string>
     <string name="tmdb_api_key_hint">Collez ou saisissez votre clé API v3 TMDB</string>
@@ -419,6 +422,8 @@
     <string name="setting_addons_vod">Films et séries</string>
     <string name="addons_vod_tiles">Apps Films et Séries</string>
     <string name="setting_cinemeta">Bibliothèque Cinemeta</string>
+    <string name="cinemeta_intro">Les films et séries utilisent toujours Cinemeta, la bibliothèque gratuite de Stremio. Vous pouvez utiliser l\'adresse d\'une autre instance.</string>
+    <string name="cinemeta_default">Celle de Stremio</string>
     <string name="title_watch">Regarder</string>
     <string name="title_watch_addons">Regarder avec les extensions</string>
     <string name="title_resume">Reprendre à %1$s</string>

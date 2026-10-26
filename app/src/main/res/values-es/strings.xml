@@ -221,6 +221,9 @@
     <string name="section_channels">Canales</string>
     <string name="section_recommended">Recomendados</string>
     <string name="menu_sections">Secciones visibles</string>
+    <string name="menu_rename_sections">Renombrar secciones</string>
+    <string name="section_rename_intro">Nombre original: %1$s. Guarda con el campo vacío para mantenerlo.</string>
+    <string name="section_original_name">Nombre original</string>
     <string name="dialog_save">Guardar</string>
     <string name="dialog_clear">Quitar</string>
     <string name="tmdb_api_key_hint">Pega o escribe tu clave API v3 de TMDB</string>
@@ -419,6 +422,8 @@
     <string name="setting_addons_vod">Películas y series</string>
     <string name="addons_vod_tiles">Apps Películas y Series</string>
     <string name="setting_cinemeta">Biblioteca Cinemeta</string>
+    <string name="cinemeta_intro">Las películas y series usan siempre Cinemeta, la biblioteca gratuita de Stremio. Puedes usar la dirección de otra instancia.</string>
+    <string name="cinemeta_default">La de Stremio</string>
     <string name="title_watch">Ver</string>
     <string name="title_watch_addons">Ver con los complementos</string>
     <string name="title_resume">Seguir desde %1$s</string>

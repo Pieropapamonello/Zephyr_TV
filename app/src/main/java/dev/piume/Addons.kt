@@ -343,23 +343,49 @@ internal fun MainActivity.addonRows(): List<Triple<String, String, () -> Unit>> 
             if (next == "apps") addonUrls().forEach { updateAddon(it, null) }
             renderSettings(ADDONS_TV_ROW)
         },
-        // Films and series: the Films and Series tiles, an app per add-on, or none; and Cinemeta, their library.
+        // Films and series: the Films and Series tiles, an app per add-on, or none; and Cinemeta, their library
+        // (always there: only its address can change).
         page(getString(R.string.setting_addons_vod), addonsVodName(addonsVod())) {
             val modes = listOf("tiles", "apps", "off")
             prefs.edit().putString(K.ADDONS_VOD, modes[(modes.indexOf(addonsVod()) + 1) % modes.size]).apply()
             addonsChanged()
             renderSettings(ADDONS_VOD_ROW)
         },
-        page(getString(R.string.setting_cinemeta), toggle(cinemetaOn())) {
-            prefs.edit().putBoolean(K.CINEMETA, !cinemetaOn()).apply()
-            if (cinemetaOn()) updateAddon(Stremio.CINEMETA, null)
-            addonsChanged()
-            renderSettings(CINEMETA_ROW)
-        },
+        page(getString(R.string.setting_cinemeta), android.net.Uri.parse(cinemetaUrl()).host.orEmpty()) { configureCinemeta() },
         page(getString(R.string.setting_addon_add), SUBMENU) { addonFromPhone() },
     ) + addonUrls().mapIndexed { i, url ->
         page(Stremio.saved(filesDir, url)?.addon?.name ?: url, SUBMENU) { addonPage(url) }
     }
+}
+
+/** Cinemeta's address: another instance's, typed with the remote, or Stremio's own again. Saving reads it at once. */
+internal fun MainActivity.configureCinemeta() {
+    val input = urlField(cinemetaUrl(), Stremio.CINEMETA)
+    val box = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(0, dp(12), 0, dp(12))
+        addView(input)
+        addView(label(getString(R.string.cinemeta_intro), 12f).apply { alpha = 0.6f; maxLines = 4; setPadding(dp(4), dp(10), dp(4), 0) })
+    }
+    fun use(url: String?) {
+        if (url == null || url == Stremio.CINEMETA) prefs.edit().remove(K.CINEMETA_URL).apply() else prefs.edit().putString(K.CINEMETA_URL, url).apply()
+        Toast.makeText(this, getString(R.string.addon_checking), Toast.LENGTH_SHORT).show()
+        updateAddon(cinemetaUrl(), null) { listing ->
+            if (listing?.addon == null) Toast.makeText(this, getString(R.string.toast_addon_failed), Toast.LENGTH_LONG).show()
+            addonsChanged()
+        }
+        renderSettings(CINEMETA_ROW)
+    }
+    val rows = listOf(
+        page(getString(R.string.dialog_save)) {
+            val url = Stremio.manifestUrl(input.text?.toString().orEmpty())
+                ?: return@page Toast.makeText(this, getString(R.string.phone_epg_bad), Toast.LENGTH_LONG).show()
+            use(url)
+        },
+        page(getString(R.string.cinemeta_default)) { use(null) },
+    )
+    showPage(getString(R.string.setting_cinemeta), rows, top = box, back = { renderSettings(CINEMETA_ROW) })
+    downFrom(input)
 }
 
 internal fun MainActivity.addonsVodName(mode: String) = getString(when (mode) {

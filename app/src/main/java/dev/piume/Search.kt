@@ -264,7 +264,7 @@ internal fun MainActivity.showSearchResults() {
     }
     // The add-ons' films and series (without a TMDB key): their cards, as under the Films and Series tiles.
     fun addonTitles(key: String, heading: Int, type: String) = searchTitles.filter { it.first.type == type }.takeIf { it.isNotEmpty() }?.let { found ->
-        Section(key, query, getString(heading, query), found.map { (t, source) -> titleCard(t, source) })
+        Section(key, query, getString(heading, query), found.map { (t, source) -> titleCard(t, source, titleTile(t.type, source)) })
     }
     showSections(listOfNotNull(
         titles("films", R.string.search_films_for, searchResults.filter { it.mediaType != "tv" }),

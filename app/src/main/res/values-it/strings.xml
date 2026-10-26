@@ -221,6 +221,9 @@
     <string name="section_channels">Canali</string>
     <string name="section_recommended">Consigliati</string>
     <string name="menu_sections">Sezioni visibili</string>
+    <string name="menu_rename_sections">Rinomina sezioni</string>
+    <string name="section_rename_intro">Nome originale: %1$s. Salva con la casella vuota per tenerlo.</string>
+    <string name="section_original_name">Nome originale</string>
     <string name="dialog_save">Salva</string>
     <string name="dialog_clear">Rimuovi</string>
     <string name="tmdb_api_key_hint">Incolla o inserisci la tua API Key v3 di TMDB</string>
@@ -419,6 +422,8 @@
     <string name="setting_addons_vod">Film e serie</string>
     <string name="addons_vod_tiles">App Film e Serie TV</string>
     <string name="setting_cinemeta">Libreria Cinemeta</string>
+    <string name="cinemeta_intro">Film e serie usano sempre Cinemeta, la libreria gratuita di Stremio. Puoi usare l\'indirizzo di un\'altra istanza.</string>
+    <string name="cinemeta_default">Quella di Stremio</string>
     <string name="title_watch">Guarda</string>
     <string name="title_watch_addons">Guarda con gli addon</string>
     <string name="title_resume">Riprendi da %1$s</string>

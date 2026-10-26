@@ -212,7 +212,7 @@ object TmdbClient {
      * catalogs (Cinemeta's) are in English only. [overview] is empty when TMDB has none in that language.
      */
     data class Localized(val tmdbId: Long, val tv: Boolean, val title: String, val overview: String, val poster: String?,
-                         val backdrop: String?, val genres: List<String>, val year: String?)
+                         val backdrop: String?, val genres: List<String>, val year: String?, val vote: Double = 0.0)
 
     /** One episode as TMDB has it in a language: its name, what it's about, its still. */
     data class LocalEpisode(val name: String, val overview: String, val still: String?)
@@ -230,7 +230,8 @@ object TmdbClient {
         val names = if (ids == null) emptyList() else (0 until ids.length()).mapNotNull { genres[ids.optInt(it)] }
         fun path(name: String) = r.optString(name).takeIf { it.isNotBlank() && it != "null" }
         return Localized(r.optLong("id"), tv, title, r.optString("overview").trim(), path("poster_path")?.let { "https://image.tmdb.org/t/p/w500$it" },
-            cardUrl(path("backdrop_path")), names, r.optString(if (tv) "first_air_date" else "release_date").take(4).takeIf { it.length == 4 })
+            cardUrl(path("backdrop_path")), names, r.optString(if (tv) "first_air_date" else "release_date").take(4).takeIf { it.length == 4 },
+            r.optDouble("vote_average", 0.0))
     }
 
     /** A season's episodes in [language], by their number. Throws when TMDB can't be asked. */
@@ -379,6 +380,9 @@ object TmdbClient {
 
     /** The title's IMDb id ("tt…"), or null, for the Stremio add-ons. Network: call it off the UI thread. */
     fun imdbIdOf(apiKey: String, item: TmdbItem): String? = imdbId(apiKey, item)
+
+    /** [item]'s IMDb id when it's known already (a Stremio title's), so it isn't asked of TMDB. */
+    fun knowImdbId(item: TmdbItem, imdb: String) { imdbCache["${item.mediaType}/${item.id}"] = imdb }
 
     /** The title's IMDb id ("tt…"), or null. Network: call it off the UI thread. */
     private fun imdbId(apiKey: String, item: TmdbItem): String? {

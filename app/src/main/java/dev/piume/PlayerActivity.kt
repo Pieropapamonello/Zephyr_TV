@@ -24,6 +24,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.ScrollView
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
@@ -748,7 +749,7 @@ class PlayerActivity : Activity() {
         openPanel(getString(R.string.player_streams)) { row ->
             streams.forEachIndexed { k, s ->
                 val name = if (s.source != null && !s.title.contains(s.source, ignoreCase = true)) "${s.source} · ${s.title}" else s.title
-                row(getString(R.string.player_stream_row, k + 1, name), k == tried) {
+                row(getString(R.string.player_stream_row, k + 1, name), k == tried, 2) {
                     tried = k - 1
                     attempts = 0
                     next()
@@ -775,31 +776,31 @@ class PlayerActivity : Activity() {
             })
             if (type != C.TRACK_TYPE_TEXT) {
                 if (type == null) heading(R.string.player_audio)
-                if (audio.isEmpty()) row(getString(R.string.player_track_n, 1), true) {}
-                audio.forEach { t -> row(t.name, t.selected) { pick(t, C.TRACK_TYPE_AUDIO) } }
+                if (audio.isEmpty()) row(getString(R.string.player_track_n, 1), true, 1) {}
+                audio.forEach { t -> row(t.name, t.selected, 1) { pick(t, C.TRACK_TYPE_AUDIO) } }
             }
             if (type != C.TRACK_TYPE_AUDIO) {
                 if (type == null) heading(R.string.player_subtitles)
-                row(getString(R.string.player_subtitles_off), subs.none { it.selected }) { subtitlesOff() }
-                subs.forEach { t -> row(t.name, t.selected) { pick(t, C.TRACK_TYPE_TEXT) } }
+                row(getString(R.string.player_subtitles_off), subs.none { it.selected }, 1) { subtitlesOff() }
+                subs.forEach { t -> row(t.name, t.selected, 1) { pick(t, C.TRACK_TYPE_TEXT) } }
             }
         }
     }
 
     /**
      * The side panel titled [title], its rows added by [fill] through the row maker it's given (a name, whether it's
-     * the one playing, what picking it does); focus on the one playing.
+     * the one playing, its lines at most: a stream's long name takes two, what picking it does); focus on the one playing.
      */
-    private fun openPanel(title: String, fill: ((String, Boolean, () -> Unit) -> Unit) -> Unit) {
+    private fun openPanel(title: String, fill: ((String, Boolean, Int, () -> Unit) -> Unit) -> Unit) {
         hideBanner.run()
         tracksTitle.text = title
         tracksList.removeAllViews()
         var focus: View? = null
-        fun row(name: String, on: Boolean, pick: () -> Unit) {
+        fun row(name: String, on: Boolean, lines: Int, pick: () -> Unit) {
             TextView(this).apply {
                 this.text = if (on) "✓  $name" else "     $name"
                 textSize = 16f
-                isSingleLine = true
+                if (lines == 1) isSingleLine = true else maxLines = lines
                 ellipsize = TextUtils.TruncateAt.END
                 setPadding(dp(14), dp(12), dp(14), dp(12))
                 isFocusable = true
@@ -816,7 +817,7 @@ class PlayerActivity : Activity() {
                 if (on && focus == null) focus = this
             }
         }
-        fill(::row)
+        fill { name, on, lines, pick -> row(name, on, lines, pick) }
         tracksPanel.visibility = View.VISIBLE
         (focus ?: (0 until tracksList.childCount).map { tracksList.getChildAt(it) }.firstOrNull { it.isFocusable })?.requestFocus()
     }
@@ -1022,7 +1023,14 @@ class PlayerActivity : Activity() {
             .setAllowCrossProtocolRedirects(true) // OMG's addresses go from https to the proxy's http, and back
             .setDefaultRequestProperties(s.headers.filterKeys { !it.equals("User-Agent", ignoreCase = true) })
         s.headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.let { http.setUserAgent(it.value) }
-        val p = ExoPlayer.Builder(this).setMediaSourceFactory(DefaultMediaSourceFactory(http)).build()
+        // Sound as a film's, through the output the TV has chosen (its speakers, a soundbar or receiver on HDMI ARC or
+        // optical, Bluetooth): taking the audio focus, so the TV routes it there and other sound stops; pausing when
+        // headphones or a Bluetooth speaker go away. The sink follows the output's changes and what it can decode
+        // (Dolby, DTS passed through to a receiver that can).
+        val p = ExoPlayer.Builder(this).setMediaSourceFactory(DefaultMediaSourceFactory(http))
+            .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
+            .setHandleAudioBecomingNoisy(true)
+            .build()
         player = p
         applyChoices(p)
         p.setVideoSurfaceView(surface)

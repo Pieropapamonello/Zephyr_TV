@@ -221,6 +221,9 @@
     <string name="section_channels">Channels</string>
     <string name="section_recommended">Recommended</string>
     <string name="menu_sections">Visible sections</string>
+    <string name="menu_rename_sections">Rename sections</string>
+    <string name="section_rename_intro">Its own name: %1$s. Save with the box empty to keep it.</string>
+    <string name="section_original_name">Original name</string>
     <string name="dialog_save">Save</string>
     <string name="dialog_clear">Clear</string>
     <string name="tmdb_api_key_hint">Paste or type your TMDB v3 API Key</string>
@@ -418,6 +421,8 @@
     <string name="setting_addons_vod">Films and series</string>
     <string name="addons_vod_tiles">Films and Series apps</string>
     <string name="setting_cinemeta">Cinemeta library</string>
+    <string name="cinemeta_intro">Films and series always come with Cinemeta, Stremio\'s free library. Another instance\'s address can be used instead.</string>
+    <string name="cinemeta_default">Stremio\'s own</string>
     <string name="title_watch">Watch</string>
     <string name="title_watch_addons">Watch with the add-ons</string>
     <string name="title_resume">Resume from %1$s</string>

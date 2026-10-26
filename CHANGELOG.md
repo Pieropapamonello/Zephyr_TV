@@ -15,6 +15,15 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- The cards of films and series show the year, the genre and the rating, with the icon of their tile.
+- The page of a film or series shows the rating. With a TMDB key, it also has the trailer and the services that have the title.
+- The page of a film or series and the player show the same picture as the card.
+- To give a section your own name, hold OK on an app and select **Rename sections**. To get the name back, select **Original name**.
+- Cinemeta is always on. To use another Cinemeta address, select **Piume settings → Stremio add-ons → Cinemeta library**.
+- On the page of a search result, **Watch on** plays a film immediately. For a series, it shows the episodes.
+- In the player, the names of streams show on two lines.
+- The player sends the sound to the audio output of the TV, also to external speakers. It pauses when headphones or a Bluetooth speaker disconnect.
+
 ## 4.1.0-beta.2
 
 - This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.
