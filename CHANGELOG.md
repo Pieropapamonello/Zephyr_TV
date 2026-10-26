@@ -15,6 +15,9 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+## 4.1.0-beta.4
+
+- This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.
 - On the page of a series, Left and Right go to the previous and next season.
 - Select an episode to see its page: its picture, season, number, name, date and description. Piume then asks the add-ons for its streams.
 - When more than one add-on has streams for the episode, the page has **Watch on** for each add-on, with the number of streams.
