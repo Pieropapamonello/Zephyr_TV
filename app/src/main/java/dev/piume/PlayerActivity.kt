@@ -97,6 +97,8 @@ class PlayerActivity : Activity() {
     private val fetched = ConcurrentHashMap<String, Pair<Long, List<Stremio.Stream>>>() // channel id to its streams, and when
     private val pages = ConcurrentHashMap<String, Stremio.Meta>()
     private val done = HashSet<String>() // the films and episodes marked watched while the player is open
+    private val userDir by lazy { intent.getStringExtra(USER_DIR)?.let(::File) ?: filesDir } // the user's: progress, watched, Trakt
+    private var scrobbling = false // Trakt was told the film or episode playing plays
     private val logos = ConcurrentHashMap<String, Bitmap>()
     private val guide by lazy {
         getSharedPreferences(K.FILE, MODE_PRIVATE).getString(K.EPG_URL, null)?.takeIf { it.isNotBlank() }?.let { Epg.saved(filesDir, it) }
@@ -454,7 +456,7 @@ class PlayerActivity : Activity() {
         if (at !in channels.indices) return
         val e = entry(at, p.currentPosition, duration)
         if (VodProgress.finished(e.position, duration)) return watched(at)
-        ahead.execute { runCatching { VodProgress.put(filesDir, e) } }
+        ahead.execute { runCatching { VodProgress.put(userDir, e) } }
     }
 
     private fun entry(i: Int, position: Long, duration: Long): VodProgress.Entry {
@@ -475,15 +477,36 @@ class PlayerActivity : Activity() {
         val next = if (last) null else entry(i + 1, 0L, 0L)
         ahead.execute {
             runCatching {
-                VodWatched.set(filesDir, listOfNotNull(c.id to meta, (meta to meta).takeIf { last && meta != c.id }), true)
-                VodProgress.remove(filesDir, c.id)
-                next?.let { VodProgress.putNext(filesDir, it) }
+                VodWatched.set(userDir, listOfNotNull(c.id to meta, (meta to meta).takeIf { last && meta != c.id }), true)
+                VodProgress.remove(userDir, c.id)
+                next?.let { VodProgress.putNext(userDir, it) }
             }
         }
     }
 
+    /**
+     * Tells the user's Trakt account (when they have one) about the film or episode playing: "start" (it plays, again
+     * after a pause), "pause", "stop" (left, or ended), with how far in it is.
+     */
+    private fun scrobble(action: String) {
+        if (!vod) return
+        val p = player ?: return
+        val c = channels.getOrNull(at) ?: return
+        val duration = p.duration.takeIf { it > 0 && it != C.TIME_UNSET } ?: return
+        when {
+            action == "start" -> scrobbling = true
+            !scrobbling -> return // nothing told yet: nothing to pause or stop
+            action == "stop" -> scrobbling = false
+        }
+        val progress = p.currentPosition * 100.0 / duration
+        val meta = intent.getStringExtra(META_ID) ?: c.id
+        val dir = userDir
+        ahead.execute { Trakt.scrobble(dir, action, c.id, meta, progress) }
+    }
+
     /** A film or episode played to its end: watched, then the next episode, or the player closes. */
     private fun ended() {
+        scrobble("stop")
         watched(at)
         if (at < channels.size - 1) play(at + 1) else finish()
     }
@@ -967,7 +990,7 @@ class PlayerActivity : Activity() {
 
     /** Tunes channel [i]: its streams (fetched ahead if they're fresh), the first that works, then its neighbours'. */
     private fun play(i: Int) {
-        if (vod && player != null) saveProgress() // the one left (still [at]), before the next
+        if (vod && player != null) { saveProgress(); scrobble("stop") } // the one left (still [at]), before the next
         if (i != at) previous = at
         at = i
         shown = i
@@ -977,7 +1000,7 @@ class PlayerActivity : Activity() {
         tried = -1
         attempts = 0
         release()
-        pendingSeek = if (vod) VodProgress.position(filesDir, c.id) ?: -1L else -1L
+        pendingSeek = if (vod) VodProgress.position(userDir, c.id) ?: -1L else -1L
         say(getString(R.string.player_loading))
         if (banner.visibility == View.VISIBLE) showBanner(i) // zapping: the banner keeps up with it; else the middle says it all
         net.execute {
@@ -1074,6 +1097,7 @@ class PlayerActivity : Activity() {
                     Player.STATE_READY -> {
                         ui.removeCallbacks(stuck)
                         say(null)
+                        if (vod && p.playWhenReady && !scrobbling) ui.post { scrobble("start") } // once it has sought to where it resumes
                         if (pendingSeek > 0) p.seekTo(pendingSeek).also { pendingSeek = -1L }
                         if (vod) group = streams.getOrNull(tried)?.group else remember(channels[at])
                         if (banner.visibility == View.VISIBLE && shown == at) showBanner(at)
@@ -1104,6 +1128,11 @@ class PlayerActivity : Activity() {
             }
 
             override fun onCues(cueGroup: CueGroup) = showCues(cueGroup.cues)
+
+            // Paused and played again: Trakt keeps up (it shows the user watching, and where they paused).
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (vod && p.playbackState == Player.STATE_READY) scrobble(if (playWhenReady) "start" else "pause")
+            }
 
             override fun onTracksChanged(tracks: Tracks) {
                 if (banner.visibility == View.VISIBLE && shown == at) { fillTrackLine(at); fillButtons(at) }
@@ -1156,6 +1185,7 @@ class PlayerActivity : Activity() {
     override fun onStop() {
         super.onStop()
         saveProgress()
+        scrobble("stop")
         finish()
     }
 
@@ -1187,6 +1217,7 @@ class PlayerActivity : Activity() {
         const val META_TYPE = "meta_type" // the title's type and id ("series", "tt…"), for its page from Continue Playing
         const val META_ID = "meta_id"
         const val POSTER = "poster" // the title's art, for its Continue Playing card
+        const val USER_DIR = "user_dir" // the folder of the user watching (see Users): their progress, watched titles, Trakt
         private const val VOD_WAIT_MS = 12_000L // a film's slower add-ons are waited for this long
         private const val VOD_STUCK_MS = 30_000L // a film's stream buffering longer than this: the next
         private const val CHOICES_FILE = "player" // not K.FILE: the home screen's process writes that one whole

@@ -50,6 +50,8 @@ internal object K {
     const val ADDONS_VOD = "addons_vod" // where their films and series show: "tiles" (Films and Series), "apps" (an app each), "off"
     const val CINEMETA_URL = "cinemeta_url" // Cinemeta's manifest, when not Stremio's own (see MainActivity.cinemetaUrl)
     const val SECTION_NAMES = "section_names" // JSON: "pkg/section" to the name the user gave it
+    const val USERS = "users" // JSON: Piume's users, [{id, name}] (see Users)
+    const val USER = "user" // the id of the user in use ("": the first)
     const val ADDONS_TV = "addons_tv" // where their TV channels show: "tv" (the TV app), "iptv" (one IPTV app), "apps" (an app each)
 
     // Spotlight

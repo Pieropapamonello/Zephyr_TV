@@ -71,7 +71,7 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
         else -> return emptyList()
     }
     val missing = ArrayList<String>()
-    val watched = VodWatched.all(filesDir)
+    val watched = VodWatched.all(vodDir())
     return addons.flatMap { addon ->
         if (Stremio.vodDue(filesDir, addon.url) && addon.vod.any { it.listed }) refreshShelves(addon, pkg)
         Stremio.shelves(filesDir, addon).filter { type == null || it.catalog.type == type }.mapNotNull { shelf ->
@@ -174,12 +174,12 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
         addServices()
         focus = rows.size
     }
-    val marks = VodWatched.all(filesDir)
+    val marks = VodWatched.all(vodDir())
     val holds = HashMap<Int, () -> Unit>()
     if (sources.isEmpty()) {
         rows += page(getString(R.string.title_no_streams)) { }
     } else if (!episodic) {
-        val at = VodProgress.position(filesDir, t.id)
+        val at = VodProgress.position(vodDir(), t.id)
         val seen = t.id in marks
         val label = when {
             sole != null && at != null -> getString(R.string.title_resume_on, clock(at), sole.name)
@@ -198,7 +198,7 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
         val seasons = meta.episodes.map { it.season }.distinct()
         // The season of the episode last played (or the next one, waiting), else of the one last watched, else the first.
         fun seasonOf(id: String?) = id?.let { i -> meta.episodes.firstOrNull { it.id == i }?.season }
-        val last = seasonOf(VodProgress.all(filesDir).firstOrNull { it.metaId == t.id }?.id)
+        val last = seasonOf(VodProgress.all(vodDir()).firstOrNull { it.metaId == t.id }?.id)
             ?: seasonOf(marks.values.filter { it.metaId == t.id && it.id != t.id }.maxByOrNull { it.at }?.id)
         val shown = season?.takeIf { it in seasons } ?: last ?: seasons.first()
         fun seasonName(s: Int) = if (s == 0) getString(R.string.title_specials) else getString(R.string.title_season, s)
@@ -208,7 +208,7 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
             sides = { step -> showVodTitle(meta, ref, seasons[Math.floorMod(at + step, seasons.size)], services.known) }
             rows += page(seasonName(shown), "‹ ${at + 1} / ${seasons.size} ›") { sides?.invoke(1) }
         }
-        val begun = VodProgress.all(filesDir).associateBy { it.id }
+        val begun = VodProgress.all(vodDir()).associateBy { it.id }
         val seasonRow = focus
         val inSeason = meta.episodes.filter { it.season == shown }
         // At first, the episode begun (or waiting next); else the first not watched, after one that is.
@@ -236,8 +236,9 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
     if (!episodic && sources.isNotEmpty()) {
         val seen = t.id in marks
         rows += page(getString(if (seen) R.string.title_mark_unwatched else R.string.title_mark_watched)) {
-            VodWatched.set(filesDir, listOf(t.id to t.id), !seen)
-            if (!seen) VodProgress.remove(filesDir, t.id)
+            VodWatched.set(vodDir(), listOf(t.id to t.id), !seen)
+            traktHistory(listOf(t.id to t.id), !seen)
+            if (!seen) VodProgress.remove(vodDir(), t.id)
             showVodTitle(meta, ref, season, services.known, focusRow = 1)
         }
     }
@@ -261,7 +262,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
     val title = getString(R.string.player_episode, t.name, e.season, e.episode)
     val released = e.released?.take(10)?.let { d -> runCatching { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).parse(d) }.getOrNull() }
         ?.let { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(it) }
-    val seen = VodWatched.has(filesDir, e.id)
+    val seen = VodWatched.has(vodDir(), e.id)
     val top = titleTop(listOfNotNull("✓".takeIf { seen }, episodeLine(e), released).joinToString(" · "), e.name.takeIf { it.isNotBlank() }, e.overview ?: meta.description)
     val sources = streamSources(t.type, e.id)
     val services = serviceRows(t, available)
@@ -277,7 +278,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
         having == null -> rows += page(getString(R.string.title_finding_streams)) { }
         else -> {
             val sole = soleAddon(having)
-            val at = VodProgress.position(filesDir, e.id)
+            val at = VodProgress.position(vodDir(), e.id)
             icons[rows.size] = watchIcon(sole)
             rows += page(when {
                 sole != null && at != null -> getString(R.string.title_resume_on, clock(at), sole.name)
@@ -329,11 +330,12 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
  */
 private fun MainActivity.markWatched(meta: Stremio.TitleMeta, episodes: List<Stremio.Episode>, on: Boolean) {
     val id = meta.title.id
-    VodWatched.set(filesDir, episodes.map { it.id to id }, on)
-    if (on) episodes.forEach { VodProgress.remove(filesDir, it.id) }
-    val marks = VodWatched.all(filesDir)
+    VodWatched.set(vodDir(), episodes.map { it.id to id }, on)
+    traktHistory(episodes.map { it.id to id }, on)
+    if (on) episodes.forEach { VodProgress.remove(vodDir(), it.id) }
+    val marks = VodWatched.all(vodDir())
     val whole = meta.episodes.filter { it.season > 0 }.ifEmpty { meta.episodes }.all { it.id in marks }
-    if (whole != (id in marks)) VodWatched.set(filesDir, listOf(id to id), whole)
+    if (whole != (id in marks)) VodWatched.set(vodDir(), listOf(id to id), whole)
 }
 
 /** "Season 1 · Episode 3" (specials: "Special 3"). */
@@ -503,7 +505,8 @@ internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, epi
             .putStringArrayListExtra(PlayerActivity.DESCS, strings { it.third?.overview ?: meta?.description })
             .putExtra(PlayerActivity.META_TYPE, type)
             .putExtra(PlayerActivity.META_ID, t?.id ?: ref.id)
-            .putExtra(PlayerActivity.POSTER, art))
+            .putExtra(PlayerActivity.POSTER, art)
+            .putExtra(PlayerActivity.USER_DIR, vodDir().path))
     } catch (e: Exception) {
         warn("player didn't open ($e)")
     }
@@ -525,7 +528,7 @@ private fun MainActivity.resumeTitle(ref: TitleRef) {
 /** The films and episodes begun, as Continue Playing cards (with the time they were left, for its order). Off the UI thread. */
 internal fun MainActivity.titleProgressCards(hidden: Set<String>): List<Pair<Long, Prog>> =
     // One card a series: its newest episode, begun or waiting next.
-    VodProgress.all(filesDir).filter { hideKey(VOD_PKG, it.name) !in hidden }.distinctBy { it.metaId }.take(10).map { e ->
+    VodProgress.all(vodDir()).filter { hideKey(VOD_PKG, it.name) !in hidden }.distinctBy { it.metaId }.take(10).map { e ->
         val left = ((e.duration - e.position) / 60_000).coerceAtLeast(1)
         val tile = if (addonsVod() == "tiles") (if (e.type == "series") SERIES_PKG else MOVIES_PKG) else null
         val state = if (e.upNext) getString(R.string.title_up_next) else getString(R.string.time_left_min, left.toInt())

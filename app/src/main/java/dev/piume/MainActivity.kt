@@ -238,8 +238,9 @@ class MainActivity : Activity() {
         setupSpotlight() // after applyTheme: its veil and arrow discs use the theme's colours
         loadWallpaper()
 
-        // Top bar: network, All apps, TV inputs, Android settings, launcher settings. Round, lit on focus.
+        // Top bar: users, search, network, All apps, TV inputs, Android settings, launcher settings. Round, lit on focus.
         for ((id, action) in listOf<Pair<Int, () -> Unit>>(
+            R.id.usersButton to { showUsers() },
             R.id.searchButton to { openSearch() },
             R.id.wifi to { openSettings(Settings.ACTION_WIFI_SETTINGS) },
             R.id.allAppsButton to { openAllApps() },
@@ -320,6 +321,7 @@ class MainActivity : Activity() {
         ui.removeCallbacks(wallpaperTick)
         ui.post(wallpaperTick)
         lastInput = SystemClock.elapsedRealtime() // back from an app: someone is here
+        syncTraktNow() // what the user watched elsewhere, now and then
         spotlightIdle = false
         restartSpotlightTick()
         // Gallery chosen but its paintings missing (updated from a version that bundled them): fetch them.
@@ -1352,7 +1354,7 @@ class MainActivity : Activity() {
             v.parent === wifi.parent -> when (key) { // top bar
                 KeyEvent.KEYCODE_DPAD_DOWN -> if (spotVis) spotlightInfoBox else apps ?: cards ?: v
                 KeyEvent.KEYCODE_DPAD_UP -> v
-                KeyEvent.KEYCODE_DPAD_LEFT -> if (v.id == R.id.searchButton) v else null
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (v.id == R.id.usersButton) v else null
                 KeyEvent.KEYCODE_DPAD_RIGHT -> if (v.id == R.id.launcherSettings) v else null
                 else -> null
             }

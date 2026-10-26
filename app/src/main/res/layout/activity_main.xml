@@ -73,6 +73,17 @@
                     android:visibility="gone" />
             </LinearLayout>
 
+            <!-- Who's watching (see Users): their Continue Playing, ✓ marks and Trakt account. -->
+            <ImageView
+                android:id="@+id/usersButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="@string/users_title"
+                android:focusable="true"
+                android:padding="8dp"
+                android:src="@drawable/ic_profile" />
+
             <ImageView
                 android:id="@+id/searchButton"
                 android:layout_width="36dp"

@@ -451,4 +451,26 @@
     <string name="toast_addon_added_vod">%1$s added: films and series</string>
     <string name="player_stream_row">%1$d · %2$s</string>
     <string name="channel_play">Watch</string>
+
+    <!-- Users and Trakt -->
+    <string name="users_title">Users</string>
+    <string name="user_default">Me</string>
+    <string name="user_add">Add user</string>
+    <string name="user_use">Use this profile</string>
+    <string name="user_in_use">In use</string>
+    <string name="user_rename">Rename</string>
+    <string name="user_remove">Remove</string>
+    <string name="user_name_hint">Name</string>
+    <string name="user_switched">Profile: %1$s</string>
+    <string name="trakt_connect">Connect Trakt</string>
+    <string name="trakt_not_connected">Not connected</string>
+    <string name="trakt_sign_in_intro">Scan the code with your phone. Sign in to Trakt and allow Piume. The TV connects by itself.</string>
+    <string name="trakt_waiting">Waiting for Trakt…</string>
+    <string name="trakt_expired">The code expired. Open this page again.</string>
+    <string name="trakt_connected">Trakt connected: %1$s</string>
+    <string name="trakt_sync">Sync with Trakt</string>
+    <string name="trakt_syncing">Syncing with Trakt…</string>
+    <string name="trakt_synced">Trakt: %1$d watched, %2$d to resume</string>
+    <string name="trakt_failed">Trakt didn\'t answer. Try again later.</string>
+    <string name="trakt_disconnect">Disconnect Trakt</string>
 </resources>

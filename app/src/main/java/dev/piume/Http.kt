@@ -28,4 +28,20 @@ internal object Http {
     fun text(url: String, headers: Map<String, String> = emptyMap()) = open(url, headers).use { it.readBytes().decodeToString() }
 
     fun json(url: String, headers: Map<String, String> = emptyMap()) = JSONObject(text(url, headers + ("Accept" to "application/json")))
+
+    /**
+     * Sends [body] (JSON) to [url] with [method] (POST, or DELETE without a body); the answer's status and body,
+     * whatever the status (an API telling "not yet" or "not found" by it). Throws on a network error only.
+     */
+    fun send(url: String, body: JSONObject?, headers: Map<String, String> = emptyMap(), method: String = "POST"): Pair<Int, String> {
+        val c = connect(url, headers + ("Accept" to "application/json") + ("Content-Type" to "application/json"))
+        c.requestMethod = method
+        if (body != null) {
+            c.doOutput = true
+            c.outputStream.use { it.write(body.toString().toByteArray()) }
+        }
+        val code = c.responseCode
+        val text = (if (code in 200..299) c.inputStream else c.errorStream)?.use { it.readBytes().decodeToString() }.orEmpty()
+        return code to text
+    }
 }

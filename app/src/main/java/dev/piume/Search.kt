@@ -203,7 +203,7 @@ internal fun MainActivity.showSearchResults() {
     }
     // Cinemeta's and the add-ons' films and series: their cards, as under the Films and Series tiles.
     fun addonTitles(key: String, heading: Int, type: String) = searchTitles.filter { it.first.type == type }.takeIf { it.isNotEmpty() }?.let { found ->
-        Section(key, query, getString(heading, query), VodWatched.all(filesDir).let { watched -> found.map { (t, source) -> titleCard(t, source, titleTile(t.type, source), t.id in watched) } })
+        Section(key, query, getString(heading, query), VodWatched.all(vodDir()).let { watched -> found.map { (t, source) -> titleCard(t, source, titleTile(t.type, source), t.id in watched) } })
     }
     showSections(listOfNotNull(
         addonTitles("addon-films", R.string.search_films_for, "movie"),
