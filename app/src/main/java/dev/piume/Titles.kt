@@ -392,10 +392,6 @@ private fun MainActivity.tmdbItemOf(t: Stremio.Title): TmdbItem? {
 internal fun MainActivity.soleAddon(sources: List<Pair<String, String>>): Stremio.Addon? =
     sources.singleOrNull()?.let { (base, _) -> addonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.firstOrNull { it.base == base } }
 
-/** The add-ons with streams for films ([tv] false) or series, whatever the id: on a TMDB page, before its IMDb id is known. */
-internal fun MainActivity.vodStreamAddons(tv: Boolean): List<Stremio.Addon> =
-    addonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.filter { it.provides("stream", if (tv) "series" else "movie") }
-
 /**
  * A Watch row's icon: [addon]'s tile's (when it has a tile of its own), else its logo (once on disk), else Play,
  * tinted for the row when it's a mark rather than a picture.
@@ -497,34 +493,36 @@ internal fun MainActivity.findTitles(query: String): List<Pair<Stremio.Title, St
 }
 
 /**
- * A TMDB result's Watch: its IMDb id, then a film plays at once; a series' page from the add-ons (its episodes)
- * takes the result's page's place, with the same art.
+ * The films and series for a search of [query], each once: with a TMDB key, those TMDB finds first (it knows their
+ * names in the TV's language: "Il padrino" finds The Godfather), as Cinemeta's titles by their IMDb ids (those without
+ * one left out); then those the add-ons' searchable catalogs find (Cinemeta's first). In the TV's language, as the
+ * Films and Series rows are. Off the UI thread.
  */
-internal fun MainActivity.watchTmdbTitle(item: TmdbItem) {
-    val key = prefs.getString(K.TMDB_API_KEY, null) ?: return
-    val art = searchArt[item.id]
-    Toast.makeText(this, getString(R.string.player_loading), Toast.LENGTH_SHORT).show()
-    netIo.execute {
-        val imdb = TmdbClient.imdbIdOf(key, item)
-        val ref = imdb?.let {
-            TitleRef(if (item.mediaType == "tv") "series" else "movie", it, item.title,
-                art?.poster ?: item.posterPath?.let { p -> "https://image.tmdb.org/t/p/w500$p" },
-                art?.backdrop ?: TmdbClient.cardUrl(item.backdropPath), logo = art?.logo,
-                rating = item.voteAverage.takeIf { v -> v > 0 }?.let { v -> "%.1f".format(java.util.Locale.ROOT, v) })
-        }
-        val meta = ref?.let { titleMeta(it) }
-        ui.post {
-            when {
-                ref == null -> Toast.makeText(this, getString(R.string.title_no_page), Toast.LENGTH_LONG).show()
-                ref.type == "movie" -> {
-                    pageReturn = { showTitle(item) } // back from the player: the result's page, as it was left
-                    playTitle(ref, meta, null)
-                }
-                meta != null -> showVodTitle(meta, ref)
-                else -> Toast.makeText(this, getString(R.string.title_no_page), Toast.LENGTH_LONG).show()
-            }
+internal fun MainActivity.searchLibrary(query: String): List<Pair<Stremio.Title, String>> {
+    val key = tmdbKey()
+    val viaTmdb = if (key == null) emptyList() else {
+        val found = TmdbClient.search(key, query, tmdbLang())
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
+        try {
+            pool.invokeAll(found.map { item -> java.util.concurrent.Callable {
+                val imdb = TmdbClient.imdbIdOf(key, item) ?: return@Callable null
+                Stremio.Title(if (item.mediaType == "tv") "series" else "movie", imdb, item.title,
+                    item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }, TmdbClient.cardUrl(item.backdropPath), null,
+                    item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }, item.genres,
+                    item.voteAverage.takeIf { it > 0 }?.let { "%.1f".format(java.util.Locale.ROOT, it) }, item.overview, item.id) to cinemetaUrl()
+            } }, 15, java.util.concurrent.TimeUnit.SECONDS).mapNotNull { runCatching { it.get() }.getOrNull() }
+        } finally {
+            pool.shutdownNow()
         }
     }
+    val all = (viaTmdb + findTitles(query)).distinctBy { it.first.type + it.first.id }
+    if (key != null) {
+        Local.use(filesDir, tmdbLang())
+        val todo = all.map { it.first }.filter { wantsLocal(it) }.map { it.id }.filter { Local.asking.add(it) }
+        if (todo.isNotEmpty()) askLocal(todo, key, tmdbLang())
+    }
+    return all.map { (t, source) -> (localize(t)?.let { l -> Stremio.Title(l.type, l.id, l.name, l.poster, l.background, l.logo, l.year, l.genres,
+        l.rating ?: t.rating, t.description, t.tmdbId) } ?: t) to source }
 }
 
 // ---------- in the TV's language ----------

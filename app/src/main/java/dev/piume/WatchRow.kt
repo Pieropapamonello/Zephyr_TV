@@ -747,8 +747,8 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     if (p.badge != null) channelArt(frame, w, cardHeight, p.badge, p.title) {
         listOfNotNull(p.image, p.channelId?.let { id -> logo(id) }, ChannelLogos.match(channelLogoTable(), p.title)).distinct()
     }
-    if (p.tmdb != null || p.vod != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title)
-    frame.setOnClickListener { p.tmdb?.let { showTitle(it) } ?: p.channelPage?.let { showChannel(it) } ?: p.vod?.let { openTitle(it) } ?: p.addon?.let {
+    if (p.vod != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title)
+    frame.setOnClickListener { p.channelPage?.let { showChannel(it) } ?: p.vod?.let { openTitle(it) } ?: p.addon?.let {
         // The row's channels, for CH+ and CH- in the player, when it's a row of them (not Continue Playing).
         val row = ((col.parent as? ViewGroup)?.getTag(R.id.watchScroll) as? RowCards)?.items
             ?.takeIf { items -> items.all { it.addon != null } }?.mapNotNull { it.addon }
@@ -781,7 +781,7 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
             }
         })
     }
-    if (p.badge == null && p.tmdb == null && p.vod == null) loadPoster(img, p.image)
+    if (p.badge == null && p.vod == null) loadPoster(img, p.image)
     // An add-on's channel: what's on as the player shows it (its times, so its bar), once the add-on tells.
     p.addon?.let { c ->
         addonOnNow(c) { now, progress ->

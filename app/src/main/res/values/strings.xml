@@ -425,7 +425,6 @@
     <string name="cinemeta_intro">Films and series always come with Cinemeta, Stremio\'s free library. Another instance\'s address can be used instead.</string>
     <string name="cinemeta_default">Stremio\'s own</string>
     <string name="title_watch">Watch</string>
-    <string name="title_watch_addons">Watch with the add-ons</string>
     <string name="title_resume">Resume from %1$s</string>
     <string name="title_resume_on">Resume from %1$s on %2$s</string>
     <string name="title_season">Season %1$d</string>

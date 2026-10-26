@@ -14,6 +14,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import dev.piume.MainActivity.App
 import dev.piume.MainActivity.Companion.DECELERATE
 import dev.piume.MainActivity.Companion.HDMI
@@ -224,13 +225,19 @@ internal fun MainActivity.titleApps(): List<App> {
     return candidateApps.filterIndexed { i, a -> i < 5 || a.pkg in TmdbClient.providerApps }.sortedByDescending { TmdbClient.isYouTube(it.pkg) }
 }
 
-/** Spotlight's buttons, one per app in [titleApps]. */
+/**
+ * Spotlight's buttons: Watch first, when an add-on has streams for films or series (the title's Cinemeta page, its
+ * seasons and episodes, as from the Films and Series rows), then one per app in [titleApps].
+ */
 internal fun MainActivity.renderSpotlightActions() {
     spotlightActions.removeAllViews()
     val targetApps = titleApps()
     spotlightApps = targetApps
+    val streamers = addonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.filter { it.streamsVod }
+    val watch = if (streamers.isEmpty()) emptyList() else listOf(MainActivity.App(WATCH_ACTION, getString(R.string.title_watch),
+        android.content.Intent(), watchIcon(streamers.singleOrNull())))
 
-    for (a in targetApps) {
+    for (a in watch + targetApps) {
         val btn = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -263,7 +270,7 @@ internal fun MainActivity.renderSpotlightActions() {
                 scaleX = if (focused) 1.08f else 1f
                 scaleY = if (focused) 1.08f else 1f
             }
-            setOnClickListener { openInApp(a) }
+            setOnClickListener { if (a.pkg == WATCH_ACTION) spotlightItem()?.let { watchSpotlight(it) } else openInApp(a) }
         }
         spotlightActions.addView(btn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
             marginStart = if (spotlightActions.childCount > 0) dp(8) else 0
@@ -276,6 +283,26 @@ internal fun MainActivity.renderSpotlightActions() {
  * IMDb id, looked up first), YouTube on the trailer TMDB lists (or a search for one), otherwise through the
  * app's search, otherwise just the app.
  */
+/** The tag of Spotlight's Watch button (see renderSpotlightActions): not an app, so it shows for every title. */
+private const val WATCH_ACTION = "piume:watch"
+
+/**
+ * Spotlight's Watch: the title's Cinemeta page (see openTitle), by its IMDb id (Cinemeta's titles have it; a TMDB
+ * list's is asked of TMDB first), with Spotlight's backdrop.
+ */
+internal fun MainActivity.watchSpotlight(item: TmdbItem) {
+    val key = prefs.getString(K.TMDB_API_KEY, null)?.takeIf { it.isNotBlank() }
+    netIo.execute {
+        val imdb = item.imdbId ?: key?.let { TmdbClient.imdbIdOf(it, item) }
+        ui.post {
+            if (imdb == null) return@post Toast.makeText(this, getString(R.string.title_no_page), Toast.LENGTH_LONG).show()
+            openTitle(TitleRef(if (item.mediaType == "tv") "series" else "movie", imdb, item.title, null,
+                TmdbClient.cardUrl(item.backdropPath), source = cinemetaUrl(),
+                rating = item.voteAverage.takeIf { it > 0 }?.let { "%.1f".format(java.util.Locale.ROOT, it) }))
+        }
+    }
+}
+
 internal fun MainActivity.openInApp(a: App, title: TmdbItem? = spotlightItem()) {
     val item = title ?: return launch(a)
     val lang = tmdbLang()

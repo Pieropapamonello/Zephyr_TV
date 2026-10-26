@@ -13,7 +13,6 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
-import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
@@ -25,7 +24,7 @@ import dev.piume.MainActivity.Companion.MIC_REQUEST
 import dev.piume.MainActivity.Prog
 import java.io.IOException
 
-// Searching TMDB from the top bar: typed with the remote, dictated, or typed on a phone. The results get a tile of
+// Searching from the top bar (films and series in Cinemeta and the add-ons, TV channels): typed with the remote, dictated, or typed on a phone. The results get a tile of
 // their own in the apps row, with their cards under it; Spotlight is left alone.
 // Functions of MainActivity, kept here by topic; their state lives in MainActivity.
 
@@ -167,108 +166,46 @@ internal fun MainActivity.stopListening() {
 }
 
 /**
- * Looks [query] up on TMDB (films and series). The results get a tile after Continue Watching, focused at once,
- * and their cards show under it. Back, or holding OK on the tile, closes it (endSearch).
+ * Looks [query] up: the films and series in Cinemeta and the add-ons' catalogs (TMDB, with its key, finding them by
+ * their names in the TV's language too: see searchLibrary), and the TV channels. The results get a tile after
+ * Continue Watching, focused at once, and their cards show under it. Back, or holding OK on the tile, closes it (endSearch).
  */
 internal fun MainActivity.searchTmdb(query: String) {
-    // Without a TMDB key, the TV channels only (the tuner's and the add-ons').
-    val key = prefs.getString(K.TMDB_API_KEY, null)?.takeIf { it.isNotBlank() }
     spotlightIo.execute {
         val channels = runCatching { findChannels(query) }.getOrDefault(emptyList())
-        val found = if (key == null) emptyList() else TmdbClient.search(key, query, tmdbLang())
-        // Without a TMDB key, the films and series come from the add-ons' catalogs (Cinemeta's, first).
-        val titles = if (key == null) runCatching { findTitles(query) }.getOrDefault(emptyList()) else emptyList()
-        // The results show at once, on the plain art the search gives; their art with the title on it follows.
+        val titles = runCatching { searchLibrary(query) }.getOrDefault(emptyList())
         ui.post {
-            if (found.isEmpty() && channels.isEmpty() && titles.isEmpty()) return@post Toast.makeText(this, getString(R.string.toast_no_results, query), Toast.LENGTH_SHORT).show()
+            if (channels.isEmpty() && titles.isEmpty()) return@post Toast.makeText(this, getString(R.string.toast_no_results, query), Toast.LENGTH_SHORT).show()
             searchQuery = query
-            searchResults = found
-            searchArt = emptyMap()
             searchChannels = channels
             searchTitles = titles
             watchApp = null // the tile's cards are new even if it's focused already
             renderApps()
             (0 until appRow.childCount).map { appRow.getChildAt(it) }.firstOrNull { it.tag == SEARCH_PKG }?.requestFocus()
-            val n = found.size + channels.size + titles.size
+            val n = channels.size + titles.size
             Toast.makeText(this, resources.getQuantityString(R.plurals.toast_search_results, n, n, query), Toast.LENGTH_LONG).show()
         }
-        if (key == null) return@execute
-        // Each result's landscape art with its title on it, all at once (one TMDB call each).
-        val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
-        val art = try {
-            pool.invokeAll(found.map { item -> java.util.concurrent.Callable { item.id to TmdbClient.art(key, item, tmdbLang()) } })
-                .mapNotNull { runCatching { it.get() }.getOrNull() }.toMap()
-        } finally {
-            pool.shutdown()
-        }
-        ui.post {
-            if (searchQuery != query || searchResults !== found) return@post // another search, or none, since
-            searchArt = art
-            refreshSearchArt()
-        }
-    }
-}
-
-/** [p] with its art from [MainActivity.searchArt], when it's a search result that has some; else [p] itself. */
-internal fun MainActivity.withArt(p: Prog): Prog {
-    val item = p.tmdb ?: return p
-    val art = searchArt[item.id] ?: return p
-    return Prog(p.title, p.sub, 0, art.backdrop ?: TmdbClient.cardUrl(item.backdropPath), null, null,
-        tmdb = item, logo = art.logo, poster = art.poster ?: item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" })
-}
-
-/**
- * The results' art arrived: each card built so far gets it in place (focus staying on the one it's on), and so do
- * those still to come (see RowCards).
- */
-internal fun MainActivity.refreshSearchArt() {
-    if (watchApp != SEARCH_PKG) return // not on screen: showSearchResults builds them with it
-    for (row in cardRows()) {
-        val cards = row.getTag(R.id.watchScroll) as? RowCards ?: continue
-        cards.items = cards.items.map(::withArt)
-        for (i in 0 until row.childCount) {
-            val old = row.getChildAt(i) as? ViewGroup ?: continue
-            val frame = old.getChildAt(0) ?: continue
-            val p = frame.getTag(R.id.watchRow) as? Prog ?: continue
-            val fresh = withArt(p)
-            if (fresh === p) continue
-            val focused = frame.hasFocus()
-            val card = watchCard(fresh, i > 0)
-            row.addView(card, i)
-            if (focused) (card as ViewGroup).getChildAt(0).requestFocus()
-            row.removeView(old)
-        }
     }
 }
 
 /**
- * The results' cards under the apps row, a row each: the films, the series (landscape art with the title on it,
- * see TmdbClient.art, and what each is), then the TV channels it found.
+ * The results' cards under the apps row, a row each: the films, the series (as under the Films and Series tiles),
+ * then the TV channels it found.
  */
 internal fun MainActivity.showSearchResults() {
     val query = searchQuery ?: return
     watchApp = SEARCH_PKG
-    fun titles(key: String, heading: Int, items: List<TmdbItem>) = items.takeIf { it.isNotEmpty() }?.let { found ->
-        Section(key, query, getString(heading, query), found.map { item ->
-            val year = item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }
-            val genre = item.genres.firstOrNull()
-            withArt(Prog(item.title, listOfNotNull(year, genre).joinToString(" · "), 0, TmdbClient.cardUrl(item.backdropPath), null, null,
-                tmdb = item, poster = item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }))
-        })
-    }
     val channels = searchChannels.takeIf { it.isNotEmpty() }?.let { list ->
         Section("channels", query, getString(R.string.search_channels_for, query), list.map { d ->
             Prog(d.name, listOfNotNull(d.number, d.now?.title).filter { it.isNotEmpty() }.joinToString(" · "), d.now?.let { Epg.progress(it) } ?: 0,
                 d.logo, d.intent, d.pkg, badge = d.number, channelPage = d)
         })
     }
-    // The add-ons' films and series (without a TMDB key): their cards, as under the Films and Series tiles.
+    // Cinemeta's and the add-ons' films and series: their cards, as under the Films and Series tiles.
     fun addonTitles(key: String, heading: Int, type: String) = searchTitles.filter { it.first.type == type }.takeIf { it.isNotEmpty() }?.let { found ->
         Section(key, query, getString(heading, query), found.map { (t, source) -> titleCard(t, source, titleTile(t.type, source)) })
     }
     showSections(listOfNotNull(
-        titles("films", R.string.search_films_for, searchResults.filter { it.mediaType != "tv" }),
-        titles("series", R.string.search_series_for, searchResults.filter { it.mediaType == "tv" }),
         addonTitles("addon-films", R.string.search_films_for, "movie"),
         addonTitles("addon-series", R.string.search_series_for, "series"),
         channels,
@@ -387,101 +324,12 @@ internal fun MainActivity.showChannel(d: ChannelDetail) {
 /** Closes the search: its tile and cards go, focus goes back to Continue Watching. False when none is open. */
 internal fun MainActivity.endSearch(): Boolean {
     if (searchQuery == null) return false
-    val onIt = currentFocus?.let { it.tag == SEARCH_PKG || (it.getTag(R.id.watchRow) as? Prog)?.let { p -> p.tmdb != null || p.channelPage != null || p.vod != null } == true } ?: true
+    val onIt = currentFocus?.let { it.tag == SEARCH_PKG || (it.getTag(R.id.watchRow) as? Prog)?.let { p -> p.channelPage != null || p.vod != null } == true } ?: true
     searchQuery = null
-    searchResults = emptyList()
     searchChannels = emptyList()
     searchTitles = emptyList()
-    searchArt = emptyMap()
     if (watchApp == SEARCH_PKG) watchApp = null
     renderApps()
     if (onIt) appRow.getChildAt(0)?.requestFocus()
     return true
-}
-
-/**
- * A result's page in the side panel: its card art across the top, edge to edge above the page title, what
- * Spotlight would say about it (rating, kind, year,
- * genre, the overview) under it, and a row per app to watch it in, each with the app's icon: the YouTube trailer
- * and the services TMDB lists it on, as Spotlight's buttons.
- */
-internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = null) {
-    if (settingsScrim.visibility != View.VISIBLE) showPanel()
-    val year = item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }
-    val rating = if (item.voteAverage > 0) "★ %.1f".format(item.voteAverage) else null
-    val kind = getString(if (item.mediaType == "tv") R.string.tmdb_badge_tv else R.string.tmdb_badge_movie)
-    val art = searchArt[item.id]
-    val panel = findViewById<LinearLayout>(R.id.settingsPanel)
-    val panelWidth = dp(380) // the panel's width (activity_main.xml)
-    val picture = FrameLayout(this).apply { setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt()) }
-    fillArt(picture, panelWidth, panelWidth * 9 / 16, art?.backdrop ?: TmdbClient.cardUrl(item.backdropPath), art?.logo,
-        art?.poster ?: item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }, item.title)
-    val top = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(dp(14), 0, dp(14), dp(12)) // in line with the page title and the rows' names
-        addView(label(listOfNotNull(rating, kind, year, item.genres.firstOrNull()).joinToString(" · "), 13f).apply { alpha = 0.7f })
-        if (item.overview.isNotBlank()) addView(label(item.overview, 13f).apply {
-            maxLines = 12
-            setLineSpacing(0f, 1.15f)
-            setPadding(0, dp(8), 0, 0)
-        })
-    }
-    val shown = titleApps().filter { TmdbClient.offers(it.pkg, available) }
-    // First, when an add-on gives streams for films or series: Watch in Piume's player (see Titles).
-    // "Watch on <add-on>" when one add-on alone has streams of its kind, with its icon.
-    val streamers = vodStreamAddons(item.mediaType == "tv")
-    val sole = streamers.singleOrNull()
-    val watch = if (streamers.isEmpty()) emptyList() else listOf(page(sole?.let { getString(R.string.tmdb_search_on, it.name) }
-        ?: getString(R.string.title_watch_addons)) { watchTmdbTitle(item) })
-    val rows = watch + shown.map { a ->
-        val name = if (TmdbClient.isYouTube(a.pkg)) getString(R.string.spotlight_trailer) else getString(R.string.tmdb_search_on, a.label)
-        page(name) {
-            closeLauncherSettings()
-            openInApp(a, item)
-        }
-    }
-    showPage(item.title, rows, top = top) { closeLauncherSettings() }
-    // Over the panel's padding, so it reaches its edges and the top of the screen; gone with the page.
-    panel.addView(picture, 0, LinearLayout.LayoutParams(panelWidth, panelWidth * 9 / 16).apply {
-        setMargins(-panel.paddingStart, -panel.paddingTop, -panel.paddingEnd, dp(20))
-    })
-    panel.clipToPadding = false
-    pageExit = {
-        panel.removeView(picture)
-        panel.clipToPadding = true
-    }
-    // Back up on the first row, the page scrolls back up: nothing above it takes focus to pull it there.
-    settingsList.getChildAt(1)?.let { first ->
-        val own = first.onFocusChangeListener
-        first.setOnFocusChangeListener { v, focused ->
-            own?.onFocusChange(v, focused)
-            // As far up as the row itself still shows: as much of the description as fits above it.
-            val scroll = settingsList.parent as android.widget.ScrollView
-            if (focused) scroll.post { scroll.smoothScrollTo(0, (v.bottom + dp(8) - scroll.height).coerceAtLeast(0)) }
-        }
-    }
-    // Each row starts with its app's icon, before the name (Watch, with Play).
-    if (watch.isNotEmpty()) (settingsList.getChildAt(1) as? LinearLayout)?.addView(ImageView(this).apply {
-        setImageDrawable(watchIcon(sole))
-        scaleType = ImageView.ScaleType.FIT_CENTER
-    }, 0, LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(12) })
-    shown.forEachIndexed { i, a ->
-        (settingsList.getChildAt(1 + watch.size + i) as? LinearLayout)?.addView(ImageView(this).apply {
-            setImageDrawable(a.icon.constantState?.newDrawable(resources) ?: a.icon)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-        }, 0, LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(12) })
-    }
-    // Which services have it: known answers apply at once, others once TMDB answers (until then every app shows).
-    val key = prefs.getString(K.TMDB_API_KEY, null)
-    if (available != null || !providersOn() || key == null) return
-    val region = TmdbClient.region(tmdbLang())
-    TmdbClient.cachedProviders(item, region)?.let { return showTitle(item, it) }
-    val title = item.title
-    spotlightIo.execute {
-        val found = TmdbClient.providers(key, item, region) ?: return@execute
-        ui.post {
-            val stillOpen = settingsScrim.visibility == View.VISIBLE && findViewById<android.widget.TextView>(R.id.settingsTitle).text.toString() == title
-            if (stillOpen) showTitle(item, found)
-        }
-    }
 }

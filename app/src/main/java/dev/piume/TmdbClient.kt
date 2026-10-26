@@ -45,46 +45,6 @@ object TmdbClient {
         return items(json.optJSONArray("results") ?: return emptyList(), genres(apiKey, language), type)
     }
 
-    /**
-     * A title's art for a card, best first: [backdrop] with the title written on it, or else a plain one and the
-     * title's [logo] to lay over it; [poster] for a title with no backdrop at all.
-     */
-    class Art(val backdrop: String?, val logo: String?, val poster: String? = null)
-
-    private val artCache = java.util.concurrent.ConcurrentHashMap<String, Art>()
-
-    /**
-     * Landscape art with the title on it, in [language] or else English: a backdrop TMDB tags with that language
-     * (designed with the title in it), or a plain backdrop (untagged) plus the title's logo (a transparent PNG) to
-     * lay over it; and the poster, for titles with no backdrop. Null when TMDB can't be reached.
-     */
-    fun art(apiKey: String, item: TmdbItem, language: String): Art? {
-        val lang = language.substringBefore('-')
-        val key = "${item.mediaType}/${item.id}/$lang"
-        artCache[key]?.let { return it }
-        val json = try {
-            JSONObject(get(apiKey, "/${item.mediaType}/${item.id}/images?include_image_language=$lang,en,null"))
-        } catch (e: Exception) {
-            warn("TMDB images failed (${redact(e)})")
-            return null
-        }
-        // Best rated first, by language in the order given ("" for none: textless art); SVG left out (Android can't draw it).
-        fun pick(arr: org.json.JSONArray?, vararg langs: String): String? {
-            val all = (0 until (arr?.length() ?: 0)).map { arr!!.getJSONObject(it) }.filter { !it.optString("file_path").endsWith(".svg") }
-            return langs.firstNotNullOfOrNull { l ->
-                all.filter { (if (it.isNull("iso_639_1")) "" else it.optString("iso_639_1")) == l }
-                    .maxByOrNull { it.optDouble("vote_average", 0.0) }?.optString("file_path")
-            }
-        }
-        val backdrops = json.optJSONArray("backdrops")
-        val titled = pick(backdrops, lang, "en")
-        val poster = (pick(json.optJSONArray("posters"), lang, "en", "") ?: item.posterPath)?.let { "https://image.tmdb.org/t/p/w500$it" }
-        val art = if (titled != null) Art("https://image.tmdb.org/t/p/w780$titled", null, poster)
-            else Art(cardUrl(item.backdropPath ?: pick(backdrops, "")),
-                pick(json.optJSONArray("logos"), lang, "en")?.let { "https://image.tmdb.org/t/p/w300$it" }, poster)
-        return art.also { artCache[key] = it }
-    }
-
     /** Films and series matching [query], most relevant first (people left out). Empty when none, or TMDB can't be reached. */
     fun search(apiKey: String, query: String, language: String): List<TmdbItem> {
         val json = try {

@@ -15,6 +15,11 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- Cinemeta is the source of all films and series: the Films and Series tiles, the search and Spotlight. TMDB only translates them and adds the trailer and the services.
+- Search finds films and series in Cinemeta and in the add-ons. With a TMDB key, it also finds them by their names in your language.
+- Select a search result to see the same page as in the Films and Series tiles, with its seasons, episodes and streams.
+- Spotlight has a **Watch** button when an add-on has streams for films or series. It opens the page of the title.
+
 ## 4.1.0-beta.4
 
 - This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.

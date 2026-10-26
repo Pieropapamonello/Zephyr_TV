@@ -114,7 +114,7 @@ internal const val SEARCH_PKG = "piume:search" // the search results tile, after
 class MainActivity : Activity() {
 
     internal class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable, val offline: Boolean = false)
-    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val tmdb: TmdbItem? = null, val logo: String? = null, val poster: String? = null, val channelPage: ChannelDetail? = null, val channelId: Long? = null, val playing: Boolean = false, val addon: AddonChannel? = null, val icon: String? = null, val vod: TitleRef? = null) // icon: the tile whose icon marks the card, when not pkg's; vod: a film or series (see Titles)
+    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val logo: String? = null, val poster: String? = null, val channelPage: ChannelDetail? = null, val channelId: Long? = null, val playing: Boolean = false, val addon: AddonChannel? = null, val icon: String? = null, val vod: TitleRef? = null) // icon: the tile whose icon marks the card, when not pkg's; vod: a film or series (see Titles)
 
     internal val prefs by lazy { getSharedPreferences(K.FILE, MODE_PRIVATE) }
     internal val io = Executors.newSingleThreadExecutor()
@@ -186,8 +186,6 @@ class MainActivity : Activity() {
     internal var spotlightApps: List<App>? = null // apps behind the Spotlight buttons; null rebuilds them
     internal var tmdbLastFocusApp: String? = null
     internal var searchQuery: String? = null // the last search, while its results tile is in the apps row; null for none
-    internal var searchResults: List<TmdbItem> = emptyList()
-    internal var searchArt: Map<Long, TmdbClient.Art?> = emptyMap() // each result's card art, by TMDB id
     internal var searchChannels: List<ChannelDetail> = emptyList() // the TV channels the search found
     internal var searchTitles: List<Pair<Stremio.Title, String>> = emptyList() // without a TMDB key, the films and series the add-ons found (and from which)
     internal var recognizer: android.speech.SpeechRecognizer? = null // dictating into the search box
@@ -1440,7 +1438,7 @@ class MainActivity : Activity() {
                 appRow.getChildAt(0)?.requestFocus() // show the app just pinned
             }
             v.parent === appRow -> appMenu(v)
-            (v.getTag(R.id.watchRow) as? Prog)?.let { it.tmdb != null || it.channelPage != null || (it.vod != null && watchApp == SEARCH_PKG) } == true -> {} // a search result: OK shows all it has
+            (v.getTag(R.id.watchRow) as? Prog)?.let { it.channelPage != null || (it.vod != null && watchApp == SEARCH_PKG) } == true -> {} // a search result: OK shows all it has
             v.getTag(R.id.watchRow) is Prog -> watchMenu(v, v.getTag(R.id.watchRow) as Prog)
         }
     }

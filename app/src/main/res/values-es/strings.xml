@@ -426,7 +426,6 @@
     <string name="cinemeta_intro">Las películas y series usan siempre Cinemeta, la biblioteca gratuita de Stremio. Puedes usar la dirección de otra instancia.</string>
     <string name="cinemeta_default">La de Stremio</string>
     <string name="title_watch">Ver</string>
-    <string name="title_watch_addons">Ver con los complementos</string>
     <string name="title_resume">Seguir desde %1$s</string>
     <string name="title_resume_on">Seguir desde %1$s en %2$s</string>
     <string name="title_season">Temporada %1$d</string>
