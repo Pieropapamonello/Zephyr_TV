@@ -24,8 +24,8 @@ internal class TitleRef(val type: String, val id: String, val name: String, val 
 /** Cinemeta's manifest: Stremio's catalog of films and series, always the library's first; its address can be changed. */
 internal fun MainActivity.cinemetaUrl(): String = prefs.getString(K.CINEMETA_URL, null)?.let { Stremio.manifestUrl(it) } ?: Stremio.CINEMETA
 
-/** Where films and series show: "tiles" (a Films tile and a Series tile), "apps" (each add-on's own tile), "off". */
-internal fun MainActivity.addonsVod(): String = prefs.getString(K.ADDONS_VOD, null)?.takeIf { it in listOf("tiles", "apps", "off") } ?: "tiles"
+/** Where films and series show: a Films tile and a Series tile, each add-on's own tile, or nowhere. */
+internal fun MainActivity.addonsVod(): VodPlace = prefs.getString(K.ADDONS_VOD, null).let { k -> VodPlace.entries.firstOrNull { it.key == k } } ?: VodPlace.TILES
 
 /** The add-ons films and series are listed from (Cinemeta first), as manifest addresses. */
 internal fun MainActivity.libraryUrls(): List<String> = (listOf(cinemetaUrl()) + addonUrls()).distinct()
@@ -41,7 +41,7 @@ internal fun MainActivity.streamSources(type: String, id: String): List<Pair<Str
 
 /** The tiles films and series add to the apps row: Films and Series, or nothing here (each add-on's own, see addonApps). */
 internal fun MainActivity.vodApps(): List<MainActivity.App> {
-    if (addonsVod() != "tiles" || libraryUrls().isEmpty()) return emptyList()
+    if (addonsVod() != VodPlace.TILES || libraryUrls().isEmpty()) return emptyList()
     return listOf(
         MainActivity.App(MOVIES_PKG, getString(R.string.vod_movies), Intent(), getDrawable(R.drawable.ic_movie)!!),
         MainActivity.App(SERIES_PKG, getString(R.string.vod_series), Intent(), getDrawable(R.drawable.ic_series)!!),
@@ -50,7 +50,7 @@ internal fun MainActivity.vodApps(): List<MainActivity.App> {
 
 /** The add-ons with film or series catalogs that get a tile of their own (films and series "apps"). */
 internal fun MainActivity.vodTileAddons(): List<Stremio.Addon> =
-    if (addonsVod() != "apps") emptyList() else vodAddons().filter { a -> a.vod.any { it.listed } }
+    if (addonsVod() != VodPlace.APPS) emptyList() else vodAddons().filter { a -> a.vod.any { it.listed } }
 
 /**
  * The rows of films or series under the tile [pkg]: under Films or Series, every add-on's catalogs of that type
@@ -61,8 +61,8 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
     val mode = addonsVod()
     val type = when (pkg) { MOVIES_PKG -> "movie"; SERIES_PKG -> "series"; else -> null }
     val addons = when {
-        mode == "tiles" && type != null -> vodAddons()
-        mode == "apps" && pkg.startsWith(STREMIO) -> vodAddons().filter { STREMIO + it.id == pkg }
+        mode == VodPlace.TILES && type != null -> vodAddons()
+        mode == VodPlace.APPS && pkg.startsWith(STREMIO) -> vodAddons().filter { STREMIO + it.id == pkg }
         else -> return emptyList()
     }
     val missing = ArrayList<String>()
@@ -79,7 +79,7 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
         }
     }.plus(
         // Last, the films and series watched: under Films and Series, or Cinemeta's own tile.
-        if (mode == "tiles" || addons.any { it.url == cinemetaUrl() }) watchedSections(type, pkg, hidden, missing) else emptyList()
+        if (mode == VodPlace.TILES || addons.any { it.url == cinemetaUrl() }) watchedSections(type, pkg, hidden, missing) else emptyList()
     ).also { if (missing.isNotEmpty()) localizeLater(missing.distinct(), pkg) }
 }
 
@@ -146,9 +146,9 @@ internal fun titleCard(t: Stremio.Title, source: String?, icon: String?, watched
 
 /** The tile a title of [type] from the add-on at [source] is under: Films or Series, or the add-on's own (null: none). */
 internal fun MainActivity.titleTile(type: String, source: String?): String? = when (addonsVod()) {
-    "tiles" -> if (type == "series") SERIES_PKG else MOVIES_PKG
-    "apps" -> source?.let { Stremio.saved(filesDir, it)?.addon }?.let { STREMIO + it.id }
-    else -> null
+    VodPlace.TILES -> if (type == "series") SERIES_PKG else MOVIES_PKG
+    VodPlace.APPS -> source?.let { Stremio.saved(filesDir, it)?.addon }?.let { STREMIO + it.id }
+    VodPlace.OFF -> null
 }
 
 // ---------- Continue Playing ----------
@@ -158,7 +158,7 @@ internal fun MainActivity.titleProgressCards(hidden: Set<String>): List<Pair<Lon
     // One card a series: its newest episode, begun or waiting next.
     VodProgress.all(vodDir()).filter { hideKey(VOD_PKG, it.name) !in hidden }.distinctBy { it.metaId }.take(10).map { e ->
         val left = ((e.duration - e.position) / 60_000).coerceAtLeast(1)
-        val tile = if (addonsVod() == "tiles") (if (e.type == "series") SERIES_PKG else MOVIES_PKG) else null
+        val tile = if (addonsVod() == VodPlace.TILES) (if (e.type == "series") SERIES_PKG else MOVIES_PKG) else null
         val state = if (e.upNext) getString(R.string.title_up_next) else getString(R.string.time_left_min, left.toInt())
         e.at to Prog(e.name, listOf(e.sub, state).filter { it.isNotBlank() }.joinToString(" · "),
             e.percent, e.poster, null, VOD_PKG, poster = e.poster, icon = tile,

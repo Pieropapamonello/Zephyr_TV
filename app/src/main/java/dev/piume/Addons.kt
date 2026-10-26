@@ -80,10 +80,16 @@ internal fun MainActivity.hasTvApp(): Boolean = listOf(
     Intent(Intent.ACTION_VIEW).setType(TvContract.Channels.CONTENT_ITEM_TYPE),
 ).any { packageManager.queryIntentActivities(it, 0).any { r -> r.activityInfo.packageName != packageName } }
 
+/** Where the add-ons' TV channels show: in the TV app, in one IPTV app, an app each; kept by [key] in the preferences. */
+internal enum class TvPlace(val key: String) { TV("tv"), IPTV("iptv"), APPS("apps") }
+
+/** Where the add-ons' films and series show: the Films and Series tiles, an app each, nowhere; kept by [key]. */
+internal enum class VodPlace(val key: String) { TILES("tiles"), APPS("apps"), OFF("off") }
+
 /** Where the add-ons' TV channels show, as chosen: in the TV app (if there's one, else the IPTV app), the IPTV app, an app each. */
-internal fun MainActivity.addonsTv(): String {
-    val mode = prefs.getString(K.ADDONS_TV, null)?.takeIf { it in listOf("tv", "iptv", "apps") } ?: "tv"
-    return if (mode == "tv" && !hasTvApp()) "iptv" else mode
+internal fun MainActivity.addonsTv(): TvPlace {
+    val mode = prefs.getString(K.ADDONS_TV, null).let { k -> TvPlace.entries.firstOrNull { it.key == k } } ?: TvPlace.TV
+    return if (mode == TvPlace.TV && !hasTvApp()) TvPlace.IPTV else mode
 }
 
 /**
@@ -102,13 +108,13 @@ internal fun MainActivity.addonApps(): List<MainActivity.App> {
         return MainActivity.App(STREMIO + addon.id, addon.name, Intent(), logo?.let { BitmapDrawable(resources, it) } ?: icon(res))
     }
     val tv = if (urls.isEmpty()) emptyList() else when (addonsTv()) {
-        "iptv" -> listOf(MainActivity.App(IPTV_PKG, getString(R.string.iptv_app), Intent(), icon(R.drawable.ic_live_tv)))
-        "apps" -> urls.mapNotNull { url ->
+        TvPlace.IPTV -> listOf(MainActivity.App(IPTV_PKG, getString(R.string.iptv_app), Intent(), icon(R.drawable.ic_live_tv)))
+        TvPlace.APPS -> urls.mapNotNull { url ->
             // Not read yet (just restored from a backup): its tile comes once it is.
             val addon = Stremio.saved(filesDir, url)?.addon ?: return@mapNotNull null.also { if (Stremio.due(filesDir, url)) updateAddon(url, null) }
             if (addon.catalogs.isEmpty()) null else tile(addon, R.drawable.ic_live_tv) // no channels, no TV tile
         }
-        else -> emptyList()
+        TvPlace.TV -> emptyList()
     }
     return (tv + vodApps() + vodTileAddons().map { tile(it, R.drawable.ic_movie) }).distinctBy { it.pkg }
 }
@@ -118,9 +124,9 @@ internal fun MainActivity.addonsUnder(pkg: String): List<String> {
     val urls = addonUrls()
     val mode = addonsTv()
     return when {
-        pkg == IPTV_PKG -> if (mode == "iptv") urls else emptyList()
-        pkg.startsWith(STREMIO) -> if (mode == "apps") urls.filter { Stremio.saved(filesDir, it)?.addon?.let { a -> STREMIO + a.id } == pkg } else emptyList()
-        mode == "tv" && isTvApp(pkg) -> urls
+        pkg == IPTV_PKG -> if (mode == TvPlace.IPTV) urls else emptyList()
+        pkg.startsWith(STREMIO) -> if (mode == TvPlace.APPS) urls.filter { Stremio.saved(filesDir, it)?.addon?.let { a -> STREMIO + a.id } == pkg } else emptyList()
+        mode == TvPlace.TV && isTvApp(pkg) -> urls
         else -> emptyList()
     }
 }
@@ -174,7 +180,7 @@ internal fun MainActivity.updateAddon(url: String, pkg: String?, done: ((Stremio
     val first = Stremio.saved(filesDir, url) == null
     val listing = Stremio.update(filesDir, url)
     // Its logo, for its tile: downloaded here, not while the apps row loads.
-    val tiles = addonsTv() == "apps"
+    val tiles = addonsTv() == TvPlace.APPS
     val logo = listing?.addon?.logo?.takeIf { tiles && !channelLogoFiles.has(it) }
         ?.let { runCatching { channelLogoFiles.get(it) { u -> openStream(u) } }.isSuccess } == true
     ui.post {
@@ -279,9 +285,9 @@ internal fun MainActivity.lastChannelCard(hidden: Set<String>): Pair<Long, Prog>
 /** The tile [c]'s channels show under, as addonsTv puts them: the add-on's own app, the IPTV app, or the TV app. */
 internal fun MainActivity.addonTile(c: AddonChannel): MainActivity.App? {
     val pkg = when (addonsTv()) {
-        "apps" -> Stremio.saved(filesDir, c.addon)?.addon?.let { STREMIO + it.id }
-        "iptv" -> IPTV_PKG
-        else -> return apps.firstOrNull { !it.pkg.startsWith(STREMIO) && isTvApp(it.pkg) }
+        TvPlace.APPS -> Stremio.saved(filesDir, c.addon)?.addon?.let { STREMIO + it.id }
+        TvPlace.IPTV -> IPTV_PKG
+        TvPlace.TV -> return apps.firstOrNull { !it.pkg.startsWith(STREMIO) && isTvApp(it.pkg) }
     }
     return apps.firstOrNull { it.pkg == pkg }
 }
@@ -329,21 +335,21 @@ internal fun MainActivity.readsListings() = checkSelfPermission(MainActivity.TV_
 /** Where the add-ons' channels show, then Add an add-on, then each add-on (its page: update, remove). */
 internal fun MainActivity.addonRows(): List<Triple<String, String, () -> Unit>> {
     val mode = addonsTv()
-    val modes = listOfNotNull("tv".takeIf { hasTvApp() }, "iptv", "apps")
+    val modes = TvPlace.entries.filter { it != TvPlace.TV || hasTvApp() }
     return listOf(
         page(getString(R.string.setting_addons_tv), addonsTvName(mode)) {
             val next = modes[(modes.indexOf(mode) + 1) % modes.size]
-            prefs.edit().putString(K.ADDONS_TV, next).apply()
+            prefs.edit().putString(K.ADDONS_TV, next.key).apply()
             addonsChanged()
             // An app each: their logos, for the tiles, come with their channels.
-            if (next == "apps") addonUrls().forEach { updateAddon(it, null) }
+            if (next == TvPlace.APPS) addonUrls().forEach { updateAddon(it, null) }
             renderSettings(ADDONS_TV_ROW)
         },
         // Films and series: the Films and Series tiles, an app per add-on, or none; and Cinemeta, their library
         // (always there: only its address can change).
         page(getString(R.string.setting_addons_vod), addonsVodName(addonsVod())) {
-            val modes = listOf("tiles", "apps", "off")
-            prefs.edit().putString(K.ADDONS_VOD, modes[(modes.indexOf(addonsVod()) + 1) % modes.size]).apply()
+            val modes = VodPlace.entries
+            prefs.edit().putString(K.ADDONS_VOD, modes[(modes.indexOf(addonsVod()) + 1) % modes.size].key).apply()
             addonsChanged()
             renderSettings(ADDONS_VOD_ROW)
         },
@@ -376,16 +382,16 @@ internal fun MainActivity.configureCinemeta() {
     }
 }
 
-internal fun MainActivity.addonsVodName(mode: String) = getString(when (mode) {
-    "tiles" -> R.string.addons_vod_tiles
-    "apps" -> R.string.addons_tv_apps
-    else -> R.string.state_off
+internal fun MainActivity.addonsVodName(mode: VodPlace) = getString(when (mode) {
+    VodPlace.TILES -> R.string.addons_vod_tiles
+    VodPlace.APPS -> R.string.addons_tv_apps
+    VodPlace.OFF -> R.string.state_off
 })
 
-internal fun MainActivity.addonsTvName(mode: String) = getString(when (mode) {
-    "tv" -> R.string.addons_tv_tv
-    "iptv" -> R.string.addons_tv_iptv
-    else -> R.string.addons_tv_apps
+internal fun MainActivity.addonsTvName(mode: TvPlace) = getString(when (mode) {
+    TvPlace.TV -> R.string.addons_tv_tv
+    TvPlace.IPTV -> R.string.addons_tv_iptv
+    TvPlace.APPS -> R.string.addons_tv_apps
 })
 
 /** An add-on's manifest address typed with the remote (see addonFromPhone). Saving adds it once it answers. */
