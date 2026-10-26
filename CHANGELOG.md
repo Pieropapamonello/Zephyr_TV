@@ -15,7 +15,19 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+## 4.1.0-beta.2
+
+- This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.
 - When only one add-on has streams for a film or series, its page says **Watch on** and the add-on's name (or **Resume from 12:34 on** the add-on), with the add-on's icon. The same is true on the page of a TMDB result.
+- Films and series from Stremio add-ons. **Cinemeta**, the catalog of Stremio, fills the new **Films** and **Series** tiles with rows. To give each add-on its own tile, select **Piume settings → Stremio add-ons → Films and series**. You can turn Cinemeta off in the same section.
+- Select a film or a series to see its page. A film has **Watch**. A series has its seasons and episodes.
+- Piume asks all the add-ons that have streams for the title. It plays the first stream that works, and tries the next one if it does not work. To choose another stream, use the **Stream** button in the player.
+- Only direct links play (http addresses, also .php addresses). Torrents do not play.
+- In the player, Left and Right go back and forward 10 seconds (more if you hold them). CH+ and CH- go to the previous and next episode. When an episode ends, the next one starts.
+- The films and episodes that you begin show in **Continue Playing** with their progress. They start again where you stopped.
+- Without a TMDB key, search finds films and series in the add-ons' catalogs. With a TMDB key, the page of a film or series has **Watch with the add-ons**.
+- You can add an add-on that has only films and series, with no TV channels.
+- Cinemeta is in English only. With a TMDB key, the names, posters, genres and descriptions of films and series, and the names and descriptions of episodes, come from TMDB in the language of Piume. What TMDB does not have in your language stays in English.
 
 ## 4.1.0-beta.1
 
