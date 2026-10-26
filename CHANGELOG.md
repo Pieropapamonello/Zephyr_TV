@@ -13,7 +13,7 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
-## Unreleased
+## 1.1.0
 
 - In **Updates**, Down now goes from **Receive betas** to the notes of the version.
 - The users icon shows the first character of the name: a letter, or an emoji. To type a name with an emoji, select **Type it on your phone**.
