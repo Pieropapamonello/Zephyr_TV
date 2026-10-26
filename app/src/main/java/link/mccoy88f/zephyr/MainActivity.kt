@@ -1503,7 +1503,9 @@ class MainActivity : Activity() {
             sectionCache?.takeIf { it.first == pkg && it.second.isNotEmpty() }?.let { (_, sections) ->
                 getString(R.string.menu_sections) to { pickSections(pkg, sections) }
             },
-            sectionCache?.takeIf { it.first == pkg && it.second.isNotEmpty() }?.let { (_, sections) ->
+            // Zephyr TV's own apps only (Films, Series, TV channels, an add-on's): their rows are named from the add-ons'
+            // catalogs, an app's own are named by the app.
+            sectionCache?.takeIf { it.first == pkg && it.second.isNotEmpty() && pkg.startsWith(STREMIO) }?.let { (_, sections) ->
                 getString(R.string.menu_rename_sections) to { renameSections(pkg, sections) }
             },
             if (pkg.startsWith(HDMI) || pkg.startsWith(STREMIO)) null else getString(R.string.menu_app_info) to {

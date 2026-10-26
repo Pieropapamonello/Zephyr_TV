@@ -80,7 +80,8 @@ internal fun MainActivity.showUpdates() {
         checkUpdate(force = true)
         showUpdates()
     }
-    showPage(getString(R.string.whats_new_title, myVersion()), listOf(topRow, betaRow), back = { renderSettings(UPDATE_ROW) })
+    val rows = listOf(topRow, betaRow)
+    showPage(getString(R.string.whats_new_title, myVersion()), rows, back = { renderSettings(UPDATE_ROW) })
     // Focusable, lit on focus, so Down walks through notes longer than the panel and it scrolls along.
     getString(R.string.whats_new).split('\n').forEach {
         settingsList.addView(label("", 13f).apply {
@@ -93,7 +94,8 @@ internal fun MainActivity.showUpdates() {
             setPadding(dp(14), dp(10), dp(14), dp(2))
         })
     }
-    settingsList.getChildAt(0).nextFocusDownId = View.NO_ID // showPage stops Down at its last row
+    // showPage stops Down at its last row (Receive betas): from there it goes on to the notes.
+    settingsList.getChildAt(rows.size - 1).nextFocusDownId = View.NO_ID
     settingsList.getChildAt(settingsList.childCount - 1).let { it.id = View.generateViewId(); it.nextFocusDownId = it.id }
 }
 

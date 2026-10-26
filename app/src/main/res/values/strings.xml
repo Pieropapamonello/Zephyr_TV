@@ -527,4 +527,10 @@
     <string name="about_source">Source code of Zephyr TV</string>
     <string name="about_plume">Plume Launcher, by aradhyas8</string>
     <string name="about_link_intro">Scan the code to open the page on your phone.</string>
+    <string name="user_name_intro">The first character shows on the users icon: a letter, or an emoji. To type an emoji, use your phone.</string>
+    <string name="user_name_phone">Type it on your phone</string>
+    <string name="user_phone_waiting">Waiting for the name…</string>
+    <string name="phone_user_title">A user\'s name</string>
+    <string name="phone_user_intro">Type the name. Its first character shows on the users icon on the TV: a letter, or an emoji.</string>
+    <string name="phone_user_saved">Saved on the TV: %1$s</string>
 </resources>

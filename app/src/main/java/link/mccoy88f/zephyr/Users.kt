@@ -106,18 +106,29 @@ internal fun MainActivity.usersChanged() {
     refreshWatchNext()
 }
 
-/** The users' icon in the top bar: the first two letters of the user in use's name ("An"). */
+/**
+ * The users' icon in the top bar: the first character of the user in use's name, a capital ("A"), or an emoji, whole
+ * ("🦊", "👨‍👩‍👧": one character as it shows, however many code points it's made of).
+ */
 internal fun MainActivity.showUserIcon() {
     val u = currentUser()
-    val letters = u.name.filter { it.isLetterOrDigit() }.take(2).ifEmpty { "?" }.let { it.take(1).uppercase() + it.drop(1).lowercase() }
+    val name = u.name.trim()
+    val first = java.text.BreakIterator.getCharacterInstance().run {
+        setText(name)
+        next().takeIf { it > 0 }?.let { name.substring(0, it) }
+    } ?: "?"
+    val emoji = !Character.isLetterOrDigit(first.codePointAt(0))
     findViewById<ImageView>(R.id.usersButton).apply {
-        setImageDrawable(Initials(letters))
+        setImageDrawable(Initials(if (emoji) first else first.uppercase(), keepColours = emoji))
         contentDescription = getString(R.string.users_title) + ": " + u.name
     }
 }
 
-/** A user's letters, drawn white in the middle of what it's given (the top bar tints it, as its icons). */
-private class Initials(private val text: String) : android.graphics.drawable.Drawable() {
+/**
+ * A user's letter, drawn white in the middle of what it's given (the top bar tints it, as its icons); an emoji in
+ * its own colours ([keepColours]: the tint would make it a blot).
+ */
+private class Initials(private val text: String, private val keepColours: Boolean) : android.graphics.drawable.Drawable() {
     private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         color = android.graphics.Color.WHITE
         typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
@@ -126,35 +137,52 @@ private class Initials(private val text: String) : android.graphics.drawable.Dra
 
     override fun draw(canvas: android.graphics.Canvas) {
         val b = bounds
-        paint.textSize = b.height() * 0.72f
+        paint.textSize = b.height() * if (keepColours) 0.8f else 0.78f
         val fm = paint.fontMetrics
         canvas.drawText(text, b.exactCenterX(), b.exactCenterY() - (fm.ascent + fm.descent) / 2, paint)
     }
 
     override fun setAlpha(alpha: Int) { paint.alpha = alpha }
-    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { paint.colorFilter = colorFilter }
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { if (!keepColours) paint.colorFilter = colorFilter }
     @Deprecated("Deprecated in Java")
     override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
 }
 
 /** A new user's name ([u] null), or [u]'s new one, typed with the remote. */
+/**
+ * A new user's name ([u] null), or [u]'s new one: typed with the remote, or on a phone (whose keyboard has emoji,
+ * for the users' icon; a TV's often has none).
+ */
 private fun MainActivity.userName(u: User?) {
+    val title = getString(if (u == null) R.string.user_add else R.string.user_rename)
     val back = { if (u == null) usersSettings(users().size) else userPage(u, renameRow(u)) }
-    textPage(getString(if (u == null) R.string.user_add else R.string.user_rename), u?.name.orEmpty(), getString(R.string.user_name_hint), null,
-        Typing.NAME, back = back) { typed ->
-        listOf(page(getString(R.string.dialog_save)) {
-            val name = typed().take(40).ifEmpty { return@page }
-            val list = users()
-            if (u == null) {
-                val added = User(java.util.UUID.randomUUID().toString().take(8), name)
-                saveUsers(list + added)
-                userPage(added)
-            } else {
-                saveUsers(list.map { if (it.id == u.id) User(it.id, name) else it })
-                if (currentUser().id == u.id) usersChanged()
-                userPage(User(u.id, name), renameRow(u))
-            }
-        })
+    fun save(typed: String) {
+        val name = typed.trim().take(40).ifEmpty { return }
+        val list = users()
+        if (u == null) {
+            val added = User(java.util.UUID.randomUUID().toString().take(8), name)
+            saveUsers(list + added)
+            userPage(added)
+        } else {
+            saveUsers(list.map { if (it.id == u.id) User(it.id, name) else it })
+            if (currentUser().id == u.id) usersChanged()
+            userPage(User(u.id, name), renameRow(u))
+        }
+    }
+    fun fromPhone() {
+        val status = label(getString(R.string.user_phone_waiting), 14f)
+        val page = PhonePages.text(phoneTexts(R.string.phone_user_title, R.string.phone_user_intro), getString(R.string.user_name_hint))
+        showPhoneLink(title, PhoneTask(page, 1024) { file ->
+            val name = file.readText().trim().take(40).ifEmpty { return@PhoneTask 400 to getString(R.string.user_name_hint) }
+            ui.post { save(name) }
+            200 to getString(R.string.phone_user_saved, name)
+        }, status) { userName(u) }
+    }
+    textPage(title, u?.name.orEmpty(), getString(R.string.user_name_hint), getString(R.string.user_name_intro), Typing.NAME, back = back) { typed ->
+        listOf(
+            page(getString(R.string.dialog_save)) { save(typed()) },
+            page(getString(R.string.user_name_phone)) { fromPhone() },
+        )
     }
 }
 

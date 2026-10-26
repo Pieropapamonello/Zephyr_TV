@@ -245,8 +245,9 @@ internal fun MainActivity.sectionNames(): Map<String, String> = runCatching {
     o.keys().asSequence().associateWith { o.getString(it) }
 }.getOrDefault(emptyMap())
 
-/** [s] with the name the user gave it, over the row ("YouTube: <name>") and in the lists of sections; else [s] itself. */
+/** [s] with the name the user gave it, over the row ("Films: <name>") and in the lists of sections; else [s] itself. */
 internal fun MainActivity.renamed(pkg: String, s: Section, names: Map<String, String> = sectionNames()): Section {
+    if (!pkg.startsWith(STREMIO)) return s // only Zephyr TV's own apps' rows can be renamed (see appMenu)
     val name = names[sectionKey(pkg, s)] ?: return s
     val title = if (s.title.endsWith(s.name)) s.title.dropLast(s.name.length) + name else name
     return Section(s.key, name, title, s.items, s.stamp)

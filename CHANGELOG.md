@@ -15,6 +15,10 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- In **Updates**, Down now goes from **Receive betas** to the notes of the version.
+- The users icon shows the first character of the name: a letter, or an emoji. To type a name with an emoji, select **Type it on your phone**.
+- **Rename sections** is only for the Films, Series and TV channels tiles, and for the tiles of the add-ons.
+
 ## 1.0.0
 
 - Piume is now **Zephyr TV**: a new name and a new home, github.com/mccoy88f/Zephyr_TV. Zephyr TV is an app of its own, so it installs next to Piume.
