@@ -194,16 +194,16 @@ internal object Stremio {
             // A catalog that can't be listed without a filter (search only, or a required genre) isn't a list: for
             // films and series it can still be searched.
             val listable = extras.filter { it.optBoolean("isRequired") }.all { it.optString("name") == "genre" }
-            if (type != "tv") {
-                // A required genre is a list only once one is picked: searched, not listed.
-                val open = extras.none { it.optBoolean("isRequired") }
-                if (open || search) vod += Catalog(type, id, name, emptyList(), search, listed = open)
-                continue
-            }
-            if (!listable) continue
             val genres = extras.firstOrNull { it.optString("name") == "genre" }
                 ?.optJSONArray("options")?.let { o -> (0 until o.length()).map { o.optString(it) } }.orEmpty()
                 .filter { g -> g.any { it.isLetterOrDigit() } }
+            if (type != "tv") {
+                // A required genre is a list only once one is picked: searched, not listed. Its genres: the search filter's.
+                val open = extras.none { it.optBoolean("isRequired") }
+                if (open || search) vod += Catalog(type, id, name, genres, search, listed = open)
+                continue
+            }
+            if (!listable) continue
             catalogs += Catalog("tv", id, name, genres, search)
         }
         return Addon(url, m.optString("id").ifBlank { url }, m.optString("name").ifBlank { Uri.host(url) }, text(m, "logo"), catalogs,

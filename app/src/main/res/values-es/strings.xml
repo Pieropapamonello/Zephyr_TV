@@ -477,4 +477,36 @@
     <string name="trakt_synced">Trakt: %1$d vistos, %2$d para reanudar</string>
     <string name="trakt_failed">Trakt no respondió. Inténtalo más tarde.</string>
     <string name="trakt_disconnect">Desconectar Trakt</string>
+
+    <!-- Search filters, and Cinemeta's genres -->
+    <string name="search_go">Buscar</string>
+    <string name="search_filter_type">Películas o series</string>
+    <string name="search_filter_year">Año</string>
+    <string name="search_filter_genre">Género</string>
+    <string name="search_filter_any">Cualquiera</string>
+    <string name="genre_action">Acción</string>
+    <string name="genre_adventure">Aventura</string>
+    <string name="genre_animation">Animación</string>
+    <string name="genre_biography">Biografía</string>
+    <string name="genre_comedy">Comedia</string>
+    <string name="genre_crime">Crimen</string>
+    <string name="genre_documentary">Documental</string>
+    <string name="genre_drama">Drama</string>
+    <string name="genre_family">Familia</string>
+    <string name="genre_fantasy">Fantasía</string>
+    <string name="genre_history">Historia</string>
+    <string name="genre_horror">Terror</string>
+    <string name="genre_mystery">Misterio</string>
+    <string name="genre_romance">Romance</string>
+    <string name="genre_scifi">Ciencia ficción</string>
+    <string name="genre_sport">Deporte</string>
+    <string name="genre_thriller">Suspense</string>
+    <string name="genre_war">Bélico</string>
+    <string name="genre_western">Western</string>
+    <string name="genre_reality">Reality</string>
+    <string name="genre_talk">Programa de entrevistas</string>
+    <string name="genre_game">Concurso</string>
+    <string name="title_watched_on">Visto el %1$s</string>
+    <string name="title_watched">Visto</string>
+    <string name="title_last_watched">Último visto: %1$s</string>
 </resources>

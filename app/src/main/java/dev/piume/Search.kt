@@ -20,6 +20,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
+import dev.piume.MainActivity.Companion.CHOSEN
 import dev.piume.MainActivity.Companion.MIC_REQUEST
 import dev.piume.MainActivity.Prog
 import java.io.IOException
@@ -29,15 +30,15 @@ import java.io.IOException
 // Functions of MainActivity, kept here by topic; their state lives in MainActivity.
 
 /**
- * The search page: a box to type in with the remote, dictation into that box, the TV's own assistant, and a QR
- * code to type on a phone instead. Without a TMDB key or Stremio add-ons there's nothing to search, so the TV's
- * assistant opens.
+ * The search page: a box to type in with the remote, the filters (films or series, year, genre: Search finds
+ * with them alone too, without words), dictation into that box, the TV's own assistant, and a QR code to type on a
+ * phone instead. [text]: what's in the box (the page built again after a filter changed); [focus]: the row to focus.
  */
-internal fun MainActivity.openSearch() {
-    if (prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank() && libraryUrls().isEmpty()) return assistant()
-    showPanel()
-    fun go(query: String) {
-        if (query.isBlank()) return
+internal fun MainActivity.openSearch(text: String = "", focus: Int? = null) {
+    if (settingsScrim.visibility != View.VISIBLE) showPanel()
+    // The keyboard's Search wants words or a filter; the Search row goes without (Cinemeta's popular ones).
+    fun go(query: String, always: Boolean = false) {
+        if (query.isBlank() && !searchFilter.any && !always) return
         closeLauncherSettings()
         searchTmdb(query.trim())
     }
@@ -59,24 +60,36 @@ internal fun MainActivity.openSearch() {
         background = bg
         setOnFocusChangeListener { _, focused -> bg.setStroke(if (focused) dp(2) else dp(1), if (focused) fg else fieldEdge()) }
         setOnEditorActionListener { v, _, _ -> go(v.text.toString()); true }
+        setText(text)
     }
     val top = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, dp(4), 0, 0)
         addView(input, LinearLayout.LayoutParams(MATCH_PARENT, dp(44)))
     }
+    val f = searchFilter
+    fun typed() = input.text?.toString().orEmpty()
     val rows = listOf(
+        // Search: with words, or with the filters alone (all of Cinemeta's popular ones, without either).
+        page(getString(R.string.search_go)) { go(typed(), always = true) },
+        page(getString(R.string.search_filter_type), typeName(f.type)) {
+            val types = listOf("all", "movie", "series")
+            searchFilter = SearchFilter(types[(types.indexOf(f.type) + 1) % types.size], f.year, f.genre)
+            openSearch(typed(), 1)
+        },
+        page(getString(R.string.search_filter_year), f.year ?: getString(R.string.search_filter_any)) { pickYear(typed()) },
+        page(getString(R.string.search_filter_genre), f.genre?.let { genreName(it) } ?: getString(R.string.search_filter_any)) { pickGenre(typed()) },
         page(getString(R.string.search_dictate)) { listen(input, ::go) },
         page(getString(R.string.search_assistant)) { closeLauncherSettings(); assistant() },
     )
-    showPage(getString(R.string.search_title), rows, top = top) { closeLauncherSettings() }
+    showPage(getString(R.string.search_title), rows, focus ?: 0, top = top) { closeLauncherSettings() }
     val first = settingsList.getChildAt(1)
     first.nextFocusUpId = input.id // showPage pins Up on the first row to itself; here it goes to the box
     // The TV keyboard keeps Down for itself while the box has focus, even with the keyboard put away.
     input.setOnKeyListener { _, key, e ->
         (key == KeyEvent.KEYCODE_DPAD_DOWN && e.action == KeyEvent.ACTION_DOWN).also { if (it) first.requestFocus() }
     }
-    input.requestFocus()
+    if (focus == null) input.requestFocus()
     pageExit = { stopListening() }
     // Under the rows, the phone: the same search typed on its own keyboard. The link works while the page is open.
     val ip = lanAddress() ?: return
@@ -171,19 +184,26 @@ internal fun MainActivity.stopListening() {
  * Continue Watching, focused at once, and their cards show under it. Back, or holding OK on the tile, closes it (endSearch).
  */
 internal fun MainActivity.searchTmdb(query: String) {
+    val filter = searchFilter
+    // What the results are for: the words, else the filters ("2020 · Drama"), else Cinemeta's popular ones.
+    val label = query.ifBlank { filterLabel(filter) }
     spotlightIo.execute {
-        val channels = runCatching { findChannels(query) }.getOrDefault(emptyList())
-        val titles = runCatching { searchLibrary(query) }.getOrDefault(emptyList())
+        // TV channels only for words, and not when films or series alone are asked for.
+        val channels = if (query.isBlank() || filter.type != "all") emptyList() else runCatching { findChannels(query) }.getOrDefault(emptyList())
+        val titles = runCatching {
+            if (query.isBlank()) browseLibrary(filter)
+            else searchLibrary(query).filter { (t, _) -> filter.accepts(t) { g -> genreName(g) } }
+        }.getOrDefault(emptyList())
         ui.post {
-            if (channels.isEmpty() && titles.isEmpty()) return@post Toast.makeText(this, getString(R.string.toast_no_results, query), Toast.LENGTH_SHORT).show()
-            searchQuery = query
+            if (channels.isEmpty() && titles.isEmpty()) return@post Toast.makeText(this, getString(R.string.toast_no_results, label), Toast.LENGTH_SHORT).show()
+            searchQuery = label
             searchChannels = channels
             searchTitles = titles
             watchApp = null // the tile's cards are new even if it's focused already
             renderApps()
             (0 until appRow.childCount).map { appRow.getChildAt(it) }.firstOrNull { it.tag == SEARCH_PKG }?.requestFocus()
             val n = channels.size + titles.size
-            Toast.makeText(this, resources.getQuantityString(R.plurals.toast_search_results, n, n, query), Toast.LENGTH_LONG).show()
+            Toast.makeText(this, resources.getQuantityString(R.plurals.toast_search_results, n, n, label), Toast.LENGTH_LONG).show()
         }
     }
 }
@@ -333,3 +353,55 @@ internal fun MainActivity.endSearch(): Boolean {
     if (onIt) appRow.getChildAt(0)?.requestFocus()
     return true
 }
+
+// ---------- filters ----------
+
+/** Films and series, films, series. */
+private fun MainActivity.typeName(type: String) = getString(when (type) {
+    "movie" -> R.string.tmdb_type_movie
+    "series" -> R.string.tmdb_type_tv
+    else -> R.string.tmdb_type_all
+})
+
+/** What a search with [f] and no words is for: "Films · 2020 · Drama", or Cinemeta's popular titles. */
+private fun MainActivity.filterLabel(f: SearchFilter) = listOfNotNull(f.type.takeIf { it != "all" }?.let { typeName(it) }, f.year, f.genre?.let { genreName(it) })
+    .joinToString(" · ").ifEmpty { getString(R.string.tmdb_source_cinemeta) }
+
+/** The search's year: any, or one from this year back to 1920. */
+private fun MainActivity.pickYear(text: String) {
+    val now = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+    val years = listOf<String?>(null) + (now downTo 1920).map { it.toString() }
+    val f = searchFilter
+    showPage(getString(R.string.search_filter_year), years.map { y ->
+        page(y ?: getString(R.string.search_filter_any), if (y == f.year) CHOSEN else "") {
+            searchFilter = SearchFilter(f.type, y, f.genre)
+            openSearch(text, 2)
+        }
+    }, years.indexOf(f.year).coerceAtLeast(0)) { openSearch(text, 2) }
+}
+
+/** The search's genre: any, or one of Cinemeta's, in the TV's language. */
+private fun MainActivity.pickGenre(text: String) {
+    val genres = listOf<String?>(null) + libraryGenres()
+    val f = searchFilter
+    showPage(getString(R.string.search_filter_genre), genres.map { g ->
+        page(g?.let { genreName(it) } ?: getString(R.string.search_filter_any), if (g == f.genre) CHOSEN else "") {
+            searchFilter = SearchFilter(f.type, f.year, g)
+            openSearch(text, 3)
+        }
+    }, genres.indexOf(f.genre).coerceAtLeast(0)) { openSearch(text, 3) }
+}
+
+/** Cinemeta's genres (IMDb's, in English) in the TV's language; one Piume doesn't know as it is. */
+internal fun MainActivity.genreName(genre: String) = GENRES[genre]?.let { getString(it) } ?: genre
+
+internal val GENRES = linkedMapOf(
+    "Action" to R.string.genre_action, "Adventure" to R.string.genre_adventure, "Animation" to R.string.genre_animation,
+    "Biography" to R.string.genre_biography, "Comedy" to R.string.genre_comedy, "Crime" to R.string.genre_crime,
+    "Documentary" to R.string.genre_documentary, "Drama" to R.string.genre_drama, "Family" to R.string.genre_family,
+    "Fantasy" to R.string.genre_fantasy, "History" to R.string.genre_history, "Horror" to R.string.genre_horror,
+    "Mystery" to R.string.genre_mystery, "Romance" to R.string.genre_romance, "Sci-Fi" to R.string.genre_scifi,
+    "Sport" to R.string.genre_sport, "Thriller" to R.string.genre_thriller, "War" to R.string.genre_war,
+    "Western" to R.string.genre_western, "Reality-TV" to R.string.genre_reality, "Talk-Show" to R.string.genre_talk,
+    "Game-Show" to R.string.genre_game,
+)

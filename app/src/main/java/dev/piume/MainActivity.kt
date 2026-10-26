@@ -186,6 +186,7 @@ class MainActivity : Activity() {
     internal var spotlightApps: List<App>? = null // apps behind the Spotlight buttons; null rebuilds them
     internal var tmdbLastFocusApp: String? = null
     internal var searchQuery: String? = null // the last search, while its results tile is in the apps row; null for none
+    internal var searchFilter = SearchFilter() // the search's filters: films or series, year, genre (see Search)
     internal var searchChannels: List<ChannelDetail> = emptyList() // the TV channels the search found
     internal var searchTitles: List<Pair<Stremio.Title, String>> = emptyList() // without a TMDB key, the films and series the add-ons found (and from which)
     internal var recognizer: android.speech.SpeechRecognizer? = null // dictating into the search box
@@ -261,6 +262,7 @@ class MainActivity : Activity() {
             setOnClickListener { action() }
         }
         findViewById<View>(R.id.tvInputsButton).visibility = if (inputsMode() == "apps") View.GONE else View.VISIBLE
+        showUserIcon() // the user in use's letters, in place of the icon
         if (prefs.contains(K.REOPEN_ROW)) {
             val row = prefs.getInt(K.REOPEN_ROW, THEME_ROW)
             prefs.edit().remove(K.REOPEN_ROW).apply()

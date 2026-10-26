@@ -15,6 +15,10 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- Search has filters: **Films or series**, **Year** and **Genre**. Select **Search** with no words to find all the titles for the filters, from Cinemeta.
+- The users icon shows the first two letters of the name of the user in use.
+- The page of a film or episode shows when the user in use watched it. The page of a series shows the last episode watched and when.
+
 - The **Films** tile has a **Films watched** row at the bottom, and the **Series** tile has a **Series watched** row. The most recent is first.
 - With Trakt, the films and series that you watched elsewhere are in these rows too, with the date of Trakt.
 

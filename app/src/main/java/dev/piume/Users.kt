@@ -80,8 +80,39 @@ internal fun MainActivity.useUser(u: User) {
 internal fun MainActivity.usersChanged() {
     watchKey = null
     watchApp = null
-    findViewById<ImageView>(R.id.usersButton).contentDescription = getString(R.string.users_title) + ": " + currentUser().name
+    showUserIcon()
     refreshWatchNext()
+}
+
+/** The users' icon in the top bar: the first two letters of the user in use's name ("An"). */
+internal fun MainActivity.showUserIcon() {
+    val u = currentUser()
+    val letters = u.name.filter { it.isLetterOrDigit() }.take(2).ifEmpty { "?" }.let { it.take(1).uppercase() + it.drop(1).lowercase() }
+    findViewById<ImageView>(R.id.usersButton).apply {
+        setImageDrawable(Initials(letters))
+        contentDescription = getString(R.string.users_title) + ": " + u.name
+    }
+}
+
+/** A user's letters, drawn white in the middle of what it's given (the top bar tints it, as its icons). */
+private class Initials(private val text: String) : android.graphics.drawable.Drawable() {
+    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.WHITE
+        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+
+    override fun draw(canvas: android.graphics.Canvas) {
+        val b = bounds
+        paint.textSize = b.height() * 0.72f
+        val fm = paint.fontMetrics
+        canvas.drawText(text, b.exactCenterX(), b.exactCenterY() - (fm.ascent + fm.descent) / 2, paint)
+    }
+
+    override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { paint.colorFilter = colorFilter }
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
 }
 
 /** A new user's name ([u] null), or [u]'s new one, typed with the remote. */
