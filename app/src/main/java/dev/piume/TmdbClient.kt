@@ -207,6 +207,44 @@ object TmdbClient {
         emptyMap()
     }
 
+    /**
+     * A film or series as TMDB has it in a language, found by its IMDb id: for the Stremio add-ons' titles, whose
+     * catalogs (Cinemeta's) are in English only. [overview] is empty when TMDB has none in that language.
+     */
+    data class Localized(val tmdbId: Long, val tv: Boolean, val title: String, val overview: String, val poster: String?,
+                         val backdrop: String?, val genres: List<String>, val year: String?)
+
+    /** One episode as TMDB has it in a language: its name, what it's about, its still. */
+    data class LocalEpisode(val name: String, val overview: String, val still: String?)
+
+    /** [imdbId]'s title in [language], or null when TMDB doesn't know it. Throws when TMDB can't be asked. */
+    fun localized(apiKey: String, imdbId: String, language: String): Localized? =
+        localized(JSONObject(get(apiKey, "/find/${Uri.encode(imdbId)}?external_source=imdb_id&language=$language")), genres(apiKey, language))
+
+    internal fun localized(answer: JSONObject, genres: Map<Int, String>): Localized? {
+        val movie = answer.optJSONArray("movie_results")?.optJSONObject(0)
+        val r = movie ?: answer.optJSONArray("tv_results")?.optJSONObject(0) ?: return null
+        val tv = movie == null
+        val title = r.optString(if (tv) "name" else "title").takeIf { it.isNotBlank() } ?: return null
+        val ids = r.optJSONArray("genre_ids")
+        val names = if (ids == null) emptyList() else (0 until ids.length()).mapNotNull { genres[ids.optInt(it)] }
+        fun path(name: String) = r.optString(name).takeIf { it.isNotBlank() && it != "null" }
+        return Localized(r.optLong("id"), tv, title, r.optString("overview").trim(), path("poster_path")?.let { "https://image.tmdb.org/t/p/w500$it" },
+            cardUrl(path("backdrop_path")), names, r.optString(if (tv) "first_air_date" else "release_date").take(4).takeIf { it.length == 4 })
+    }
+
+    /** A season's episodes in [language], by their number. Throws when TMDB can't be asked. */
+    fun seasonEpisodes(apiKey: String, tvId: Long, season: Int, language: String): Map<Int, LocalEpisode> =
+        seasonEpisodes(JSONObject(get(apiKey, "/tv/$tvId/season/$season?language=$language")))
+
+    internal fun seasonEpisodes(answer: JSONObject): Map<Int, LocalEpisode> {
+        val list = answer.optJSONArray("episodes") ?: return emptyMap()
+        return (0 until list.length()).mapNotNull { list.optJSONObject(it) }.associate { e ->
+            e.optInt("episode_number") to LocalEpisode(e.optString("name").trim(), e.optString("overview").trim(),
+                e.optString("still_path").takeIf { it.isNotBlank() && it != "null" }?.let { "https://image.tmdb.org/t/p/w300$it" })
+        }
+    }
+
     fun backdropUrl(path: String?): String? = if (path.isNullOrBlank()) null else "$IMAGE_BASE$path"
 
     /** The same image at card size. */

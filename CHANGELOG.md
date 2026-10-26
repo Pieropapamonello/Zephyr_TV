@@ -23,6 +23,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - The films and episodes that you begin show in **Continue Playing** with their progress. They start again where you stopped.
 - Without a TMDB key, search finds films and series in the add-ons' catalogs. With a TMDB key, the page of a film or series has **Watch with the add-ons**.
 - You can add an add-on that has only films and series, with no TV channels.
+- Cinemeta is in English only. With a TMDB key, the names, posters, genres and descriptions of films and series, and the names and descriptions of episodes, come from TMDB in the language of Piume. What TMDB does not have in your language stays in English.
 
 ## 4.0.2
 

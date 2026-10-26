@@ -73,15 +73,18 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
         mode == "apps" && pkg.startsWith(STREMIO) -> vodAddons().filter { STREMIO + it.id == pkg }
         else -> return emptyList()
     }
+    val missing = ArrayList<String>()
     return addons.flatMap { addon ->
         if (Stremio.vodDue(filesDir, addon.url) && addon.vod.any { it.listed }) refreshShelves(addon, pkg)
         Stremio.shelves(filesDir, addon).filter { type == null || it.catalog.type == type }.mapNotNull { shelf ->
             val kind = getString(if (shelf.catalog.type == "series") R.string.vod_series else R.string.vod_movies)
             val name = if (type != null) "${addon.name} · ${shelf.catalog.name}" else "$kind · ${shelf.catalog.name}"
-            val cards = shelf.titles.filter { hideKey(null, it.name) !in hidden }.map { titleCard(it, addon.url) }
+            // In the TV's language when TMDB has the title (those it hasn't been asked about yet: once it's answered).
+            val cards = shelf.titles.map { t -> localize(t) ?: t.also { if (wantsLocal(it)) missing += it.id } }
+                .filter { hideKey(null, it.name) !in hidden }.map { titleCard(it, addon.url) }
             if (cards.isEmpty()) null else Section("vod:${addon.id}:${shelf.catalog.type}:${shelf.catalog.id}", name, name, cards)
         }
-    }
+    }.also { if (missing.isNotEmpty()) localizeLater(missing.distinct(), pkg) }
 }
 
 private val refreshing = java.util.Collections.synchronizedSet(HashSet<String>())
@@ -125,10 +128,13 @@ internal fun MainActivity.openTitle(ref: TitleRef) {
     }
 }
 
-/** [ref]'s page from the add-on it came from, else the first with pages for it. Network: off the UI thread. */
+/**
+ * [ref]'s page from the add-on it came from, else the first with pages for it; in the TV's language when TMDB has
+ * it (see localizeMeta). Network: off the UI thread.
+ */
 private fun MainActivity.titleMeta(ref: TitleRef): Stremio.TitleMeta? {
     val addons = vodAddons().filter { it.provides("meta", ref.type, ref.id) }.sortedByDescending { it.url == ref.source }
-    for (a in addons) runCatching { Stremio.titleMeta(a.base, ref.type, ref.id) }.getOrNull()?.let { return it }
+    for (a in addons) runCatching { Stremio.titleMeta(a.base, ref.type, ref.id) }.getOrNull()?.let { return localizeMeta(it) }
     return null
 }
 
@@ -309,4 +315,133 @@ internal fun MainActivity.watchTmdbTitle(item: TmdbItem) {
                 item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }, TmdbClient.cardUrl(item.backdropPath)))
         }
     }
+}
+
+// ---------- in the TV's language ----------
+
+/**
+ * Cinemeta's catalogs and pages are in English (IMDb's) and take no language. With a TMDB key, a title with an IMDb
+ * id gets its name, art, genres and what it's about from TMDB in the TV's language (tmdbLang), and a series its
+ * episodes' names, overviews and stills; what TMDB lacks stays Cinemeta's. Kept on disk a couple of weeks, per language.
+ */
+private object Local {
+    private const val FILE = "tmdb_titles.json"
+    private const val AGE_MS = 14 * 24 * 3600_000L
+    @Volatile private var lang: String? = null
+    private val known = java.util.concurrent.ConcurrentHashMap<String, TmdbClient.Localized>()
+    private val unknown: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    val asking: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** The titles known in [language], read from disk the first time (or when the language changed). */
+    @Synchronized
+    fun use(dir: java.io.File, language: String) {
+        if (lang == language) return
+        lang = language
+        known.clear()
+        unknown.clear()
+        val f = java.io.File(dir, FILE)
+        if (!f.exists() || System.currentTimeMillis() - f.lastModified() > AGE_MS) return
+        runCatching {
+            val o = org.json.JSONObject(f.readText())
+            if (o.optString("lang") != language) return
+            val items = o.getJSONObject("items")
+            for (id in items.keys()) {
+                val e = items.optJSONObject(id) ?: run { unknown += id; null } ?: continue
+                fun list(a: org.json.JSONArray?) = a?.let { (0 until it.length()).map { i -> it.optString(i) } }.orEmpty()
+                known[id] = TmdbClient.Localized(e.optLong("id"), e.optBoolean("tv"), e.optString("t"), e.optString("o"),
+                    e.optString("p").ifEmpty { null }, e.optString("b").ifEmpty { null }, list(e.optJSONArray("g")), e.optString("y").ifEmpty { null })
+            }
+        }
+    }
+
+    fun get(id: String) = known[id]
+    fun asked(id: String) = known.containsKey(id) || id in unknown
+    fun put(id: String, l: TmdbClient.Localized?) { if (l != null) known[id] = l else unknown += id }
+
+    @Synchronized
+    fun save(dir: java.io.File) {
+        val items = org.json.JSONObject()
+        for ((id, l) in known) items.put(id, org.json.JSONObject().put("id", l.tmdbId).put("tv", l.tv).put("t", l.title).put("o", l.overview)
+            .put("p", l.poster.orEmpty()).put("b", l.backdrop.orEmpty()).put("g", org.json.JSONArray(l.genres)).put("y", l.year.orEmpty()))
+        for (id in unknown) items.put(id, org.json.JSONObject.NULL)
+        val f = java.io.File(dir, FILE)
+        val part = java.io.File(dir, "$FILE.part")
+        part.writeText(org.json.JSONObject().put("lang", lang).put("items", items).toString())
+        part.renameTo(f)
+    }
+}
+
+private fun MainActivity.tmdbKey() = prefs.getString(K.TMDB_API_KEY, null)?.takeIf { it.isNotBlank() }
+
+/** Whether [t] could be had in the TV's language and TMDB wasn't asked yet. */
+private fun MainActivity.wantsLocal(t: Stremio.Title): Boolean {
+    if (tmdbKey() == null || !t.id.startsWith("tt")) return false
+    Local.use(filesDir, tmdbLang())
+    return !Local.asked(t.id)
+}
+
+/** [t] in the TV's language, as TMDB has it (its logo, written in English, left out); null when it isn't known (yet). */
+private fun MainActivity.localize(t: Stremio.Title): Stremio.Title? {
+    if (tmdbKey() == null || !t.id.startsWith("tt")) return null
+    Local.use(filesDir, tmdbLang())
+    val l = Local.get(t.id) ?: return null
+    val same = l.title.equals(t.name, ignoreCase = true)
+    return Stremio.Title(t.type, t.id, l.title, l.poster ?: t.poster, l.backdrop ?: t.background, t.logo.takeIf { same }, t.year ?: l.year)
+}
+
+/** Asks TMDB for [ids] in the TV's language, a few at a time; once in, the rows under [pkg] again if it's still in focus. */
+private fun MainActivity.localizeLater(ids: List<String>, pkg: String) {
+    val key = tmdbKey() ?: return
+    val lang = tmdbLang()
+    val todo = ids.filter { Local.asking.add(it) }
+    if (todo.isEmpty()) return
+    netIo.execute {
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
+        try {
+            pool.invokeAll(todo.map { id -> java.util.concurrent.Callable {
+                runCatching { TmdbClient.localized(key, id, lang) }.onSuccess { Local.put(id, it) } // a failure is asked again next time
+            } })
+        } finally {
+            pool.shutdown()
+            todo.forEach { Local.asking.remove(it) }
+        }
+        runCatching { Local.save(filesDir) }
+        ui.post {
+            if (tmdbLastFocusApp == pkg) {
+                watchApp = null
+                queryAppChannels(pkg)
+            }
+        }
+    }
+}
+
+/**
+ * [meta] in the TV's language when TMDB has it: name, art, genres and what it's about, and a series' episodes
+ * (their names, overviews and stills, a season at a time). Network: off the UI thread.
+ */
+private fun MainActivity.localizeMeta(meta: Stremio.TitleMeta): Stremio.TitleMeta {
+    val key = tmdbKey() ?: return meta
+    val t = meta.title
+    if (!t.id.startsWith("tt")) return meta
+    val lang = tmdbLang()
+    Local.use(filesDir, lang)
+    val l = Local.get(t.id) ?: if (Local.asked(t.id)) return meta else
+        runCatching { TmdbClient.localized(key, t.id, lang) }.getOrNull().also { Local.put(t.id, it); runCatching { Local.save(filesDir) } } ?: return meta
+    val title = localize(t) ?: t
+    val episodes = if (!l.tv || meta.episodes.isEmpty()) meta.episodes else {
+        val seasons = meta.episodes.map { it.season }.distinct().take(40)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(4)
+        val local = try {
+            pool.invokeAll(seasons.map { n -> java.util.concurrent.Callable { n to runCatching { TmdbClient.seasonEpisodes(key, l.tmdbId, n, lang) }.getOrDefault(emptyMap()) } },
+                20, java.util.concurrent.TimeUnit.SECONDS).mapNotNull { runCatching { it.get() }.getOrNull() }.toMap()
+        } finally {
+            pool.shutdownNow()
+        }
+        meta.episodes.map { e ->
+            val le = local[e.season]?.get(e.episode) ?: return@map e
+            Stremio.Episode(e.id, e.season, e.episode, le.name.ifBlank { e.name }, e.released, le.still ?: e.thumbnail, le.overview.ifBlank { e.overview.orEmpty() }.ifBlank { null })
+        }
+    }
+    return Stremio.TitleMeta(title, l.overview.ifBlank { meta.description.orEmpty() }.ifBlank { null }, l.genres.ifEmpty { meta.genres },
+        meta.rating, meta.runtime, episodes)
 }
