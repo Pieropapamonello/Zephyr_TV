@@ -15,6 +15,9 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+## 4.1.0-beta.6
+
+- This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.
 - Piume has users. Select the users icon, left of search, to add a user or to change the user in use. Each user has their own Continue Playing and ✓ marks.
 - Each user can connect their Trakt account. Select the user, then **Connect Trakt**, and scan the code with your phone.
 - With Trakt, what you watch in Piume goes to your Trakt history. What you watched elsewhere gets ✓, and where you paused shows in Continue Playing.
