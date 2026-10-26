@@ -507,6 +507,17 @@ internal fun MainActivity.configureTmdbApiKey() {
 
 internal fun MainActivity.page(title: String, value: String = "", action: () -> Unit) = Triple(title, value, action)
 
+/**
+ * The row of the page in the panel the focus is on (0 for its first row, after the box on top), or null when it's
+ * elsewhere: a page built again by itself (an answer came in) keeps the focus where it was.
+ */
+internal fun MainActivity.focusedRow(): Int? {
+    val focused = currentFocus ?: return null
+    val i = settingsList.indexOfChild(focused).takeIf { it >= 0 } ?: return null
+    val first = (0 until settingsList.childCount).firstOrNull { settingsList.getChildAt(it).hasOnClickListeners() } ?: return null
+    return (i - first).takeIf { it >= 0 }
+}
+
 internal fun MainActivity.showPage(title: String, rows: List<Triple<String, String, () -> Unit>>, focus: Int = 0, top: View? = null, back: (() -> Unit)?) {
     pageExit?.invoke()
     pageExit = null

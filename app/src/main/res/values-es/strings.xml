@@ -508,4 +508,6 @@
     <string name="title_watched_on">Visto el %1$s</string>
     <string name="title_watched">Visto</string>
     <string name="title_last_watched">Último visto: %1$s</string>
+    <string name="trakt_signed_out">Trakt rechazó la cuenta. Vuelve a conectarla en los ajustes del usuario.</string>
+    <string name="trakt_refused">Trakt no aceptó el inicio de sesión. Vuelve a abrir esta página e inténtalo de nuevo.</string>
 </resources>

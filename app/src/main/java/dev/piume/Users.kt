@@ -16,11 +16,15 @@ import java.io.File
 /** A Piume user: [id] names their folder ("" for the first one: Piume's own files), [name] is what they're called. */
 internal class User(val id: String, val name: String)
 
+/** What a user's id may be: it names a folder, so letters, digits, "-" and "_" only (a restored backup could say anything). */
+private val USER_ID = Regex("[A-Za-z0-9_-]{1,32}")
+
 /** Piume's users, in the order they were added; the first one always there. */
 internal fun MainActivity.users(): List<User> {
     val saved = runCatching {
         val a = org.json.JSONArray(prefs.getString(K.USERS, null) ?: return@runCatching emptyList())
-        (0 until a.length()).map { a.getJSONObject(it) }.map { User(it.optString("id"), it.optString("name")) }
+        (0 until a.length()).map { a.getJSONObject(it) }.map { User(it.optString("id"), it.optString("name").take(40)) }
+            .filter { it.id == "" || USER_ID.matches(it.id) }
     }.getOrDefault(emptyList())
     val first = saved.firstOrNull { it.id == "" } ?: User("", getString(R.string.user_default))
     return listOf(first) + saved.filter { it.id != "" }
@@ -33,8 +37,9 @@ private fun MainActivity.saveUsers(list: List<User>) {
 /** The user in use: their progress, watched titles and Trakt account are the ones Piume shows and keeps. */
 internal fun MainActivity.currentUser(): User = users().let { list -> list.firstOrNull { it.id == prefs.getString(K.USER, "") } ?: list.first() }
 
-/** [user]'s folder: what they watched and where they got to, and their Trakt account. */
-internal fun MainActivity.vodDir(user: String = currentUser().id): File = if (user == "") filesDir else File(filesDir, "user_$user").apply { mkdirs() }
+/** [user]'s folder: what they watched and where they got to, and their Trakt account. Never outside Piume's files. */
+internal fun MainActivity.vodDir(user: String = currentUser().id): File =
+    if (user == "" || !USER_ID.matches(user)) filesDir else File(filesDir, "user_$user").apply { mkdirs() }
 
 /**
  * Top bar, the users' icon: the users, the one in use marked; OK on one uses it at once (and closes the panel).
@@ -49,12 +54,13 @@ internal fun MainActivity.showUsers(focus: Int? = null) {
             if (u.id != current.id) useUser(u)
             closeLauncherSettings()
         }
-    } + page(getString(R.string.users_settings), SUBMENU) { usersSettings() },
+    } + page(getString(R.string.users_settings), SUBMENU) { unlock { usersSettings() } }, // adding, removing, Trakt: behind the layout lock
         focus ?: list.indexOfFirst { it.id == current.id }.coerceAtLeast(0)) { closeLauncherSettings() }
 }
 
 /** The users' settings: each user (their page: Trakt, rename, remove), then Add user. */
 private fun MainActivity.usersSettings(focus: Int = 0) {
+    if (settingsScrim.visibility != android.view.View.VISIBLE) showPanel() // after the PIN, which closes the panel
     val current = currentUser()
     val list = users()
     showPage(getString(R.string.users_settings), list.map { u ->
@@ -186,16 +192,17 @@ private fun MainActivity.traktSignIn(u: User) {
         if (!pageShowing(title)) return // left: no more asking
         if (System.currentTimeMillis() > until) return run { status.text = getString(R.string.trakt_expired) }
         netIo.execute {
-            val done = runCatching { Trakt.poll(dir, state) }.getOrElse { null } // offline for a moment: ask again
+            val sign = runCatching { Trakt.poll(dir, state) }.getOrDefault(Trakt.SignIn.WAITING) // offline for a moment: ask again
             ui.post {
-                when (done) {
-                    true -> {
+                when (sign) {
+                    Trakt.SignIn.DONE -> {
                         Toast.makeText(this, getString(R.string.trakt_connected, Trakt.account(dir)?.user.orEmpty()), Toast.LENGTH_LONG).show()
                         if (pageShowing(title)) userPage(u)
                         syncTrakt(u.id, tell = true)
                     }
-                    false -> status.text = getString(R.string.trakt_expired)
-                    null -> ui.postDelayed({ ask() }, 5000)
+                    Trakt.SignIn.REFUSED -> status.text = getString(R.string.trakt_refused)
+                    Trakt.SignIn.EXPIRED -> status.text = getString(R.string.trakt_expired)
+                    Trakt.SignIn.WAITING -> ui.postDelayed({ ask() }, 5000)
                 }
             }
         }
@@ -218,8 +225,15 @@ internal fun MainActivity.syncTrakt(user: String = currentUser().id, tell: Boole
     if (Trakt.account(dir) == null || !syncing.add(user)) return
     if (tell) Toast.makeText(this, getString(R.string.trakt_syncing), Toast.LENGTH_SHORT).show()
     netIo.execute {
+        var signedOut = false
         val result = runCatching {
-            val watched = Trakt.watched(dir) ?: return@runCatching null
+            val watched = try {
+                Trakt.watched(dir)
+            } catch (e: Trakt.SignedOut) {
+                Trakt.forget(dir) // refused on Trakt's side: connected again from the user's page
+                signedOut = true
+                null
+            } ?: return@runCatching null
             VodWatched.add(dir, watched) // with Trakt's dates: the Watched rows' order
             val paused = Trakt.paused(dir).orEmpty().filter { it.runtimeMin > 0 }
             val mine = VodProgress.all(dir).associateBy { it.id }
@@ -240,9 +254,12 @@ internal fun MainActivity.syncTrakt(user: String = currentUser().id, tell: Boole
         syncing.remove(user)
         ui.post {
             if (user == currentUser().id) usersChanged()
-            if (!tell) return@post
-            Toast.makeText(this, if (result == null) getString(R.string.trakt_failed) else getString(R.string.trakt_synced, result.first, result.second),
-                Toast.LENGTH_LONG).show()
+            if (!tell && !signedOut) return@post
+            Toast.makeText(this, when {
+                signedOut -> getString(R.string.trakt_signed_out)
+                result == null -> getString(R.string.trakt_failed)
+                else -> getString(R.string.trakt_synced, result.first, result.second)
+            }, Toast.LENGTH_LONG).show()
         }
     }
 }

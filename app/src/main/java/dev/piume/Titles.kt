@@ -27,7 +27,7 @@ internal class TitleRef(val type: String, val id: String, val name: String, val 
                         val source: String? = null, val video: String? = null, val logo: String? = null, val rating: String? = null)
 
 /** Cinemeta's manifest: Stremio's catalog of films and series, always the library's first; its address can be changed. */
-internal fun MainActivity.cinemetaUrl(): String = prefs.getString(K.CINEMETA_URL, null)?.takeIf { it.isNotBlank() } ?: Stremio.CINEMETA
+internal fun MainActivity.cinemetaUrl(): String = prefs.getString(K.CINEMETA_URL, null)?.let { Stremio.manifestUrl(it) } ?: Stremio.CINEMETA
 
 /** Where films and series show: "tiles" (a Films tile and a Series tile), "apps" (each add-on's own tile), "off". */
 internal fun MainActivity.addonsVod(): String = prefs.getString(K.ADDONS_VOD, null)?.takeIf { it in listOf("tiles", "apps", "off") } ?: "tiles"
@@ -216,6 +216,7 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
                                        episode: String? = null, focusRow: Int? = null) {
     val t = meta.title
     val kind = getString(if (t.type == "series") R.string.tmdb_badge_tv else R.string.tmdb_badge_movie)
+    if (season == null && episode == null && focusRow == null) markWhole(meta) // on opening: episodes watched since
     // Watched (by the user in use): a film when, a series its last episode watched and when.
     val mine = VodWatched.all(vodDir())
     val seenLine = if (t.type == "series") mine.values.filter { it.metaId == t.id && ':' in it.id }.maxByOrNull { it.at }?.let { m ->
@@ -324,7 +325,8 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
         }
         if (focus == seasonAt) scroll.post { scroll.scrollTo(0, top()) }
     }
-    services.later { showVodTitle(meta, ref, season, it, episode) }
+    // Built again once TMDB says which services have it: on the row the focus is on by then, not back at the start.
+    services.later { showVodTitle(meta, ref, season, it, episode, focusedRow()) }
 }
 
 /**
@@ -387,7 +389,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
         else -> Triple(t.background, t.logo, ref.poster ?: t.poster)
     }
     titlePage(title, art, t.name, top, rows, focus, icons) { showVodTitle(meta, ref, e.season, services.known, e.id) }
-    services.later { showVodEpisode(meta, ref, e, it, found, focus) }
+    services.later { showVodEpisode(meta, ref, e, it, found, focusedRow() ?: focus) }
     // The stream add-ons asked whether they have it (how many streams each), all at once; the page again once they've said.
     if (found != null || sources.isEmpty()) return
     netIo.execute {
@@ -399,7 +401,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
         } finally {
             pool.shutdownNow()
         }
-        ui.post { if (pageShowing(title)) showVodEpisode(meta, ref, e, services.known, counts, focus) }
+        ui.post { if (pageShowing(title)) showVodEpisode(meta, ref, e, services.known, counts, focusedRow() ?: focus) }
     }
 }
 
@@ -412,6 +414,16 @@ private fun MainActivity.markWatched(meta: Stremio.TitleMeta, episodes: List<Str
     VodWatched.set(vodDir(), episodes.map { it.id to id }, on, name = meta.title.name)
     traktHistory(episodes.map { it.id to id }, on)
     if (on) episodes.forEach { VodProgress.remove(vodDir(), it.id) }
+    markWhole(meta)
+}
+
+/**
+ * The series [meta] marked watched once all its episodes are (specials aside), and not any more once one isn't:
+ * after marks on its pages, and when its page opens (the player and Trakt mark episodes only).
+ */
+private fun MainActivity.markWhole(meta: Stremio.TitleMeta) {
+    if (meta.title.type != "series" || meta.episodes.isEmpty()) return
+    val id = meta.title.id
     val marks = VodWatched.all(vodDir())
     val whole = meta.episodes.filter { it.season > 0 }.ifEmpty { meta.episodes }.all { it.id in marks }
     if (whole != (id in marks)) VodWatched.set(vodDir(), listOf(id to id), whole, name = meta.title.name)

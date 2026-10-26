@@ -466,8 +466,9 @@ class PlayerActivity : Activity() {
     }
 
     /**
-     * Film or episode [i] watched (at the credits, or to its end): marked so (the series too, after its last
-     * episode), off Continue Playing, and the next episode waiting there in its place. Once each.
+     * Film or episode [i] watched (at the credits, or to its end): marked so, off Continue Playing, and the next
+     * episode waiting there in its place. Once each. (Whether the whole series is watched, the home screen tells:
+     * its episodes, specials aside; see Titles.markWatched.)
      */
     private fun watched(i: Int) {
         val c = channels.getOrNull(i) ?: return
@@ -477,7 +478,7 @@ class PlayerActivity : Activity() {
         val next = if (last) null else entry(i + 1, 0L, 0L)
         ahead.execute {
             runCatching {
-                VodWatched.set(userDir, listOfNotNull(c.id to meta, (meta to meta).takeIf { last && meta != c.id }), true, name = c.name)
+                VodWatched.set(userDir, listOf(c.id to meta), true, name = c.name)
                 VodProgress.remove(userDir, c.id)
                 next?.let { VodProgress.putNext(userDir, it) }
             }

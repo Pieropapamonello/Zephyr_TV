@@ -15,6 +15,13 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- To open **Settings** in the users panel, you must type the PIN when the layout lock is on. Changing the user in use does not need it.
+- Piume does not disconnect Trakt by itself any more when the home screen and the player renew the access at the same time.
+- When Trakt refuses the account, Piume tells you to connect it again. When Trakt refuses a sign-in, the TV tells you at once.
+- On the page of a film, series or episode, the focus stays on its row when the page gets new information.
+- What you watch is not lost any more when the player and the home screen save it at the same time.
+- A series gets ✓ when you watched all its episodes. Specials do not count.
+
 ## 4.2.0
 
 - Films and series from Stremio add-ons. **Cinemeta**, the free library of Stremio, fills the new **Films** and **Series** tiles with rows. To give each add-on its own tile, select **Piume settings → Stremio add-ons → Films and series**.

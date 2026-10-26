@@ -31,14 +31,24 @@ internal object VodProgress {
     /** Whether [position] in [duration] is worth coming back to: in a little way, and not at the credits. */
     internal fun resumable(position: Long, duration: Long) = position >= MIN_MS && (duration <= 0 || position < duration - END_MS)
 
+    private var cache: Pair<String, List<Entry>>? = null // the file's path, time and size, to what it holds
+
+    /** Newest first; read again only once the file changed (a page asks several times, the player writes it too). */
     @Synchronized
-    fun all(dir: File): List<Entry> = runCatching {
-        val a = JSONArray(File(dir, FILE).readText())
-        (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { o ->
-            Entry(o.getString("id"), o.optString("type"), o.optString("metaId"), o.optString("name"), o.optString("sub"),
-                o.optString("poster").ifEmpty { null }, o.optLong("position"), o.optLong("duration"), o.optLong("at"))
-        }
-    }.getOrDefault(emptyList()).sortedByDescending { it.at }
+    fun all(dir: File): List<Entry> {
+        val f = File(dir, FILE)
+        val stamp = stamp(f)
+        cache?.takeIf { it.first == stamp }?.let { return it.second }
+        val list = runCatching {
+            val a = JSONArray(f.readText())
+            (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { o ->
+                Entry(o.getString("id"), o.optString("type"), o.optString("metaId"), o.optString("name"), o.optString("sub"),
+                    o.optString("poster").ifEmpty { null }, o.optLong("position"), o.optLong("duration"), o.optLong("at"))
+            }
+        }.getOrDefault(emptyList()).sortedByDescending { it.at }
+        cache = stamp to list
+        return list
+    }
 
     /** Where [id] got to, if it's worth resuming. */
     fun position(dir: File, id: String): Long? = all(dir).firstOrNull { it.id == id }?.takeIf { resumable(it.position, it.duration) }?.position
@@ -48,9 +58,8 @@ internal object VodProgress {
      * what was there stays: where it was before, or the next episode waiting (the first seconds of it don't take it off).
      */
     @Synchronized
-    fun put(dir: File, e: Entry) {
-        val all = all(dir)
-        val rest = all.filter { it.id != e.id }
+    fun put(dir: File, e: Entry) = locked(dir, FILE) {
+        val rest = all(dir).filter { it.id != e.id }
         when {
             resumable(e.position, e.duration) -> write(dir, (listOf(e) + rest).take(KEEP))
             e.duration > 0 && e.position >= e.duration - END_MS -> write(dir, rest)
@@ -59,7 +68,7 @@ internal object VodProgress {
 
     /** [e], the episode after one watched to the end, waiting in Continue Playing (from its start). */
     @Synchronized
-    fun putNext(dir: File, e: Entry) {
+    fun putNext(dir: File, e: Entry) = locked(dir, FILE) {
         val rest = all(dir).filter { it.id != e.id }
         write(dir, (listOf(Entry(e.id, e.type, e.metaId, e.name, e.sub, e.poster, 0L, 0L, e.at)) + rest).take(KEEP))
     }
@@ -68,7 +77,7 @@ internal object VodProgress {
     internal fun finished(position: Long, duration: Long) = duration > 0 && position >= duration - END_MS
 
     @Synchronized
-    fun remove(dir: File, id: String) = write(dir, all(dir).filter { it.id != id })
+    fun remove(dir: File, id: String) = locked(dir, FILE) { write(dir, all(dir).filter { it.id != id }) }
 
     private fun write(dir: File, list: List<Entry>) {
         val f = File(dir, FILE)
@@ -78,7 +87,21 @@ internal object VodProgress {
                 .put("poster", e.poster.orEmpty()).put("position", e.position).put("duration", e.duration).put("at", e.at)
         }).toString())
         part.renameTo(f)
+        cache = null
     }
+}
+
+/** What tells one version of [f] from the next: its path, time and size. */
+internal fun stamp(f: File) = "${f.path}/${f.lastModified()}/${f.length()}"
+
+/**
+ * [block] with [dir]'s [name] locked for one writer at a time across processes: the home screen and the player (its
+ * own process) both change these files, and @Synchronized holds only within one. Callers hold their object's monitor
+ * too, so two threads of one process never ask for the same lock (which Java refuses rather than waits for).
+ */
+internal fun <T> locked(dir: File, name: String, block: () -> T): T {
+    dir.mkdirs()
+    return java.io.RandomAccessFile(File(dir, "$name.lock"), "rw").use { f -> f.channel.lock().use { block() } }
 }
 
 /**
@@ -93,12 +116,12 @@ internal object VodWatched {
 
     internal class Mark(val id: String, val metaId: String, val at: Long, val name: String = "")
 
-    private var cache: Pair<String, Map<String, Mark>>? = null // the file's time and size, to what it holds
+    private var cache: Pair<String, Map<String, Mark>>? = null // the file's path, time and size, to what it holds
 
     @Synchronized
     fun all(dir: File): Map<String, Mark> {
         val f = File(dir, FILE)
-        val stamp = "${f.lastModified()}/${f.length()}"
+        val stamp = stamp(f)
         cache?.takeIf { it.first == stamp }?.let { return it.second }
         val marks = runCatching {
             val a = JSONArray(f.readText())
@@ -112,7 +135,7 @@ internal object VodWatched {
 
     /** Marks [items] (id to its title's id) watched ([on]) or not, now; [name]: the title's. Newest kept first, at most [KEEP]. */
     @Synchronized
-    fun set(dir: File, items: List<Pair<String, String>>, on: Boolean, now: Long = System.currentTimeMillis(), name: String = "") {
+    fun set(dir: File, items: List<Pair<String, String>>, on: Boolean, now: Long = System.currentTimeMillis(), name: String = "") = locked(dir, FILE) {
         val ids = items.map { it.first }.toSet()
         val rest = all(dir).values.filter { it.id !in ids }
         write(dir, (if (on) items.map { (id, meta) -> Mark(id, meta, now, name) } else emptyList()) + rest)
@@ -123,7 +146,7 @@ internal object VodWatched {
      * missing names taken from them.
      */
     @Synchronized
-    fun add(dir: File, marks: List<Mark>) {
+    fun add(dir: File, marks: List<Mark>) = locked(dir, FILE) {
         val mine = all(dir)
         val fresh = marks.associateBy { it.id }
         val kept = mine.values.map { m ->
@@ -137,7 +160,7 @@ internal object VodWatched {
     @Synchronized
     fun name(dir: File, names: Map<String, String>) {
         if (names.isEmpty()) return
-        write(dir, all(dir).values.map { m -> names[m.metaId]?.takeIf { m.name.isEmpty() }?.let { Mark(m.id, m.metaId, m.at, it) } ?: m })
+        locked(dir, FILE) { write(dir, all(dir).values.map { m -> names[m.metaId]?.takeIf { m.name.isEmpty() }?.let { Mark(m.id, m.metaId, m.at, it) } ?: m }) }
     }
 
     private fun write(dir: File, marks: List<Mark>) {

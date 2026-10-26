@@ -24,7 +24,7 @@ internal object Trakt {
     private const val REDIRECT = "$SITE/traktauth"
     private const val API = "https://api.trakt.tv"
     private const val FILE = "trakt.json"
-    private const val REFRESH_BEFORE_MS = 24 * 3600_000L // a token about to expire is refreshed this long before
+    private const val REFRESH_BEFORE_MS = 3600_000L // a token about to expire is refreshed this long before (they last a day or more)
 
     /** A signed-in account: its tokens, when the access token expires, its Trakt name, and when it was last synced. */
     internal class Account(val access: String, val refresh: String, val expires: Long, val user: String, val synced: Long = 0)
@@ -58,11 +58,11 @@ internal object Trakt {
     private fun tokens(o: JSONObject, user: String, synced: Long = 0) = Account(o.getString("access_token"), o.getString("refresh_token"),
         (o.optLong("created_at", System.currentTimeMillis() / 1000) + o.optLong("expires_in", 7 * 86400)) * 1000, user, synced)
 
-    /**
-     * Whether the sign-in with [state] is done: true once the account is saved in [dir] (with its Trakt name), null
-     * while the phone hasn't answered yet, false when the site no longer knows [state] (expired, or taken).
-     */
-    fun poll(dir: File, state: String): Boolean? {
+    /** Where a sign-in is: done (the account saved), waiting for the phone, refused by Trakt, or no longer known (expired). */
+    enum class SignIn { DONE, WAITING, REFUSED, EXPIRED }
+
+    /** Where the sign-in with [state] is; once done, the account is saved in [dir] (with its Trakt name). */
+    fun poll(dir: File, state: String): SignIn {
         val (code, body) = Http.send("$SITE/api/trakt/poll", JSONObject().put("state", state))
         return when (code) {
             200 -> {
@@ -71,31 +71,45 @@ internal object Trakt {
                     JSONObject(request(a.access, "GET", "/users/settings", null).second).getJSONObject("user").optString("username")
                 }.getOrDefault("")
                 save(dir, Account(a.access, a.refresh, a.expires, name))
-                true
+                SignIn.DONE
             }
-            202 -> null
-            else -> false
+            202, 429 -> SignIn.WAITING // 429: asked too often (another TV behind the same address): ask again later
+            410 -> SignIn.REFUSED
+            else -> SignIn.EXPIRED
         }
     }
 
-    /** The account's access token, refreshed (through the site) when it's about to expire; null when signed out. */
+    /**
+     * The account's access token, refreshed (through the site) when it's about to expire; null when signed out.
+     * Trakt gives a new refresh token with each refresh and takes the old one back, so one process refreshes at a
+     * time (the home screen and the player both call Trakt), and one that finds it refused looks again first: the
+     * other may have just refreshed it.
+     */
     private fun token(dir: File): String? {
         val a = account(dir) ?: return null
         if (System.currentTimeMillis() < a.expires - REFRESH_BEFORE_MS) return a.access
-        val (code, body) = runCatching { Http.send("$SITE/api/trakt/refresh", JSONObject().put("refresh_token", a.refresh)) }
-            .getOrElse { return a.access } // offline: the old one may still work
-        if (code == 401 || code == 400) { forget(dir); return null } // revoked: signed out
-        if (code !in 200..299) return a.access
-        val fresh = tokens(JSONObject(body), a.user, a.synced)
-        save(dir, fresh)
-        return fresh.access
+        return synchronized(this) {
+            locked(dir, FILE) {
+                val now = account(dir) ?: return@locked null
+                if (now.refresh != a.refresh) return@locked now.access // refreshed meanwhile, here or in the other process
+                val (code, body) = runCatching { Http.send("$SITE/api/trakt/refresh", JSONObject().put("refresh_token", now.refresh)) }
+                    .getOrElse { return@locked now.access } // offline: the old one may still work
+                when {
+                    code == 401 || code == 400 -> { forget(dir); null } // revoked: signed out
+                    code !in 200..299 -> now.access
+                    else -> tokens(JSONObject(body), now.user, now.synced).also { save(dir, it) }.access
+                }
+            }
+        }
     }
 
     private fun request(token: String, method: String, path: String, body: JSONObject?): Pair<Int, String> {
         val headers = mapOf("trakt-api-version" to "2", "trakt-api-key" to CLIENT_ID, "Authorization" to "Bearer $token")
-        if (method == "GET") return runCatching { 200 to Http.text(API + path, headers + ("Accept" to "application/json")) }.getOrElse { 0 to "" }
-        return Http.send(API + path, body, headers, method)
+        return runCatching { Http.send(API + path, body, headers, method) }.getOrElse { 0 to "" } // 0: offline
     }
+
+    /** Whether Trakt refused the account itself (signed out on trakt.tv, or the app's access taken back). */
+    fun refused(answer: Pair<Int, String>?) = answer?.first == 401 || answer?.first == 403
 
     /** [path] asked as the account in [dir]; null when signed out. */
     private fun call(dir: File, method: String, path: String, body: JSONObject? = null): Pair<Int, String>? =
@@ -143,10 +157,15 @@ internal object Trakt {
 
     /** Films and episodes watched, as VodWatched keeps them (with when, and the title's name). Null when Trakt can't be asked. */
     fun watched(dir: File): List<VodWatched.Mark>? {
-        val movies = call(dir, "GET", "/sync/watched/movies")?.takeIf { it.first == 200 } ?: return null
-        val shows = call(dir, "GET", "/sync/watched/shows")?.takeIf { it.first == 200 } ?: return null
+        val movies = call(dir, "GET", "/sync/watched/movies")
+        if (refused(movies)) throw SignedOut()
+        val shows = call(dir, "GET", "/sync/watched/shows")
+        if (movies?.first != 200 || shows?.first != 200) return null
         return parseWatched(JSONArray(movies.second), JSONArray(shows.second))
     }
+
+    /** Trakt refused the account (see [refused]): it has to be connected again. */
+    class SignedOut : Exception("Trakt refused the account")
 
     internal fun parseWatched(movies: JSONArray, shows: JSONArray): List<VodWatched.Mark> {
         val out = ArrayList<VodWatched.Mark>()
