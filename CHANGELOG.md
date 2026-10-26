@@ -15,6 +15,9 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+## 4.1.0-beta.3
+
+- This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.
 - The cards of films and series show the year, the genre and the rating, with the icon of their tile.
 - The page of a film or series shows the rating. With a TMDB key, it also has the trailer and the services that have the title.
 - The page of a film or series and the player show the same picture as the card.
