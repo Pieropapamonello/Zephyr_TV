@@ -217,14 +217,16 @@ private fun MainActivity.pageShowing(title: String) =
 private val syncing = java.util.Collections.synchronizedSet(HashSet<String>())
 
 /**
- * Brings [user]'s Trakt history and pauses into Piume: what they watched gets its ✓, where they paused elsewhere
- * goes into Continue Playing (when newer than Piume's own). [tell]: say how it went. Without an account, nothing.
+ * Brings [user]'s Trakt history and pauses into Piume: what they watched gets its ✓ (and leaves Continue Playing),
+ * where they paused elsewhere goes into Continue Playing (when newer than Piume's own). Trakt is the history once
+ * connected: the first sync sends it what Piume has that it hasn't; after that, what was taken off on Trakt since
+ * the last sync is taken off here too. [tell]: say how it went. Without an account, nothing.
  */
 internal fun MainActivity.syncTrakt(user: String = currentUser().id, tell: Boolean = false) {
     val dir = vodDir(user)
     if (Trakt.account(dir) == null || !syncing.add(user)) return
     if (tell) Toast.makeText(this, getString(R.string.trakt_syncing), Toast.LENGTH_SHORT).show()
-    netIo.execute {
+    longIo.execute { // the whole history: not on the threads pages wait for
         var signedOut = false
         val result = runCatching {
             val watched = try {
@@ -234,12 +236,31 @@ internal fun MainActivity.syncTrakt(user: String = currentUser().id, tell: Boole
                 signedOut = true
                 null
             } ?: return@runCatching null
+            val ids = watched.map { it.id }.toSet()
+            val before = Trakt.seen(dir)
+            // Films and episodes, not the marks of series watched whole (Piume's own, from their episodes).
+            val mine = VodWatched.all(dir).values.let { all -> val series = all.filter { ':' in it.id }.map { it.metaId }.toSet(); all.filter { ':' in it.id || it.id !in series } }
+            // First sync: what Piume knew before (watched here, or marked) goes to Trakt, with when. Until Trakt took
+            // it, nothing counts as seen there (else a failed send would read as taken off on Trakt next time).
+            val sent = before != null || mine.filter { it.id !in ids }.let { missing ->
+                missing.isEmpty() || Trakt.history(dir, missing.map { it.id to it.metaId }, true, missing.associate { it.id to it.at })
+            }
+            if (before != null) {
+                // Taken off on Trakt since: off here too.
+                val gone = mine.filter { it.id in before && it.id !in ids }
+                if (gone.isNotEmpty()) VodWatched.set(dir, gone.map { it.id to it.metaId }, false)
+            }
             VodWatched.add(dir, watched) // with Trakt's dates: the Watched rows' order
+            if (sent) Trakt.seen(dir, ids + (if (before == null) mine.map { it.id } else emptyList()))
+            // Watched elsewhere after it was paused here: nothing left to resume.
+            val marks = watched.associateBy { it.id }
+            VodProgress.all(dir).filter { e -> (marks[e.id]?.at ?: 0L) > e.at }.forEach { VodProgress.remove(dir, it.id) }
             val paused = Trakt.paused(dir).orEmpty().filter { it.runtimeMin > 0 }
-            val mine = VodProgress.all(dir).associateBy { it.id }
+            val begun = VodProgress.all(dir).associateBy { it.id }
             var resumed = 0
             for (p in paused) {
-                if ((mine[p.id]?.at ?: 0L) >= p.at || p.id in VodWatched.all(dir)) continue
+                // Newer than Piume's own; and paused after it was last watched (begun again), or never watched.
+                if ((begun[p.id]?.at ?: 0L) >= p.at || (marks[p.id]?.at ?: 0L) >= p.at) continue
                 val duration = p.runtimeMin * 60_000L
                 val sub = if (!p.series) "" else listOf(getString(R.string.title_season_episode, p.season, p.number), p.episodeTitle)
                     .filter { it.isNotBlank() }.joinToString(" · ")

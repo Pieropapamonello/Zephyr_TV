@@ -123,6 +123,9 @@ class MainActivity : Activity() {
     // Network work that can take a while (weather, update checks and downloads, city search) has its own threads,
     // so an update download or a slow weather server never holds up the rows, which io reads from the TV.
     internal val netIo = Executors.newFixedThreadPool(2)
+    // What takes long and nobody waits for (the TV guide, the channel logos' table, an update's download, a Trakt
+    // sync): on a thread of its own, so a title's page or a search never queues behind it.
+    internal val longIo = Executors.newSingleThreadExecutor()
     // Spotlight's own thread: downloading the next backdrop ahead mustn't hold up the rows' data on io.
     internal val spotlightIo = Executors.newSingleThreadExecutor()
     internal val backdrops by lazy { BackdropCache(File(cacheDir, BACKDROP_DIR)) }
@@ -404,6 +407,7 @@ class MainActivity : Activity() {
         posterIo.shutdownNow()
         spotlightIo.shutdownNow()
         netIo.shutdownNow()
+        longIo.shutdownNow()
         super.onDestroy()
     }
 

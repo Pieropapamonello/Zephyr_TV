@@ -511,6 +511,12 @@ internal fun MainActivity.page(title: String, value: String = "", action: () -> 
  * The row of the page in the panel the focus is on (0 for its first row, after the box on top), or null when it's
  * elsewhere: a page built again by itself (an answer came in) keeps the focus where it was.
  */
+/** Focuses the page's row [i] (0: its first, after the box on top). */
+internal fun MainActivity.focusRow(i: Int) {
+    val first = (0 until settingsList.childCount).firstOrNull { settingsList.getChildAt(it).hasOnClickListeners() } ?: return
+    settingsList.getChildAt(first + i)?.requestFocus()
+}
+
 internal fun MainActivity.focusedRow(): Int? {
     val focused = currentFocus ?: return null
     val i = settingsList.indexOfChild(focused).takeIf { it >= 0 } ?: return null

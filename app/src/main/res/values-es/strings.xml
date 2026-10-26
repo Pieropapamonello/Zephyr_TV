@@ -510,4 +510,6 @@
     <string name="title_last_watched">Último visto: %1$s</string>
     <string name="trakt_signed_out">Trakt rechazó la cuenta. Vuelve a conectarla en los ajustes del usuario.</string>
     <string name="trakt_refused">Trakt no aceptó el inicio de sesión. Vuelve a abrir esta página e inténtalo de nuevo.</string>
+    <string name="title_hold_hint">Mantén pulsado OK en un episodio para marcarlo como visto o no visto.</string>
+    <string name="search_filter_clear">Quitar los filtros</string>
 </resources>

@@ -51,7 +51,22 @@ internal object Trakt {
         part.renameTo(File(dir, FILE))
     }
 
-    fun forget(dir: File) = File(dir, FILE).delete()
+    /** Signed out: the account, and what Trakt said was watched last time (a new account starts from Piume's own). */
+    fun forget(dir: File) {
+        File(dir, FILE).delete()
+        File(dir, SEEN).delete()
+    }
+
+    private const val SEEN = "trakt_seen.txt"
+
+    /** The films and episodes Trakt said were watched at the last sync, or null before the first one. */
+    fun seen(dir: File): Set<String>? = runCatching { File(dir, SEEN).readLines().filter { it.isNotBlank() }.toSet() }.getOrNull()
+
+    fun seen(dir: File, ids: Collection<String>) {
+        val part = File(dir, "$SEEN.part")
+        part.writeText(ids.joinToString("\n"))
+        part.renameTo(File(dir, SEEN))
+    }
 
     fun synced(dir: File, at: Long) = account(dir)?.let { save(dir, Account(it.access, it.refresh, it.expires, it.user, at)) }
 
@@ -136,21 +151,26 @@ internal object Trakt {
 
     /**
      * Films ("tt…") and episodes ("tt…:1:3", with their series' id) added to the history ([on]) or taken out of it,
-     * as [items] (an id to its title's id). Quietly nothing when signed out or offline.
+     * as [items] (an id to its title's id); [at]: when each was watched, when it's known (else now). Whether Trakt
+     * took it: false when signed out or offline.
      */
-    fun history(dir: File, items: List<Pair<String, String>>, on: Boolean) {
+    fun history(dir: File, items: List<Pair<String, String>>, on: Boolean, at: Map<String, Long> = emptyMap()): Boolean {
         val movies = JSONArray()
         val shows = LinkedHashMap<String, LinkedHashMap<Int, JSONArray>>()
+        fun JSONObject.watchedAt(id: String) = apply {
+            at[id]?.takeIf { on && it > 0 }?.let { put("watched_at", java.time.Instant.ofEpochMilli(it).toString()) }
+        }
         for ((id, metaId) in items.filter { it.first.startsWith("tt") }) {
             val parts = id.split(':')
-            if (parts.size < 3) movies.put(JSONObject().put("ids", JSONObject().put("imdb", id)))
+            if (parts.size < 3) movies.put(JSONObject().put("ids", JSONObject().put("imdb", id)).watchedAt(id))
             else shows.getOrPut(metaId) { LinkedHashMap() }.getOrPut(parts[1].toIntOrNull() ?: continue) { JSONArray() }
-                .put(JSONObject().put("number", parts[2].toIntOrNull() ?: continue))
+                .put(JSONObject().put("number", parts[2].toIntOrNull() ?: continue).watchedAt(id))
         }
         val showList = JSONArray(shows.map { (metaId, seasons) -> JSONObject().put("ids", JSONObject().put("imdb", metaId))
             .put("seasons", JSONArray(seasons.map { (n, eps) -> JSONObject().put("number", n).put("episodes", eps) })) })
-        if (movies.length() == 0 && showList.length() == 0) return
-        runCatching { call(dir, "POST", if (on) "/sync/history" else "/sync/history/remove", JSONObject().put("movies", movies).put("shows", showList)) }
+        if (movies.length() == 0 && showList.length() == 0) return true
+        return runCatching { call(dir, "POST", if (on) "/sync/history" else "/sync/history/remove", JSONObject().put("movies", movies).put("shows", showList)) }
+            .getOrNull()?.first in 200..299
     }
 
     // ---------- what Trakt tells Piume ----------

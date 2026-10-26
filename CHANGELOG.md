@@ -15,6 +15,14 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- When you select a film or series, its page opens at once and shows **Loading** until the information is there.
+- The page of a series tells you that you can hold OK on an episode to mark it.
+- Search has **Clear the filters**. The results of a search with words also show the filters.
+- In the list of years, Left and Right go back and forward 10 years.
+- With Trakt, the first sync sends to Trakt what you watched in Piume before. After that, what you remove on Trakt is removed in Piume too. A title that you finish elsewhere leaves Continue Playing.
+- An episode that you watch to the end in Piume counts as watched on Trakt too, also when it is short.
+- Long downloads (TV guide, channel logos, updates, Trakt) do not slow down the pages and the search any more.
+
 - To open **Settings** in the users panel, you must type the PIN when the layout lock is on. Changing the user in use does not need it.
 - Piume does not disconnect Trakt by itself any more when the home screen and the player renew the access at the same time.
 - When Trakt refuses the account, Piume tells you to connect it again. When Trakt refuses a sign-in, the TV tells you at once.

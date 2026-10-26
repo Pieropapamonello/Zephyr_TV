@@ -79,6 +79,12 @@ internal fun MainActivity.openSearch(text: String = "", focus: Int? = null) {
         },
         page(getString(R.string.search_filter_year), f.year ?: getString(R.string.search_filter_any)) { pickYear(typed()) },
         page(getString(R.string.search_filter_genre), f.genre?.let { genreName(it) } ?: getString(R.string.search_filter_any)) { pickGenre(typed()) },
+    ) + listOfNotNull(
+        if (!f.any) null else page(getString(R.string.search_filter_clear)) {
+            searchFilter = SearchFilter()
+            openSearch(typed(), 1)
+        },
+    ) + listOf(
         page(getString(R.string.search_dictate)) { listen(input, ::go) },
         page(getString(R.string.search_assistant)) { closeLauncherSettings(); assistant() },
     )
@@ -186,7 +192,8 @@ internal fun MainActivity.stopListening() {
 internal fun MainActivity.searchTmdb(query: String) {
     val filter = searchFilter
     // What the results are for: the words, else the filters ("2020 · Drama"), else Cinemeta's popular ones.
-    val label = query.ifBlank { filterLabel(filter) }
+    // With words and filters, both: the filters stay until they're cleared, and say so.
+    val label = if (query.isBlank()) filterLabel(filter) else listOfNotNull(query, filterLabel(filter).takeIf { filter.any }).joinToString(" · ")
     spotlightIo.execute {
         // TV channels only for words, and not when films or series alone are asked for.
         val channels = if (query.isBlank() || filter.type != "all") emptyList() else runCatching { findChannels(query) }.getOrDefault(emptyList())
@@ -378,6 +385,8 @@ private fun MainActivity.pickYear(text: String) {
             openSearch(text, 2)
         }
     }, years.indexOf(f.year).coerceAtLeast(0)) { openSearch(text, 2) }
+    // Left/Right: ten years on or back, not a hundred rows one by one.
+    pageSides = { step -> focusRow(((focusedRow() ?: 0) + step * 10).coerceIn(0, years.size - 1)) }
 }
 
 /** The search's genre: any, or one of Cinemeta's, in the TV's language. */

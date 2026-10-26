@@ -455,7 +455,7 @@ internal fun MainActivity.epgUrl() = prefs.getString(K.EPG_URL, null)?.takeIf { 
  */
 internal fun MainActivity.updateEpg(pkg: String?, done: ((Int?) -> Unit)? = null) {
     val url = epgUrl() ?: return
-    netIo.execute {
+    longIo.execute { // a big guide can take minutes: not on the threads pages wait for
         val n = Epg.update(filesDir, url)
         ui.post {
             done?.invoke(n)
@@ -474,7 +474,7 @@ internal fun MainActivity.channelCountry() = TmdbClient.region(tmdbLang())
  * Fetches the channel logo table in the background; once it's in, the TV app's sections are built again if it's
  * still the app in focus. [done], when given, hears how many channel names the table has (null: it failed).
  */
-internal fun MainActivity.updateChannelLogos(pkg: String?, done: ((Int?) -> Unit)? = null) = netIo.execute {
+internal fun MainActivity.updateChannelLogos(pkg: String?, done: ((Int?) -> Unit)? = null) = longIo.execute { // 14 MB to read
     val n = ChannelLogos.update(filesDir, channelCountry())
     // A new table each month (or by hand): the logos themselves are fetched again with it, in case they changed.
     if (n != null) channelLogoFiles.clear()
@@ -1025,7 +1025,7 @@ internal fun MainActivity.retryPosters() {
 /** Downsample to card size in RGB_565 so a dozen posters stay around 1-2 MB. */
 /** [uri]'s picture at about card size; [alpha] keeps its transparency (a logo), at twice the memory. */
 internal fun MainActivity.decode(uri: String, alpha: Boolean = false): Bitmap? {
-    val bytes = openStream(uri).use { it.readBytes() }
+    val bytes = openStream(uri).use { it.readCapped(Http.MAX_IMAGE) }
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
     var sample = 1

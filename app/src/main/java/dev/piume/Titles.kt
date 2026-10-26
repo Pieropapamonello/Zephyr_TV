@@ -182,13 +182,18 @@ internal fun MainActivity.titleTile(type: String, source: String?): String? = wh
  */
 internal fun MainActivity.openTitle(ref: TitleRef) {
     if (ref.video != null) return resumeTitle(ref)
-    Toast.makeText(this, getString(R.string.player_loading), Toast.LENGTH_SHORT).show()
+    // The page at once, with the card's art and Loading…: it fills in once the add-on answers (if it's still open).
+    titlePage(ref.name, Triple(ref.background, ref.logo, ref.poster), ref.name, titleTop("", null, null),
+        listOf(page(getString(R.string.player_loading)) { }), 0, emptyMap()) { closeLauncherSettings() }
     netIo.execute {
         val meta = titleMeta(ref)
         ui.post {
-            if (meta != null) showVodTitle(meta, ref)
-            else if (ref.type == "movie") playTitle(ref, null, null)
-            else Toast.makeText(this, getString(R.string.title_no_page), Toast.LENGTH_LONG).show()
+            if (!pageShowing(ref.name)) return@post // closed meanwhile
+            when {
+                meta != null -> showVodTitle(meta, ref)
+                ref.type == "movie" -> { closeLauncherSettings(); playTitle(ref, null, null) }
+                else -> showPage(ref.name, listOf(page(getString(R.string.title_no_page)) { closeLauncherSettings() }), back = { closeLauncherSettings() })
+            }
         }
     }
 }
@@ -326,6 +331,12 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
         if (focus == seasonAt) scroll.post { scroll.scrollTo(0, top()) }
     }
     // Built again once TMDB says which services have it: on the row the focus is on by then, not back at the start.
+    // Under the rows, what holding OK on an episode does: nothing on screen tells it otherwise.
+    if (episodic) settingsList.addView(label(getString(R.string.title_hold_hint), 12f).apply {
+        alpha = 0.55f
+        maxLines = 3
+        setPadding(dp(14), dp(14), dp(14), dp(4))
+    })
     services.later { showVodTitle(meta, ref, season, it, episode, focusedRow()) }
 }
 

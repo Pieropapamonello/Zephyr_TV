@@ -133,7 +133,7 @@ internal fun MainActivity.installUpdate(ver: String) {
     updating = true
     if (isShowingUpdates()) showUpdates()
     refreshSettings(UPDATE_ROW)
-    netIo.execute {
+    longIo.execute { // a download of a megabyte or more: not on the threads pages wait for
         val ok = try {
             Updater.install(this, REPO, ver)
             true

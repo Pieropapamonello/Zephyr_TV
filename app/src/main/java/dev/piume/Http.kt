@@ -25,7 +25,13 @@ internal object Http {
     /** The body of [url]; throws on a network error or a non-2xx answer. */
     fun open(url: String, headers: Map<String, String> = emptyMap()): InputStream = connect(url, headers).inputStream
 
-    fun text(url: String, headers: Map<String, String> = emptyMap()) = open(url, headers).use { it.readBytes().decodeToString() }
+    /** A page, a list, a JSON answer: none is bigger than this; more is a server gone wrong (or a stream). */
+    const val MAX_TEXT = 16L * 1024 * 1024
+
+    /** An image: a backdrop is a few hundred KB, a poster less. */
+    const val MAX_IMAGE = 12L * 1024 * 1024
+
+    fun text(url: String, headers: Map<String, String> = emptyMap()) = open(url, headers).use { it.readCapped(MAX_TEXT).decodeToString() }
 
     fun json(url: String, headers: Map<String, String> = emptyMap()) = JSONObject(text(url, headers + ("Accept" to "application/json")))
 
@@ -41,7 +47,30 @@ internal object Http {
             c.outputStream.use { it.write(body.toString().toByteArray()) }
         }
         val code = c.responseCode
-        val text = (if (code in 200..299) c.inputStream else c.errorStream)?.use { it.readBytes().decodeToString() }.orEmpty()
+        val text = (if (code in 200..299) c.inputStream else c.errorStream)?.use { it.readCapped(MAX_TEXT).decodeToString() }.orEmpty()
         return code to text
+    }
+}
+
+/**
+ * All of the stream, up to [max] bytes; past them it throws. What add-ons, other apps' listings and the web hand
+ * over isn't trusted to end: an endless or huge answer would take the home screen's memory (or the disk) with it.
+ */
+internal fun InputStream.readCapped(max: Long): ByteArray {
+    val out = java.io.ByteArrayOutputStream()
+    copyCapped(out, max)
+    return out.toByteArray()
+}
+
+/** Copies the stream to [out], up to [max] bytes; past them it throws. */
+internal fun InputStream.copyCapped(out: java.io.OutputStream, max: Long) {
+    val buf = ByteArray(64 * 1024)
+    var total = 0L
+    while (true) {
+        val n = read(buf)
+        if (n < 0) return
+        total += n
+        if (total > max) throw java.io.IOException("more than ${max / 1024 / 1024} MB")
+        out.write(buf, 0, n)
     }
 }

@@ -508,4 +508,6 @@
     <string name="title_last_watched">Last watched: %1$s</string>
     <string name="trakt_signed_out">Trakt refused the account. Connect it again in the user\'s settings.</string>
     <string name="trakt_refused">Trakt didn\'t accept the sign-in. Open this page again and try once more.</string>
+    <string name="title_hold_hint">Hold OK on an episode to mark it as watched or not watched.</string>
+    <string name="search_filter_clear">Clear the filters</string>
 </resources>

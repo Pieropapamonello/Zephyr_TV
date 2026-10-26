@@ -34,7 +34,7 @@ internal class BackdropCache(private val dir: File, private val maxFiles: Int = 
         }
         val part = File(dir, "${file.name}.${Thread.currentThread().id}$PART")
         try {
-            download(url).use { input -> part.outputStream().use { input.copyTo(it) } }
+            download(url).use { input -> part.outputStream().use { input.copyCapped(it, Http.MAX_IMAGE) } }
             if (!part.renameTo(file) && file.length() == 0L) throw java.io.IOException("couldn't save $url")
         } finally {
             part.delete()

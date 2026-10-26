@@ -473,6 +473,8 @@ class PlayerActivity : Activity() {
     private fun watched(i: Int) {
         val c = channels.getOrNull(i) ?: return
         if (!done.add(c.id)) return
+        // Watched here at the credits, maybe before Trakt's 80% (a short episode): Trakt counts it watched too.
+        if (i == at) scrobble("stop", 100.0)
         val meta = intent.getStringExtra(META_ID) ?: c.id
         val last = i == channels.size - 1 // the episodes after the one picked, to the series' last
         val next = if (last) null else entry(i + 1, 0L, 0L)
@@ -489,7 +491,7 @@ class PlayerActivity : Activity() {
      * Tells the user's Trakt account (when they have one) about the film or episode playing: "start" (it plays, again
      * after a pause), "pause", "stop" (left, or ended), with how far in it is.
      */
-    private fun scrobble(action: String) {
+    private fun scrobble(action: String, percent: Double? = null) {
         if (!vod) return
         val p = player ?: return
         val c = channels.getOrNull(at) ?: return
@@ -499,7 +501,7 @@ class PlayerActivity : Activity() {
             !scrobbling -> return // nothing told yet: nothing to pause or stop
             action == "stop" -> scrobbling = false
         }
-        val progress = p.currentPosition * 100.0 / duration
+        val progress = percent ?: (p.currentPosition * 100.0 / duration)
         val meta = intent.getStringExtra(META_ID) ?: c.id
         val dir = userDir
         ahead.execute { Trakt.scrobble(dir, action, c.id, meta, progress) }
@@ -532,8 +534,14 @@ class PlayerActivity : Activity() {
         ahead.execute {
             val bmp = c.logos.firstNotNullOfOrNull { uri ->
                 runCatching {
-                    val bytes = Http.open(uri).use { it.readBytes() }
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.also { logos[uri] = it }
+                    val bytes = Http.open(uri).use { it.readCapped(Http.MAX_IMAGE) }
+                    // A film's art is a backdrop, up to 4K: decoded at about the size it shows (240 dp wide at most).
+                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                    var sample = 1
+                    while (bounds.outWidth / (sample * 2) >= dp(240)) sample *= 2
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+                        ?.also { logos[uri] = it }
                 }.getOrNull()
             } ?: return@execute
             ui.post { if (still()) view.setImageBitmap(bmp) }
