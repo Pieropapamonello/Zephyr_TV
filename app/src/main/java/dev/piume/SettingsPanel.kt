@@ -93,6 +93,8 @@ internal fun MainActivity.closeLauncherSettings() {
     pageExit?.invoke()
     pageExit = null
     pageBack = null
+    pageSides = null
+    pageReturn = null
     settingsScrim.visibility = View.GONE
     homeFocusable(allApps.visibility != View.VISIBLE) // the PIN can open over All apps
     (panelFrom?.takeIf { it.isAttachedToWindow } ?: findViewById(R.id.launcherSettings)).requestFocus()
@@ -330,7 +332,7 @@ internal fun MainActivity.spotlightRows(): List<Triple<String, String, () -> Uni
         page(getString(R.string.setting_tmdb_api_key), if (hasKey) getString(R.string.tmdb_api_key_set) else getString(R.string.tmdb_api_key_empty)) {
             configureTmdbApiKey()
         },
-        // What Spotlight shows: one of TMDB's ready-made lists, or the user's own public TMDB list (a watchlist).
+        // What Spotlight shows: Cinemeta's popular titles, one of TMDB's ready-made lists, or the user's own public TMDB list (a watchlist).
         page(getString(R.string.setting_tmdb_source), sourceName(spotlightSource())) { pickSpotlightSource() },
         page(getString(R.string.setting_tmdb_list), prefs.getString(K.TMDB_LIST, null) ?: getString(R.string.tmdb_list_none)) { tmdbListFromPhone() },
         page(getString(R.string.setting_tmdb_language), lang) {
@@ -494,10 +496,8 @@ internal fun MainActivity.configureTmdbApiKey() {
         page(getString(R.string.dialog_clear)) {
             prefs.edit().remove(K.TMDB_API_KEY).apply()
             tmdbTrending = emptyList()
-            spotlightIo.execute { backdrops.clear() } // no Spotlight any more: give the space back
-            if (currentWallpaper() == "tmdb:trending") {
-                setWallpaper(dark, defaultWallpaper(dark))
-            }
+            spotlightIo.execute { backdrops.clear() } // TMDB's backdrops: Spotlight goes on with Cinemeta's
+            if (currentWallpaper() == "tmdb:trending") loadWallpaper()
             renderSettings(TMDB_KEY_ROW)
         }
     )
@@ -510,6 +510,7 @@ internal fun MainActivity.page(title: String, value: String = "", action: () -> 
 internal fun MainActivity.showPage(title: String, rows: List<Triple<String, String, () -> Unit>>, focus: Int = 0, top: View? = null, back: (() -> Unit)?) {
     pageExit?.invoke()
     pageExit = null
+    pageSides = null
     pageBack = back
     shownSection = -1 // renderSettings sets it again for section pages
     findViewById<TextView>(R.id.settingsTitle).text = title
@@ -743,17 +744,22 @@ internal fun MainActivity.pickNightHour(key: String, title: Int, row: Int) {
     }, current / 60) { renderSettings(row) }
 }
 
-/** What Spotlight shows: a key of TmdbClient.CATEGORIES, or "list" (only once a list is set: see tmdbListFromPhone). */
+/**
+ * What Spotlight shows: "cinemeta" (Cinemeta's popular titles, the default, and the only one without a TMDB key), a
+ * key of TmdbClient.CATEGORIES, or "list" (only once a list is set: see tmdbListFromPhone).
+ */
 internal fun MainActivity.spotlightSource(): String {
-    val s = prefs.getString(K.TMDB_SOURCE, "trending") ?: "trending"
+    if (prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank()) return "cinemeta"
+    val s = prefs.getString(K.TMDB_SOURCE, "cinemeta") ?: "cinemeta"
     return when {
         s == "list" && prefs.getString(K.TMDB_LIST, null) != null -> "list"
         s in TmdbClient.CATEGORIES -> s
-        else -> "trending"
+        else -> "cinemeta"
     }
 }
 
 internal fun MainActivity.sourceName(source: String) = getString(when (source) {
+    "cinemeta" -> R.string.tmdb_source_cinemeta
     "list" -> R.string.tmdb_source_list
     "trending_week" -> R.string.tmdb_source_trending_week
     "popular" -> R.string.tmdb_source_popular
@@ -770,7 +776,8 @@ internal fun MainActivity.sourceName(source: String) = getString(when (source) {
  */
 internal fun MainActivity.pickSpotlightSource() {
     val current = spotlightSource()
-    val sources = TmdbClient.CATEGORIES.keys.toList() + "list"
+    // TMDB's lists need its key: without one, Cinemeta alone.
+    val sources = listOf("cinemeta") + if (prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank()) emptyList() else TmdbClient.CATEGORIES.keys.toList() + "list"
     showPage(getString(R.string.setting_tmdb_source), sources.map { s ->
         page(sourceName(s), if (s == current) CHOSEN else "") {
             if (s == "list" && prefs.getString(K.TMDB_LIST, null) == null) return@page tmdbListFromPhone()

@@ -215,7 +215,7 @@
     <string name="tmdb_badge_movie">Film</string>
     <string name="tmdb_badge_tv">Série</string>
     <string name="toast_tmdb_fetch_failed">Impossible de charger les tendances de TMDB</string>
-    <string name="wallpaper_tmdb_trending">À la une TMDB (tendances)</string>
+    <string name="wallpaper_tmdb_trending">À la une</string>
     <string name="setting_tmdb_default_apps">Applis pour les suggestions</string>
     <string name="app_section">%1$s : %2$s</string>
     <string name="section_channels">Chaînes</string>
@@ -356,9 +356,10 @@
         <item quantity="many">%1$d résultats pour « %2$s ». Retour ferme la recherche</item>
         <item quantity="other">%1$d résultats pour « %2$s ». Retour ferme la recherche</item>
     </plurals>
-    <string name="screensaver_tmdb">Images d\'À la une (TMDB)</string>
+    <string name="screensaver_tmdb">Images d\'À la une</string>
     <!-- TMDB list as Spotlight source -->
     <string name="setting_tmdb_source">À la une affiche</string>
+    <string name="tmdb_source_cinemeta">Cinemeta : titres populaires</string>
     <string name="tmdb_source_trending">Titres tendance</string>
     <string name="tmdb_source_trending_week">Tendances de la semaine</string>
     <string name="tmdb_source_popular">Populaires</string>
@@ -432,6 +433,14 @@
     <string name="title_specials">Épisodes spéciaux</string>
     <string name="title_episode_row">%1$d. %2$s</string>
     <string name="title_episode_n">Épisode %1$d</string>
+    <string name="title_season_episode">Saison %1$d · Épisode %2$d</string>
+    <string name="title_special_n">Épisode spécial %1$d</string>
+    <string name="title_finding_streams">Recherche des flux…</string>
+    <plurals name="title_streams">
+        <item quantity="one">%d flux</item>
+        <item quantity="many">%d flux</item>
+        <item quantity="other">%d flux</item>
+    </plurals>
     <string name="title_no_streams">Aucune extension n\'a de flux pour ce titre</string>
     <string name="title_no_page">Aucune extension n\'a de fiche pour ce titre</string>
     <string name="player_episode">%1$s · S%2$d E%3$d</string>

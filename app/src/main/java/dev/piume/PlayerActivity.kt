@@ -106,6 +106,8 @@ class PlayerActivity : Activity() {
     private lateinit var loading: LinearLayout // in the middle while a channel loads: its logo, name and the status
     private lateinit var loadLogo: ImageView
     private lateinit var loadName: TextView
+    private lateinit var loadSub: TextView // under the name, for an episode: its season, number and name
+    private var loadFor = -1 // the channel (film, episode) the loading screen shows
     private lateinit var banner: LinearLayout
     private lateinit var logo: ImageView
     private lateinit var title: TextView
@@ -200,6 +202,7 @@ class PlayerActivity : Activity() {
         // none works.
         loadLogo = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER }
         loadName = text(28f, bold = true).apply { gravity = Gravity.CENTER; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
+        loadSub = text(20f).apply { gravity = Gravity.CENTER; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(6), 0, 0) }
         status = text(18f).apply { gravity = Gravity.CENTER; alpha = 0.8f; setPadding(0, dp(10), 0, 0) }
         loading = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -207,6 +210,7 @@ class PlayerActivity : Activity() {
             setPadding(dp(48), 0, dp(48), 0)
             addView(loadLogo, LinearLayout.LayoutParams(dp(240), dp(135)).apply { bottomMargin = dp(16) })
             addView(loadName, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+            addView(loadSub, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             addView(status, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             visibility = View.GONE
         }
@@ -497,9 +501,14 @@ class PlayerActivity : Activity() {
             return
         }
         val c = channels[at]
-        if (loadName.text.toString() != c.name) {
+        if (loadFor != at) {
+            val i = at
+            loadFor = i
             loadName.text = c.name
-            logoInto(loadLogo, c) { loadName.text.toString() == c.name }
+            // A film's or episode's line (an episode's season, number and name); a channel's what's on stays in the banner.
+            loadSub.text = if (vod) c.now.orEmpty() else ""
+            loadSub.visibility = if (loadSub.text.isEmpty()) View.GONE else View.VISIBLE
+            logoInto(loadLogo, c) { loadFor == i }
         }
         status.text = text
         loading.visibility = View.VISIBLE

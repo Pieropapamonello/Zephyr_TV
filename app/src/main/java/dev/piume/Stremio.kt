@@ -60,9 +60,13 @@ internal object Stremio {
         val streamsVod get() = provides("stream", "movie") || provides("stream", "series")
     }
 
-    /** A film or series in a catalog: its type and id (IMDb's, for most), name, art, year, genres and rating (IMDb's, "7.5"). */
+    /**
+     * A film or series in a catalog: its type and id (IMDb's, for most), name, art, year, genres and rating (IMDb's,
+     * "7.5"); what it's about and its TMDB id when the catalog tells (Cinemeta's do; not kept with the shelves).
+     */
     internal class Title(val type: String, val id: String, val name: String, val poster: String?, val background: String?,
-                         val logo: String?, val year: String?, val genres: List<String> = emptyList(), val rating: String? = null)
+                         val logo: String?, val year: String?, val genres: List<String> = emptyList(), val rating: String? = null,
+                         val description: String? = null, val tmdbId: Long? = null)
 
     /** A catalog of films or series, its first pages: what's under the Films or Series tile, or the add-on's own. */
     internal class Shelf(val catalog: Catalog, val titles: List<Title>)
@@ -346,7 +350,8 @@ internal object Stremio {
         val year = (text(m, "releaseInfo") ?: text(m, "year"))?.take(9)
         val genres = (m.optJSONArray("genres") ?: m.optJSONArray("genre"))?.let { g -> (0 until g.length()).map { g.optString(it) } }.orEmpty()
             .filter { it.isNotBlank() }
-        return Title(type, id, name, logo(text(m, "poster")), logo(text(m, "background")), logo(text(m, "logo")), year, genres, text(m, "imdbRating"))
+        return Title(type, id, name, logo(text(m, "poster")), logo(text(m, "background")), logo(text(m, "logo")), year, genres, text(m, "imdbRating"),
+            text(m, "description"), m.optLong("moviedb_id").takeIf { it > 0 })
     }
 
     /** The titles of a searchable catalog for [query]. Throws when the add-on can't be asked. */

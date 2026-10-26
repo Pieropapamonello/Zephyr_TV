@@ -215,7 +215,7 @@
     <string name="tmdb_badge_movie">Film</string>
     <string name="tmdb_badge_tv">Serie TV</string>
     <string name="toast_tmdb_fetch_failed">Impossibile caricare i contenuti di tendenza da TMDB</string>
-    <string name="wallpaper_tmdb_trending">In evidenza TMDB (tendenze)</string>
+    <string name="wallpaper_tmdb_trending">In evidenza</string>
     <string name="setting_tmdb_default_apps">App preferite per i suggerimenti</string>
     <string name="app_section">%1$s: %2$s</string>
     <string name="section_channels">Canali</string>
@@ -356,9 +356,10 @@
         <item quantity="many">%1$d risultati per “%2$s”. Indietro chiude la ricerca</item>
         <item quantity="other">%1$d risultati per “%2$s”. Indietro chiude la ricerca</item>
     </plurals>
-    <string name="screensaver_tmdb">Immagini di In evidenza (TMDB)</string>
+    <string name="screensaver_tmdb">Immagini di In evidenza</string>
     <!-- TMDB list as Spotlight source -->
     <string name="setting_tmdb_source">In evidenza mostra</string>
+    <string name="tmdb_source_cinemeta">Cinemeta: titoli popolari</string>
     <string name="tmdb_source_trending">Titoli di tendenza</string>
     <string name="tmdb_source_trending_week">Di tendenza questa settimana</string>
     <string name="tmdb_source_popular">I più popolari</string>
@@ -432,6 +433,14 @@
     <string name="title_specials">Speciali</string>
     <string name="title_episode_row">%1$d. %2$s</string>
     <string name="title_episode_n">Episodio %1$d</string>
+    <string name="title_season_episode">Stagione %1$d · Episodio %2$d</string>
+    <string name="title_special_n">Speciale %1$d</string>
+    <string name="title_finding_streams">Cerco gli stream…</string>
+    <plurals name="title_streams">
+        <item quantity="one">%d stream</item>
+        <item quantity="many">%d stream</item>
+        <item quantity="other">%d stream</item>
+    </plurals>
     <string name="title_no_streams">Nessun addon ha stream per questo titolo</string>
     <string name="title_no_page">Nessun addon ha la scheda di questo titolo</string>
     <string name="player_episode">%1$s · S%2$d E%3$d</string>

@@ -305,6 +305,11 @@ class MainActivity : Activity() {
         }
         // Only rebuild what changed, so focus stays where it was when returning from an app.
         if (appsDirty) refreshApps() else if (appRow.childCount == 0) renderApps()
+        // Back from the player a title's page opened: the page again (its progress, Resume), where it was.
+        pageReturn?.let { again ->
+            pageReturn = null
+            if (settingsScrim.visibility == View.VISIBLE) again()
+        }
         watchSessions() // once allowed (see NowPlaying): the Play queue follows what's playing
         ui.post(playingTick)
         refreshWatchNext()
@@ -505,7 +510,7 @@ class MainActivity : Activity() {
     internal fun wallpaperChoices(forDark: Boolean): List<Pair<String, String>> =
         listOf(plainWallpaper(forDark).let { wallpaperName(it) to it }) +
             BUNDLED_WALLPAPERS.keys.map { wallpaperName("res:$it") to "res:$it" } +
-            (if (!prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank()) listOf(wallpaperName("tmdb:trending") to "tmdb:trending") else emptyList()) +
+            listOf(wallpaperName("tmdb:trending") to "tmdb:trending") + // Cinemeta's titles without a TMDB key
             (wallpaperDir()?.listFiles { f -> f.extension.lowercase() in setOf("jpg", "jpeg", "png", "webp") }
                 ?.sortedBy { it.name }?.map { it.nameWithoutExtension to "file:${it.name}" } ?: emptyList()) +
             listOfNotNull(currentWallpaper(forDark).takeIf { it.startsWith("folder:") }?.let { wallpaperName(it) to it })
@@ -572,14 +577,18 @@ class MainActivity : Activity() {
             return BitmapFactory.decodeResource(resources, res)
         }
         if (choice == "tmdb:trending") {
-            val key = prefs.getString(K.TMDB_API_KEY, null) ?: return null
+            val key = prefs.getString(K.TMDB_API_KEY, null)?.takeIf { it.isNotBlank() }
             val type = prefs.getString(K.TMDB_TYPE, "all") ?: "all"
             // Trending is per day: refetch now and then, or a home screen that never closes keeps last week's list.
+            // Cinemeta's popular titles need no key (in the TV's language with one); TMDB's lists need it.
             if (tmdbTrending.isEmpty() || System.currentTimeMillis() - tmdbFetchedAt > TMDB_FRESH_MS) {
                 val listId = prefs.getString(K.TMDB_LIST, null)
-                val source = prefs.getString(K.TMDB_SOURCE, "trending") ?: "trending"
-                val fresh = if (source == "list" && listId != null) TmdbClient.fetchList(key, listId, tmdbLang(), type)
-                    else TmdbClient.fetchCategory(key, source.takeIf { it in TmdbClient.CATEGORIES } ?: "trending", tmdbLang(), type, TmdbClient.region(tmdbLang()))
+                val source = spotlightSource()
+                val fresh = when {
+                    key == null || source == "cinemeta" -> spotlightTitles(type)
+                    source == "list" && listId != null -> TmdbClient.fetchList(key, listId, tmdbLang(), type)
+                    else -> TmdbClient.fetchCategory(key, source, tmdbLang(), type, TmdbClient.region(tmdbLang()))
+                }
                 if (fresh.isNotEmpty()) {
                     // A different order each time, so the same top titles don't always open the round.
                     tmdbTrending = fresh.shuffled()
@@ -785,6 +794,8 @@ class MainActivity : Activity() {
 
     internal var pageBack: (() -> Unit)? = null
     internal var pageExit: (() -> Unit)? = null // cleanup when the page goes away (stops the upload server)
+    internal var pageSides: ((Int) -> Unit)? = null // Left/Right (-1, +1) on a page that has them: a series' seasons
+    internal var pageReturn: (() -> Unit)? = null // the page to show again, as it was, back from the player it opened
 
     internal var unlockedUntil = 0L // one PIN covers a few minutes of changes, until the home screen is left
     internal var pinFails = 0
@@ -1315,7 +1326,10 @@ class MainActivity : Activity() {
         // The PIN boxes and the text fields (city search, API key) use them themselves.
         if (settingsScrim.visibility == View.VISIBLE && currentFocus !== pinBox && currentFocus !is EditText &&
             (e.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || e.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
-        ) return true
+        ) {
+            if (e.action == KeyEvent.ACTION_DOWN) pageSides?.invoke(if (e.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1)
+            return true
+        }
         if (editing && editKey(e, confirm)) return true
         if (e.action == KeyEvent.ACTION_DOWN && settingsScrim.visibility != View.VISIBLE && allApps.visibility != View.VISIBLE) {
             currentFocus?.let { homeNav(it, e.keyCode) }?.let { it.requestFocus(); return true }
@@ -1753,9 +1767,8 @@ class MainActivity : Activity() {
                 pickScreensaver(2)
             },
         ) + listOfNotNull(
-            // Spotlight's trending backdrops, once there is a TMDB key to get them with.
-            if (prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank()) null
-            else page(getString(R.string.screensaver_tmdb), if (tmdb) CHOSEN else "") {
+            // Spotlight's backdrops (Cinemeta's, or TMDB's lists with a key).
+            page(getString(R.string.screensaver_tmdb), if (tmdb) CHOSEN else "") {
                 useGallery(SS_TMDB)
                 pickScreensaver(3)
             },

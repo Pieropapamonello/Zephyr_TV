@@ -215,7 +215,7 @@
     <string name="tmdb_badge_movie">Movie</string>
     <string name="tmdb_badge_tv">TV Series</string>
     <string name="toast_tmdb_fetch_failed">Couldn\'t load TMDB trending items</string>
-    <string name="wallpaper_tmdb_trending">TMDB Spotlight (Trending)</string>
+    <string name="wallpaper_tmdb_trending">Spotlight</string>
     <string name="setting_tmdb_default_apps">Default apps for suggestions</string>
     <string name="app_section">%1$s: %2$s</string>
     <string name="section_channels">Channels</string>
@@ -355,9 +355,10 @@
         <item quantity="one">%1$d result for “%2$s”. Back closes the search</item>
         <item quantity="other">%1$d results for “%2$s”. Back closes the search</item>
     </plurals>
-    <string name="screensaver_tmdb">Spotlight trending (TMDB)</string>
+    <string name="screensaver_tmdb">Spotlight</string>
     <!-- TMDB list as Spotlight source -->
     <string name="setting_tmdb_source">Spotlight shows</string>
+    <string name="tmdb_source_cinemeta">Cinemeta: popular titles</string>
     <string name="tmdb_source_trending">Trending titles</string>
     <string name="tmdb_source_trending_week">Trending this week</string>
     <string name="tmdb_source_popular">Popular</string>
@@ -431,6 +432,13 @@
     <string name="title_specials">Specials</string>
     <string name="title_episode_row">%1$d. %2$s</string>
     <string name="title_episode_n">Episode %1$d</string>
+    <string name="title_season_episode">Season %1$d · Episode %2$d</string>
+    <string name="title_special_n">Special %1$d</string>
+    <string name="title_finding_streams">Looking for streams…</string>
+    <plurals name="title_streams">
+        <item quantity="one">%d stream</item>
+        <item quantity="other">%d streams</item>
+    </plurals>
     <string name="title_no_streams">No add-on has streams for this title</string>
     <string name="title_no_page">No add-on has a page for this title</string>
     <string name="player_episode">%1$s · S%2$d E%3$d</string>

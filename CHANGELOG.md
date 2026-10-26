@@ -15,6 +15,14 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- On the page of a series, Left and Right go to the previous and next season.
+- Select an episode to see its page: its picture, season, number, name, date and description. Piume then asks the add-ons for its streams.
+- When more than one add-on has streams for the episode, the page has **Watch on** for each add-on, with the number of streams.
+- The player shows the season, the number and the name of the episode.
+- When you go back from the player, the page of the film, series or episode shows again, with its progress.
+- Spotlight works without a TMDB key. It shows the popular films and series of Cinemeta. With a TMDB key, their names, descriptions and genres are in your language.
+- With a TMDB key, you can still select one of the TMDB lists in **Piume settings → Spotlight → Source**.
+
 ## 4.1.0-beta.3
 
 - This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.

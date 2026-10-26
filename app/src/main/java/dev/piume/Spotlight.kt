@@ -166,7 +166,7 @@ internal fun MainActivity.providersOn() = prefs.getBoolean(K.TMDB_PROVIDERS, tru
  */
 internal fun MainActivity.showProviders(item: TmdbItem) {
     val key = prefs.getString(K.TMDB_API_KEY, null)
-    if (!providersOn() || key == null) return applyProviders(null)
+    if (!providersOn() || key == null || item.id <= 0) return applyProviders(null) // a Cinemeta title TMDB doesn't know: all of them
     val region = TmdbClient.region(tmdbLang())
     val known = TmdbClient.cachedProviders(item, region)
     applyProviders(known)
@@ -285,7 +285,7 @@ internal fun MainActivity.openInApp(a: App, title: TmdbItem? = spotlightItem()) 
         launch(a)
     }
     val key = prefs.getString(K.TMDB_API_KEY, null)
-    if (key == null || !TmdbClient.needsLookup(a.pkg)) return start(null)
+    if (key == null || !TmdbClient.needsLookup(a.pkg)) return start(TmdbClient.knownRef(a.pkg, item)) // a Cinemeta title's IMDb id, for Stremio
     spotlightIo.execute {
         val ref = TmdbClient.lookup(key, a.pkg, item, lang)
         ui.post { start(ref) }

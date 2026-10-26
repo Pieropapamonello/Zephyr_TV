@@ -215,7 +215,7 @@
     <string name="tmdb_badge_movie">Película</string>
     <string name="tmdb_badge_tv">Serie</string>
     <string name="toast_tmdb_fetch_failed">No se han podido cargar las tendencias de TMDB</string>
-    <string name="wallpaper_tmdb_trending">Destacados de TMDB (tendencias)</string>
+    <string name="wallpaper_tmdb_trending">Destacados</string>
     <string name="setting_tmdb_default_apps">Apps para las sugerencias</string>
     <string name="app_section">%1$s: %2$s</string>
     <string name="section_channels">Canales</string>
@@ -356,9 +356,10 @@
         <item quantity="many">%1$d resultados para “%2$s”. Atrás cierra la búsqueda</item>
         <item quantity="other">%1$d resultados para “%2$s”. Atrás cierra la búsqueda</item>
     </plurals>
-    <string name="screensaver_tmdb">Imágenes de Destacados (TMDB)</string>
+    <string name="screensaver_tmdb">Imágenes de Destacados</string>
     <!-- TMDB list as Spotlight source -->
     <string name="setting_tmdb_source">Destacados muestra</string>
+    <string name="tmdb_source_cinemeta">Cinemeta: títulos populares</string>
     <string name="tmdb_source_trending">Títulos en tendencia</string>
     <string name="tmdb_source_trending_week">Tendencia esta semana</string>
     <string name="tmdb_source_popular">Populares</string>
@@ -432,6 +433,14 @@
     <string name="title_specials">Especiales</string>
     <string name="title_episode_row">%1$d. %2$s</string>
     <string name="title_episode_n">Episodio %1$d</string>
+    <string name="title_season_episode">Temporada %1$d · Episodio %2$d</string>
+    <string name="title_special_n">Especial %1$d</string>
+    <string name="title_finding_streams">Buscando streams…</string>
+    <plurals name="title_streams">
+        <item quantity="one">%d stream</item>
+        <item quantity="many">%d streams</item>
+        <item quantity="other">%d streams</item>
+    </plurals>
     <string name="title_no_streams">Ningún complemento tiene streams para este título</string>
     <string name="title_no_page">Ningún complemento tiene la ficha de este título</string>
     <string name="player_episode">%1$s · T%2$d E%3$d</string>

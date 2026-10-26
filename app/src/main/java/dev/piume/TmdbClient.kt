@@ -16,6 +16,7 @@ data class TmdbItem(
     val genres: List<String>, // names in the language the list was fetched in
     val releaseDate: String?,
     val posterPath: String? = null,
+    val imdbId: String? = null, // known already: a title from Cinemeta (see MainActivity.spotlightTitles)
 )
 
 object TmdbClient {
@@ -246,10 +247,11 @@ object TmdbClient {
         }
     }
 
-    fun backdropUrl(path: String?): String? = if (path.isNullOrBlank()) null else "$IMAGE_BASE$path"
+    // A whole address (a Cinemeta title's background) is used as it is.
+    fun backdropUrl(path: String?): String? = if (path.isNullOrBlank()) null else if (path.startsWith("http")) path else "$IMAGE_BASE$path"
 
     /** The same image at card size. */
-    fun cardUrl(path: String?): String? = if (path.isNullOrBlank()) null else "https://image.tmdb.org/t/p/w780$path"
+    fun cardUrl(path: String?): String? = if (path.isNullOrBlank()) null else if (path.startsWith("http")) path else "https://image.tmdb.org/t/p/w780$path"
 
     // Nuvio's builds: GitHub ("full") and Play Store. Both take nuvio://tmdb/<type>/<id> and have no search link
     // (their stremio:// handler only installs addons).
@@ -330,6 +332,9 @@ object TmdbClient {
     fun needsLookup(pkg: String) = pkg == STREMIO || pkg == YOUTUBE
 
     /** What [openIntent] needs for [pkg] as its `ref`, or null. Network: call it off the UI thread. */
+    /** What [lookup] would find for [pkg] that's known already, without TMDB: a Cinemeta title's IMDb id, for Stremio. */
+    fun knownRef(pkg: String, item: TmdbItem): String? = if (pkg == STREMIO) item.imdbId else null
+
     fun lookup(apiKey: String, pkg: String, item: TmdbItem, language: String): String? = when (pkg) {
         STREMIO -> imdbId(apiKey, item)
         YOUTUBE -> trailerKey(apiKey, item, language)
@@ -386,6 +391,7 @@ object TmdbClient {
 
     /** The title's IMDb id ("tt…"), or null. Network: call it off the UI thread. */
     private fun imdbId(apiKey: String, item: TmdbItem): String? {
+        item.imdbId?.let { return it }
         val key = "${item.mediaType}/${item.id}"
         imdbCache[key]?.let { return it.ifEmpty { null } }
         val type = if (item.mediaType == "tv") "tv" else "movie"
