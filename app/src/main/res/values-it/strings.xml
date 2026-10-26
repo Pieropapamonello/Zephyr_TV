@@ -458,10 +458,9 @@
 
     <!-- Users and Trakt -->
     <string name="users_title">Utenti</string>
+    <string name="users_settings">Impostazioni</string>
     <string name="user_default">Io</string>
     <string name="user_add">Aggiungi utente</string>
-    <string name="user_use">Usa questo profilo</string>
-    <string name="user_in_use">In uso</string>
     <string name="user_rename">Rinomina</string>
     <string name="user_remove">Rimuovi</string>
     <string name="user_name_hint">Nome</string>

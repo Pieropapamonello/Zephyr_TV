@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- The users icon shows the users. Select a name to use that user. To add a user, connect Trakt, rename or remove a user, select **Settings** under the names.
+
 - Search has filters: **Films or series**, **Year** and **Genre**. Select **Search** with no words to find all the titles for the filters, from Cinemeta.
 - The users icon shows the first two letters of the name of the user in use.
 - The page of a film or episode shows when the user in use watched it. The page of a series shows the last episode watched and when.

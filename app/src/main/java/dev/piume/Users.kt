@@ -5,6 +5,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
 import dev.piume.MainActivity.Companion.CHOSEN
+import dev.piume.MainActivity.Companion.SUBMENU
 import java.io.File
 
 // Who's watching: Piume's users, each with what they watched and where they got to (VodProgress, VodWatched, in a
@@ -35,38 +36,55 @@ internal fun MainActivity.currentUser(): User = users().let { list -> list.first
 /** [user]'s folder: what they watched and where they got to, and their Trakt account. */
 internal fun MainActivity.vodDir(user: String = currentUser().id): File = if (user == "") filesDir else File(filesDir, "user_$user").apply { mkdirs() }
 
-/** Top bar, the users' icon: the users, the one in use first marked, and Add user. */
-internal fun MainActivity.showUsers(focus: Int = 0) {
-    showPanel()
+/**
+ * Top bar, the users' icon: the users, the one in use marked; OK on one uses it at once (and closes the panel).
+ * Under them, Settings: each user's page and Add user.
+ */
+internal fun MainActivity.showUsers(focus: Int? = null) {
+    if (settingsScrim.visibility != android.view.View.VISIBLE) showPanel()
     val current = currentUser()
     val list = users()
     showPage(getString(R.string.users_title), list.map { u ->
-        val trakt = Trakt.account(vodDir(u.id))?.user?.let { "Trakt: $it" }
-        page(u.name, listOfNotNull(trakt, if (u.id == current.id) CHOSEN else null).joinToString("  ")) { userPage(u) }
-    } + page(getString(R.string.user_add)) { userName(null) }, focus) { closeLauncherSettings() }
+        page(u.name, if (u.id == current.id) CHOSEN else "") {
+            if (u.id != current.id) useUser(u)
+            closeLauncherSettings()
+        }
+    } + page(getString(R.string.users_settings), SUBMENU) { usersSettings() },
+        focus ?: list.indexOfFirst { it.id == current.id }.coerceAtLeast(0)) { closeLauncherSettings() }
 }
 
-/** A user's page: use this profile, their Trakt account (connect, sync, disconnect), rename, remove. */
-internal fun MainActivity.userPage(u: User, focus: Int = 0) {
+/** The users' settings: each user (their page: Trakt, rename, remove), then Add user. */
+private fun MainActivity.usersSettings(focus: Int = 0) {
+    val current = currentUser()
+    val list = users()
+    showPage(getString(R.string.users_settings), list.map { u ->
+        val trakt = Trakt.account(vodDir(u.id))?.user?.let { "Trakt: $it" }
+        page(u.name, listOfNotNull(trakt, if (u.id == current.id) CHOSEN else null).joinToString("  ")) { userPage(u) }
+    } + page(getString(R.string.user_add)) { userName(null) }, focus) { showUsers(list.size) }
+}
+
+/** A user's page: their Trakt account (connect, or sync and disconnect), rename, remove. */
+private fun MainActivity.userPage(u: User, focus: Int = 0) {
     val dir = vodDir(u.id)
     val account = Trakt.account(dir)
-    val inUse = currentUser().id == u.id
-    val back = { showUsers(users().indexOfFirst { it.id == u.id }.coerceAtLeast(0)) }
+    val back = { usersSettings(users().indexOfFirst { it.id == u.id }.coerceAtLeast(0)) }
     showPage(u.name, listOfNotNull(
-        if (inUse) page(getString(R.string.user_in_use), CHOSEN) { } else page(getString(R.string.user_use)) { useUser(u); back() },
         if (account == null) page(getString(R.string.trakt_connect), getString(R.string.trakt_not_connected)) { traktSignIn(u) }
         else page(getString(R.string.trakt_sync), account.user) { syncTrakt(u.id, tell = true) },
-        account?.let { page(getString(R.string.trakt_disconnect)) { Trakt.forget(dir); userPage(u, 1) } },
+        account?.let { page(getString(R.string.trakt_disconnect)) { Trakt.forget(dir); userPage(u) } },
         page(getString(R.string.user_rename)) { userName(u) },
         // The first user stays: their files are Piume's own.
         if (u.id == "") null else page(getString(R.string.user_remove)) {
             saveUsers(users().filter { it.id != u.id })
-            if (inUse) useUser(users().first())
+            if (currentUser().id == u.id || prefs.getString(K.USER, "") == u.id) useUser(users().first())
             dir.deleteRecursively()
-            showUsers()
+            usersSettings()
         },
     ), focus, back = back)
 }
+
+/** The row of Rename on [u]'s page (after Trakt's one or two). */
+private fun MainActivity.renameRow(u: User) = if (Trakt.account(vodDir(u.id)) == null) 1 else 2
 
 /** [u] in use from now on: Continue Playing and the ✓ marks are theirs; synced with Trakt when they have it. */
 internal fun MainActivity.useUser(u: User) {
@@ -125,7 +143,7 @@ private fun MainActivity.userName(u: User?) {
         setPadding(0, dp(12), 0, dp(12))
         addView(input)
     }
-    val back = { if (u == null) showUsers(users().size) else userPage(u, 3) }
+    val back = { if (u == null) usersSettings(users().size) else userPage(u, renameRow(u)) }
     showPage(getString(if (u == null) R.string.user_add else R.string.user_rename), listOf(page(getString(R.string.dialog_save)) {
         val name = input.text?.toString()?.trim().orEmpty().ifEmpty { return@page }
         val list = users()
@@ -136,7 +154,7 @@ private fun MainActivity.userName(u: User?) {
         } else {
             saveUsers(list.map { if (it.id == u.id) User(it.id, name) else it })
             if (currentUser().id == u.id) usersChanged()
-            userPage(User(u.id, name), 3)
+            userPage(User(u.id, name), renameRow(u))
         }
     }), top = box, back = back)
     downFrom(input)
@@ -161,7 +179,7 @@ private fun MainActivity.traktSignIn(u: User) {
         addView(status.apply { gravity = Gravity.CENTER; maxLines = 2; setPadding(0, dp(12), 0, 0) })
     }
     val title = getString(R.string.trakt_connect) + " · " + u.name
-    showPage(title, listOf(page(getString(R.string.dialog_cancel)) { userPage(u, 1) }), top = box, back = { userPage(u, 1) })
+    showPage(title, listOf(page(getString(R.string.dialog_cancel)) { userPage(u) }), top = box, back = { userPage(u) })
     val until = System.currentTimeMillis() + 10 * 60_000L
     val dir = vodDir(u.id)
     fun ask() {
@@ -173,7 +191,7 @@ private fun MainActivity.traktSignIn(u: User) {
                 when (done) {
                     true -> {
                         Toast.makeText(this, getString(R.string.trakt_connected, Trakt.account(dir)?.user.orEmpty()), Toast.LENGTH_LONG).show()
-                        if (pageShowing(title)) userPage(u, 1)
+                        if (pageShowing(title)) userPage(u)
                         syncTrakt(u.id, tell = true)
                     }
                     false -> status.text = getString(R.string.trakt_expired)
