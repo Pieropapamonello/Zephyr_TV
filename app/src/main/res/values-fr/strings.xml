@@ -385,7 +385,7 @@
     <string name="addon_checking">Lecture de l\'extension…</string>
     <string name="toast_addon_added">%1$s ajoutée : %2$d chaînes</string>
     <string name="toast_addon_failed">Impossible de lire l\'extension. Vérifiez l\'adresse.</string>
-    <string name="toast_addon_no_tv">Cette extension n\'a pas de chaînes TV.</string>
+    <string name="toast_addon_no_tv">Cette extension n\'a pas de chaînes TV, de films ni de séries.</string>
     <string name="toast_addon_updated">Extension mise à jour : %1$d chaînes</string>
     <string name="toast_addon_removed">Extension supprimée</string>
     <string name="addon_update">Mettre à jour</string>
@@ -414,6 +414,22 @@
     <string name="player_pause">Pause</string>
     <string name="player_play">Lecture</string>
     <string name="player_paused">En pause</string>
+    <string name="vod_movies">Films</string>
+    <string name="vod_series">Séries</string>
+    <string name="setting_addons_vod">Films et séries</string>
+    <string name="addons_vod_tiles">Apps Films et Séries</string>
+    <string name="setting_cinemeta">Bibliothèque Cinemeta</string>
+    <string name="title_watch">Regarder</string>
+    <string name="title_watch_addons">Regarder avec les extensions</string>
+    <string name="title_resume">Reprendre à %1$s</string>
+    <string name="title_season">Saison %1$d</string>
+    <string name="title_specials">Épisodes spéciaux</string>
+    <string name="title_episode_row">%1$d. %2$s</string>
+    <string name="title_episode_n">Épisode %1$d</string>
+    <string name="title_no_streams">Aucune extension n\'a de flux pour ce titre</string>
+    <string name="title_no_page">Aucune extension n\'a de fiche pour ce titre</string>
+    <string name="player_episode">%1$s · S%2$d E%3$d</string>
+    <string name="toast_addon_added_vod">%1$s ajoutée : films et séries</string>
     <string name="player_stream_row">%1$d · %2$s</string>
     <string name="channel_play">Regarder</string>
 </resources>

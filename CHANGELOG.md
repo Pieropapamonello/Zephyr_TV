@@ -15,6 +15,15 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- Films and series from Stremio add-ons. **Cinemeta**, the catalog of Stremio, fills the new **Films** and **Series** tiles with rows. To give each add-on its own tile, select **Piume settings → Stremio add-ons → Films and series**. You can turn Cinemeta off in the same section.
+- Select a film or a series to see its page. A film has **Watch**. A series has its seasons and episodes.
+- Piume asks all the add-ons that have streams for the title. It plays the first stream that works, and tries the next one if it does not work. To choose another stream, use the **Stream** button in the player.
+- Only direct links play (http addresses, also .php addresses). Torrents do not play.
+- In the player, Left and Right go back and forward 10 seconds (more if you hold them). CH+ and CH- go to the previous and next episode. When an episode ends, the next one starts.
+- The films and episodes that you begin show in **Continue Playing** with their progress. They start again where you stopped.
+- Without a TMDB key, search finds films and series in the add-ons' catalogs. With a TMDB key, the page of a film or series has **Watch with the add-ons**.
+- You can add an add-on that has only films and series, with no TV channels.
+
 ## 4.0.2
 
 - In the player, OK puts a frame on the program on now. Press OK again to see the full description. Press Down to go to the buttons, and Up to go back to the program.

@@ -9,6 +9,8 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import dev.piume.MainActivity.Prog
 import dev.piume.MainActivity.Companion.ADDONS_TV_ROW
+import dev.piume.MainActivity.Companion.ADDONS_VOD_ROW
+import dev.piume.MainActivity.Companion.CINEMETA_ROW
 import dev.piume.MainActivity.Companion.ADDON_ADD_ROW
 import dev.piume.MainActivity.Companion.ADDON_ROWS
 import dev.piume.MainActivity.Companion.SUBMENU
@@ -85,24 +87,31 @@ internal fun MainActivity.addonsTv(): String {
     return if (mode == "tv" && !hasTvApp()) "iptv" else mode
 }
 
-/** The tiles the add-ons add to the apps row: one IPTV app, or one per add-on, or none (in the TV app). Runs on the io thread. */
+/**
+ * The tiles the add-ons add to the apps row: for TV channels one IPTV app, or one per add-on with channels, or none
+ * (in the TV app); for films and series the Films and Series tiles, or one per add-on with catalogs of them (see
+ * Titles). An add-on with both has one tile, with both. Runs on the io thread.
+ */
 internal fun MainActivity.addonApps(): List<MainActivity.App> {
     val urls = addonUrls()
-    if (urls.isEmpty()) return emptyList()
-    fun icon() = getDrawable(R.drawable.ic_live_tv)!!
-    return when (addonsTv()) {
-        "iptv" -> listOf(MainActivity.App(IPTV_PKG, getString(R.string.iptv_app), Intent(), icon()))
+    fun icon(res: Int) = getDrawable(res)!!
+    // Its logo once it's on disk (downloaded with its channels, see updateAddon), else the [res] mark.
+    fun tile(addon: Stremio.Addon, res: Int): MainActivity.App {
+        val logo = addon.logo?.takeIf { channelLogoFiles.has(it) }?.let { uri ->
+            runCatching { BitmapFactory.decodeFile(channelLogoFiles.get(uri) { openStream(it) }.path) }.getOrNull()
+        }
+        return MainActivity.App(STREMIO + addon.id, addon.name, Intent(), logo?.let { BitmapDrawable(resources, it) } ?: icon(res))
+    }
+    val tv = if (urls.isEmpty()) emptyList() else when (addonsTv()) {
+        "iptv" -> listOf(MainActivity.App(IPTV_PKG, getString(R.string.iptv_app), Intent(), icon(R.drawable.ic_live_tv)))
         "apps" -> urls.mapNotNull { url ->
             // Not read yet (just restored from a backup): its tile comes once it is.
             val addon = Stremio.saved(filesDir, url)?.addon ?: return@mapNotNull null.also { if (Stremio.due(filesDir, url)) updateAddon(url, null) }
-            // Its logo once it's on disk (downloaded with its channels, see updateAddon), else the TV mark.
-            val logo = addon.logo?.takeIf { channelLogoFiles.has(it) }?.let { uri ->
-                runCatching { BitmapFactory.decodeFile(channelLogoFiles.get(uri) { openStream(it) }.path) }.getOrNull()
-            }
-            MainActivity.App(STREMIO + addon.id, addon.name, Intent(), logo?.let { BitmapDrawable(resources, it) } ?: icon())
-        }.distinctBy { it.pkg }
+            if (addon.catalogs.isEmpty()) null else tile(addon, R.drawable.ic_live_tv) // no channels, no TV tile
+        }
         else -> emptyList()
     }
+    return (tv + vodApps() + vodTileAddons().map { tile(it, R.drawable.ic_movie) }).distinctBy { it.pkg }
 }
 
 /** The add-ons whose channels show under the tile [pkg]: all of them under the TV app or the IPTV app, one under its own. */
@@ -184,9 +193,11 @@ internal fun MainActivity.addAddon(input: String, done: () -> Unit = {}) {
     val url = Stremio.manifestUrl(input) ?: return Toast.makeText(this, getString(R.string.phone_epg_bad), Toast.LENGTH_LONG).show()
     Toast.makeText(this, getString(R.string.addon_checking), Toast.LENGTH_SHORT).show()
     updateAddon(url, null) { listing ->
+        val a = listing?.addon
         when {
-            listing == null -> Toast.makeText(this, getString(R.string.toast_addon_failed), Toast.LENGTH_LONG).show()
-            listing.rows.isEmpty() -> {
+            listing == null || a == null -> Toast.makeText(this, getString(R.string.toast_addon_failed), Toast.LENGTH_LONG).show()
+            // Neither channels nor films and series (catalogs or streams of them): nothing Piume can show.
+            listing.rows.isEmpty() && !a.streamsVod && a.vod.isEmpty() -> {
                 Stremio.forget(filesDir, url)
                 Toast.makeText(this, getString(R.string.toast_addon_no_tv), Toast.LENGTH_LONG).show()
             }
@@ -194,7 +205,8 @@ internal fun MainActivity.addAddon(input: String, done: () -> Unit = {}) {
                 saveAddonUrls(addonUrls() + url)
                 addonsChanged()
                 val channels = listing.rows.filter { it.genre == null }.sumOf { it.items.size }
-                Toast.makeText(this, getString(R.string.toast_addon_added, listing.addon.name, channels), Toast.LENGTH_LONG).show()
+                Toast.makeText(this, if (channels > 0) getString(R.string.toast_addon_added, a.name, channels)
+                    else getString(R.string.toast_addon_added_vod, a.name), Toast.LENGTH_LONG).show()
             }
         }
         done()
@@ -331,11 +343,30 @@ internal fun MainActivity.addonRows(): List<Triple<String, String, () -> Unit>> 
             if (next == "apps") addonUrls().forEach { updateAddon(it, null) }
             renderSettings(ADDONS_TV_ROW)
         },
+        // Films and series: the Films and Series tiles, an app per add-on, or none; and Cinemeta, their library.
+        page(getString(R.string.setting_addons_vod), addonsVodName(addonsVod())) {
+            val modes = listOf("tiles", "apps", "off")
+            prefs.edit().putString(K.ADDONS_VOD, modes[(modes.indexOf(addonsVod()) + 1) % modes.size]).apply()
+            addonsChanged()
+            renderSettings(ADDONS_VOD_ROW)
+        },
+        page(getString(R.string.setting_cinemeta), toggle(cinemetaOn())) {
+            prefs.edit().putBoolean(K.CINEMETA, !cinemetaOn()).apply()
+            if (cinemetaOn()) updateAddon(Stremio.CINEMETA, null)
+            addonsChanged()
+            renderSettings(CINEMETA_ROW)
+        },
         page(getString(R.string.setting_addon_add), SUBMENU) { addonFromPhone() },
     ) + addonUrls().mapIndexed { i, url ->
         page(Stremio.saved(filesDir, url)?.addon?.name ?: url, SUBMENU) { addonPage(url) }
     }
 }
+
+internal fun MainActivity.addonsVodName(mode: String) = getString(when (mode) {
+    "tiles" -> R.string.addons_vod_tiles
+    "apps" -> R.string.addons_tv_apps
+    else -> R.string.state_off
+})
 
 internal fun MainActivity.addonsTvName(mode: String) = getString(when (mode) {
     "tv" -> R.string.addons_tv_tv

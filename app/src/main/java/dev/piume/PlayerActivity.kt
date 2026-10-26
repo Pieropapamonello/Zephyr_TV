@@ -40,8 +40,10 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import java.io.File
+import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import org.json.JSONObject
 
 /**
@@ -52,6 +54,11 @@ import org.json.JSONObject
  * each was tried). OK or Info shows what's on, in short; OK again shows all of it (the add-on's guide, else the one
  * set in Piume settings). Up/Down show the banner, and with it up reach its buttons, as Left/Right do: Play/Pause, then Audio, Subtitles and Stream, each opening its list to pick from (holding OK, or Menu, opens audio and subtitles together). The audio and subtitles
  * picked are kept by language, for the next channels and the next time.
+ *
+ * Films and episodes (MODE "vod", see Titles) play the same way, their streams asked of every stream add-on at once
+ * and the first that works played: Left/Right then go back and on 10 seconds (more while held), CH+/CH- to the
+ * episode before and after, and the Stream button to another stream. It resumes where it was left (VodProgress),
+ * and an episode that ends goes on to the next, on the same kind of stream when there's one (its bingeGroup).
  *
  * Media3's ExoPlayer plays them, the one library Piume ships, for HLS and DASH as the TV's own player doesn't do
  * reliably. It runs in a process of its own (":player" in the manifest), so a stream or a decoder that hangs or
@@ -78,6 +85,14 @@ class PlayerActivity : Activity() {
     private var expanded = false // the banner shows all of what's on, not just its first line
     private var tune = 0 // counts tunings, so an answer for a channel left meanwhile is dropped
     private var typed = "" // number keys pressed so far
+    private var vod = false // films and episodes (see MODE): seeking, resuming, the next episode; else live channels
+    private var sources: List<Pair<String, String>> = emptyList() // films' and episodes' stream add-ons: address and name, in order
+    private var descs: List<String> = emptyList() // what each film or episode is about (OK on the banner shows it)
+    private var pendingSeek = -1L // where the stream starts once it's ready: resumed, or where a failed one stopped
+    private var group: String? = null // the bingeGroup of the stream playing: the next episode's like it first
+    private var seeking = false // the banner came up for a seek: Left/Right go on seeking, not to its buttons
+    private var ticks = 0
+    private val pool by lazy { Executors.newFixedThreadPool(4) } // a film's streams, every add-on at once
     private val fetched = ConcurrentHashMap<String, Pair<Long, List<Stremio.Stream>>>() // channel id to its streams, and when
     private val pages = ConcurrentHashMap<String, Stremio.Meta>()
     private val logos = ConcurrentHashMap<String, Bitmap>()
@@ -116,6 +131,7 @@ class PlayerActivity : Activity() {
 
     private val hideBanner = Runnable {
         expanded = false
+        seeking = false
         unfocusBanner()
         banner.animate().alpha(0f).setDuration(250).withEndAction { banner.visibility = View.GONE }.start()
     }
@@ -123,6 +139,18 @@ class PlayerActivity : Activity() {
     private val goTyped = Runnable {
         typed.toIntOrNull()?.let { n -> if (n in 1..channels.size) zapTo(n - 1, delay = 0) }
         typed = ""
+    }
+    /** Once a second while a film plays: its time in the banner; every ten, where it got to (VodProgress). */
+    private val tick = object : Runnable {
+        override fun run() {
+            ui.removeCallbacks(this)
+            if (!vod) return
+            if (player?.isPlaying == true) {
+                if (banner.visibility == View.VISIBLE && shown == at) fillGuide(channels[at])
+                if (++ticks % 10 == 0) saveProgress()
+            }
+            ui.postDelayed(this, 1000)
+        }
     }
     private val stuck = Runnable {
         if (player?.playWhenReady == false) return@Runnable // paused: waiting is what it's asked to do
@@ -133,9 +161,13 @@ class PlayerActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        base = intent.getStringExtra(BASE) ?: return finish()
+        vod = intent.getStringExtra(MODE) == MODE_VOD
+        base = intent.getStringExtra(BASE) ?: if (vod) "" else return finish()
         addon = intent.getStringExtra(ADDON).orEmpty()
         fun list(key: String) = intent.getStringArrayListExtra(key).orEmpty()
+        sources = list(SOURCES).zip(list(SOURCE_NAMES))
+        descs = list(DESCS)
+        if (vod && sources.isEmpty()) return finish()
         val ids = list(IDS)
         channels = ids.indices.map { i ->
             Channel(list(TYPES).getOrNull(i)?.ifEmpty { null } ?: "tv", ids[i], list(NAMES).getOrNull(i).orEmpty(),
@@ -145,6 +177,7 @@ class PlayerActivity : Activity() {
         if (channels.isEmpty()) return finish()
         build()
         play(intent.getIntExtra(INDEX, 0).coerceIn(0, channels.size - 1))
+        if (vod) ui.post(tick)
     }
 
     // ---------- screen ----------
@@ -288,7 +321,7 @@ class PlayerActivity : Activity() {
     private fun showBanner(i: Int, stay: Boolean = false) {
         val c = channels[i]
         title.text = c.name
-        position.text = getString(R.string.player_channel_n, i + 1, channels.size)
+        position.text = if (vod && channels.size < 2) "" else getString(R.string.player_channel_n, i + 1, channels.size)
         clock.text = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date())
         fillGuide(c)
         fillSource(i)
@@ -304,7 +337,7 @@ class PlayerActivity : Activity() {
         ui.removeCallbacks(hideBanner)
         if (!stay && !expanded) ui.postDelayed(hideBanner, if (bannerFocused()) BUTTONS_MS else BANNER_MS)
         // The add-on's page for the channel, for what's on and next: once, in the background.
-        if (!pages.containsKey(c.id)) ahead.execute {
+        if (!vod && !pages.containsKey(c.id)) ahead.execute {
             val meta = runCatching { Stremio.meta(base, c.type, c.id) }.getOrNull() ?: return@execute
             pages[c.id] = meta
             ui.post { if (shown == i && banner.visibility == View.VISIBLE) fillGuide(c) }
@@ -336,6 +369,7 @@ class PlayerActivity : Activity() {
 
     /** What's on: the add-on's (its page, else its catalog's line), else the guide set in Piume settings. */
     private fun fillGuide(c: Channel) {
+        if (vod) return fillTime(c)
         val meta = pages[c.id]
         val epg = if (meta?.description == null && meta?.now == null && c.now == null) guide?.let { Epg.nowAndNext(it, c.name) } else null
         val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT)
@@ -365,6 +399,63 @@ class PlayerActivity : Activity() {
         bar.visibility = if (progress == null) View.GONE else View.VISIBLE
         bar.progress = progress ?: 0
         desc.visibility = if (onNow.visibility == View.VISIBLE || bar.visibility == View.VISIBLE) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * A film's or episode's line in the banner: its name (an episode's), the time it's at and how long it is, with the
+     * bar; OK there shows what it's about.
+     */
+    private fun fillTime(c: Channel) {
+        val p = player?.takeIf { channels.indexOf(c) == at }
+        val duration = p?.duration?.takeIf { it > 0 && it != C.TIME_UNSET }
+        val pos = p?.currentPosition ?: 0
+        onNow.text = listOfNotNull(c.now, duration?.let { "${clockOf(pos)} / ${clockOf(it)}" }).joinToString("  ·  ")
+        more.text = descs.getOrNull(channels.indexOf(c)).orEmpty()
+        onNow.visibility = if (onNow.text.isNullOrEmpty()) View.GONE else View.VISIBLE
+        more.visibility = if (expanded && !more.text.isNullOrEmpty()) View.VISIBLE else View.GONE
+        bar.visibility = if (duration == null) View.GONE else View.VISIBLE
+        bar.progress = if (duration == null) 0 else (pos * 100 / duration).toInt().coerceIn(0, 100)
+        desc.visibility = if (onNow.visibility == View.VISIBLE || bar.visibility == View.VISIBLE) View.VISIBLE else View.GONE
+    }
+
+    /** "1:02:03", "4:05". */
+    private fun clockOf(ms: Long): String {
+        val s = ms / 1000
+        return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
+    }
+
+    /**
+     * Left/Right on a film: back or on [step] (-1, +1), 10 seconds, more while held; the banner shows where to, and
+     * Left/Right go on seeking while it's up for it.
+     */
+    private fun seek(step: Int, repeat: Int = 0) {
+        val p = player ?: return
+        val by = when { repeat > 20 -> 60_000L; repeat > 5 -> 30_000L; else -> 10_000L }
+        val duration = p.duration.takeIf { it > 0 && it != C.TIME_UNSET }
+        val to = (p.currentPosition + step * by).coerceIn(0, duration?.minus(1000) ?: Long.MAX_VALUE)
+        p.seekTo(to)
+        ui.removeCallbacks(stuck)
+        if (banner.visibility != View.VISIBLE) seeking = true
+        showBanner(at)
+        fillTime(channels[at])
+    }
+
+    /** Where the film or episode playing got to, for resuming it and for Continue Playing. */
+    private fun saveProgress() {
+        if (!vod) return
+        val p = player ?: return
+        val duration = p.duration.takeIf { it > 0 && it != C.TIME_UNSET } ?: return
+        val c = channels.getOrNull(at) ?: return
+        val e = VodProgress.Entry(c.id, intent.getStringExtra(META_TYPE) ?: c.type, intent.getStringExtra(META_ID) ?: c.id,
+            c.name, c.now.orEmpty(), intent.getStringExtra(POSTER) ?: c.logos.firstOrNull(), p.currentPosition, duration, System.currentTimeMillis())
+        ahead.execute { runCatching { VodProgress.put(filesDir, e) } }
+    }
+
+    /** A film or episode played to its end: off Continue Playing, then the next episode, or the player closes. */
+    private fun ended() {
+        val c = channels[at]
+        ahead.execute { runCatching { VodProgress.remove(filesDir, c.id) } }
+        if (at < channels.size - 1) play(at + 1) else finish()
     }
 
     /** OK on what's on: all of it (the description, what's next), or back to its first line. */
@@ -430,6 +521,8 @@ class PlayerActivity : Activity() {
             KeyEvent.KEYCODE_DPAD_DOWN -> { if (!buttonFocused() && buttons.childCount > 0) focusButton(0) else keepUp(); return true }
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
                 val step = if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                // A film's line is its timeline: Left/Right there seek.
+                if (vod && currentFocus === desc) { seek(step, event.repeatCount); keepUp(); return true }
                 val n = buttons.childCount
                 if (n > 0) focusButton(if (buttonFocused()) (buttons.indexOfChild(currentFocus) + step).coerceIn(0, n - 1) else if (step > 0) 0 else n - 1)
                 return true
@@ -438,7 +531,7 @@ class PlayerActivity : Activity() {
         }
         // The banner up (and done fading in) with buttons: Left/Right reach them; otherwise they change the stream.
         if ((keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) && banner.visibility == View.VISIBLE &&
-            banner.alpha >= 1f && shown == at && buttons.childCount > 0) {
+            banner.alpha >= 1f && shown == at && buttons.childCount > 0 && !(vod && seeking)) {
             focusButton(if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 0 else buttons.childCount - 1)
             return true
         }
@@ -450,8 +543,10 @@ class PlayerActivity : Activity() {
         when (keyCode) {
             KeyEvent.KEYCODE_CHANNEL_UP -> zap(+1)
             KeyEvent.KEYCODE_CHANNEL_DOWN -> zap(-1)
-            KeyEvent.KEYCODE_DPAD_LEFT -> otherStream(-1)
-            KeyEvent.KEYCODE_DPAD_RIGHT -> otherStream(+1)
+            KeyEvent.KEYCODE_DPAD_LEFT -> if (vod) seek(-1, event.repeatCount) else otherStream(-1)
+            KeyEvent.KEYCODE_DPAD_RIGHT -> if (vod) seek(+1, event.repeatCount) else otherStream(+1)
+            KeyEvent.KEYCODE_MEDIA_REWIND -> if (vod) seek(-1, 6)
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> if (vod) seek(+1, 6)
             // OK acts once let go (see onKeyUp), as holding it opens Audio and subtitles (onKeyLongPress).
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (event.repeatCount == 0) event.startTracking()
             KeyEvent.KEYCODE_INFO, KeyEvent.KEYCODE_GUIDE -> if (event.repeatCount == 0) okPressed()
@@ -495,6 +590,7 @@ class PlayerActivity : Activity() {
      * clear where OK goes next: all of it), else on the first button. Once in use, the banner's views take OK.
      */
     private fun okPressed() {
+        seeking = false
         showBanner(shown)
         if (shown == at) focusDesc()
     }
@@ -651,7 +747,8 @@ class PlayerActivity : Activity() {
         if (streams.size < 2) return
         openPanel(getString(R.string.player_streams)) { row ->
             streams.forEachIndexed { k, s ->
-                row(getString(R.string.player_stream_row, k + 1, s.title), k == tried) {
+                val name = if (s.source != null && !s.title.contains(s.source, ignoreCase = true)) "${s.source} · ${s.title}" else s.title
+                row(getString(R.string.player_stream_row, k + 1, name), k == tried) {
                     tried = k - 1
                     attempts = 0
                     next()
@@ -835,6 +932,7 @@ class PlayerActivity : Activity() {
 
     /** Tunes channel [i]: its streams (fetched ahead if they're fresh), the first that works, then its neighbours'. */
     private fun play(i: Int) {
+        if (vod && player != null) saveProgress() // the one left (still [at]), before the next
         if (i != at) previous = at
         at = i
         shown = i
@@ -844,6 +942,7 @@ class PlayerActivity : Activity() {
         tried = -1
         attempts = 0
         release()
+        pendingSeek = if (vod) VodProgress.position(filesDir, c.id) ?: -1L else -1L
         say(getString(R.string.player_loading))
         if (banner.visibility == View.VISIBLE) showBanner(i) // zapping: the banner keeps up with it; else the middle says it all
         net.execute {
@@ -859,12 +958,31 @@ class PlayerActivity : Activity() {
 
     private fun streamsOf(c: Channel): List<Stremio.Stream> {
         fetched[c.id]?.takeIf { System.currentTimeMillis() - it.first < FRESH_MS }?.let { return it.second }
+        if (vod) return titleStreams(c)
         return runCatching { Stremio.streams(base, c.type, c.id) }.onFailure { warn("streams failed: $it") }.getOrDefault(emptyList())
             .also { if (it.isNotEmpty()) fetched[c.id] = System.currentTimeMillis() to it }
     }
 
+    /**
+     * A film's or episode's streams from every stream add-on at once, in the add-ons' order (each its best first),
+     * waiting for the slow ones up to VOD_WAIT_MS; the same kind as the one playing (its bingeGroup) first.
+     */
+    private fun titleStreams(c: Channel): List<Stremio.Stream> {
+        val asked = sources.map { (b, name) ->
+            pool.submit(Callable { runCatching { Stremio.titleStreams(b, name, c.type, c.id) }.onFailure { warn("streams failed: ${b.substringAfter("://").substringBefore('/')} ($it)") }.getOrDefault(emptyList()) })
+        }
+        val until = System.currentTimeMillis() + VOD_WAIT_MS
+        val all = asked.flatMap { f ->
+            runCatching { f.get((until - System.currentTimeMillis()).coerceAtLeast(0), TimeUnit.MILLISECONDS) }.getOrElse { f.cancel(true); emptyList() }
+        }.distinctBy { it.url }
+        val list = group?.let { g -> all.sortedByDescending { it.group == g } } ?: all
+        if (list.isNotEmpty()) fetched[c.id] = System.currentTimeMillis() to list
+        return list
+    }
+
     /** The streams of the channels either side, so CH+ and CH- don't wait for the add-on (OMG checks each: ~1.5 s). */
     private fun prefetch(i: Int) {
+        if (vod) return run { if (i + 1 < channels.size) channels[i + 1].let { c -> ahead.execute { streamsOf(c) } } } // the next episode only
         if (channels.size < 2) return
         for (j in listOf(Math.floorMod(i + 1, channels.size), Math.floorMod(i - 1, channels.size)).distinct()) {
             val c = channels[j]
@@ -878,6 +996,8 @@ class PlayerActivity : Activity() {
      */
     private fun next() {
         ui.removeCallbacks(stuck)
+        // A film's stream that fails (or another picked) carries on where the last one got to.
+        if (vod) player?.let { if (it.currentPosition > 5000) pendingSeek = it.currentPosition }
         if (streams.isEmpty() || ++attempts > streams.size) {
             release()
             return say(getString(R.string.player_no_streams))
@@ -912,14 +1032,16 @@ class PlayerActivity : Activity() {
                     Player.STATE_READY -> {
                         ui.removeCallbacks(stuck)
                         say(null)
-                        remember(channels[at])
+                        if (pendingSeek > 0) p.seekTo(pendingSeek).also { pendingSeek = -1L }
+                        if (vod) group = streams.getOrNull(tried)?.group else remember(channels[at])
                         if (banner.visibility == View.VISIBLE && shown == at) showBanner(at)
                     }
                     // Waiting too long, at the start or later, is a stream that's stuck: the next one.
                     Player.STATE_BUFFERING -> {
                         ui.removeCallbacks(stuck)
-                        ui.postDelayed(stuck, STUCK_MS)
+                        ui.postDelayed(stuck, if (vod) VOD_STUCK_MS else STUCK_MS)
                     }
+                    Player.STATE_ENDED -> if (vod) ended()
                 }
             }
 
@@ -955,7 +1077,7 @@ class PlayerActivity : Activity() {
         p.setMediaItem(item)
         p.playWhenReady = true
         p.prepare()
-        ui.postDelayed(stuck, STUCK_MS)
+        ui.postDelayed(stuck, if (vod) VOD_STUCK_MS else STUCK_MS)
     }
 
     private fun release() {
@@ -988,9 +1110,10 @@ class PlayerActivity : Activity() {
         }
     }
 
-    // Live TV: nothing to come back to, so leaving the player closes it.
+    // Live TV: nothing to come back to, so leaving the player closes it; a film is kept where it got to.
     override fun onStop() {
         super.onStop()
+        saveProgress()
         finish()
     }
 
@@ -1000,6 +1123,7 @@ class PlayerActivity : Activity() {
         release()
         net.shutdownNow()
         ahead.shutdown()
+        if (vod) pool.shutdownNow()
     }
 
     companion object {
@@ -1013,6 +1137,16 @@ class PlayerActivity : Activity() {
         const val LOGOS = "logos" // the add-on's
         const val FALLBACK_LOGOS = "fallback_logos" // Piume's own, by name (see ChannelLogos)
         const val LAST_FILE = "last_channel.json"
+        const val MODE = "mode" // MODE_VOD for films and episodes; none for TV channels
+        const val MODE_VOD = "vod"
+        const val SOURCES = "sources" // films and episodes: the stream add-ons' addresses (without /manifest.json), in order
+        const val SOURCE_NAMES = "source_names"
+        const val DESCS = "descs" // what each film or episode is about
+        const val META_TYPE = "meta_type" // the title's type and id ("series", "tt…"), for its page from Continue Playing
+        const val META_ID = "meta_id"
+        const val POSTER = "poster" // the title's art, for its Continue Playing card
+        private const val VOD_WAIT_MS = 12_000L // a film's slower add-ons are waited for this long
+        private const val VOD_STUCK_MS = 30_000L // a film's stream buffering longer than this: the next
         private const val CHOICES_FILE = "player" // not K.FILE: the home screen's process writes that one whole
         private const val AUDIO_LANG = "audio_lang"
         private const val TEXT_LANG = "text_lang" // "" for off; none for the stream's own choice

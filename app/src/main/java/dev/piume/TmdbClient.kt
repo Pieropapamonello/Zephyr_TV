@@ -339,6 +339,9 @@ object TmdbClient {
         return best
     }
 
+    /** The title's IMDb id ("tt…"), or null, for the Stremio add-ons. Network: call it off the UI thread. */
+    fun imdbIdOf(apiKey: String, item: TmdbItem): String? = imdbId(apiKey, item)
+
     /** The title's IMDb id ("tt…"), or null. Network: call it off the UI thread. */
     private fun imdbId(apiKey: String, item: TmdbItem): String? {
         val key = "${item.mediaType}/${item.id}"

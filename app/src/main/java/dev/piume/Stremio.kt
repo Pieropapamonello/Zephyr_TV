@@ -8,23 +8,72 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Stremio add-ons as a source of TV channels: the user adds an add-on by its manifest's address (an OMG+ TV
- * configuration, or any add-on with "tv" catalogs) and each of its TV catalogs becomes rows, the whole catalog and
- * one per category (its "genre" options). What the add-on lists is saved in a small file and read again every
- * quarter of an hour, so the rows show at once and what's on stays fresh. Network and disk: off the UI thread.
+ * Stremio add-ons, for TV channels and for films and series. The user adds an add-on by its manifest's address.
+ *
+ * TV: each "tv" catalog (an OMG+ TV configuration's) becomes rows, the whole catalog and one per category (its "genre"
+ * options). What the add-on lists is saved in a small file and read again every few minutes, so the rows show at
+ * once and what's on stays fresh.
+ *
+ * Films and series: most add-ons only give streams for a title they're asked about (by its IMDb id, "tt…"), and
+ * have no list of their own; the library comes from catalog add-ons, Cinemeta first (Stremio's own, see CINEMETA).
+ * Their "movie" and "series" catalogs (the first pages) are saved too, read again every few hours; a title's page
+ * (with a series' episodes) is asked when it opens, and its streams from every add-on that has them.
+ * Network and disk: off the UI thread.
  */
 internal object Stremio {
     private const val MAX_AGE_MS = 5 * 60_000L // the channels are read again after this long ("on now" goes stale)
     private const val RETRY_MS = 5 * 60_000L // and after a failure, not before five minutes
     private const val MAX_PAGES = 40 // a catalog's pages read at most (100 channels each, on OMG)
+    private const val VOD_AGE_MS = 6 * 3600_000L // films' and series' catalogs are read again after this long
+    private const val VOD_PAGES = 2 // a film or series catalog's pages read (Cinemeta: 50 a page)
 
-    /** One of the add-on's catalogs of [type] "tv", with the categories it can be filtered by. */
-    internal class Catalog(val type: String, val id: String, val name: String, val genres: List<String>)
+    /** Stremio's own catalog add-on: the films' and series' library (IMDb's), on by default (see MainActivity.cinemetaOn). */
+    const val CINEMETA = "https://v3-cinemeta.strem.io/manifest.json"
 
-    /** An add-on as its manifest describes it: [url] is the manifest's own address. */
-    internal class Addon(val url: String, val id: String, val name: String, val logo: String?, val catalogs: List<Catalog>) {
+    /**
+     * One of the add-on's catalogs of [type] ("tv", "movie", "series"), the categories it can be filtered by, whether
+     * it can be searched, and whether it can be [listed] (a search-only one can't).
+     */
+    internal class Catalog(val type: String, val id: String, val name: String, val genres: List<String>, val search: Boolean = false,
+                           val listed: Boolean = true)
+
+    /**
+     * What an add-on answers: [name] ("stream", "meta", "subtitles", "catalog") for [types], and only for ids that
+     * start with one of [prefixes] (null: any id).
+     */
+    internal class Resource(val name: String, val types: List<String>, val prefixes: List<String>?)
+
+    /**
+     * An add-on as its manifest describes it: [url] is the manifest's own address; [catalogs] its TV ones, [vod] its
+     * films' and series' ones (each listable without a filter, or searchable).
+     */
+    internal class Addon(val url: String, val id: String, val name: String, val logo: String?, val catalogs: List<Catalog>,
+                         val resources: List<Resource> = emptyList(), val vod: List<Catalog> = emptyList()) {
         val base get() = url.removeSuffix("/manifest.json")
+
+        /** Whether the add-on answers [resource] for an item of [type] with this [id] (or any id, when null). */
+        fun provides(resource: String, type: String, id: String? = null) = resources.any { r ->
+            r.name == resource && type in r.types && (id == null || r.prefixes == null || r.prefixes.any { id.startsWith(it) })
+        }
+
+        /** Whether it gives streams for films or series (the add-ons asked when a title plays). */
+        val streamsVod get() = provides("stream", "movie") || provides("stream", "series")
     }
+
+    /** A film or series in a catalog: its type and id (IMDb's, for most), name, art and year. */
+    internal class Title(val type: String, val id: String, val name: String, val poster: String?, val background: String?,
+                         val logo: String?, val year: String?)
+
+    /** A catalog of films or series, its first pages: what's under the Films or Series tile, or the add-on's own. */
+    internal class Shelf(val catalog: Catalog, val titles: List<Title>)
+
+    /** A series' episode, as a title's page lists them: its id for the streams ("tt…:1:3"), season and number, name. */
+    internal class Episode(val id: String, val season: Int, val episode: Int, val name: String, val released: String?,
+                           val thumbnail: String?, val overview: String?)
+
+    /** A title's page: what it's about and, for a series, its episodes in order (specials, season 0, last). */
+    internal class TitleMeta(val title: Title, val description: String?, val genres: List<String>, val rating: String?,
+                             val runtime: String?, val episodes: List<Episode>)
 
     /** A channel in a catalog: what to ask the streams for, its name and logo, what's on (if the add-on says), its categories. */
     internal class Item(val type: String, val id: String, val name: String, val logo: String?, val now: String?, val genres: List<String> = emptyList())
@@ -35,8 +84,12 @@ internal object Stremio {
     /** What's saved for an add-on: its manifest and rows, and when it was read ([at]: it tells one reading from the next). */
     internal class Listing(val addon: Addon, val rows: List<Row>, val at: Long = 0)
 
-    /** A way to play a channel: the address, its name ("Rai 1 (2)") and the headers the player must send. */
-    internal class Stream(val url: String, val title: String, val headers: Map<String, String>)
+    /**
+     * A way to play a channel or a title: the address, its name ("Rai 1 (2)", "1080p · Film.mkv") and the headers the
+     * player must send; [group] is its bingeGroup (the same kind of stream for the next episode).
+     */
+    internal class Stream(val url: String, val title: String, val headers: Map<String, String>, val group: String? = null,
+                          val source: String? = null) // source: the add-on it came from, when streams of several are mixed
 
     @Volatile private var listings: Map<String, Listing> = emptyMap() // manifest address to what's saved, once read
     private val updating = java.util.Collections.synchronizedSet(HashSet<String>())
@@ -110,6 +163,7 @@ internal object Stremio {
             if (!part.renameTo(f)) throw java.io.IOException("can't save ${f.name}")
             failed(dir, url).delete()
             File(dir, "stremio_${key(url)}.json").delete() // v1's
+            if (addon.vod.isNotEmpty() && vodDue(dir, url)) runCatching { updateShelves(dir, addon) }.onFailure { warn("Stremio catalogs failed: ${Uri.host(url)} ($it)") }
             return Listing(addon, rows, f.lastModified()).also { listings = listings + (url to it) }
         } catch (e: Exception) {
             warn("Stremio add-on failed: ${Uri.host(url)} ($e)")
@@ -123,21 +177,54 @@ internal object Stremio {
     /** The add-on in a manifest: its name, logo and TV catalogs (categories without a letter or digit are left out: OMG's ⚙️). */
     internal fun addon(url: String, m: JSONObject): Addon {
         val catalogs = ArrayList<Catalog>()
+        val vod = ArrayList<Catalog>()
         val list = m.optJSONArray("catalogs") ?: JSONArray()
         for (i in 0 until list.length()) {
             val c = list.optJSONObject(i) ?: continue
-            if (c.optString("type") != "tv") continue
+            val type = c.optString("type")
+            if (type != "tv" && type != "movie" && type != "series") continue
             val id = c.optString("id").takeIf { it.isNotEmpty() } ?: continue
-            val extra = c.optJSONArray("extra") ?: JSONArray()
-            // A catalog that can't be listed without a filter (search only, or a required genre) isn't a list of channels.
-            val required = (0 until extra.length()).mapNotNull { extra.optJSONObject(it) }.filter { it.optBoolean("isRequired") }
-            if (required.any { it.optString("name") != "genre" }) continue
-            val genres = (0 until extra.length()).mapNotNull { extra.optJSONObject(it) }.firstOrNull { it.optString("name") == "genre" }
+            val extras = c.optJSONArray("extra")?.let { e -> (0 until e.length()).mapNotNull { e.optJSONObject(it) } }.orEmpty()
+            val search = extras.any { it.optString("name") == "search" }
+            val name = c.optString("name").ifBlank { m.optString("name") }
+            // A catalog that can't be listed without a filter (search only, or a required genre) isn't a list: for
+            // films and series it can still be searched.
+            val listable = extras.filter { it.optBoolean("isRequired") }.all { it.optString("name") == "genre" }
+            if (type != "tv") {
+                // A required genre is a list only once one is picked: searched, not listed.
+                val open = extras.none { it.optBoolean("isRequired") }
+                if (open || search) vod += Catalog(type, id, name, emptyList(), search, listed = open)
+                continue
+            }
+            if (!listable) continue
+            val genres = extras.firstOrNull { it.optString("name") == "genre" }
                 ?.optJSONArray("options")?.let { o -> (0 until o.length()).map { o.optString(it) } }.orEmpty()
                 .filter { g -> g.any { it.isLetterOrDigit() } }
-            catalogs += Catalog("tv", id, c.optString("name").ifBlank { m.optString("name") }, genres)
+            catalogs += Catalog("tv", id, name, genres, search)
         }
-        return Addon(url, m.optString("id").ifBlank { url }, m.optString("name").ifBlank { Uri.host(url) }, text(m, "logo"), catalogs)
+        return Addon(url, m.optString("id").ifBlank { url }, m.optString("name").ifBlank { Uri.host(url) }, text(m, "logo"), catalogs,
+            resources(m), vod)
+    }
+
+    /**
+     * What the add-on answers, from its manifest's resources: each a name ("stream") with the manifest's types and
+     * id prefixes, or an object with its own. A catalog add-on's "catalog" isn't one of them (its catalogs say it).
+     */
+    internal fun resources(m: JSONObject): List<Resource> {
+        fun strings(a: JSONArray?) = a?.let { (0 until it.length()).map { i -> it.optString(i) }.filter { s -> s.isNotEmpty() } }
+        val types = strings(m.optJSONArray("types")).orEmpty()
+        val prefixes = strings(m.optJSONArray("idPrefixes"))?.takeIf { it.isNotEmpty() }
+        val list = m.optJSONArray("resources") ?: return emptyList()
+        return (0 until list.length()).mapNotNull { i ->
+            when (val r = list.opt(i)) {
+                is String -> Resource(r, types, prefixes)
+                is JSONObject -> r.optString("name").takeIf { it.isNotEmpty() }?.let { name ->
+                    // Its own types; without its own prefixes it takes any id (the protocol's rule for the full notation).
+                    Resource(name, strings(r.optJSONArray("types")) ?: types, strings(r.optJSONArray("idPrefixes"))?.takeIf { it.isNotEmpty() })
+                }
+                else -> null
+            }
+        }
     }
 
     /**
@@ -189,6 +276,106 @@ internal object Stremio {
         return url
     }
 
+    // ---------- films and series ----------
+
+    private fun shelfFile(dir: File, url: String) = File(dir, "stremio_vod_${key(url)}.json")
+
+    /** Whether the add-on's film and series catalogs are missing or a few hours old. */
+    fun vodDue(dir: File, url: String): Boolean {
+        val f = shelfFile(dir, url)
+        return !f.exists() || System.currentTimeMillis() - f.lastModified() > VOD_AGE_MS
+    }
+
+    @Volatile private var shelves: Map<String, Pair<Long, List<Shelf>>> = emptyMap()
+
+    /** The add-on's film and series catalogs as last read (their first pages), or none yet. Reads the disk the first time. */
+    fun shelves(dir: File, addon: Addon): List<Shelf> {
+        val f = shelfFile(dir, addon.url)
+        shelves[addon.url]?.takeIf { it.first == f.lastModified() }?.let { return it.second }
+        if (!f.exists()) return emptyList()
+        val saved = runCatching { JSONObject(f.readText()) }.getOrNull() ?: return emptyList()
+        val list = saved.optJSONArray("shelves") ?: JSONArray()
+        val out = (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { o ->
+            val catalog = addon.vod.firstOrNull { it.type == o.optString("type") && it.id == o.optString("catalog") } ?: return@mapNotNull null
+            Shelf(catalog, titles(o))
+        }
+        shelves = shelves + (addon.url to (f.lastModified() to out))
+        return out
+    }
+
+    /** Reads the add-on's film and series catalogs again (the listable ones, their first pages) and saves them. */
+    fun updateShelves(dir: File, addon: Addon): List<Shelf> {
+        val out = addon.vod.filter { it.listed }.mapNotNull { c ->
+            val titles = LinkedHashMap<String, Title>()
+            for (page in 0 until VOD_PAGES) {
+                val extra = if (titles.isEmpty()) "" else "/skip=${titles.size}"
+                val metas = runCatching { titles(Http.json("${addon.base}/catalog/${enc(c.type)}/${enc(c.id)}$extra.json")) }.getOrNull() ?: break
+                val before = titles.size
+                for (t in metas) titles.putIfAbsent(t.id, t)
+                if (metas.size < 50 || titles.size == before) break
+            }
+            if (titles.isEmpty()) null else Shelf(c, titles.values.toList())
+        }
+        val f = shelfFile(dir, addon.url)
+        val part = File(dir, f.name + ".part")
+        part.writeText(JSONObject().put("shelves", JSONArray(out.map { shelf ->
+            JSONObject().put("type", shelf.catalog.type).put("catalog", shelf.catalog.id).put("metas", JSONArray(shelf.titles.map { t ->
+                JSONObject().put("type", t.type).put("id", t.id).put("name", t.name).put("poster", t.poster ?: JSONObject.NULL)
+                    .put("background", t.background ?: JSONObject.NULL).put("logo", t.logo ?: JSONObject.NULL).put("releaseInfo", t.year ?: JSONObject.NULL)
+            }))
+        })).toString())
+        if (!part.renameTo(f)) throw java.io.IOException("can't save ${f.name}")
+        shelves = shelves + (addon.url to (f.lastModified() to out))
+        return out
+    }
+
+    /** The films or series in a catalog page (or a saved shelf): those with an id, a name and a type of theirs. */
+    internal fun titles(page: JSONObject): List<Title> {
+        val metas = page.optJSONArray("metas") ?: return emptyList()
+        return (0 until metas.length()).mapNotNull { metas.optJSONObject(it) }.mapNotNull { m -> title(m) }
+    }
+
+    private fun title(m: JSONObject, fallbackType: String? = null): Title? {
+        val id = m.optString("id").takeIf { it.isNotEmpty() } ?: return null
+        val name = m.optString("name").trim().takeIf { it.isNotEmpty() } ?: return null
+        val type = m.optString("type").ifBlank { fallbackType ?: return null }
+        if (type != "movie" && type != "series") return null
+        val year = (text(m, "releaseInfo") ?: text(m, "year"))?.take(9)
+        return Title(type, id, name, logo(text(m, "poster")), logo(text(m, "background")), logo(text(m, "logo")), year)
+    }
+
+    /** The titles of a searchable catalog for [query]. Throws when the add-on can't be asked. */
+    fun search(addon: Addon, c: Catalog, query: String): List<Title> =
+        titles(Http.json("${addon.base}/catalog/${enc(c.type)}/${enc(c.id)}/search=${enc(query)}.json"))
+
+    /** A title's page from an add-on that has it (Cinemeta, for IMDb ids). Throws when the add-on can't be asked. */
+    fun titleMeta(base: String, type: String, id: String): TitleMeta? = titleMeta(Http.json("$base/meta/${enc(type)}/${enc(id)}.json"), type)
+
+    internal fun titleMeta(answer: JSONObject, type: String): TitleMeta? {
+        val m = answer.optJSONObject("meta") ?: return null
+        val title = title(m, type) ?: return null
+        val genres = (m.optJSONArray("genres") ?: m.optJSONArray("genre"))?.let { g -> (0 until g.length()).map { g.optString(it) } }.orEmpty()
+            .filter { it.isNotBlank() }
+        val list = m.optJSONArray("videos") ?: JSONArray()
+        val episodes = if (type != "series") emptyList() else (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { v ->
+            val id = v.optString("id").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            val season = v.optInt("season", -1).takeIf { it >= 0 } ?: return@mapNotNull null
+            val episode = v.optInt("episode", v.optInt("number", 0))
+            Episode(id, season, episode, (text(v, "name") ?: text(v, "title")).orEmpty(), text(v, "released"), logo(text(v, "thumbnail")),
+                text(v, "overview") ?: text(v, "description"))
+        }.distinctBy { it.id }.sortedWith(compareBy({ if (it.season == 0) Int.MAX_VALUE else it.season }, { it.episode }))
+        return TitleMeta(title, text(m, "description"), genres, text(m, "imdbRating"), text(m, "runtime"), episodes)
+    }
+
+    /**
+     * The ways to play a film or an episode ([id], "tt…:1:3" for an episode) from the add-on at [base] (called [name]), best first as it lists
+     * them: direct web addresses only (no torrents), each named by its quality line and its file ("1080p · Film.mkv").
+     */
+    fun titleStreams(base: String, name: String, type: String, id: String): List<Stream> =
+        streams(Http.json("$base/stream/${enc(type)}/${enc(id)}.json"), vod = true).map {
+            Stream(it.url, it.title, it.headers, it.group, name)
+        }
+
     /** What the add-on tells about a channel on its page: what's on and next ([description]), and what's on in short. */
     internal class Meta(val description: String?, val now: String?)
 
@@ -223,13 +410,23 @@ internal object Stremio {
     /** The ways to play channel [id], in the add-on's order (best first); those without a web address are left out. */
     fun streams(base: String, type: String, id: String): List<Stream> = streams(Http.json("$base/stream/${enc(type)}/${enc(id)}.json"))
 
-    internal fun streams(answer: JSONObject): List<Stream> {
+    /**
+     * The streams in an add-on's answer that have a web address (torrents, YouTube ids and outside links are left
+     * out), with the headers they need. A channel's is named by its title's first line; a film's or episode's
+     * ([vod]) by its name (the quality, "1080p") and its description's first line (the file).
+     */
+    internal fun streams(answer: JSONObject, vod: Boolean = false): List<Stream> {
         val list = answer.optJSONArray("streams") ?: return emptyList()
         return (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { s ->
             val url = text(s, "url")?.takeIf { it.startsWith("http://") || it.startsWith("https://") } ?: return@mapNotNull null
-            val request = s.optJSONObject("behaviorHints")?.optJSONObject("proxyHeaders")?.optJSONObject("request")
+            val hints = s.optJSONObject("behaviorHints")
+            val request = hints?.optJSONObject("proxyHeaders")?.optJSONObject("request")
             val headers = request?.keys()?.asSequence()?.associateWith { request.optString(it) }?.filterValues { it.isNotEmpty() }.orEmpty()
-            Stream(url, (text(s, "title") ?: text(s, "name") ?: "").lines().first().trim(), headers)
+            val described = text(s, "description") ?: text(s, "title")
+            val title = if (!vod) (text(s, "title") ?: text(s, "name") ?: "").lines().first().trim()
+                else listOfNotNull(text(s, "name")?.lines()?.map { it.trim() }?.filter { it.isNotEmpty() }?.joinToString(" "),
+                    described?.lines()?.firstOrNull { it.isNotBlank() }?.trim()).distinct().joinToString(" · ")
+            Stream(url, title, headers, hints?.let { text(it, "bingeGroup") })
         }
     }
 

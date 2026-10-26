@@ -47,6 +47,8 @@ internal object K {
 
     // Stremio add-ons
     const val ADDONS = "addons" // the add-ons' manifest addresses, in order, one per line (see Addons)
+    const val ADDONS_VOD = "addons_vod" // where their films and series show: "tiles" (Films and Series), "apps" (an app each), "off"
+    const val CINEMETA = "cinemeta" // Cinemeta, Stremio's catalog of films and series, on (the default) or off
     const val ADDONS_TV = "addons_tv" // where their TV channels show: "tv" (the TV app), "iptv" (one IPTV app), "apps" (an app each)
 
     // Spotlight
