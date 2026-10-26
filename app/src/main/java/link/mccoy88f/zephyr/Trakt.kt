@@ -197,10 +197,17 @@ internal object Trakt {
             val show = imdb(s.optJSONObject("show")) ?: continue
             val name = s.optJSONObject("show")?.optString("title").orEmpty()
             val reset = s.optString("reset_at").takeIf { it.isNotBlank() && it != "null" } // a rewatch began: earlier ones don't count
+            val showTime = time(s.optString("last_watched_at"))
+            var count = 0
             for (season in objects(s.optJSONArray("seasons"))) for (e in objects(season.optJSONArray("episodes"))) {
-                val at = e.optString("last_watched_at")
-                if (reset != null && at < reset) continue
-                out += VodWatched.Mark("$show:${season.optInt("number")}:${e.optInt("number")}", show, time(at), name)
+                val at = e.optString("last_watched_at").takeIf { it.isNotBlank() && it != "null" }
+                if (reset != null && at != null && at < reset) continue
+                val epTime = at?.let { time(it) }?.takeIf { it > 0 } ?: showTime
+                out += VodWatched.Mark("$show:${season.optInt("number")}:${e.optInt("number")}", show, epTime, name)
+                count++
+            }
+            if (count == 0 && (reset == null || s.optString("last_watched_at") >= reset)) {
+                out += VodWatched.Mark("$show:1:1", show, showTime, name)
             }
         }
         return out

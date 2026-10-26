@@ -104,6 +104,7 @@ internal fun MainActivity.usersChanged() {
     watchApp = null
     showUserIcon()
     refreshWatchNext()
+    rowsAgain(tmdbLastFocusApp)
 }
 
 /**

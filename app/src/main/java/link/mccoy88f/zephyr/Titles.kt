@@ -94,8 +94,8 @@ private fun MainActivity.watchedSections(type: String?, pkg: String, hidden: Set
     val nameless = (films.map { it to "movie" } + shows.map { it to "series" }).filter { it.first.name.isEmpty() }
     if (nameless.isNotEmpty()) nameLater(nameless, pkg)
     fun section(kind: String, title: Int, marks: List<VodWatched.Mark>): Section? {
-        val cards = marks.filter { it.name.isNotEmpty() && it.metaId.startsWith("tt") }.take(40).map { m ->
-            val t = Stremio.Title(kind, m.metaId, m.name, Stremio.art(m.metaId, "poster/small"), Stremio.art(m.metaId, "background/medium"),
+        val cards = marks.filter { it.metaId.startsWith("tt") }.take(40).map { m ->
+            val t = Stremio.Title(kind, m.metaId, m.name.ifEmpty { m.metaId }, Stremio.art(m.metaId, "poster/small"), Stremio.art(m.metaId, "background/medium"),
                 Stremio.art(m.metaId, "logo/medium"), null)
             val shown = localize(t) ?: t.also { if (wantsLocal(it)) missing += it.id }
             titleCard(shown, cinemetaUrl(), pkg, watched = true, sub = listOfNotNull("✓", watchedOn(m.at)).joinToString(" · "))
