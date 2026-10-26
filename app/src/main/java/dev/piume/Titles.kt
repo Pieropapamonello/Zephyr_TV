@@ -232,6 +232,7 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
     val services = serviceRows(t, available)
     val episodic = sources.isNotEmpty() && t.type == "series" && meta.episodes.isNotEmpty()
     var sides: ((Int) -> Unit)? = null
+    var seasonAt: Int? = null // the season's row, among the rows
     fun addServices() = services.rows.forEachIndexed { i, row -> icons[rows.size] = services.icons[i]; rows += row }
     if (episodic) {
         addServices()
@@ -269,6 +270,7 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
         if (seasons.size > 1) {
             // Left/Right on any row go to the season before or after; the season's row keeps the focus.
             sides = { step -> showVodTitle(meta, ref, seasons[Math.floorMod(at + step, seasons.size)], services.known) }
+            seasonAt = rows.size
             rows += page(seasonName(shown), "‹ ${at + 1} / ${seasons.size} ›") { sides?.invoke(1) }
         }
         val begun = VodProgress.all(vodDir()).associateBy { it.id }
@@ -310,6 +312,18 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
     val art = if (ref.background != null) Triple(ref.background, ref.logo, ref.poster ?: t.poster) else Triple(t.background, t.logo, ref.poster ?: t.poster)
     titlePage(t.name, art, t.name, top, rows, focus, icons, holds) { closeLauncherSettings() }
     pageSides = sides
+    // The season's row, with the focus, at the top of the panel: its episodes under it show (not just the row, at
+    // the bottom, as scrolling only as far as the focus needs would leave it). After a season picked, at once.
+    seasonAt?.let { i -> settingsList.getChildAt(1 + i) }?.let { row ->
+        val scroll = settingsList.parent as android.widget.ScrollView
+        fun top() = (row.top + settingsList.top - dp(8)).coerceAtLeast(0)
+        val own = row.onFocusChangeListener
+        row.setOnFocusChangeListener { v, focused ->
+            own?.onFocusChange(v, focused)
+            if (focused) scroll.post { scroll.smoothScrollTo(0, top()) }
+        }
+        if (focus == seasonAt) scroll.post { scroll.scrollTo(0, top()) }
+    }
     services.later { showVodTitle(meta, ref, season, it, episode) }
 }
 

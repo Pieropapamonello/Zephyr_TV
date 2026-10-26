@@ -15,6 +15,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- On the page of a series, the season row stays at the top when you change the season, so the episodes show under it.
 - The users icon shows the users. Select a name to use that user. To add a user, connect Trakt, rename or remove a user, select **Settings** under the names.
 - Search has filters: **Films or series**, **Year** and **Genre**. Select **Search** with no words to find all the titles for the filters, from Cinemeta.
 - The users icon shows the first two letters of the name of the user in use.
