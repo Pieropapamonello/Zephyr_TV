@@ -15,6 +15,9 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+## 4.1.0-beta.1
+
+- This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.
 - Films and series from Stremio add-ons. **Cinemeta**, the catalog of Stremio, fills the new **Films** and **Series** tiles with rows. To give each add-on its own tile, select **Piume settings → Stremio add-ons → Films and series**. You can turn Cinemeta off in the same section.
 - Select a film or a series to see its page. A film has **Watch**. A series has its seasons and episodes.
 - Piume asks all the add-ons that have streams for the title. It plays the first stream that works, and tries the next one if it does not work. To choose another stream, use the **Stream** button in the player.
