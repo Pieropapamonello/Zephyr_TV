@@ -15,14 +15,29 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
-- On the page of a series, the season row stays at the top when you change the season, so the episodes show under it.
-- The users icon shows the users. Select a name to use that user. To add a user, connect Trakt, rename or remove a user, select **Settings** under the names.
-- Search has filters: **Films or series**, **Year** and **Genre**. Select **Search** with no words to find all the titles for the filters, from Cinemeta.
-- The users icon shows the first two letters of the name of the user in use.
-- The page of a film or episode shows when the user in use watched it. The page of a series shows the last episode watched and when.
+## 4.2.0
 
+- Films and series from Stremio add-ons. **Cinemeta**, the free library of Stremio, fills the new **Films** and **Series** tiles with rows. To give each add-on its own tile, select **Piume settings → Stremio add-ons → Films and series**.
+- Cinemeta is always on. To use another Cinemeta address, select **Piume settings → Stremio add-ons → Cinemeta library**.
+- With a TMDB key, the names, posters, genres and descriptions of films and series, and the names of episodes, are in your language.
+- The cards show the year, the genre and the rating, with the icon of their tile. A ✓ shows the titles that you watched.
+- Select a film to see its page, with **Watch**, the rating, the trailer and the services that have it. When one add-on alone has the streams, the page says **Watch on** and its name.
+- On the page of a series, Left and Right change the season. Select an episode to see its page and its streams. When more than one add-on has streams, the page has **Watch on** for each add-on.
+- Piume plays films and episodes in its own player. It tries the streams of all the add-ons, and the next one if a stream does not work. Only direct links play, not torrents.
+- In the player, Left and Right go back and forward 10 seconds. CH+ and CH- go to the previous and next episode. When an episode ends, the next one starts.
+- The player shows the season, the number and the name of the episode. The names of streams show on two lines. The sound goes to the audio output of the TV, also to external speakers.
+- When you go back from the player, the page that you came from shows again.
+- Films and episodes that you begin show in **Continue Playing**. When an episode ends, the next episode shows there with **Up next**.
+- Piume remembers the films and episodes that you watch to the end. A watched film has **Watch again**. To change a mark, select **Mark as watched** or **Mark as not watched**. On a series, hold OK on an episode, or select **Mark season as watched**.
 - The **Films** tile has a **Films watched** row at the bottom, and the **Series** tile has a **Series watched** row. The most recent is first.
-- With Trakt, the films and series that you watched elsewhere are in these rows too, with the date of Trakt.
+- The page of a film or episode shows when you watched it. The page of a series shows the last episode that you watched.
+- Piume has users. Select the users icon, left of search, and select a name to use that user. The icon shows the first two letters of the name. Each user has their own Continue Playing and ✓ marks.
+- To add, rename or remove a user, or to connect Trakt, select **Settings** under the names.
+- Each user can connect a Trakt account. Select **Connect Trakt** and scan the code with your phone. What you watch in Piume goes to Trakt. What you watched elsewhere gets ✓, and where you paused shows in Continue Playing.
+- Search finds films and series in Cinemeta and in the add-ons. With a TMDB key, it also finds them by their names in your language. A result opens the same page as in the Films and Series tiles.
+- Search has filters: **Films or series**, **Year** and **Genre**. Select **Search** with no words to find the titles for the filters.
+- Spotlight works without a TMDB key: it shows the popular films and series of Cinemeta. With a TMDB key, you can still select a TMDB list in **Piume settings → Spotlight → Source**. Spotlight has a **Watch** button.
+- To give a section your own name, hold OK on an app and select **Rename sections**.
 
 ## 4.1.0-beta.6
 
