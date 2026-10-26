@@ -108,7 +108,7 @@ internal fun MainActivity.addonApps(): List<MainActivity.App> {
         return MainActivity.App(STREMIO + addon.id, addon.name, Intent(), logo?.let { BitmapDrawable(resources, it) } ?: icon(res))
     }
     val tv = if (urls.isEmpty()) emptyList() else when (addonsTv()) {
-        TvPlace.IPTV -> listOf(MainActivity.App(IPTV_PKG, getString(R.string.iptv_app), Intent(), icon(R.drawable.ic_live_tv)))
+        TvPlace.IPTV -> listOf(MainActivity.App(IPTV_PKG, getString(R.string.iptv_app), Intent(), icon(R.drawable.ic_live_tv), picture = icon(R.drawable.tile_tv)))
         TvPlace.APPS -> urls.mapNotNull { url ->
             // Not read yet (just restored from a backup): its tile comes once it is.
             val addon = Stremio.saved(filesDir, url)?.addon ?: return@mapNotNull null.also { if (Stremio.due(filesDir, url)) updateAddon(url, null) }

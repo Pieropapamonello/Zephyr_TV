@@ -113,7 +113,10 @@ internal const val SEARCH_PKG = "piume:search" // the search results tile, after
 
 class MainActivity : Activity() {
 
-    internal class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable, val offline: Boolean = false)
+    // picture: a tile that is a picture, whole (Zephyr TV's own apps: Films, Series, TV channels), its name in it; the
+    // icon stays the small mark on cards.
+    internal class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable, val offline: Boolean = false,
+                       val picture: Drawable? = null)
     internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val logo: String? = null, val poster: String? = null, val channelPage: ChannelDetail? = null, val channelId: Long? = null, val playing: Boolean = false, val addon: AddonChannel? = null, val icon: String? = null, val vod: TitleRef? = null) // icon: the tile whose icon marks the card, when not pkg's; vod: a film or series (see Titles)
 
     internal val prefs by lazy { getSharedPreferences(K.FILE, MODE_PRIVATE) }
@@ -1090,6 +1093,12 @@ class MainActivity : Activity() {
         val colour = colourIcons()
         val t = when {
             custom != null -> tile(name, custom, false, a.pkg) { launch(a) }
+            a.picture != null -> pictureTile(a.picture, a.pkg) {
+                if (allApps.visibility == View.VISIBLE) {
+                    closeAllApps()
+                    appRow.findViewWithTag<View>(a.pkg)?.requestFocus()
+                } else if (!playLastChannel(a.pkg) && watchApp == a.pkg) firstCard()?.requestFocus()
+            }
             // An add-on's tile (see addonApps): OK goes down to its channels; from All apps, to its tile in the row.
             a.pkg.startsWith(STREMIO) -> tile(name, a.icon, a.icon !is android.graphics.drawable.BitmapDrawable, a.pkg) {
                 if (allApps.visibility == View.VISIBLE) {
@@ -1162,6 +1171,23 @@ class MainActivity : Activity() {
     }
 
     /** White card: logo on top, name underneath. With no label the mark sits alone, centred, at one size. */
+    /**
+     * A tile that is [picture], filling the card to its rounded edges (its name is in it), lifting with the focus as
+     * the others do.
+     */
+    internal fun pictureTile(picture: Drawable, tag: String, onClick: () -> Unit): View {
+        val col = LinearLayout(this).apply { gravity = Gravity.CENTER }
+        col.addView(ImageView(this).apply {
+            setImageDrawable(picture)
+            scaleType = ImageView.ScaleType.CENTER_CROP
+        }, LinearLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+        style(col, dp(8), card = true)
+        col.clipToOutline = true // the picture takes the card's rounded corners
+        col.tag = tag
+        col.setOnClickListener { onClick() }
+        return col
+    }
+
     internal fun tile(label: String?, icon: Drawable, mono: Boolean, tag: String, wordmarkInset: Int? = null, tint: Int? = null, onClick: () -> Unit): View {
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

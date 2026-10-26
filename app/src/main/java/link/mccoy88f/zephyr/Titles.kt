@@ -43,8 +43,8 @@ internal fun MainActivity.streamSources(type: String, id: String): List<Pair<Str
 internal fun MainActivity.vodApps(): List<MainActivity.App> {
     if (addonsVod() != VodPlace.TILES || libraryUrls().isEmpty()) return emptyList()
     return listOf(
-        MainActivity.App(MOVIES_PKG, getString(R.string.vod_movies), Intent(), getDrawable(R.drawable.ic_movie)!!),
-        MainActivity.App(SERIES_PKG, getString(R.string.vod_series), Intent(), getDrawable(R.drawable.ic_series)!!),
+        MainActivity.App(MOVIES_PKG, getString(R.string.vod_movies), Intent(), getDrawable(R.drawable.ic_movie)!!, picture = getDrawable(R.drawable.tile_films)),
+        MainActivity.App(SERIES_PKG, getString(R.string.vod_series), Intent(), getDrawable(R.drawable.ic_series)!!, picture = getDrawable(R.drawable.tile_series)),
     )
 }
 

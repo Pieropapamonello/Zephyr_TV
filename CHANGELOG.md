@@ -22,6 +22,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - When Zephyr TV is your Home, it asks if you want to uninstall Piume.
 - Zephyr TV can restore the backups of Piume.
 - Zephyr TV has a new logo and a new banner on the home screen of the TV.
+- The **Films**, **Series** and **TV channels** tiles have their own pictures.
 - **Zephyr TV settings → System → About** shows the version, the credits and the license, with QR codes to the GitHub pages of mccoy88f, of the source code and of Plume Launcher.
 - When you select a film or series, its page opens at once and shows **Loading** until the information is there.
 - The page of a series tells you that you can hold OK on an episode to mark it.
