@@ -517,4 +517,14 @@
     <string name="piume_uninstall_intro">Zephyr TV has your settings, users and history from Piume, and it is your Home now. Piume gets no more updates: you can uninstall it.</string>
     <string name="piume_uninstall">Uninstall Piume</string>
     <string name="zephyr_later">Later</string>
+    <!-- System → About -->
+    <string name="setting_about">About</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_made">Zephyr TV is made by mccoy88f, with help from Claude Code. It started as Piume, a fork of Plume Launcher by aradhyas8, whose design and much of whose code it keeps.</string>
+    <string name="about_data">Films and series: Cinemeta, the library of Stremio. Names in your language and Spotlight lists: TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB. History: Trakt. Channel logos: iptv-org. App logos: Simple Icons. Weather: Open-Meteo. Screensaver paintings: public domain, through Wikimedia Commons.</string>
+    <string name="about_license">Zephyr TV is free software under the GNU General Public License v3.0: you can use, change and share it. A version you share keeps the same license and comes with its source code.</string>
+    <string name="about_author">mccoy88f on GitHub</string>
+    <string name="about_source">Source code of Zephyr TV</string>
+    <string name="about_plume">Plume Launcher, by aradhyas8</string>
+    <string name="about_link_intro">Scan the code to open the page on your phone.</string>
 </resources>

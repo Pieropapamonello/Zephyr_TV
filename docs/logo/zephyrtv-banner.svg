@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A" /><stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="frameGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" /><stop offset="100%" stop-color="#2563EB" />
+    </linearGradient>
+    <linearGradient id="playGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" /><stop offset="100%" stop-color="#BAE6FD" />
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFFFFF" /><stop offset="100%" stop-color="#94A3B8" />
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#bgGrad)" />
+  <!-- The logo's TV, scaled to the banner's height, on the left -->
+  <g transform="translate(18,52) scale(0.62)">
+    <circle cx="256" cy="72" r="8" fill="#38BDF8" />
+    <line x1="256" y1="80" x2="256" y2="114" stroke="#38BDF8" stroke-width="6" stroke-linecap="round" />
+    <rect x="96" y="114" width="320" height="196" rx="32" fill="none" stroke="url(#frameGrad)" stroke-width="20" stroke-linejoin="round" />
+    <polygon points="224,165 224,245 304,205" fill="url(#playGrad)" />
+  </g>
+  <text x="458" y="196" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="62" font-weight="900" fill="url(#textGrad)" text-anchor="middle" letter-spacing="8">ZEPHYR</text>
+  <text x="458" y="248" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="30" font-weight="700" fill="#38BDF8" text-anchor="middle" letter-spacing="14">TV</text>
+</svg>

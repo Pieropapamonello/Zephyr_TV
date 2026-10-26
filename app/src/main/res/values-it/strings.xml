@@ -519,4 +519,14 @@
     <string name="piume_uninstall_intro">Zephyr TV ha le impostazioni, gli utenti e la cronologia di Piume, ed è la tua Home. Piume non riceve più aggiornamenti: puoi disinstallarla.</string>
     <string name="piume_uninstall">Disinstalla Piume</string>
     <string name="zephyr_later">Più tardi</string>
+    <!-- System → About -->
+    <string name="setting_about">Informazioni</string>
+    <string name="about_version">Versione %1$s</string>
+    <string name="about_made">Zephyr TV è fatta da mccoy88f, con l\'aiuto di Claude Code. È nata come Piume, un fork di Plume Launcher di aradhyas8, di cui mantiene il design e buona parte del codice.</string>
+    <string name="about_data">Film e serie: Cinemeta, la libreria di Stremio. Nomi nella tua lingua e liste di In evidenza: TMDB. Questo prodotto usa l\'API di TMDB ma non è approvato né certificato da TMDB. Cronologia: Trakt. Loghi dei canali: iptv-org. Loghi delle app: Simple Icons. Meteo: Open-Meteo. Dipinti del salvaschermo: pubblico dominio, tramite Wikimedia Commons.</string>
+    <string name="about_license">Zephyr TV è software libero con licenza GNU General Public License v3.0: puoi usarlo, modificarlo e condividerlo. Una versione che condividi mantiene la stessa licenza ed è accompagnata dal suo codice sorgente.</string>
+    <string name="about_author">mccoy88f su GitHub</string>
+    <string name="about_source">Codice sorgente di Zephyr TV</string>
+    <string name="about_plume">Plume Launcher, di aradhyas8</string>
+    <string name="about_link_intro">Inquadra il codice per aprire la pagina sul telefono.</string>
 </resources>

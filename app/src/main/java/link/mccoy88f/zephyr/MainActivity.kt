@@ -2032,6 +2032,7 @@ class MainActivity : Activity() {
         const val UPDATE_ROW = HOME_BUTTON_ROW + 2
         const val BACKUP_ROW = HOME_BUTTON_ROW + 3
         const val PROBLEMS_ROW = HOME_BUTTON_ROW + 4
+        const val ABOUT_ROW = HOME_BUTTON_ROW + 5
         val SPOTLIGHT_EVERY = listOf(0, 5, 8, 10, 15, 30) // seconds between Spotlight titles; 0 = off
         val ROW_ALIGN = linkedMapOf( // setting -> its name, and the row's gravity in the scroller
             "left" to (R.string.align_left to Gravity.START),
