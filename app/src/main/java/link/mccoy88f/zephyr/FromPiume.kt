@@ -8,13 +8,18 @@ import android.widget.Toast
 import java.io.File
 import org.json.JSONObject
 
-// Zephyr TV is what Piume became. On its first start it takes what Piume kept, through Piume's MigrationProvider:
+// Zephyr TV is what Piume became. On its first start it takes what Piume kept, through Piume's MigrationProvider
+// (Piume, from 4.2.1, hands it only to this app, which it knows by its certificate; this app takes it only from
+// the Piume it knows by Piume's):
 // the settings, and each user's progress, watched titles and Trakt account; then it suggests uninstalling Piume.
 // Functions of MainActivity, kept here by topic.
 
-/** Piume: its package, and what it hands over (only to this app, signed with the same key). */
+/** Piume: its package, and what it hands over (only to this app, told by its certificate). */
 private const val PIUME_PKG = "dev.piume"
 private val PIUME_EXPORT: Uri = Uri.parse("content://dev.piume.migration/export")
+
+/** The SHA-256 of Piume's signing certificate (CN=Piume, O=mccoy88f): only that Piume is taken from. */
+private const val PIUME_CERT = "0207d5096b66aee9f326687eccbc1ebb62513bbc0542ef16dfc706e2232e7fa7"
 
 /** Settings that stay this app's own: its Home setup and its updates (Piume doesn't hand these, nor are they taken). */
 private val OWN = setOf(K.HOME_OFF, K.SETUP_SHOWN, K.REOPEN_ROW, K.UPD_VER, K.UPD_TIME, K.UPD_TOLD, K.SEEN_NOTES, K.IMPORTED, K.PIUME_TOLD)
@@ -22,10 +27,23 @@ private val OWN = setOf(K.HOME_OFF, K.SETUP_SHOWN, K.REOPEN_ROW, K.UPD_VER, K.UP
 /** The files taken, by their path: each user's, in the files folder or a user_<id> folder (nothing else, nowhere else). */
 private val TAKEN = Regex("(user_[A-Za-z0-9_-]{1,32}/)?(vod_progress\\.json|vod_watched\\.json|trakt\\.json|trakt_seen\\.txt)")
 
-/** Whether Piume is installed, signed with this app's key: the one it may take things from. */
-internal fun MainActivity.piumeHere(): Boolean = runCatching {
-    packageManager.getPackageInfo(PIUME_PKG, 0)
-    packageManager.checkSignatures(packageName, PIUME_PKG) == PackageManager.SIGNATURE_MATCH
+/** Whether Piume is installed, signed with Piume's key: the one this app may take things from. */
+internal fun MainActivity.piumeHere(): Boolean = signedBy(PIUME_PKG, PIUME_CERT)
+
+/**
+ * Whether [pkg] is installed and signed with the certificate whose SHA-256 is [sha256] (hex): an app told by its
+ * key, not only its name (anyone can name an app anything).
+ */
+internal fun android.content.Context.signedBy(pkg: String, sha256: String): Boolean = runCatching {
+    val pm = packageManager
+    val certs = if (android.os.Build.VERSION.SDK_INT >= 28) {
+        val info = pm.getPackageInfo(pkg, PackageManager.GET_SIGNING_CERTIFICATES).signingInfo ?: return false
+        if (info.hasMultipleSigners()) info.apkContentsSigners else info.signingCertificateHistory
+    } else {
+        @Suppress("DEPRECATION")
+        pm.getPackageInfo(pkg, PackageManager.GET_SIGNATURES).signatures
+    } ?: return false
+    certs.any { s -> java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) } == sha256 }
 }.getOrDefault(false)
 
 /**
