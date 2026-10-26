@@ -82,7 +82,64 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
                 .filter { hideKey(null, it.name) !in hidden }.map { titleCard(it, addon.url, pkg, it.id in watched) }
             if (cards.isEmpty()) null else Section("vod:${addon.id}:${shelf.catalog.type}:${shelf.catalog.id}", name, name, cards)
         }
-    }.also { if (missing.isNotEmpty()) localizeLater(missing.distinct(), pkg) }
+    }.plus(
+        // Last, the films and series watched: under Films and Series, or Cinemeta's own tile.
+        if (mode == "tiles" || addons.any { it.url == cinemetaUrl() }) watchedSections(type, pkg, hidden, missing) else emptyList()
+    ).also { if (missing.isNotEmpty()) localizeLater(missing.distinct(), pkg) }
+}
+
+/**
+ * The Films watched and Series watched rows (films only for [type] "movie", series only for "series"), newest
+ * first, a series by its last episode watched: Cinemeta's art for each (by its IMDb id), in the TV's language when
+ * TMDB has it ([missing] gets those it wasn't asked about yet), when it was watched under it. Names missing from old
+ * marks are looked up on Cinemeta, and the rows built again once they're in. Off the UI thread.
+ */
+private fun MainActivity.watchedSections(type: String?, pkg: String, hidden: Set<String>, missing: MutableList<String>): List<Section> {
+    val (films, shows) = VodWatched.titles(vodDir())
+    val nameless = (films.map { it to "movie" } + shows.map { it to "series" }).filter { it.first.name.isEmpty() }
+    if (nameless.isNotEmpty()) nameLater(nameless, pkg)
+    val date = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
+    fun section(kind: String, title: Int, marks: List<VodWatched.Mark>): Section? {
+        val cards = marks.filter { it.name.isNotEmpty() && it.metaId.startsWith("tt") }.take(40).map { m ->
+            val art = "https://images.metahub.space/%s/" + m.metaId + "/img"
+            val t = Stremio.Title(kind, m.metaId, m.name, art.format("poster/small"), art.format("background/medium"), art.format("logo/medium"), null)
+            val shown = localize(t) ?: t.also { if (wantsLocal(it)) missing += it.id }
+            titleCard(shown, cinemetaUrl(), pkg, watched = true, sub = listOfNotNull("✓", m.at.takeIf { it > 0 }?.let { date.format(java.util.Date(it)) }).joinToString(" · "))
+        }.filter { hideKey(null, it.title) !in hidden }
+        val name = getString(title)
+        return if (cards.isEmpty()) null else Section("vod:watched:$kind", name, name, cards)
+    }
+    return listOfNotNull(
+        if (type == "series") null else section("movie", R.string.vod_watched_movies, films),
+        if (type == "movie") null else section("series", R.string.vod_watched_series, shows),
+    )
+}
+
+private val naming = java.util.Collections.synchronizedSet(HashSet<String>()) // asked once while Piume runs
+
+/** The names of [marks] (with their kind) from Cinemeta, kept with them; then the rows under [pkg] again, if it's still in focus. */
+private fun MainActivity.nameLater(marks: List<Pair<VodWatched.Mark, String>>, pkg: String) {
+    val todo = marks.filter { naming.add(it.first.metaId) }.take(40)
+    if (todo.isEmpty()) return
+    val dir = vodDir()
+    val base = cinemetaUrl().removeSuffix("/manifest.json")
+    netIo.execute {
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
+        val names = try {
+            pool.invokeAll(todo.map { (m, kind) -> java.util.concurrent.Callable {
+                runCatching { Stremio.titleMeta(base, kind, m.metaId)?.title?.name }.getOrNull()?.let { m.metaId to it }
+            } }, 20, java.util.concurrent.TimeUnit.SECONDS).mapNotNull { runCatching { it.get() }.getOrNull() }.toMap()
+        } finally {
+            pool.shutdownNow()
+        }
+        runCatching { VodWatched.name(dir, names) }
+        if (names.isNotEmpty()) ui.post {
+            if (tmdbLastFocusApp == pkg) {
+                watchApp = null
+                queryAppChannels(pkg)
+            }
+        }
+    }
 }
 
 private val refreshing = java.util.Collections.synchronizedSet(HashSet<String>())
@@ -104,10 +161,10 @@ private fun MainActivity.refreshShelves(addon: Stremio.Addon, pkg: String) {
 
 /**
  * A film's or series' card: its wide art (or its poster on a blur of itself), under it its year, genre and rating,
- * marked with the icon of the tile [icon] it's under (Films, Series, or the add-on's own), and ✓ once [watched].
+ * marked with the icon of the tile [icon] it's under (Films, Series, or the add-on's own), and ✓ once [watched]; or [sub].
  */
-internal fun titleCard(t: Stremio.Title, source: String?, icon: String?, watched: Boolean = false) =
-    Prog(t.name, listOfNotNull("✓".takeIf { watched }, t.year, t.genres.firstOrNull(), t.rating?.let { "★ $it" }).joinToString(" · "), 0, t.background, null, null,
+internal fun titleCard(t: Stremio.Title, source: String?, icon: String?, watched: Boolean = false, sub: String? = null) =
+    Prog(t.name, sub ?: listOfNotNull("✓".takeIf { watched }, t.year, t.genres.firstOrNull(), t.rating?.let { "★ $it" }).joinToString(" · "), 0, t.background, null, null,
         logo = t.logo, poster = t.poster, icon = icon, vod = TitleRef(t.type, t.id, t.name, t.poster, t.background, source, logo = t.logo, rating = t.rating))
 
 /** The tile a title of [type] from the add-on at [source] is under: Films or Series, or the add-on's own (null: none). */
@@ -236,7 +293,7 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
     if (!episodic && sources.isNotEmpty()) {
         val seen = t.id in marks
         rows += page(getString(if (seen) R.string.title_mark_unwatched else R.string.title_mark_watched)) {
-            VodWatched.set(vodDir(), listOf(t.id to t.id), !seen)
+            VodWatched.set(vodDir(), listOf(t.id to t.id), !seen, name = t.name)
             traktHistory(listOf(t.id to t.id), !seen)
             if (!seen) VodProgress.remove(vodDir(), t.id)
             showVodTitle(meta, ref, season, services.known, focusRow = 1)
@@ -330,12 +387,12 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
  */
 private fun MainActivity.markWatched(meta: Stremio.TitleMeta, episodes: List<Stremio.Episode>, on: Boolean) {
     val id = meta.title.id
-    VodWatched.set(vodDir(), episodes.map { it.id to id }, on)
+    VodWatched.set(vodDir(), episodes.map { it.id to id }, on, name = meta.title.name)
     traktHistory(episodes.map { it.id to id }, on)
     if (on) episodes.forEach { VodProgress.remove(vodDir(), it.id) }
     val marks = VodWatched.all(vodDir())
     val whole = meta.episodes.filter { it.season > 0 }.ifEmpty { meta.episodes }.all { it.id in marks }
-    if (whole != (id in marks)) VodWatched.set(vodDir(), listOf(id to id), whole)
+    if (whole != (id in marks)) VodWatched.set(vodDir(), listOf(id to id), whole, name = meta.title.name)
 }
 
 /** "Season 1 · Episode 3" (specials: "Special 3"). */

@@ -419,6 +419,8 @@
     <string name="player_paused">Paused</string>
     <string name="vod_movies">Films</string>
     <string name="vod_series">Series</string>
+    <string name="vod_watched_movies">Films watched</string>
+    <string name="vod_watched_series">Series watched</string>
     <string name="setting_addons_vod">Films and series</string>
     <string name="addons_vod_tiles">Films and Series apps</string>
     <string name="setting_cinemeta">Cinemeta library</string>

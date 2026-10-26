@@ -10,7 +10,8 @@ class TraktTest {
             {"plays":1,"movie":{"title":"No IMDb","ids":{"trakt":2,"imdb":null}}}]""")
         val shows = JSONArray("""[{"reset_at":"2024-01-01T00:00:00.000Z","show":{"ids":{"imdb":"tt0903747"}},"seasons":[{"number":1,"episodes":[
             {"number":1,"last_watched_at":"2023-05-01T00:00:00.000Z"},{"number":2,"last_watched_at":"2024-02-01T00:00:00.000Z"}]}]}]""")
-        assertEquals(listOf("tt0372784" to "tt0372784", "tt0903747:1:2" to "tt0903747"), Trakt.parseWatched(movies, shows))
+        assertEquals(listOf("tt0372784" to "tt0372784", "tt0903747:1:2" to "tt0903747"), Trakt.parseWatched(movies, shows).map { it.id to it.metaId })
+        assertEquals("Batman Begins", Trakt.parseWatched(movies, shows).first().name)
     }
 
     @Test fun pausedFilmsAndEpisodes() {

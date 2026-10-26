@@ -171,8 +171,7 @@ internal fun MainActivity.syncTrakt(user: String = currentUser().id, tell: Boole
     netIo.execute {
         val result = runCatching {
             val watched = Trakt.watched(dir) ?: return@runCatching null
-            val known = VodWatched.all(dir)
-            VodWatched.set(dir, watched.filter { it.first !in known }, true, 0) // Trakt's own dates aren't kept: older than Piume's marks
+            VodWatched.add(dir, watched) // with Trakt's dates: the Watched rows' order
             val paused = Trakt.paused(dir).orEmpty().filter { it.runtimeMin > 0 }
             val mine = VodProgress.all(dir).associateBy { it.id }
             var resumed = 0

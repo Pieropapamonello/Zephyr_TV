@@ -82,15 +82,16 @@ internal object VodProgress {
 }
 
 /**
- * The films and episodes watched to the end (or marked so on their pages), and the series watched whole, by their
- * ids ("tt…" for a film or series, "tt…:1:3" for an episode), each with its title's id and when. Written by the player
+ * The films and episodes watched to the end (or marked so on their pages, or on Trakt), and the series watched whole,
+ * by their ids ("tt…" for a film or series, "tt…:1:3" for an episode), each with its title's id, when, and the
+ * title's name (for the Watched rows; empty in marks from before it was kept). Written by the player
  * (its own process) and the home screen, so a file; read often (each card's mark), so kept while the file is the same.
  */
 internal object VodWatched {
     private const val FILE = "vod_watched.json"
     private const val KEEP = 5000
 
-    internal class Mark(val id: String, val metaId: String, val at: Long)
+    internal class Mark(val id: String, val metaId: String, val at: Long, val name: String = "")
 
     private var cache: Pair<String, Map<String, Mark>>? = null // the file's time and size, to what it holds
 
@@ -101,7 +102,7 @@ internal object VodWatched {
         cache?.takeIf { it.first == stamp }?.let { return it.second }
         val marks = runCatching {
             val a = JSONArray(f.readText())
-            (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { Mark(it.getString("id"), it.optString("metaId"), it.optLong("at")) }
+            (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { Mark(it.getString("id"), it.optString("metaId"), it.optLong("at"), it.optString("name")) }
         }.getOrDefault(emptyList()).associateBy { it.id }
         cache = stamp to marks
         return marks
@@ -109,16 +110,58 @@ internal object VodWatched {
 
     fun has(dir: File, id: String) = id in all(dir)
 
-    /** Marks [items] (id to its title's id) watched ([on]) or not; newest kept first, at most [KEEP]. */
+    /** Marks [items] (id to its title's id) watched ([on]) or not, now; [name]: the title's. Newest kept first, at most [KEEP]. */
     @Synchronized
-    fun set(dir: File, items: List<Pair<String, String>>, on: Boolean, now: Long = System.currentTimeMillis()) {
+    fun set(dir: File, items: List<Pair<String, String>>, on: Boolean, now: Long = System.currentTimeMillis(), name: String = "") {
         val ids = items.map { it.first }.toSet()
-        val rest = all(dir).values.filter { it.id !in ids }.sortedByDescending { it.at }
-        val list = (if (on) items.map { (id, meta) -> Mark(id, meta, now) } else emptyList()) + rest
+        val rest = all(dir).values.filter { it.id !in ids }
+        write(dir, (if (on) items.map { (id, meta) -> Mark(id, meta, now, name) } else emptyList()) + rest)
+    }
+
+    /**
+     * [marks] from elsewhere (Trakt): those not marked yet added, with their own dates; those marked, newer dates and
+     * missing names taken from them.
+     */
+    @Synchronized
+    fun add(dir: File, marks: List<Mark>) {
+        val mine = all(dir)
+        val fresh = marks.associateBy { it.id }
+        val kept = mine.values.map { m ->
+            val o = fresh[m.id] ?: return@map m
+            Mark(m.id, m.metaId, maxOf(m.at, o.at), m.name.ifEmpty { o.name })
+        }
+        write(dir, kept + marks.filter { it.id !in mine })
+    }
+
+    /** The names of titles whose marks had none (looked up since). */
+    @Synchronized
+    fun name(dir: File, names: Map<String, String>) {
+        if (names.isEmpty()) return
+        write(dir, all(dir).values.map { m -> names[m.metaId]?.takeIf { m.name.isEmpty() }?.let { Mark(m.id, m.metaId, m.at, it) } ?: m })
+    }
+
+    private fun write(dir: File, marks: List<Mark>) {
         val f = File(dir, FILE)
         val part = File(dir, "$FILE.part")
-        part.writeText(JSONArray(list.take(KEEP).map { JSONObject().put("id", it.id).put("metaId", it.metaId).put("at", it.at) }).toString())
+        part.writeText(JSONArray(marks.sortedByDescending { it.at }.take(KEEP).map {
+            JSONObject().put("id", it.id).put("metaId", it.metaId).put("at", it.at).put("name", it.name)
+        }).toString())
         part.renameTo(f)
         cache = null
+    }
+
+    /**
+     * The films watched, and the series with episodes watched, newest first (a series by its last episode): each a
+     * title's id, its name and when. A series is told from a film by its episodes' marks.
+     */
+    fun titles(dir: File): Pair<List<Mark>, List<Mark>> {
+        val marks = all(dir).values
+        val series = marks.filter { ':' in it.id }.groupBy { it.metaId }
+        val films = marks.filter { ':' !in it.id && it.id !in series }.sortedByDescending { it.at }
+        val shows = series.map { (meta, eps) ->
+            val last = eps.maxBy { it.at }
+            Mark(meta, meta, last.at, eps.firstOrNull { it.name.isNotEmpty() }?.name ?: marks.firstOrNull { it.id == meta }?.name.orEmpty())
+        }.sortedByDescending { it.at }
+        return films to shows
     }
 }

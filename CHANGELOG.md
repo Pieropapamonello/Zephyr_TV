@@ -15,6 +15,9 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- The **Films** tile has a **Films watched** row at the bottom, and the **Series** tile has a **Series watched** row. The most recent is first.
+- With Trakt, the films and series that you watched elsewhere are in these rows too, with the date of Trakt.
+
 ## 4.1.0-beta.6
 
 - This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.

@@ -420,6 +420,8 @@
     <string name="player_paused">In pausa</string>
     <string name="vod_movies">Film</string>
     <string name="vod_series">Serie TV</string>
+    <string name="vod_watched_movies">Film già visti</string>
+    <string name="vod_watched_series">Serie TV già viste</string>
     <string name="setting_addons_vod">Film e serie</string>
     <string name="addons_vod_tiles">App Film e Serie TV</string>
     <string name="setting_cinemeta">Libreria Cinemeta</string>

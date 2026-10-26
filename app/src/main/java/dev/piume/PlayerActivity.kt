@@ -477,7 +477,7 @@ class PlayerActivity : Activity() {
         val next = if (last) null else entry(i + 1, 0L, 0L)
         ahead.execute {
             runCatching {
-                VodWatched.set(userDir, listOfNotNull(c.id to meta, (meta to meta).takeIf { last && meta != c.id }), true)
+                VodWatched.set(userDir, listOfNotNull(c.id to meta, (meta to meta).takeIf { last && meta != c.id }), true, name = c.name)
                 VodProgress.remove(userDir, c.id)
                 next?.let { VodProgress.putNext(userDir, it) }
             }

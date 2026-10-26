@@ -141,26 +141,33 @@ internal object Trakt {
 
     // ---------- what Trakt tells Piume ----------
 
-    /** Films and episodes watched, as VodWatched keeps them: an id to its title's id. Null when Trakt can't be asked. */
-    fun watched(dir: File): List<Pair<String, String>>? {
+    /** Films and episodes watched, as VodWatched keeps them (with when, and the title's name). Null when Trakt can't be asked. */
+    fun watched(dir: File): List<VodWatched.Mark>? {
         val movies = call(dir, "GET", "/sync/watched/movies")?.takeIf { it.first == 200 } ?: return null
         val shows = call(dir, "GET", "/sync/watched/shows")?.takeIf { it.first == 200 } ?: return null
         return parseWatched(JSONArray(movies.second), JSONArray(shows.second))
     }
 
-    internal fun parseWatched(movies: JSONArray, shows: JSONArray): List<Pair<String, String>> {
-        val out = ArrayList<Pair<String, String>>()
-        for (m in objects(movies)) imdb(m.optJSONObject("movie"))?.let { out += it to it }
+    internal fun parseWatched(movies: JSONArray, shows: JSONArray): List<VodWatched.Mark> {
+        val out = ArrayList<VodWatched.Mark>()
+        for (m in objects(movies)) {
+            val movie = m.optJSONObject("movie")
+            imdb(movie)?.let { out += VodWatched.Mark(it, it, time(m.optString("last_watched_at")), movie?.optString("title").orEmpty()) }
+        }
         for (s in objects(shows)) {
             val show = imdb(s.optJSONObject("show")) ?: continue
+            val name = s.optJSONObject("show")?.optString("title").orEmpty()
             val reset = s.optString("reset_at").takeIf { it.isNotBlank() && it != "null" } // a rewatch began: earlier ones don't count
             for (season in objects(s.optJSONArray("seasons"))) for (e in objects(season.optJSONArray("episodes"))) {
-                if (reset != null && e.optString("last_watched_at") < reset) continue
-                out += "$show:${season.optInt("number")}:${e.optInt("number")}" to show
+                val at = e.optString("last_watched_at")
+                if (reset != null && at < reset) continue
+                out += VodWatched.Mark("$show:${season.optInt("number")}:${e.optInt("number")}", show, time(at), name)
             }
         }
         return out
     }
+
+    private fun time(iso: String) = runCatching { java.time.Instant.parse(iso).toEpochMilli() }.getOrDefault(0L)
 
     /** Where a film or episode was paused, elsewhere or here, as Trakt keeps it. */
     internal class Paused(val id: String, val metaId: String, val series: Boolean, val progress: Double, val runtimeMin: Int, val at: Long,
@@ -172,7 +179,7 @@ internal object Trakt {
     }
 
     internal fun parsePaused(list: JSONArray): List<Paused> = objects(list).mapNotNull { p ->
-        val at = runCatching { java.time.Instant.parse(p.optString("paused_at")).toEpochMilli() }.getOrDefault(0L)
+        val at = time(p.optString("paused_at"))
         val progress = p.optDouble("progress", 0.0)
         if (p.optString("type") == "episode") {
             val show = p.optJSONObject("show") ?: return@mapNotNull null
