@@ -374,12 +374,25 @@ internal fun MainActivity.showChannel(d: ChannelDetail) {
         panel.clipToPadding = true
     }
     val icon = (d.pkg ?: tile?.pkg?.takeIf { !it.startsWith(STREMIO) })?.let { pkg -> runCatching { packageManager.getApplicationIcon(pkg) }.getOrNull() }
-        // A virtual tile's: its logo, or the TV mark in a grey that reads on the row lit or not.
-        ?: tile?.icon?.constantState?.newDrawable(resources)?.mutate()?.apply { if (this !is android.graphics.drawable.BitmapDrawable) setTint(0xFF8E8E93.toInt()) }
-    if (icon != null) (settingsList.getChildAt(1) as? LinearLayout)?.addView(ImageView(this).apply {
-        setImageDrawable(icon)
-        scaleType = ImageView.ScaleType.FIT_CENTER
-    }, 0, LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(12) })
+        ?: tile?.icon?.constantState?.newDrawable(resources)?.mutate()
+    if (icon != null) {
+        val row = settingsList.getChildAt(1) as? LinearLayout
+        val iv = ImageView(this).apply {
+            setImageDrawable(icon)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            if (icon !is android.graphics.drawable.BitmapDrawable) {
+                setColorFilter(fg, android.graphics.PorterDuff.Mode.SRC_IN)
+            }
+        }
+        row?.addView(iv, 0, LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(12) })
+        val orig = row?.onFocusChangeListener
+        row?.setOnFocusChangeListener { v, focused ->
+            orig?.onFocusChange(v, focused)
+            if (icon !is android.graphics.drawable.BitmapDrawable) {
+                iv.setColorFilter(if (focused) onFg else fg, android.graphics.PorterDuff.Mode.SRC_IN)
+            }
+        }
+    }
 }
 
 /** Closes the search: its tile and cards go, focus goes back to Continue Watching. False when none is open. */

@@ -448,6 +448,10 @@
         <item quantity="one">%d stream</item>
         <item quantity="other">%d streams</item>
     </plurals>
+    <plurals name="title_episodes">
+        <item quantity="one">%d episode</item>
+        <item quantity="other">%d episodes</item>
+    </plurals>
     <string name="title_no_streams">No add-on has streams for this title</string>
     <string name="title_no_page">No add-on has a page for this title</string>
     <string name="player_episode">%1$s · S%2$d E%3$d</string>

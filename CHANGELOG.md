@@ -13,6 +13,14 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 1.2.4
+
+- The play icon changes color when a watch button is in focus.
+- The title detail page starts with focus on the description.
+- Series detail pages list seasons first.
+- In season detail pages, press left or right to switch between seasons.
+- Available streaming apps show as a horizontal row of icons in title details.
+
 ## 1.2.3
 
 - Trakt synchronization now imports watched series even when individual episode details are not returned by Trakt.

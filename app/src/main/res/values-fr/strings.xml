@@ -450,6 +450,11 @@
         <item quantity="many">%d flux</item>
         <item quantity="other">%d flux</item>
     </plurals>
+    <plurals name="title_episodes">
+        <item quantity="one">%d épisode</item>
+        <item quantity="many">%d épisodes</item>
+        <item quantity="other">%d épisodes</item>
+    </plurals>
     <string name="title_no_streams">Aucune extension n\'a de flux pour ce titre</string>
     <string name="title_no_page">Aucune extension n\'a de fiche pour ce titre</string>
     <string name="player_episode">%1$s · S%2$d E%3$d</string>

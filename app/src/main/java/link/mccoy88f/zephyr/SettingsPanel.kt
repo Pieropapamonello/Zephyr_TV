@@ -544,9 +544,9 @@ internal fun MainActivity.showPage(title: String, rows: List<Triple<String, Stri
     // Keep focus inside the panel: Up from the first row and Down from the last go nowhere.
     (settingsList.parent as View).scrollTo(0, 0)
     if (rows.isEmpty()) return // a page that's all [top], like the PIN boxes, focuses itself
-    settingsList.getChildAt(first).let { it.nextFocusUpId = it.id }
+    if (top == null) settingsList.getChildAt(first).let { it.nextFocusUpId = it.id }
     settingsList.getChildAt(first + rows.size - 1).let { it.nextFocusDownId = it.id }
-    settingsList.getChildAt(first + focus.coerceIn(0, rows.size - 1)).requestFocus()
+    if (focus >= 0) settingsList.getChildAt(first + focus.coerceIn(0, rows.size - 1)).requestFocus()
 }
 
 // ---------- layout lock ----------
@@ -717,6 +717,14 @@ internal fun MainActivity.settingsRow(title: String, value: String, action: () -
             state.alpha = if (focused) 0.75f else 0.6f
             if (toggled) showSwitch(focused) // redrawn in the inverted colours on the lit row
             arrow.setColorFilter(if (focused) onFg else fg)
+            for (idx in 0 until childCount) {
+                val child = getChildAt(idx)
+                if (child is ImageView && child !== arrow) {
+                    if (child.drawable !is android.graphics.drawable.BitmapDrawable) {
+                        child.setColorFilter(if (focused) onFg else fg)
+                    }
+                }
+            }
         }
     }
 }

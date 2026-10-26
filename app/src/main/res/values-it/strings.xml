@@ -450,6 +450,11 @@
         <item quantity="many">%d stream</item>
         <item quantity="other">%d stream</item>
     </plurals>
+    <plurals name="title_episodes">
+        <item quantity="one">%d episodio</item>
+        <item quantity="many">%d episodi</item>
+        <item quantity="other">%d episodi</item>
+    </plurals>
     <string name="title_no_streams">Nessun addon ha stream per questo titolo</string>
     <string name="title_no_page">Nessun addon ha la scheda di questo titolo</string>
     <string name="player_episode">%1$s · S%2$d E%3$d</string>
