@@ -417,19 +417,13 @@ class PlayerActivity : Activity() {
         val p = player?.takeIf { channels.indexOf(c) == at }
         val duration = p?.duration?.takeIf { it > 0 && it != C.TIME_UNSET }
         val pos = p?.currentPosition ?: 0
-        onNow.text = listOfNotNull(c.now, duration?.let { "${clockOf(pos)} / ${clockOf(it)}" }).joinToString("  ·  ")
+        onNow.text = listOfNotNull(c.now, duration?.let { "${clock(pos)} / ${clock(it)}" }).joinToString("  ·  ")
         more.text = descs.getOrNull(channels.indexOf(c)).orEmpty()
         onNow.visibility = if (onNow.text.isNullOrEmpty()) View.GONE else View.VISIBLE
         more.visibility = if (expanded && !more.text.isNullOrEmpty()) View.VISIBLE else View.GONE
         bar.visibility = if (duration == null) View.GONE else View.VISIBLE
         bar.progress = if (duration == null) 0 else (pos * 100 / duration).toInt().coerceIn(0, 100)
         desc.visibility = if (onNow.visibility == View.VISIBLE || bar.visibility == View.VISIBLE) View.VISIBLE else View.GONE
-    }
-
-    /** "1:02:03", "4:05". */
-    private fun clockOf(ms: Long): String {
-        val s = ms / 1000
-        return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
     }
 
     /**

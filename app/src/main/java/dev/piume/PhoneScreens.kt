@@ -64,24 +64,31 @@ internal fun MainActivity.showPhoneLink(
     }
     upload = link
     val url = link.url(ip)
-    val box = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER_HORIZONTAL
-        setPadding(0, dp(4), 0, dp(12))
-        addView(ImageView(this@showPhoneLink).apply { setImageBitmap(qrBitmap(url, dp(200))) })
-        addView(label(url, 12f).apply { gravity = Gravity.CENTER; setPadding(0, dp(12), 0, dp(4)) })
-        addView(label(getString(R.string.upload_qr_instructions), 12f).apply {
-            gravity = Gravity.CENTER
-            alpha = 0.6f
-            maxLines = 3
-        })
-        addView(status.apply { gravity = Gravity.CENTER; maxLines = 2; setPadding(0, dp(12), 0, 0) })
-    }
+    val box = qrBox(url, url, getString(R.string.upload_qr_instructions), status)
     showPage(title, more + page(getString(R.string.dialog_done)) { back() }, top = box, back = back)
     pageExit = {
         link.stop()
         if (upload === link) upload = null
     }
+}
+
+/**
+ * A QR code of [url] for the phone, [caption] under it (the address, to type instead), [intro] (what to do), and
+ * [status] (how it's going), all in the middle: the top of a page for something done on a phone.
+ */
+internal fun MainActivity.qrBox(url: String, caption: String?, intro: String, status: TextView) = LinearLayout(this).apply {
+    orientation = LinearLayout.VERTICAL
+    gravity = Gravity.CENTER_HORIZONTAL
+    setPadding(0, dp(4), 0, dp(12))
+    addView(ImageView(this@qrBox).apply { setImageBitmap(qrBitmap(url, dp(200))) })
+    caption?.let { addView(label(it, 12f).apply { gravity = Gravity.CENTER; setPadding(0, dp(12), 0, dp(4)) }) }
+    addView(label(intro, 12f).apply {
+        gravity = Gravity.CENTER
+        alpha = 0.6f
+        maxLines = 4
+        if (caption == null) setPadding(0, dp(12), 0, 0)
+    })
+    addView(status.apply { gravity = Gravity.CENTER; maxLines = 2; setPadding(0, dp(12), 0, 0) })
 }
 
 /** The last problems (newest first), to see what went wrong; readable on a phone too, where lines fit. */

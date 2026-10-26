@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
 import android.media.tv.TvContract
-import android.widget.LinearLayout
 import android.widget.Toast
 import dev.piume.MainActivity.Prog
 import dev.piume.MainActivity.Companion.ADDONS_TV_ROW
@@ -181,10 +180,7 @@ internal fun MainActivity.updateAddon(url: String, pkg: String?, done: ((Stremio
     ui.post {
         done?.invoke(listing)
         if (tiles && listing != null && (logo || first)) refreshApps()
-        if (listing != null && pkg != null && tmdbLastFocusApp == pkg) {
-            watchApp = null
-            queryAppChannels(pkg)
-        }
+        if (listing != null) rowsAgain(pkg)
     }
 }
 
@@ -360,13 +356,6 @@ internal fun MainActivity.addonRows(): List<Triple<String, String, () -> Unit>> 
 
 /** Cinemeta's address: another instance's, typed with the remote, or Stremio's own again. Saving reads it at once. */
 internal fun MainActivity.configureCinemeta() {
-    val input = urlField(cinemetaUrl(), Stremio.CINEMETA)
-    val box = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(12), 0, dp(12))
-        addView(input)
-        addView(label(getString(R.string.cinemeta_intro), 12f).apply { alpha = 0.6f; maxLines = 4; setPadding(dp(4), dp(10), dp(4), 0) })
-    }
     fun use(url: String?) {
         if (url == null || url == Stremio.CINEMETA) prefs.edit().remove(K.CINEMETA_URL).apply() else prefs.edit().putString(K.CINEMETA_URL, url).apply()
         Toast.makeText(this, getString(R.string.addon_checking), Toast.LENGTH_SHORT).show()
@@ -376,16 +365,15 @@ internal fun MainActivity.configureCinemeta() {
         }
         renderSettings(CINEMETA_ROW)
     }
-    val rows = listOf(
-        page(getString(R.string.dialog_save)) {
-            val url = Stremio.manifestUrl(input.text?.toString().orEmpty())
-                ?: return@page Toast.makeText(this, getString(R.string.phone_epg_bad), Toast.LENGTH_LONG).show()
-            use(url)
-        },
-        page(getString(R.string.cinemeta_default)) { use(null) },
-    )
-    showPage(getString(R.string.setting_cinemeta), rows, top = box, back = { renderSettings(CINEMETA_ROW) })
-    downFrom(input)
+    textPage(getString(R.string.setting_cinemeta), cinemetaUrl(), Stremio.CINEMETA, getString(R.string.cinemeta_intro), back = { renderSettings(CINEMETA_ROW) }) { typed ->
+        listOf(
+            page(getString(R.string.dialog_save)) {
+                val url = Stremio.manifestUrl(typed()) ?: return@page Toast.makeText(this, getString(R.string.phone_epg_bad), Toast.LENGTH_LONG).show()
+                use(url)
+            },
+            page(getString(R.string.cinemeta_default)) { use(null) },
+        )
+    }
 }
 
 internal fun MainActivity.addonsVodName(mode: String) = getString(when (mode) {
@@ -401,23 +389,13 @@ internal fun MainActivity.addonsTvName(mode: String) = getString(when (mode) {
 })
 
 /** An add-on's manifest address typed with the remote (see addonFromPhone). Saving adds it once it answers. */
-internal fun MainActivity.configureAddon() {
-    val input = urlField("", getString(R.string.addon_hint))
-    val box = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(12), 0, dp(12))
-        addView(input)
-        addView(label(getString(R.string.addon_intro), 12f).apply { alpha = 0.6f; maxLines = 4; setPadding(dp(4), dp(10), dp(4), 0) })
-    }
-    val rows = listOf(
-        page(getString(R.string.dialog_save)) {
-            addAddon(input.text?.toString().orEmpty()) { refreshSettings(ADDON_ADD_ROW) }
+internal fun MainActivity.configureAddon() =
+    textPage(getString(R.string.setting_addon_add), "", getString(R.string.addon_hint), getString(R.string.addon_intro), back = { addonFromPhone() }) { typed ->
+        listOf(page(getString(R.string.dialog_save)) {
+            addAddon(typed()) { refreshSettings(ADDON_ADD_ROW) }
             renderSettings(ADDON_ADD_ROW)
-        },
-    )
-    showPage(getString(R.string.setting_addon_add), rows, top = box, back = { addonFromPhone() })
-    downFrom(input)
-}
+        })
+    }
 
 /**
  * Add an add-on: a QR code first, as the other addresses and keys, since a long address is easier pasted on a

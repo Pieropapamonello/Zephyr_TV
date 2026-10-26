@@ -170,6 +170,13 @@ internal fun MainActivity.hideWatch(p: Prog) {
     if (app == null || app == CW_PKG || app == SEARCH_PKG) refreshWatchNext() else queryAppChannels(app)
 }
 
+/** [pkg]'s rows built again with what just came in, if it's still the app in focus. On the main thread. */
+internal fun MainActivity.rowsAgain(pkg: String?) {
+    if (pkg == null || tmdbLastFocusApp != pkg) return
+    watchApp = null
+    queryAppChannels(pkg)
+}
+
 internal fun MainActivity.queryAppChannels(pkg: String?) {
     // An add-on's tile, or the TV app with the add-ons' channels in it, has rows without the TV listings too.
     if (pkg == null || (!readsListings() && !pkg.startsWith(STREMIO) && addonsUnder(pkg).isEmpty())) {
@@ -276,24 +283,19 @@ internal fun MainActivity.renameSections(pkg: String, sections: List<Section>, f
 private fun MainActivity.renameSection(pkg: String, sections: List<Section>, i: Int) {
     val s = sections[i]
     val key = sectionKey(pkg, s)
-    val input = urlField(renamed(pkg, s).name, s.name).apply { inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES }
-    val box = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(12), 0, dp(12))
-        addView(input)
-        addView(label(getString(R.string.section_rename_intro, s.name), 12f).apply { alpha = 0.6f; maxLines = 4; setPadding(dp(4), dp(10), dp(4), 0) })
-    }
     fun save(name: String?) {
         val o = org.json.JSONObject(sectionNames())
         if (name.isNullOrBlank() || name == s.name) o.remove(key) else o.put(key, name)
         prefs.edit().apply { if (o.length() == 0) remove(K.SECTION_NAMES) else putString(K.SECTION_NAMES, o.toString()) }.apply()
         renameSections(pkg, sections, i)
     }
-    showPage(renamed(pkg, s).name, listOf(
-        page(getString(R.string.dialog_save)) { save(input.text?.toString()?.trim()) },
-        page(getString(R.string.section_original_name)) { save(null) },
-    ), top = box, back = { renameSections(pkg, sections, i) })
-    downFrom(input)
+    textPage(renamed(pkg, s).name, renamed(pkg, s).name, s.name, getString(R.string.section_rename_intro, s.name), Typing.SENTENCE,
+        back = { renameSections(pkg, sections, i) }) { typed ->
+        listOf(
+            page(getString(R.string.dialog_save)) { save(typed()) },
+            page(getString(R.string.section_original_name)) { save(null) },
+        )
+    }
 }
 
 /**
@@ -459,10 +461,7 @@ internal fun MainActivity.updateEpg(pkg: String?, done: ((Int?) -> Unit)? = null
         val n = Epg.update(filesDir, url)
         ui.post {
             done?.invoke(n)
-            if (n != null && pkg != null && tmdbLastFocusApp == pkg) {
-                watchApp = null
-                queryAppChannels(pkg)
-            }
+            if (n != null) rowsAgain(pkg)
         }
     }
 }
@@ -480,10 +479,7 @@ internal fun MainActivity.updateChannelLogos(pkg: String?, done: ((Int?) -> Unit
     if (n != null) channelLogoFiles.clear()
     ui.post {
         done?.invoke(n)
-        if (n != null && pkg != null && tmdbLastFocusApp == pkg) {
-            watchApp = null
-            queryAppChannels(pkg)
-        }
+        if (n != null) rowsAgain(pkg)
     }
 }
 

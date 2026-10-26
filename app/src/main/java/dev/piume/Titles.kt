@@ -98,13 +98,12 @@ private fun MainActivity.watchedSections(type: String?, pkg: String, hidden: Set
     val (films, shows) = VodWatched.titles(vodDir())
     val nameless = (films.map { it to "movie" } + shows.map { it to "series" }).filter { it.first.name.isEmpty() }
     if (nameless.isNotEmpty()) nameLater(nameless, pkg)
-    val date = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
     fun section(kind: String, title: Int, marks: List<VodWatched.Mark>): Section? {
         val cards = marks.filter { it.name.isNotEmpty() && it.metaId.startsWith("tt") }.take(40).map { m ->
-            val art = "https://images.metahub.space/%s/" + m.metaId + "/img"
-            val t = Stremio.Title(kind, m.metaId, m.name, art.format("poster/small"), art.format("background/medium"), art.format("logo/medium"), null)
+            val t = Stremio.Title(kind, m.metaId, m.name, Stremio.art(m.metaId, "poster/small"), Stremio.art(m.metaId, "background/medium"),
+                Stremio.art(m.metaId, "logo/medium"), null)
             val shown = localize(t) ?: t.also { if (wantsLocal(it)) missing += it.id }
-            titleCard(shown, cinemetaUrl(), pkg, watched = true, sub = listOfNotNull("✓", m.at.takeIf { it > 0 }?.let { date.format(java.util.Date(it)) }).joinToString(" · "))
+            titleCard(shown, cinemetaUrl(), pkg, watched = true, sub = listOfNotNull("✓", watchedOn(m.at)).joinToString(" · "))
         }.filter { hideKey(null, it.title) !in hidden }
         val name = getString(title)
         return if (cards.isEmpty()) null else Section("vod:watched:$kind", name, name, cards)
@@ -124,21 +123,9 @@ private fun MainActivity.nameLater(marks: List<Pair<VodWatched.Mark, String>>, p
     val dir = vodDir()
     val base = cinemetaUrl().removeSuffix("/manifest.json")
     netIo.execute {
-        val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
-        val names = try {
-            pool.invokeAll(todo.map { (m, kind) -> java.util.concurrent.Callable {
-                runCatching { Stremio.titleMeta(base, kind, m.metaId)?.title?.name }.getOrNull()?.let { m.metaId to it }
-            } }, 20, java.util.concurrent.TimeUnit.SECONDS).mapNotNull { runCatching { it.get() }.getOrNull() }.toMap()
-        } finally {
-            pool.shutdownNow()
-        }
+        val names = parallel(todo, 6, 20) { (m, kind) -> Stremio.titleMeta(base, kind, m.metaId)?.title?.name?.let { m.metaId to it } }.toMap()
         runCatching { VodWatched.name(dir, names) }
-        if (names.isNotEmpty()) ui.post {
-            if (tmdbLastFocusApp == pkg) {
-                watchApp = null
-                queryAppChannels(pkg)
-            }
-        }
+        if (names.isNotEmpty()) ui.post { rowsAgain(pkg) }
     }
 }
 
@@ -150,12 +137,7 @@ private fun MainActivity.refreshShelves(addon: Stremio.Addon, pkg: String) {
     netIo.execute {
         val ok = runCatching { Stremio.updateShelves(filesDir, addon) }.onFailure { warn("Stremio catalogs failed: ${android.net.Uri.parse(addon.url).host} ($it)") }.isSuccess
         refreshing.remove(addon.url)
-        if (ok) ui.post {
-            if (tmdbLastFocusApp == pkg) {
-                watchApp = null
-                queryAppChannels(pkg)
-            }
-        }
+        if (ok) ui.post { rowsAgain(pkg) }
     }
 }
 
@@ -251,16 +233,8 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
     } else if (!episodic) {
         val at = VodProgress.position(vodDir(), t.id)
         val seen = t.id in marks
-        val label = when {
-            sole != null && at != null -> getString(R.string.title_resume_on, clock(at), sole.name)
-            at != null -> getString(R.string.title_resume, clock(at))
-            sole != null && seen -> getString(R.string.title_watch_again_on, sole.name)
-            seen -> getString(R.string.title_watch_again)
-            sole != null -> getString(R.string.tmdb_search_on, sole.name)
-            else -> getString(R.string.title_watch)
-        }
         icons[rows.size] = watchIcon(sole)
-        rows += page(label, if (seen) "✓" else "") {
+        rows += page(watchLabel(sole, at, seen), if (seen) "✓" else "") {
             pageReturn = { showVodTitle(meta, ref, season, services.known) }
             playTitle(ref, meta, null)
         }
@@ -372,14 +346,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
             val sole = soleAddon(having)
             val at = VodProgress.position(vodDir(), e.id)
             icons[rows.size] = watchIcon(sole)
-            rows += page(when {
-                sole != null && at != null -> getString(R.string.title_resume_on, clock(at), sole.name)
-                at != null -> getString(R.string.title_resume, clock(at))
-                sole != null && seen -> getString(R.string.title_watch_again_on, sole.name)
-                seen -> getString(R.string.title_watch_again)
-                sole != null -> getString(R.string.tmdb_search_on, sole.name)
-                else -> getString(R.string.title_watch)
-            }) { play(sole?.base) }
+            rows += page(watchLabel(sole, at, seen)) { play(sole?.base) }
             // Several add-ons have it: each of them too, with how many streams it has.
             if (sole == null) having.forEach { (base, name) ->
                 icons[rows.size] = watchIcon(soleAddon(listOf(base to name)))
@@ -404,14 +371,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
     // The stream add-ons asked whether they have it (how many streams each), all at once; the page again once they've said.
     if (found != null || sources.isEmpty()) return
     netIo.execute {
-        val pool = java.util.concurrent.Executors.newFixedThreadPool(4)
-        val counts = try {
-            pool.invokeAll(sources.map { (base, name) -> java.util.concurrent.Callable {
-                base to runCatching { Stremio.titleStreams(base, name, t.type, e.id).size }.getOrDefault(0)
-            } }, 15, java.util.concurrent.TimeUnit.SECONDS).mapNotNull { runCatching { it.get() }.getOrNull() }.toMap()
-        } finally {
-            pool.shutdownNow()
-        }
+        val counts = parallel(sources, 4, 15) { (base, name) -> base to runCatching { Stremio.titleStreams(base, name, t.type, e.id).size }.getOrDefault(0) }.toMap()
         ui.post { if (pageShowing(title)) showVodEpisode(meta, ref, e, services.known, counts, focusedRow() ?: focus) }
     }
 }
@@ -440,16 +400,22 @@ private fun MainActivity.markWhole(meta: Stremio.TitleMeta) {
     if (whole != (id in marks)) VodWatched.set(vodDir(), listOf(id to id), whole, name = meta.title.name)
 }
 
+/**
+ * A film's or episode's Watch row: Resume from where it [at] got to, Watch again once [seen], else Watch; "on" the
+ * add-on when one alone ([sole]) has its streams.
+ */
+private fun MainActivity.watchLabel(sole: Stremio.Addon?, at: Long?, seen: Boolean) = when {
+    sole != null && at != null -> getString(R.string.title_resume_on, clock(at), sole.name)
+    at != null -> getString(R.string.title_resume, clock(at))
+    sole != null && seen -> getString(R.string.title_watch_again_on, sole.name)
+    seen -> getString(R.string.title_watch_again)
+    sole != null -> getString(R.string.tmdb_search_on, sole.name)
+    else -> getString(R.string.title_watch)
+}
+
 /** "Season 1 · Episode 3" (specials: "Special 3"). */
 internal fun MainActivity.episodeLine(e: Stremio.Episode) =
     if (e.season == 0) getString(R.string.title_special_n, e.episode) else getString(R.string.title_season_episode, e.season, e.episode)
-
-/** Whether the page titled [title] is still the one in the panel (an answer for it may show it again). */
-private fun MainActivity.pageShowing(title: String) =
-    settingsScrim.visibility == View.VISIBLE && findViewById<android.widget.TextView>(R.id.settingsTitle).text.toString() == title
-
-/** When a mark was made ("26 ott 2026"), or null for one without a date. */
-private fun watchedOn(at: Long) = at.takeIf { it > 0 }?.let { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(it)) }
 
 /** Under a title's art: its [info] line, a [name] (an episode's), when the user [seen] it, and what it's about. */
 private fun MainActivity.titleTop(info: String, name: String?, about: String?, seen: String? = null) = LinearLayout(this).apply {
@@ -573,12 +539,6 @@ internal fun MainActivity.watchIcon(addon: Stremio.Addon?): android.graphics.dra
     return getDrawable(R.drawable.ic_play)!!.mutate().apply { setTint(fg) }
 }
 
-/** "1:02:03", "4:05". */
-private fun clock(ms: Long): String {
-    val s = ms / 1000
-    return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
-}
-
 /**
  * Plays the film, or the episode [episode] with the ones after it (for the next ones), in Piume's player: the
  * stream add-ons that have it are asked for their streams (see PlayerActivity, MODE_VOD), or [only] the one at that
@@ -649,14 +609,7 @@ internal fun MainActivity.titleProgressCards(hidden: Set<String>): List<Pair<Lon
 internal fun MainActivity.findTitles(query: String): List<Pair<Stremio.Title, String>> {
     val asked = vodAddons().flatMap { a -> a.vod.filter { it.search }.map { c -> a to c } }
     if (asked.isEmpty()) return emptyList()
-    val pool = java.util.concurrent.Executors.newFixedThreadPool(4)
-    return try {
-        pool.invokeAll(asked.map { (a, c) -> java.util.concurrent.Callable { runCatching { Stremio.search(a, c, query) }.getOrDefault(emptyList()).map { it to a.url } } },
-            15, java.util.concurrent.TimeUnit.SECONDS)
-            .flatMap { runCatching { it.get() }.getOrDefault(emptyList()) }.distinctBy { it.first.type + it.first.id }
-    } finally {
-        pool.shutdownNow()
-    }
+    return parallel(asked, 4, 15) { (a, c) -> Stremio.search(a, c, query).map { it to a.url } }.flatten().distinctBy { it.first.type + it.first.id }
 }
 
 /**
@@ -668,18 +621,12 @@ internal fun MainActivity.findTitles(query: String): List<Pair<Stremio.Title, St
 internal fun MainActivity.searchLibrary(query: String): List<Pair<Stremio.Title, String>> {
     val key = tmdbKey()
     val viaTmdb = if (key == null) emptyList() else {
-        val found = TmdbClient.search(key, query, tmdbLang())
-        val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
-        try {
-            pool.invokeAll(found.map { item -> java.util.concurrent.Callable {
-                val imdb = TmdbClient.imdbIdOf(key, item) ?: return@Callable null
-                Stremio.Title(if (item.mediaType == "tv") "series" else "movie", imdb, item.title,
-                    item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }, TmdbClient.cardUrl(item.backdropPath), null,
-                    item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }, item.genres,
-                    item.voteAverage.takeIf { it > 0 }?.let { "%.1f".format(java.util.Locale.ROOT, it) }, item.overview, item.id) to cinemetaUrl()
-            } }, 15, java.util.concurrent.TimeUnit.SECONDS).mapNotNull { runCatching { it.get() }.getOrNull() }
-        } finally {
-            pool.shutdownNow()
+        parallel(TmdbClient.search(key, query, tmdbLang()), 6, 15) { item ->
+            val imdb = TmdbClient.imdbIdOf(key, item) ?: return@parallel null
+            Stremio.Title(if (item.mediaType == "tv") "series" else "movie", imdb, item.title,
+                item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }, TmdbClient.cardUrl(item.backdropPath), null,
+                item.releaseDate?.take(4)?.takeIf { it.isNotBlank() }, item.genres,
+                item.voteAverage.takeIf { it > 0 }?.let { "%.1f".format(java.util.Locale.ROOT, it) }, item.overview, item.id) to cinemetaUrl()
         }
     }
     return localizeAll((viaTmdb + findTitles(query)).distinctBy { it.first.type + it.first.id })
@@ -693,8 +640,7 @@ private fun MainActivity.localizeAll(all: List<Pair<Stremio.Title, String>>): Li
         val todo = all.map { it.first }.filter { wantsLocal(it) }.map { it.id }.filter { Local.asking.add(it) }
         if (todo.isNotEmpty()) askLocal(todo, key, tmdbLang())
     }
-    return all.map { (t, source) -> (localize(t)?.let { l -> Stremio.Title(l.type, l.id, l.name, l.poster, l.background, l.logo, l.year, l.genres,
-        l.rating ?: t.rating, t.description, t.tmdbId) } ?: t) to source }
+    return all.map { (t, source) -> (localize(t) ?: t) to source }
 }
 
 /**
@@ -728,16 +674,11 @@ internal fun MainActivity.browseLibrary(filter: SearchFilter): List<Pair<Stremio
     val url = cinemetaUrl()
     val base = url.removeSuffix("/manifest.json")
     val kinds = if (filter.type == "all") listOf("movie", "series") else listOf(filter.type)
-    val pool = java.util.concurrent.Executors.newFixedThreadPool(4)
-    val found = try {
-        pool.invokeAll(kinds.flatMap { kind -> (0 until 2).map { page -> java.util.concurrent.Callable {
-            val catalog = if (filter.year != null) "year/genre=${filter.year}" else filter.genre?.let { "top/genre=${Stremio.enc(it)}" } ?: "top"
-            val skip = if (page == 0) "" else (if ('=' in catalog) "&" else "/") + "skip=${page * 50}"
-            runCatching { Stremio.titles(Http.json("$base/catalog/$kind/$catalog$skip.json")) }.getOrDefault(emptyList())
-        } } }, 20, java.util.concurrent.TimeUnit.SECONDS).flatMap { runCatching { it.get() }.getOrDefault(emptyList()) }
-    } finally {
-        pool.shutdownNow()
-    }
+    val catalog = if (filter.year != null) "year/genre=${filter.year}" else filter.genre?.let { "top/genre=${Stremio.enc(it)}" } ?: "top"
+    val found = parallel(kinds.flatMap { kind -> (0 until 2).map { page -> kind to page } }, 4, 20) { (kind, page) ->
+        val skip = if (page == 0) "" else (if ('=' in catalog) "&" else "/") + "skip=${page * 50}"
+        Stremio.titles(Http.json("$base/catalog/$kind/$catalog$skip.json"))
+    }.flatten()
     return localizeAll(found.filter { filter.accepts(it) }.distinctBy { it.type + it.id }.map { it to url })
 }
 
@@ -819,19 +760,16 @@ private fun MainActivity.localize(t: Stremio.Title): Stremio.Title? {
     Local.use(filesDir, tmdbLang())
     val l = Local.get(t.id) ?: return null
     val same = l.title.equals(t.name, ignoreCase = true)
-    return Stremio.Title(t.type, t.id, l.title, l.poster ?: t.poster, l.backdrop ?: t.background, t.logo.takeIf { same }, t.year ?: l.year,
-        l.genres.ifEmpty { t.genres }, t.rating ?: l.rating())
+    return t.copy(name = l.title, poster = l.poster ?: t.poster, background = l.backdrop ?: t.background, logo = t.logo.takeIf { same },
+        year = t.year ?: l.year, genres = l.genres.ifEmpty { t.genres }, rating = t.rating ?: l.rating())
 }
 
 /** Asks TMDB for [todo] (marked as being asked) in [lang], a few at a time, and keeps what it says. Network: off the UI thread. */
 private fun MainActivity.askLocal(todo: List<String>, key: String, lang: String) {
-    val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
     try {
-        pool.invokeAll(todo.map { id -> java.util.concurrent.Callable {
-            runCatching { TmdbClient.localized(key, id, lang) }.onSuccess { Local.put(id, it) } // a failure is asked again next time
-        } })
+        // A failure is asked again next time; an unknown title (null) is kept as unknown.
+        parallel(todo, 6, 60) { id -> TmdbClient.localized(key, id, lang).also { Local.put(id, it) } ?: Unit }
     } finally {
-        pool.shutdown()
         todo.forEach { Local.asking.remove(it) }
     }
     runCatching { Local.save(filesDir) }
@@ -881,12 +819,7 @@ private fun MainActivity.localizeLater(ids: List<String>, pkg: String) {
     if (todo.isEmpty()) return
     netIo.execute {
         askLocal(todo, key, lang)
-        ui.post {
-            if (tmdbLastFocusApp == pkg) {
-                watchApp = null
-                queryAppChannels(pkg)
-            }
-        }
+        ui.post { rowsAgain(pkg) }
     }
 }
 
@@ -905,13 +838,7 @@ private fun MainActivity.localizeMeta(meta: Stremio.TitleMeta): Stremio.TitleMet
     val title = localize(t) ?: t
     val episodes = if (!l.tv || meta.episodes.isEmpty()) meta.episodes else {
         val seasons = meta.episodes.map { it.season }.distinct().take(40)
-        val pool = java.util.concurrent.Executors.newFixedThreadPool(4)
-        val local = try {
-            pool.invokeAll(seasons.map { n -> java.util.concurrent.Callable { n to runCatching { TmdbClient.seasonEpisodes(key, l.tmdbId, n, lang) }.getOrDefault(emptyMap()) } },
-                20, java.util.concurrent.TimeUnit.SECONDS).mapNotNull { runCatching { it.get() }.getOrNull() }.toMap()
-        } finally {
-            pool.shutdownNow()
-        }
+        val local = parallel(seasons, 4, 20) { n -> n to runCatching { TmdbClient.seasonEpisodes(key, l.tmdbId, n, lang) }.getOrDefault(emptyMap()) }.toMap()
         meta.episodes.map { e ->
             val le = local[e.season]?.get(e.episode) ?: return@map e
             Stremio.Episode(e.id, e.season, e.episode, le.name.ifBlank { e.name }, e.released, le.still ?: e.thumbnail, le.overview.ifBlank { e.overview.orEmpty() }.ifBlank { null })

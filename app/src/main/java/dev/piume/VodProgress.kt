@@ -91,6 +91,16 @@ internal object VodProgress {
     }
 }
 
+/** "1:02:03", "4:05": where a film or episode is, or how long it is. */
+internal fun clock(ms: Long): String {
+    val s = ms / 1000
+    return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
+}
+
+/** When something was watched ("26 ott 2026"), or null for a mark without a date. */
+internal fun watchedOn(at: Long): String? =
+    at.takeIf { it > 0 }?.let { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(it)) }
+
 /** What tells one version of [f] from the next: its path, time and size. */
 internal fun stamp(f: File) = "${f.path}/${f.lastModified()}/${f.length()}"
 

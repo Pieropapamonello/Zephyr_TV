@@ -1,8 +1,6 @@
 package dev.piume
 
-import android.view.Gravity
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.Toast
 import dev.piume.MainActivity.Companion.CHOSEN
 import dev.piume.MainActivity.Companion.SUBMENU
@@ -141,29 +139,23 @@ private class Initials(private val text: String) : android.graphics.drawable.Dra
 
 /** A new user's name ([u] null), or [u]'s new one, typed with the remote. */
 private fun MainActivity.userName(u: User?) {
-    val input = urlField(u?.name.orEmpty(), getString(R.string.user_name_hint)).apply {
-        inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
-    }
-    val box = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(12), 0, dp(12))
-        addView(input)
-    }
     val back = { if (u == null) usersSettings(users().size) else userPage(u, renameRow(u)) }
-    showPage(getString(if (u == null) R.string.user_add else R.string.user_rename), listOf(page(getString(R.string.dialog_save)) {
-        val name = input.text?.toString()?.trim().orEmpty().ifEmpty { return@page }
-        val list = users()
-        if (u == null) {
-            val added = User(java.util.UUID.randomUUID().toString().take(8), name)
-            saveUsers(list + added)
-            userPage(added)
-        } else {
-            saveUsers(list.map { if (it.id == u.id) User(it.id, name) else it })
-            if (currentUser().id == u.id) usersChanged()
-            userPage(User(u.id, name), renameRow(u))
-        }
-    }), top = box, back = back)
-    downFrom(input)
+    textPage(getString(if (u == null) R.string.user_add else R.string.user_rename), u?.name.orEmpty(), getString(R.string.user_name_hint), null,
+        Typing.NAME, back = back) { typed ->
+        listOf(page(getString(R.string.dialog_save)) {
+            val name = typed().take(40).ifEmpty { return@page }
+            val list = users()
+            if (u == null) {
+                val added = User(java.util.UUID.randomUUID().toString().take(8), name)
+                saveUsers(list + added)
+                userPage(added)
+            } else {
+                saveUsers(list.map { if (it.id == u.id) User(it.id, name) else it })
+                if (currentUser().id == u.id) usersChanged()
+                userPage(User(u.id, name), renameRow(u))
+            }
+        })
+    }
 }
 
 // ---------- Trakt ----------
@@ -176,14 +168,7 @@ private fun MainActivity.traktSignIn(u: User) {
     val state = Trakt.newState()
     val url = Trakt.signInUrl(state)
     val status = label(getString(R.string.trakt_waiting), 14f)
-    val box = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER_HORIZONTAL
-        setPadding(0, dp(4), 0, dp(12))
-        addView(ImageView(this@traktSignIn).apply { setImageBitmap(qrBitmap(url, dp(200))) })
-        addView(label(getString(R.string.trakt_sign_in_intro), 12f).apply { gravity = Gravity.CENTER; alpha = 0.6f; maxLines = 4; setPadding(0, dp(12), 0, 0) })
-        addView(status.apply { gravity = Gravity.CENTER; maxLines = 2; setPadding(0, dp(12), 0, 0) })
-    }
+    val box = qrBox(url, null, getString(R.string.trakt_sign_in_intro), status)
     val title = getString(R.string.trakt_connect) + " · " + u.name
     showPage(title, listOf(page(getString(R.string.dialog_cancel)) { userPage(u) }), top = box, back = { userPage(u) })
     val until = System.currentTimeMillis() + 10 * 60_000L
@@ -209,10 +194,6 @@ private fun MainActivity.traktSignIn(u: User) {
     }
     ui.postDelayed({ ask() }, 5000)
 }
-
-/** Whether the page titled [title] is still the one in the panel. */
-private fun MainActivity.pageShowing(title: String) =
-    settingsScrim.visibility == android.view.View.VISIBLE && findViewById<android.widget.TextView>(R.id.settingsTitle).text.toString() == title
 
 private val syncing = java.util.Collections.synchronizedSet(HashSet<String>())
 
@@ -266,7 +247,7 @@ internal fun MainActivity.syncTrakt(user: String = currentUser().id, tell: Boole
                     .filter { it.isNotBlank() }.joinToString(" · ")
                 // Cinemeta's background for the title, as its card in the Films and Series rows has.
                 VodProgress.put(dir, VodProgress.Entry(p.id, if (p.series) "series" else "movie", p.metaId, p.title, sub,
-                    "https://images.metahub.space/background/medium/${p.metaId}/img", (duration * p.progress / 100).toLong(), duration, p.at))
+                    Stremio.art(p.metaId, "background/medium"), (duration * p.progress / 100).toLong(), duration, p.at))
                 resumed++
             }
             Trakt.synced(dir, System.currentTimeMillis())

@@ -74,3 +74,18 @@ internal fun InputStream.copyCapped(out: java.io.OutputStream, max: Long) {
         out.write(buf, 0, n)
     }
 }
+
+/**
+ * [task] for each of [items], [threads] at a time, waiting [seconds] at most for them all: the answers that came,
+ * in [items]' order. A task that fails, answers null or is still running by then is left out.
+ */
+internal fun <T, R : Any> parallel(items: List<T>, threads: Int, seconds: Long, task: (T) -> R?): List<R> {
+    if (items.isEmpty()) return emptyList()
+    val pool = java.util.concurrent.Executors.newFixedThreadPool(minOf(threads, items.size))
+    return try {
+        pool.invokeAll(items.map { java.util.concurrent.Callable { runCatching { task(it) }.getOrNull() } }, seconds, java.util.concurrent.TimeUnit.SECONDS)
+            .mapNotNull { runCatching { it.get() }.getOrNull() }
+    } finally {
+        pool.shutdownNow()
+    }
+}

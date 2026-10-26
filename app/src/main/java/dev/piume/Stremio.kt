@@ -27,6 +27,12 @@ internal object Stremio {
     private const val VOD_AGE_MS = 6 * 3600_000L // films' and series' catalogs are read again after this long
     private const val VOD_PAGES = 2 // a film or series catalog's pages read (Cinemeta: 50 a page)
 
+    /**
+     * Cinemeta's art for the title with this IMDb [id], from its image server (metahub): [kind] "poster/small",
+     * "background/medium", "logo/medium"… For titles known by their id alone (watched elsewhere, on Trakt).
+     */
+    fun art(id: String, kind: String) = "https://images.metahub.space/$kind/$id/img"
+
     /** Stremio's own catalog add-on: the films' and series' library (IMDb's), always on, its address can be changed (see MainActivity.cinemetaUrl). */
     const val CINEMETA = "https://v3-cinemeta.strem.io/manifest.json"
 
@@ -64,7 +70,7 @@ internal object Stremio {
      * A film or series in a catalog: its type and id (IMDb's, for most), name, art, year, genres and rating (IMDb's,
      * "7.5"); what it's about and its TMDB id when the catalog tells (Cinemeta's do; not kept with the shelves).
      */
-    internal class Title(val type: String, val id: String, val name: String, val poster: String?, val background: String?,
+    internal data class Title(val type: String, val id: String, val name: String, val poster: String?, val background: String?,
                          val logo: String?, val year: String?, val genres: List<String> = emptyList(), val rating: String? = null,
                          val description: String? = null, val tmdbId: Long? = null)
 

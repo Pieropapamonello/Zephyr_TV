@@ -396,28 +396,20 @@ internal fun MainActivity.saveTmdbKey(key: String) {
  * The TV guide's address (an XMLTV file, see Epg): typed with the remote or sent from a phone. Saving fetches it at
  * once; Clear turns the guide off.
  */
-internal fun MainActivity.configureEpg() {
-    val input = urlField(epgUrl() ?: "", getString(R.string.epg_hint))
-    val box = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(12), 0, dp(12))
-        addView(input)
-        addView(label(getString(R.string.epg_intro), 12f).apply { alpha = 0.6f; maxLines = 4; setPadding(dp(4), dp(10), dp(4), 0) })
+internal fun MainActivity.configureEpg() =
+    textPage(getString(R.string.setting_epg), epgUrl() ?: "", getString(R.string.epg_hint), getString(R.string.epg_intro), back = { renderSettings(EPG_ROW) }) { typed ->
+        listOf(
+            page(getString(R.string.setting_epg_phone)) { epgFromPhone() },
+            page(getString(R.string.dialog_save)) {
+                saveEpgUrl(typed())
+                renderSettings(EPG_ROW)
+            },
+            page(getString(R.string.dialog_clear)) {
+                saveEpgUrl(null)
+                renderSettings(EPG_ROW)
+            },
+        )
     }
-    val rows = listOf(
-        page(getString(R.string.setting_epg_phone)) { epgFromPhone() },
-        page(getString(R.string.dialog_save)) {
-            saveEpgUrl(input.text?.toString()?.trim())
-            renderSettings(EPG_ROW)
-        },
-        page(getString(R.string.dialog_clear)) {
-            saveEpgUrl(null)
-            renderSettings(EPG_ROW)
-        },
-    )
-    showPage(getString(R.string.setting_epg), rows, top = box, back = { renderSettings(EPG_ROW) })
-    downFrom(input)
-}
 
 /** A box for a web address, typed with the remote: framed like the other settings boxes. */
 internal fun MainActivity.urlField(value: String, hint: String): EditText =
@@ -437,6 +429,34 @@ internal fun MainActivity.urlField(value: String, hint: String): EditText =
         background = bg
         setOnFocusChangeListener { _, focused -> bg.setStroke(if (focused) dp(2) else dp(1), if (focused) fg else fieldEdge()) }
     }
+
+/** What a page's box (see textPage) is for: a web address, a name (capitals for each word or the first), or a key. */
+internal enum class Typing { ADDRESS, NAME, SENTENCE, KEY }
+
+/**
+ * A page with a box to type in with the remote: [value] in it ([hint] while it's empty), [intro] under it, then the
+ * rows [rows] makes, which read what's typed (trimmed) when picked: Save, Clear, on the phone… The box has the focus;
+ * Down goes on to the rows.
+ */
+internal fun MainActivity.textPage(title: String, value: String, hint: String, intro: String?, typing: Typing = Typing.ADDRESS,
+                                   back: () -> Unit, rows: (typed: () -> String) -> List<Triple<String, String, () -> Unit>>) {
+    val input = urlField(value, hint).apply {
+        inputType = android.text.InputType.TYPE_CLASS_TEXT or when (typing) {
+            Typing.ADDRESS -> android.text.InputType.TYPE_TEXT_VARIATION_URI
+            Typing.NAME -> android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            Typing.SENTENCE -> android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            Typing.KEY -> android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        }
+    }
+    val box = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(0, dp(12), 0, dp(12))
+        addView(input)
+        intro?.let { addView(label(it, 12f).apply { alpha = 0.6f; maxLines = 4; setPadding(dp(4), dp(10), dp(4), 0) }) }
+    }
+    showPage(title, rows { input.text?.toString()?.trim().orEmpty() }, top = box, back = back)
+    downFrom(input)
+}
 
 /** Focuses [input], the box at the top of the page, with Down going on to the first row under it. */
 internal fun MainActivity.downFrom(input: EditText) {
@@ -462,48 +482,25 @@ internal fun MainActivity.saveEpgUrl(url: String?) {
     }
 }
 
-internal fun MainActivity.configureTmdbApiKey() {
-    val currentKey = prefs.getString(K.TMDB_API_KEY, "") ?: ""
-    val input = EditText(this).apply {
-        setText(currentKey)
-        hint = getString(R.string.tmdb_api_key_hint)
-        setTextColor(fg)
-        setHintTextColor(if (dark) 0x66FFFFFF else 0x66000000)
-        isSingleLine = true
-        setPadding(dp(14), dp(10), dp(14), dp(10))
-        val bg = GradientDrawable().apply {
-            cornerRadius = dp(8).toFloat()
-            setColor(field)
-            setStroke(dp(1), fieldEdge())
-        }
-        background = bg
-        // Same focus mark as the PIN boxes: otherwise only a blinking cursor tells you you're typing here.
-        setOnFocusChangeListener { _, focused -> bg.setStroke(if (focused) dp(2) else dp(1), if (focused) fg else fieldEdge()) }
+internal fun MainActivity.configureTmdbApiKey() =
+    textPage(getString(R.string.setting_tmdb_api_key), prefs.getString(K.TMDB_API_KEY, "") ?: "", getString(R.string.tmdb_api_key_hint), null,
+        Typing.KEY, back = { renderSettings(TMDB_KEY_ROW) }) { typed ->
+        listOf(
+            // Typing a 32-character key (or a 200-character token) with a remote is no fun: paste it on a phone.
+            page(getString(R.string.setting_tmdb_key_phone)) { tmdbKeyFromPhone() },
+            page(getString(R.string.dialog_save)) {
+                typed().takeIf { it.isNotBlank() }?.let { saveTmdbKey(it) }
+                renderSettings(TMDB_KEY_ROW)
+            },
+            page(getString(R.string.dialog_clear)) {
+                prefs.edit().remove(K.TMDB_API_KEY).apply()
+                tmdbTrending = emptyList()
+                spotlightIo.execute { backdrops.clear() } // TMDB's backdrops: Spotlight goes on with Cinemeta's
+                if (currentWallpaper() == "tmdb:trending") loadWallpaper()
+                renderSettings(TMDB_KEY_ROW)
+            },
+        )
     }
-    val box = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(12), 0, dp(12))
-        addView(input)
-    }
-    val rows = listOf(
-        // Typing a 32-character key (or a 200-character token) with a remote is no fun: paste it on a phone.
-        page(getString(R.string.setting_tmdb_key_phone)) { tmdbKeyFromPhone() },
-        page(getString(R.string.dialog_save)) {
-            val key = input.text?.toString()?.trim()
-            if (!key.isNullOrBlank()) saveTmdbKey(key)
-            renderSettings(TMDB_KEY_ROW)
-        },
-        page(getString(R.string.dialog_clear)) {
-            prefs.edit().remove(K.TMDB_API_KEY).apply()
-            tmdbTrending = emptyList()
-            spotlightIo.execute { backdrops.clear() } // TMDB's backdrops: Spotlight goes on with Cinemeta's
-            if (currentWallpaper() == "tmdb:trending") loadWallpaper()
-            renderSettings(TMDB_KEY_ROW)
-        }
-    )
-    showPage(getString(R.string.setting_tmdb_api_key), rows, top = box, back = { renderSettings(TMDB_KEY_ROW) })
-    input.requestFocus()
-}
 
 internal fun MainActivity.page(title: String, value: String = "", action: () -> Unit) = Triple(title, value, action)
 
@@ -511,6 +508,10 @@ internal fun MainActivity.page(title: String, value: String = "", action: () -> 
  * The row of the page in the panel the focus is on (0 for its first row, after the box on top), or null when it's
  * elsewhere: a page built again by itself (an answer came in) keeps the focus where it was.
  */
+/** Whether the page titled [title] is still the one in the panel (an answer for it may show it again). */
+internal fun MainActivity.pageShowing(title: String) =
+    settingsScrim.visibility == View.VISIBLE && findViewById<TextView>(R.id.settingsTitle).text.toString() == title
+
 /** Focuses the page's row [i] (0: its first, after the box on top). */
 internal fun MainActivity.focusRow(i: Int) {
     val first = (0 until settingsList.childCount).firstOrNull { settingsList.getChildAt(it).hasOnClickListeners() } ?: return
