@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo/zephyrtv-logo.svg" alt="Zephyr TV" width="160"></p>
+
 <h1 align="center">Zephyr TV</h1>
 
 <p align="center">
