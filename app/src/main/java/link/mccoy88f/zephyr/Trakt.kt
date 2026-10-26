@@ -179,7 +179,7 @@ internal object Trakt {
     fun watched(dir: File): List<VodWatched.Mark>? {
         val movies = call(dir, "GET", "/sync/watched/movies")
         if (refused(movies)) throw SignedOut()
-        val shows = call(dir, "GET", "/sync/watched/shows")
+        val shows = call(dir, "GET", "/sync/watched/shows?extended=progress")
         if (movies?.first != 200 || shows?.first != 200) return null
         return parseWatched(JSONArray(movies.second), JSONArray(shows.second))
     }
@@ -203,7 +203,9 @@ internal object Trakt {
                 val at = e.optString("last_watched_at").takeIf { it.isNotBlank() && it != "null" }
                 if (reset != null && at != null && at < reset) continue
                 val epTime = at?.let { time(it) }?.takeIf { it > 0 } ?: showTime
-                out += VodWatched.Mark("$show:${season.optInt("number")}:${e.optInt("number")}", show, epTime, name)
+                val sNum = season.optInt("number")
+                val eNum = e.optInt("number", e.optInt("episode", 0))
+                out += VodWatched.Mark("$show:$sNum:$eNum", show, epTime, name)
                 count++
             }
             if (count == 0 && (reset == null || s.optString("last_watched_at") >= reset)) {

@@ -59,7 +59,11 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, a
     val kind = getString(if (t.type == "series") R.string.tmdb_badge_tv else R.string.tmdb_badge_movie)
     markWhole(meta)
     // Watched (by the user in use): a film when, a series its last episode watched and when.
-    val mine = VodWatched.all(vodDir())
+    var mine = VodWatched.all(vodDir())
+    if (t.type == "series" && t.id in mine && meta.episodes.isNotEmpty() && meta.episodes.none { it.id in mine }) {
+        VodWatched.set(vodDir(), meta.episodes.map { it.id to t.id }, true, name = t.name)
+        mine = VodWatched.all(vodDir())
+    }
     val seenLine = if (t.type == "series") mine.values.filter { it.metaId == t.id && ':' in it.id }.maxByOrNull { it.at }?.let { m ->
         val e = meta.episodes.firstOrNull { it.id == m.id }
         getString(R.string.title_last_watched, listOfNotNull(e?.let { episodeLine(it) }, watchedOn(m.at)).joinToString(" · "))

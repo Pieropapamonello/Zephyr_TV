@@ -13,6 +13,12 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 1.2.5
+
+- Trakt synchronization now requests full episode progress to correctly mark all watched episodes in series details.
+- In the player, the channel and title logo now has rounded corners.
+- A soft blurred version of the logo shows behind it as a background.
+
 ## 1.2.4
 
 - The play icon changes color when a watch button is in focus.

@@ -106,15 +106,18 @@ class PlayerActivity : Activity() {
         getSharedPreferences(K.FILE, MODE_PRIVATE).getString(K.EPG_URL, null)?.takeIf { it.isNotBlank() }?.let { Epg.saved(filesDir, it) }
     }
 
+    private class LogoBox(val frame: FrameLayout, val bg: ImageView, val fg: ImageView)
+
     private lateinit var surface: SurfaceView
     private lateinit var status: TextView // under the channel's logo and name while it loads: which stream, or none works
     private lateinit var loading: LinearLayout // in the middle while a channel loads: its logo, name and the status
-    private lateinit var loadLogo: ImageView
+    private lateinit var loadLogoBox: LogoBox
     private lateinit var loadName: TextView
     private lateinit var loadSub: TextView // under the name, for an episode: its season, number and name
     private var loadFor = -1 // the channel (film, episode) the loading screen shows
     private lateinit var banner: LinearLayout
-    private lateinit var logo: ImageView
+    private lateinit var logoBox: LogoBox
+    private val blurLogos = ConcurrentHashMap<String, Bitmap>()
     private lateinit var title: TextView
     private lateinit var position: TextView
     private lateinit var clock: TextView
@@ -207,7 +210,7 @@ class PlayerActivity : Activity() {
         root.addView(surface, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER))
         // While a channel loads: its logo and name in the middle, and under them the stream being tried, or that
         // none works.
-        loadLogo = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER }
+        loadLogoBox = createLogoBox(dp(16), dp(12), 12)
         loadName = text(28f, bold = true).apply { gravity = Gravity.CENTER; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
         loadSub = text(20f).apply { gravity = Gravity.CENTER; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(6), 0, 0) }
         status = text(18f).apply { gravity = Gravity.CENTER; alpha = 0.8f; setPadding(0, dp(10), 0, 0) }
@@ -215,7 +218,7 @@ class PlayerActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(48), 0, dp(48), 0)
-            addView(loadLogo, LinearLayout.LayoutParams(dp(240), dp(135)).apply { bottomMargin = dp(16) })
+            addView(loadLogoBox.frame, LinearLayout.LayoutParams(dp(240), dp(135)).apply { bottomMargin = dp(16) })
             addView(loadName, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             addView(loadSub, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             addView(status, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
@@ -226,11 +229,7 @@ class PlayerActivity : Activity() {
         root.addView(subtitles, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER))
 
         // The banner: across the bottom, on a shade so it reads over any picture.
-        logo = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            background = GradientDrawable().apply { cornerRadius = dp(8).toFloat(); setColor(0x33FFFFFF) }
-            setPadding(dp(8), dp(6), dp(8), dp(6))
-        }
+        logoBox = createLogoBox(dp(8), dp(6), 10)
         title = text(24f, bold = true).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
         position = text(14f).apply { alpha = 0.7f; setPadding(dp(12), 0, 0, 0) }
         clock = text(18f)
@@ -303,7 +302,7 @@ class PlayerActivity : Activity() {
             clipToPadding = false
             setPadding(dp(48), dp(48), dp(48), dp(32))
             background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0xE6000000.toInt(), 0xB3000000.toInt(), 0x00000000))
-            addView(logo, LinearLayout.LayoutParams(dp(160), dp(90)).apply { marginEnd = dp(24) })
+            addView(logoBox.frame, LinearLayout.LayoutParams(dp(160), dp(90)).apply { marginEnd = dp(24) })
             addView(info, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
             visibility = View.GONE
         }
@@ -523,16 +522,47 @@ class PlayerActivity : Activity() {
         keepUp()
     }
 
-    /** The channel's logo in the banner: the add-on's, then Zephyr TV's own; downloaded once, kept while the player is open. */
-    private fun showLogo(c: Channel) = logoInto(logo, c) { title.text == c.name }
+    private fun createLogoBox(padH: Int, padV: Int, radiusDp: Int = 10): LogoBox {
+        val frame = FrameLayout(this).apply {
+            background = GradientDrawable().apply {
+                cornerRadius = dp(radiusDp).toFloat()
+                setColor(0x33000000)
+            }
+            clipToOutline = true
+            outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+        }
+        val bg = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            alpha = 0.55f
+        }
+        val fg = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setPadding(padH, padV, padH, padV)
+        }
+        frame.addView(bg, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        frame.addView(fg, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        return LogoBox(frame, bg, fg)
+    }
 
-    /** [c]'s logo in [view]: the add-on's, then Zephyr TV's own; downloaded once, set if [still] holds when it arrives. */
-    private fun logoInto(view: ImageView, c: Channel, still: () -> Boolean) {
-        val known = c.logos.firstNotNullOfOrNull { logos[it] }
-        view.setImageBitmap(known)
-        view.visibility = if (c.logos.isEmpty()) View.GONE else View.VISIBLE
+    /** The channel's logo in the banner: the add-on's, then Zephyr TV's own; downloaded once, kept while the player is open. */
+    private fun showLogo(c: Channel) = logoInto(logoBox, c) { title.text == c.name }
+
+    /** [c]'s logo in [box]: the add-on's, then Zephyr TV's own; downloaded once, set if [still] holds when it arrives. */
+    private fun logoInto(box: LogoBox, c: Channel, still: () -> Boolean) {
+        val knownUri = c.logos.firstOrNull { logos[it] != null }
+        val known = knownUri?.let { logos[it] }
+        if (known != null) {
+            val blur = blurLogos[knownUri] ?: runCatching { softBlur(known) }.getOrNull()?.also { blurLogos[knownUri] = it }
+            box.bg.setImageBitmap(blur)
+            box.fg.setImageBitmap(known)
+        } else {
+            box.bg.setImageDrawable(null)
+            box.fg.setImageDrawable(null)
+        }
+        box.frame.visibility = if (c.logos.isEmpty()) View.GONE else View.VISIBLE
         if (known != null || c.logos.isEmpty()) return
         ahead.execute {
+            var foundUri: String? = null
             val bmp = c.logos.firstNotNullOfOrNull { uri ->
                 runCatching {
                     val bytes = Http.open(uri).use { it.readCapped(Http.MAX_IMAGE) }
@@ -542,10 +572,19 @@ class PlayerActivity : Activity() {
                     var sample = 1
                     while (bounds.outWidth / (sample * 2) >= dp(240)) sample *= 2
                     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
-                        ?.also { logos[uri] = it }
+                        ?.also {
+                            logos[uri] = it
+                            foundUri = uri
+                        }
                 }.getOrNull()
             } ?: return@execute
-            ui.post { if (still()) view.setImageBitmap(bmp) }
+            val blur = foundUri?.let { u -> blurLogos.getOrPut(u) { softBlur(bmp) } } ?: runCatching { softBlur(bmp) }.getOrNull()
+            ui.post {
+                if (still()) {
+                    box.bg.setImageBitmap(blur)
+                    box.fg.setImageBitmap(bmp)
+                }
+            }
         }
     }
 
@@ -566,7 +605,7 @@ class PlayerActivity : Activity() {
             // A film's or episode's line (an episode's season, number and name); a channel's what's on stays in the banner.
             loadSub.text = if (vod) c.now.orEmpty() else ""
             loadSub.visibility = if (loadSub.text.isEmpty()) View.GONE else View.VISIBLE
-            logoInto(loadLogo, c) { loadFor == i }
+            logoInto(loadLogoBox, c) { loadFor == i }
         }
         status.text = text
         loading.visibility = View.VISIBLE
