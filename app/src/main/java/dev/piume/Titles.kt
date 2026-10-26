@@ -44,9 +44,6 @@ private fun MainActivity.vodAddons(): List<Stremio.Addon> = libraryUrls().mapNot
 internal fun MainActivity.streamSources(type: String, id: String): List<Pair<String, String>> =
     addonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.filter { it.provides("stream", type, id) }.map { it.base to it.name }
 
-/** Whether some add-on gives streams for films or series at all (Watch shows on a title's page). */
-internal fun MainActivity.hasVodStreams(): Boolean = addonUrls().any { Stremio.saved(filesDir, it)?.addon?.streamsVod == true }
-
 /** The tiles films and series add to the apps row: Films and Series, or nothing here (each add-on's own, see addonApps). */
 internal fun MainActivity.vodApps(): List<MainActivity.App> {
     if (addonsVod() != "tiles" || libraryUrls().isEmpty()) return emptyList()
@@ -164,13 +161,20 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
         }
     }
     val sources = streamSources(t.type, meta.episodes.firstOrNull()?.id ?: t.id)
+    val sole = soleAddon(sources) // the one add-on with streams for it: Watch on it, with its icon
     val rows = ArrayList<Triple<String, String, () -> Unit>>()
     var focus = 0
     if (sources.isEmpty()) {
         rows += page(getString(R.string.title_no_streams)) { }
     } else if (t.type != "series" || meta.episodes.isEmpty()) {
         val at = VodProgress.position(filesDir, t.id)
-        rows += page(if (at != null) getString(R.string.title_resume, clock(at)) else getString(R.string.title_watch)) {
+        val label = when {
+            sole != null && at != null -> getString(R.string.title_resume_on, clock(at), sole.name)
+            sole != null -> getString(R.string.tmdb_search_on, sole.name)
+            at != null -> getString(R.string.title_resume, clock(at))
+            else -> getString(R.string.title_watch)
+        }
+        rows += page(label) {
             closeLauncherSettings()
             playTitle(ref, meta, null)
         }
@@ -214,11 +218,36 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, s
             if (focused) scroll.post { scroll.smoothScrollTo(0, (v.bottom + dp(8) - scroll.height).coerceAtLeast(0)) }
         }
     }
-    // Watch (or the episodes) marked with the films' or series' icon, as a TMDB page's rows are with their apps'.
+    // Watch marked with its add-on's icon (the one add-on's), else Play, as a TMDB page's rows are with their apps'.
     if (sources.isNotEmpty() && (t.type != "series" || meta.episodes.isEmpty())) (settingsList.getChildAt(1) as? LinearLayout)?.addView(ImageView(this).apply {
-        setImageDrawable(getDrawable(R.drawable.ic_play)!!.mutate().apply { setTint(fg) })
+        setImageDrawable(watchIcon(sole))
         scaleType = ImageView.ScaleType.FIT_CENTER
     }, 0, LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(12) })
+}
+
+/** The add-on behind [sources] when it's the only one (Watch on it), else null. */
+internal fun MainActivity.soleAddon(sources: List<Pair<String, String>>): Stremio.Addon? =
+    sources.singleOrNull()?.let { (base, _) -> addonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.firstOrNull { it.base == base } }
+
+/** The add-ons with streams for films ([tv] false) or series, whatever the id: on a TMDB page, before its IMDb id is known. */
+internal fun MainActivity.vodStreamAddons(tv: Boolean): List<Stremio.Addon> =
+    addonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.filter { it.provides("stream", if (tv) "series" else "movie") }
+
+/**
+ * A Watch row's icon: [addon]'s tile's (when it has a tile of its own), else its logo (once on disk), else Play,
+ * tinted for the row when it's a mark rather than a picture.
+ */
+internal fun MainActivity.watchIcon(addon: Stremio.Addon?): android.graphics.drawable.Drawable {
+    if (addon != null) {
+        apps.firstOrNull { it.pkg == STREMIO + addon.id }?.icon?.constantState?.newDrawable(resources)?.mutate()?.let { d ->
+            return d.apply { if (this !is android.graphics.drawable.BitmapDrawable) setTint(fg) }
+        }
+        addon.logo?.takeIf { channelLogoFiles.has(it) }?.let { uri ->
+            runCatching { android.graphics.BitmapFactory.decodeFile(channelLogoFiles.get(uri) { u -> openStream(u) }.path) }.getOrNull()
+                ?.let { return android.graphics.drawable.BitmapDrawable(resources, it) }
+        }
+    }
+    return getDrawable(R.drawable.ic_play)!!.mutate().apply { setTint(fg) }
 }
 
 /** "1:02:03", "4:05". */

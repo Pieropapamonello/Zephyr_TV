@@ -421,6 +421,7 @@
     <string name="title_watch">Watch</string>
     <string name="title_watch_addons">Watch with the add-ons</string>
     <string name="title_resume">Resume from %1$s</string>
+    <string name="title_resume_on">Resume from %1$s on %2$s</string>
     <string name="title_season">Season %1$d</string>
     <string name="title_specials">Specials</string>
     <string name="title_episode_row">%1$d. %2$s</string>

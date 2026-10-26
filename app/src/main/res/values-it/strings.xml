@@ -422,6 +422,7 @@
     <string name="title_watch">Guarda</string>
     <string name="title_watch_addons">Guarda con gli addon</string>
     <string name="title_resume">Riprendi da %1$s</string>
+    <string name="title_resume_on">Riprendi da %1$s su %2$s</string>
     <string name="title_season">Stagione %1$d</string>
     <string name="title_specials">Speciali</string>
     <string name="title_episode_row">%1$d. %2$s</string>

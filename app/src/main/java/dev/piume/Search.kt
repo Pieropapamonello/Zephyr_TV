@@ -428,7 +428,11 @@ internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = nu
     }
     val shown = titleApps().filter { TmdbClient.offers(it.pkg, available) }
     // First, when an add-on gives streams for films or series: Watch in Piume's player (see Titles).
-    val watch = if (hasVodStreams()) listOf(page(getString(R.string.title_watch_addons)) { watchTmdbTitle(item) }) else emptyList()
+    // "Watch on <add-on>" when one add-on alone has streams of its kind, with its icon.
+    val streamers = vodStreamAddons(item.mediaType == "tv")
+    val sole = streamers.singleOrNull()
+    val watch = if (streamers.isEmpty()) emptyList() else listOf(page(sole?.let { getString(R.string.tmdb_search_on, it.name) }
+        ?: getString(R.string.title_watch_addons)) { watchTmdbTitle(item) })
     val rows = watch + shown.map { a ->
         val name = if (TmdbClient.isYouTube(a.pkg)) getString(R.string.spotlight_trailer) else getString(R.string.tmdb_search_on, a.label)
         page(name) {
@@ -458,7 +462,7 @@ internal fun MainActivity.showTitle(item: TmdbItem, available: Set<String>? = nu
     }
     // Each row starts with its app's icon, before the name (Watch, with Play).
     if (watch.isNotEmpty()) (settingsList.getChildAt(1) as? LinearLayout)?.addView(ImageView(this).apply {
-        setImageDrawable(getDrawable(R.drawable.ic_play)!!.mutate().apply { setTint(fg) })
+        setImageDrawable(watchIcon(sole))
         scaleType = ImageView.ScaleType.FIT_CENTER
     }, 0, LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(12) })
     shown.forEachIndexed { i, a ->

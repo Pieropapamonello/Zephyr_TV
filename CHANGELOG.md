@@ -15,6 +15,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- When only one add-on has streams for a film or series, its page says **Watch on** and the add-on's name (or **Resume from 12:34 on** the add-on), with the add-on's icon. The same is true on the page of a TMDB result.
+
 ## 4.1.0-beta.1
 
 - This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.

@@ -422,6 +422,7 @@
     <string name="title_watch">Regarder</string>
     <string name="title_watch_addons">Regarder avec les extensions</string>
     <string name="title_resume">Reprendre à %1$s</string>
+    <string name="title_resume_on">Reprendre à %1$s sur %2$s</string>
     <string name="title_season">Saison %1$d</string>
     <string name="title_specials">Épisodes spéciaux</string>
     <string name="title_episode_row">%1$d. %2$s</string>
