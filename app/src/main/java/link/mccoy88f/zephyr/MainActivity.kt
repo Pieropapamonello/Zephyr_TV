@@ -1096,7 +1096,7 @@ class MainActivity : Activity() {
             a.picture != null -> {
                 val pic = if (colour) a.picture.constantState?.newDrawable(resources) ?: a.picture
                           else (a.picture.constantState?.newDrawable(resources) ?: a.picture).mutate().apply { colorFilter = GREYSCALE }
-                tile(null, pic, false, a.pkg) {
+                tile(null, pic, false, a.pkg, padding = dp(4)) {
                     if (allApps.visibility == View.VISIBLE) {
                         closeAllApps()
                         appRow.findViewWithTag<View>(a.pkg)?.requestFocus()
@@ -1180,7 +1180,7 @@ class MainActivity : Activity() {
 
     /** White card: logo on top, name underneath. With no label the mark sits alone, centred, at one size. */
 
-    internal fun tile(label: String?, icon: Drawable, mono: Boolean, tag: String, wordmarkInset: Int? = null, tint: Int? = null, onClick: () -> Unit): View {
+    internal fun tile(label: String?, icon: Drawable, mono: Boolean, tag: String, wordmarkInset: Int? = null, tint: Int? = null, padding: Int? = null, onClick: () -> Unit): View {
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -1212,6 +1212,8 @@ class MainActivity : Activity() {
             if (wordmarkInset != null) {
                 img.scaleType = ImageView.ScaleType.CENTER_CROP
                 img.setPadding(wordmarkInset, 0, wordmarkInset, 0)
+            } else if (padding != null) {
+                img.setPadding(padding, padding, padding, padding)
             } else {
                 img.setPadding(dp(16), dp(20), dp(16), dp(20))
             }

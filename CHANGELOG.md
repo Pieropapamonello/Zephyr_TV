@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 1.2.1
+
+- The **Films**, **Series** and **TV channels** icons are larger on their home screen tiles.
+
 ## 1.2.0
 
 - Stremio add-ons have an **Adult content (18+)** setting. Content from these add-ons does not save viewing history or progress, and does not show in Continue Playing.

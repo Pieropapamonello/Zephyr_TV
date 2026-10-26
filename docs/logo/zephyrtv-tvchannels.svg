@@ -7,7 +7,7 @@
     </linearGradient>
   </defs>
 
-  <g transform="translate(0, 26)">
+  <g transform="translate(256, 256) scale(1.42) translate(-256, -230)">
     <!-- Antenna / Segnale -->
     <circle cx="256" cy="72" r="8" fill="#FB7185" />
     <line x1="256" y1="80" x2="256" y2="114" stroke="#FB7185" stroke-width="6" stroke-linecap="round" />
