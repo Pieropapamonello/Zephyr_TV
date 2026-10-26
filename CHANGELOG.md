@@ -15,6 +15,14 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+## 4.1.0-beta.5
+
+- This version is a beta. To get betas as updates, turn on **Piume settings → Updates → Receive betas**.
+- Piume remembers the films and episodes that you watch to the end. Their cards and pages show ✓.
+- The page of a film that you watched has **Watch again**. To change the mark, select **Mark as watched** or **Mark as not watched**.
+- On the page of a series, hold OK on an episode to mark it as watched or not watched. To mark all the episodes of the season, select **Mark season as watched**.
+- When an episode ends, the next episode stays in **Continue Playing** with **Up next**. Continue Playing shows one card for each series.
+- The page of a series opens on the season and the episode to watch next.
 - Cinemeta is the source of all films and series: the Films and Series tiles, the search and Spotlight. TMDB only translates them and adds the trailer and the services.
 - Search finds films and series in Cinemeta and in the add-ons. With a TMDB key, it also finds them by their names in your language.
 - Select a search result to see the same page as in the Films and Series tiles, with its seasons, episodes and streams.

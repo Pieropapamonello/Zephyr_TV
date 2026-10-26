@@ -96,6 +96,7 @@ class PlayerActivity : Activity() {
     private val pool by lazy { Executors.newFixedThreadPool(4) } // a film's streams, every add-on at once
     private val fetched = ConcurrentHashMap<String, Pair<Long, List<Stremio.Stream>>>() // channel id to its streams, and when
     private val pages = ConcurrentHashMap<String, Stremio.Meta>()
+    private val done = HashSet<String>() // the films and episodes marked watched while the player is open
     private val logos = ConcurrentHashMap<String, Bitmap>()
     private val guide by lazy {
         getSharedPreferences(K.FILE, MODE_PRIVATE).getString(K.EPG_URL, null)?.takeIf { it.isNotBlank() }?.let { Epg.saved(filesDir, it) }
@@ -445,21 +446,45 @@ class PlayerActivity : Activity() {
         fillTime(channels[at])
     }
 
-    /** Where the film or episode playing got to, for resuming it and for Continue Playing. */
+    /** Where the film or episode playing got to, for resuming it and for Continue Playing; at the credits, it's watched. */
     private fun saveProgress() {
         if (!vod) return
         val p = player ?: return
         val duration = p.duration.takeIf { it > 0 && it != C.TIME_UNSET } ?: return
-        val c = channels.getOrNull(at) ?: return
-        val e = VodProgress.Entry(c.id, intent.getStringExtra(META_TYPE) ?: c.type, intent.getStringExtra(META_ID) ?: c.id,
-            c.name, c.now.orEmpty(), intent.getStringExtra(POSTER) ?: c.logos.firstOrNull(), p.currentPosition, duration, System.currentTimeMillis())
+        if (at !in channels.indices) return
+        val e = entry(at, p.currentPosition, duration)
+        if (VodProgress.finished(e.position, duration)) return watched(at)
         ahead.execute { runCatching { VodProgress.put(filesDir, e) } }
     }
 
-    /** A film or episode played to its end: off Continue Playing, then the next episode, or the player closes. */
+    private fun entry(i: Int, position: Long, duration: Long): VodProgress.Entry {
+        val c = channels[i]
+        return VodProgress.Entry(c.id, intent.getStringExtra(META_TYPE) ?: c.type, intent.getStringExtra(META_ID) ?: c.id,
+            c.name, c.now.orEmpty(), intent.getStringExtra(POSTER) ?: c.logos.firstOrNull(), position, duration, System.currentTimeMillis())
+    }
+
+    /**
+     * Film or episode [i] watched (at the credits, or to its end): marked so (the series too, after its last
+     * episode), off Continue Playing, and the next episode waiting there in its place. Once each.
+     */
+    private fun watched(i: Int) {
+        val c = channels.getOrNull(i) ?: return
+        if (!done.add(c.id)) return
+        val meta = intent.getStringExtra(META_ID) ?: c.id
+        val last = i == channels.size - 1 // the episodes after the one picked, to the series' last
+        val next = if (last) null else entry(i + 1, 0L, 0L)
+        ahead.execute {
+            runCatching {
+                VodWatched.set(filesDir, listOfNotNull(c.id to meta, (meta to meta).takeIf { last && meta != c.id }), true)
+                VodProgress.remove(filesDir, c.id)
+                next?.let { VodProgress.putNext(filesDir, it) }
+            }
+        }
+    }
+
+    /** A film or episode played to its end: watched, then the next episode, or the player closes. */
     private fun ended() {
-        val c = channels[at]
-        ahead.execute { runCatching { VodProgress.remove(filesDir, c.id) } }
+        watched(at)
         if (at < channels.size - 1) play(at + 1) else finish()
     }
 

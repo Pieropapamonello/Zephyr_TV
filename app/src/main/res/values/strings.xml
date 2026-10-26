@@ -431,6 +431,13 @@
     <string name="title_specials">Specials</string>
     <string name="title_episode_row">%1$d. %2$s</string>
     <string name="title_episode_n">Episode %1$d</string>
+    <string name="title_watch_again">Watch again</string>
+    <string name="title_watch_again_on">Watch again on %1$s</string>
+    <string name="title_mark_watched">Mark as watched</string>
+    <string name="title_mark_unwatched">Mark as not watched</string>
+    <string name="title_mark_season">Mark season as watched</string>
+    <string name="title_unmark_season">Mark season as not watched</string>
+    <string name="title_up_next">Up next</string>
     <string name="title_season_episode">Season %1$d · Episode %2$d</string>
     <string name="title_special_n">Special %1$d</string>
     <string name="title_finding_streams">Looking for streams…</string>

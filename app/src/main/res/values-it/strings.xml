@@ -432,6 +432,13 @@
     <string name="title_specials">Speciali</string>
     <string name="title_episode_row">%1$d. %2$s</string>
     <string name="title_episode_n">Episodio %1$d</string>
+    <string name="title_watch_again">Guarda di nuovo</string>
+    <string name="title_watch_again_on">Guarda di nuovo su %1$s</string>
+    <string name="title_mark_watched">Segna come visto</string>
+    <string name="title_mark_unwatched">Segna come non visto</string>
+    <string name="title_mark_season">Segna stagione come vista</string>
+    <string name="title_unmark_season">Segna stagione come non vista</string>
+    <string name="title_up_next">Prossimo</string>
     <string name="title_season_episode">Stagione %1$d · Episodio %2$d</string>
     <string name="title_special_n">Speciale %1$d</string>
     <string name="title_finding_streams">Cerco gli stream…</string>

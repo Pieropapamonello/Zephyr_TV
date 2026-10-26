@@ -1426,6 +1426,8 @@ class MainActivity : Activity() {
     /** What holding OK does depends on what's focused. */
     internal fun onHold(v: View) {
         val tag = v.tag as? String
+        @Suppress("UNCHECKED_CAST")
+        (v.getTag(R.id.settingsList) as? () -> Unit)?.let { return it() } // a page's row with a hold of its own (an episode's: watched)
         when {
             v.id == R.id.searchButton -> assistant() // the TV's own voice search, for what TMDB doesn't know
             tag == SEARCH_PKG -> endSearch()
