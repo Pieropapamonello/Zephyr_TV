@@ -13,7 +13,7 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
-## 1.2.1
+## 1.2.2
 
 - The **Films**, **Series** and **TV channels** icons are larger on their home screen tiles.
 
