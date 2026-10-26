@@ -1,24 +1,24 @@
-# Contributing to Piume
+# Contributing to Zephyr TV
 
-Thanks for wanting to help. Piume is a fork of [Plume Launcher](https://github.com/aradhyas8/Plume_Launcher) by aradhyas8. It is a small project with one maintainer, so this page explains what fits, what doesn't, and how to send a change that can be merged quickly.
+Thanks for wanting to help. Zephyr TV is a fork of [Plume Launcher](https://github.com/aradhyas8/Plume_Launcher) by aradhyas8. It is a small project with one maintainer, so this page explains what fits, what doesn't, and how to send a change that can be merged quickly.
 
-## What Piume is
+## What Zephyr TV is
 
-Piume is a minimal home screen for Android TV and Google TV. Every change is weighed against these principles:
+Zephyr TV is a minimal home screen for Android TV and Google TV. Every change is weighed against these principles:
 
 - **Small and light.** A 1.2 MB APK, about 50–70 MB of RAM, no extra background services. One library only: Media3's ExoPlayer, for the Stremio add-ons' channels, in a player that runs in a process of its own.
 - **Simple home screen.** One apps row and one Continue Watching row. Nothing else competes for attention.
 - **Yours, not ours.** No ads, no sponsored or recommended content, no analytics, no account.
-- **Quiet on the network.** Piume only goes online for the things listed under [Privacy](README.md#privacy). Anything new that connects to the internet must be optional and off until the user turns it on.
+- **Quiet on the network.** Zephyr TV only goes online for the things listed under [Privacy](README.md#privacy). Anything new that connects to the internet must be optional and off until the user turns it on.
 
 ## Code map
 
-All the code is in `app/src/main/java/dev/piume/`. The home screen is one activity; its state lives in `MainActivity.kt` and its functions are kept by topic in the files next to it:
+All the code is in `app/src/main/java/link/mccoy88f/zephyr/`. The home screen is one activity; its state lives in `MainActivity.kt` and its functions are kept by topic in the files next to it:
 
 | File | What it does |
 |---|---|
 | `MainActivity.kt` | Start-up, theme, wallpapers, apps row, All apps, screensaver, remote navigation |
-| `SettingsPanel.kt` | Piume settings: sections, pages, on/off rows, layout lock |
+| `SettingsPanel.kt` | Zephyr TV settings: sections, pages, on/off rows, layout lock |
 | `Spotlight.kt` | TMDB Spotlight: title, arrows, app buttons, cycling |
 | `WatchRow.kt` | Continue Playing, recommendations per app, cards and posters |
 | `Addons.kt`, `Stremio.kt`, `PlayerActivity.kt` | Stremio add-ons' TV channels (rows, tiles, settings), the add-on client and cache, the player |
@@ -39,7 +39,7 @@ These will be declined, however well they're built:
 - Recommendation, trending or "discover" rows, and anything else that fills the home screen with content the user didn't ask for
 - Ads, analytics, crash reporting services, or accounts
 - New third-party libraries or SDKs (AndroidX included), besides the player's Media3
-- Services, workers or alarms that run while Piume isn't on screen
+- Services, workers or alarms that run while Zephyr TV isn't on screen
 - Online metadata services that need an API key, such as TMDB
 - Extra home screen rows, widgets or sections beyond the apps row and the card row
 
@@ -74,7 +74,7 @@ All of the text is in `res/values/strings.xml`, with the Italian translation in 
 
 ## Reporting bugs
 
-Use the [bug report form](../../issues/new/choose). The TV model, Android version and Piume version matter most, because many problems only happen on one manufacturer's TVs. A photo or video of the screen helps a lot.
+Use the [bug report form](../../issues/new/choose). The TV model, Android version and Zephyr TV version matter most, because many problems only happen on one manufacturer's TVs. A photo or video of the screen helps a lot.
 
 ## Building
 
@@ -82,4 +82,4 @@ See [Building from source](README.md#building-from-source) in the README.
 
 ## Screenshots
 
-The README images in `docs/screens/` come from an Android TV emulator. To take them again, run the **Screenshots** workflow from the Actions tab: it commits the new images to the branch it runs on. The Spotlight images need the `PIUME_TMDB_KEY` repository secret (a TMDB API key). The steps are in `scripts/screenshots.sh`.
+The README images in `docs/screens/` come from an Android TV emulator. To take them again, run the **Screenshots** workflow from the Actions tab: it commits the new images to the branch it runs on. The Spotlight images need the `ZEPHYR_TMDB_KEY` repository secret (a TMDB API key). The steps are in `scripts/screenshots.sh`.

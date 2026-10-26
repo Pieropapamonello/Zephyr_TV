@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "piume"
+rootProject.name = "zephyr"
 include(":app")

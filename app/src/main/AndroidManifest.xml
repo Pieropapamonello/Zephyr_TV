@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- In-app updates from GitHub releases. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Uninstalling Piume, once its settings and history are here (Android asks first; see FromPiume). -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <!-- Lets us read every app's Watch Next entries (same permission Projectivy uses). -->
     <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
     <!-- Dictating a title into the search box (asked for the first time someone picks Say it). -->
@@ -14,7 +16,7 @@
     <!-- Folder wallpapers: asked for only when someone picks "Choose a folder on this TV". -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <!-- Granted once over adb (pm grant dev.piume android.permission.WRITE_SECURE_SETTINGS) so the app can
+    <!-- Granted once over adb (pm grant link.mccoy88f.zephyr android.permission.WRITE_SECURE_SETTINGS) so the app can
          re-enable its Home service: Android drops it from the enabled list whenever the app is force-stopped. -->
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
@@ -32,12 +34,14 @@
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
+        <!-- Piume, what Zephyr TV was: its settings and history are taken on the first start (see FromPiume). -->
+        <package android:name="dev.piume" />
         <!-- Sony TVs: which external inputs have a device connected (see connectedInputs). -->
         <provider android:authorities="com.sony.dtv.tvinput.external.provider" />
     </queries>
 
     <!-- Cleartext stays allowed: Continue Watching posters come from other apps' listings, and some give
-         plain http addresses. Everything Piume asks for itself (TMDB, weather, updates) is https. -->
+         plain http addresses. Everything Zephyr TV asks for itself (TMDB, weather, updates) is https. -->
     <application
         android:label="@string/app_name"
         android:banner="@drawable/banner"
@@ -75,7 +79,7 @@
             android:configChanges="keyboard|keyboardHidden|navigation|screenSize|smallestScreenSize|screenLayout|orientation"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen" />
 
-        <!-- The update installer reports here; not exported, so only Android (via Piume's PendingIntent) can. -->
+        <!-- The update installer reports here; not exported, so only Android (via Zephyr TV's PendingIntent) can. -->
         <receiver android:name=".InstallResult" android:exported="false" />
 
         <!-- Back to the home screen after an update (Android kills the old version, which uncovers the last app). -->
@@ -110,7 +114,7 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/home_override" />
         </service>
-        <!-- Lets Piume see what's playing (media sessions) for the Play queue; it reads no notifications. -->
+        <!-- Lets Zephyr TV see what's playing (media sessions) for the Play queue; it reads no notifications. -->
         <service
             android:name=".PlayingListener"
             android:exported="true"

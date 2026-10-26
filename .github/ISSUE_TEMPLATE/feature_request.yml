@@ -1,11 +1,11 @@
 name: Feature request
-description: Suggest an idea for Piume
+description: Suggest an idea for Zephyr TV
 labels: [enhancement]
 body:
   - type: markdown
     attributes:
       value: |
-        Piume stays small on purpose. Please read [what's in and out of scope](https://github.com/mccoy88f/Piume_Launcher/blob/main/CONTRIBUTING.md#whats-out-of-scope) before suggesting something.
+        Zephyr TV stays small on purpose. Please read [what's in and out of scope](https://github.com/mccoy88f/Zephyr_TV/blob/main/CONTRIBUTING.md#whats-out-of-scope) before suggesting something.
   - type: textarea
     id: problem
     attributes:
@@ -27,7 +27,7 @@ body:
   - type: checkboxes
     id: scope
     attributes:
-      label: Fit with Piume
+      label: Fit with Zephyr TV
       options:
         - label: This doesn't add recommendation rows, ads, tracking, an account, or a third-party library.
           required: true

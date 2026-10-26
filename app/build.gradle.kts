@@ -7,15 +7,15 @@ plugins {
 // No dependencies on purpose: framework Views only, to keep RAM and APK size minimal. One exception, the player
 // for the Stremio add-ons' channels (see dependencies).
 android {
-    namespace = "dev.piume"
+    namespace = "link.mccoy88f.zephyr"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "dev.piume"
+        applicationId = "link.mccoy88f.zephyr"
         minSdk = 26
         targetSdk = 36
-        versionCode = 70
-        versionName = "4.2.0"
+        versionCode = 1
+        versionName = "1.0.0"
         // What's new: only this version's section of CHANGELOG.md ships, one entry per line, without ** marks.
         val notes = rootProject.file("CHANGELOG.md").readText().replace("\r", "")
             .substringAfter("\n## $versionName\n", "").substringBefore("\n## ")

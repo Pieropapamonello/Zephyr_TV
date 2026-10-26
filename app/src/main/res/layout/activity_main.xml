@@ -252,7 +252,7 @@
 
         <!-- Apps, then a row per section of the focused app's recommendations. Only the apps and the first
              section set its height (the apps row stays put); further sections hang below, see BottomSection. -->
-        <dev.piume.BottomSection
+        <link.mccoy88f.zephyr.BottomSection
             android:id="@+id/bottomSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -273,7 +273,7 @@
             <!-- Both rows: the scroller reaches 16dp (one grid gap) past the content edges on each side and
                  clips there. That is room for the focus lift, while the next item, a gap away, stays hidden.
                  Same on left and right, and SnapScrollView scrolls by whole items. -->
-            <dev.piume.SnapScrollView
+            <link.mccoy88f.zephyr.SnapScrollView
                 android:id="@+id/appScroll"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -321,7 +321,7 @@
                         android:orientation="horizontal"
                         android:visibility="gone" />
                 </LinearLayout>
-            </dev.piume.SnapScrollView>
+            </link.mccoy88f.zephyr.SnapScrollView>
 
             <TextView
                 android:id="@+id/watchTitle"
@@ -334,7 +334,7 @@
                 android:textSize="14sp"
                 android:visibility="gone" />
 
-            <dev.piume.SnapScrollView
+            <link.mccoy88f.zephyr.SnapScrollView
                 android:id="@+id/watchScroll"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -356,7 +356,7 @@
                     android:layout_height="wrap_content"
                     android:clipChildren="false"
                     android:orientation="horizontal" />
-            </dev.piume.SnapScrollView>
+            </link.mccoy88f.zephyr.SnapScrollView>
 
             <!-- Sections after the first: a title and a row each, built in code like the ones above. -->
             <LinearLayout
@@ -366,7 +366,7 @@
                 android:clipChildren="false"
                 android:clipToPadding="false"
                 android:orientation="vertical" />
-        </dev.piume.BottomSection>
+        </link.mccoy88f.zephyr.BottomSection>
     </LinearLayout>
 
     <!-- All apps: hidden until the Apps tile is pressed; Back closes it. Children unclipped, or the grid is cut

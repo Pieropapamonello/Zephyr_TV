@@ -33,7 +33,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: piume-debug
+          name: zephyr-debug
           path: |
             app/build/outputs/apk/debug/*.apk
             app/build/reports/

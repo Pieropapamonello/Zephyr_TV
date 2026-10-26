@@ -4,7 +4,7 @@
 set -u
 APK=$1
 OUT=$2
-PKG=dev.piume
+PKG=link.mccoy88f.zephyr
 mkdir -p "$OUT"
 
 shot() { # shot <name>: the screen as a 1280x720 JPEG
@@ -27,7 +27,7 @@ import re, sys
 want = sys.argv[1]
 for node in re.findall(r"<node [^>]*>", open("/tmp/ui.xml").read()):
     attrs = dict(re.findall(r'([\w-]+)="([^"]*)"', node))
-    if want in (attrs.get("resource-id"), "dev.piume:id/" + want, attrs.get("text"), attrs.get("content-desc")):
+    if want in (attrs.get("resource-id"), "link.mccoy88f.zephyr:id/" + want, attrs.get("text"), attrs.get("content-desc")):
         x1, y1, x2, y2 = map(int, re.findall(r"\d+", attrs["bounds"]))
         print((x1 + x2) // 2, (y1 + y2) // 2)
         break
@@ -40,7 +40,7 @@ PY
     sleep 1
 }
 
-prefs() { # prefs <theme> [extra xml]: Piume's settings, with the setup and notes popups already seen
+prefs() { # prefs <theme> [extra xml]: Zephyr TV's settings, with the setup and notes popups already seen
     adb shell am force-stop $PKG
     local key=""
     # With a key, both wallpapers are the Spotlight backdrop, as when the key is typed in.
@@ -94,7 +94,7 @@ for lang in en it; do
 
     # Settings, grouped in sections; then the TMDB Spotlight section.
     prefs dark; start
-    if [ $lang = it ]; then d="Impostazioni di Piume"; else d="Piume settings"; fi
+    if [ $lang = it ]; then d="Impostazioni di Zephyr TV"; else d="Zephyr TV settings"; fi
     tap launcherSettings "$d" @1788,90 && WAIT=2 shot $lang-settings
     prefs dark '<int name="reopen_row" value="300" />'; start
     WAIT=1 shot $lang-settings-tmdb

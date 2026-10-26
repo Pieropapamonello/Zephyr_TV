@@ -1,11 +1,11 @@
 name: Bug report
-description: Something in Piume doesn't work as expected
+description: Something in Zephyr TV doesn't work as expected
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Please check [Troubleshooting](https://github.com/mccoy88f/Piume_Launcher#troubleshooting) first. Many Home button problems are solved there.
+        Please check [Troubleshooting](https://github.com/mccoy88f/Zephyr_TV#troubleshooting) first. Many Home button problems are solved there.
   - type: input
     id: device
     attributes:
@@ -23,19 +23,19 @@ body:
   - type: input
     id: version
     attributes:
-      label: Piume version
-      description: Shown in Piume's settings, on the Updates row.
+      label: Zephyr TV version
+      description: Shown in Zephyr TV's settings, on the Updates row.
     validations:
       required: true
   - type: dropdown
     id: install
     attributes:
-      label: How did you install Piume?
+      label: How did you install Zephyr TV?
       options:
         - Downloader app
         - USB drive / file manager
         - adb
-        - Updated from inside Piume
+        - Updated from inside Zephyr TV
         - Other
     validations:
       required: true
@@ -51,7 +51,7 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. Open Piume settings
+        1. Open Zephyr TV settings
         2. Select ...
         3. ...
     validations:

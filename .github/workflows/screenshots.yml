@@ -1,5 +1,5 @@
 # Takes the README screenshots on an Android TV emulator and commits them to docs/screens/ on the branch it runs on.
-# Run it by hand from the Actions tab. With the PIUME_TMDB_KEY repository secret (a TMDB API key or read token),
+# Run it by hand from the Actions tab. With the ZEPHYR_TMDB_KEY repository secret (a TMDB API key or read token),
 # the screenshots show Spotlight and the TMDB screensaver; without it, the home screen has no Spotlight.
 name: Screenshots
 
@@ -36,7 +36,7 @@ jobs:
       - name: Take the screenshots
         uses: reactivecircus/android-emulator-runner@v2
         env:
-          TMDB_KEY: ${{ secrets.PIUME_TMDB_KEY }}
+          TMDB_KEY: ${{ secrets.ZEPHYR_TMDB_KEY }}
         with:
           api-level: 34
           target: android-tv

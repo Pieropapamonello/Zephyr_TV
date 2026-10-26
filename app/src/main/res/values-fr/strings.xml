@@ -1,13 +1,13 @@
 <resources>
     <!-- App & General -->
-    <string name="app_name">Piume</string>
-    <string name="override_desc">Ouvre Piume chaque fois que l\'écran d\'accueil de Google TV apparaît, pour que le bouton Accueil mène ici.</string>
+    <string name="app_name">Zephyr TV</string>
+    <string name="override_desc">Ouvre Zephyr TV chaque fois que l\'écran d\'accueil de Google TV apparaît, pour que le bouton Accueil mène ici.</string>
 
     <!-- Top bar & Accessibility descriptions -->
     <string name="network_settings">Paramètres réseau</string>
     <string name="all_apps">Toutes les applis</string>
     <string name="settings">Paramètres</string>
-    <string name="plume_settings">Paramètres de Piume</string>
+    <string name="plume_settings">Paramètres de Zephyr TV</string>
     <string name="tv_inputs">Entrées TV</string>
     <string name="toast_no_inputs">Aucune entrée TV trouvée</string>
 
@@ -60,7 +60,7 @@
     <string name="setting_epg">Guide TV (XMLTV)</string>
     <string name="setting_epg_phone">Coller l\'adresse depuis le téléphone</string>
     <string name="epg_hint">https://…/guide.xml.gz</string>
-    <string name="epg_intro">L\'adresse d\'un guide TV au format XMLTV, pour afficher le programme en cours sous chaque chaîne. Piume le télécharge une fois par jour.</string>
+    <string name="epg_intro">L\'adresse d\'un guide TV au format XMLTV, pour afficher le programme en cours sous chaque chaîne. Zephyr TV le télécharge une fois par jour.</string>
     <string name="epg_downloading">Téléchargement du guide TV…</string>
     <string name="toast_epg_updated">Guide TV téléchargé : %1$d chaînes</string>
     <string name="toast_epg_old">Le guide TV n\'a aucun programme pour aujourd\'hui : il n\'est pas à jour. Essayez une autre adresse.</string>
@@ -151,9 +151,9 @@
     <string name="pin_wrong">Code incorrect</string>
     <string name="pin_too_many_tries_wait">Trop de tentatives. Réessayez dans %1$d s.</string>
     <string name="pin_instructions">▲ ▼ changer  ·  ◀ ▶ déplacer  ·  OK valider. Les touches numériques fonctionnent aussi.</string>
-    <string name="pin_forgot_notice">Oublié ? Paramètres Android → Applis → Piume → Effacer les données supprime le verrou, avec votre disposition et vos paramètres.</string>
+    <string name="pin_forgot_notice">Oublié ? Paramètres Android → Applis → Zephyr TV → Effacer les données supprime le verrou, avec votre disposition et vos paramètres.</string>
     <string name="pin_mismatch">Les codes ne correspondent pas. Choisissez-en un à nouveau.</string>
-    <string name="layout_locked_toast">Disposition verrouillée. Les paramètres de Piume et les modifications de l\'écran d\'accueil demandent désormais le code.</string>
+    <string name="layout_locked_toast">Disposition verrouillée. Les paramètres de Zephyr TV et les modifications de l\'écran d\'accueil demandent désormais le code.</string>
     <string name="unlock_to_edit">Déverrouiller pour modifier…</string>
 
     <!-- Context Menus (Hold OK) -->
@@ -182,8 +182,8 @@
     <string name="weather_thunderstorm">Orage</string>
 
     <!-- Toasts & Notifications -->
-    <string name="toast_photo_access_needed">Piume a besoin d\'accéder aux photos pour afficher vos dossiers</string>
-    <string name="toast_home_button_permission">Activez \"Piume : bouton Accueil\" dans Paramètres → Système → Accessibilité</string>
+    <string name="toast_photo_access_needed">Zephyr TV a besoin d\'accéder aux photos pour afficher vos dossiers</string>
+    <string name="toast_home_button_permission">Activez \"Zephyr TV : bouton Accueil\" dans Paramètres → Système → Accessibilité</string>
     <string name="toast_no_photos_found">Aucune photo trouvée. Copiez-en sur la TV ou branchez une clé USB avec des photos.</string>
     <string name="toast_connect_network">Connectez d\'abord la TV au Wi-Fi ou à l\'Ethernet</string>
     <string name="toast_upload_server_failed">Impossible d\'ouvrir la page d\'envoi</string>
@@ -191,10 +191,10 @@
     <string name="toast_screensaver_downloading">Téléchargement des tableaux de la galerie (%1$s)…</string>
     <string name="toast_screensaver_download_failed">Impossible de télécharger les tableaux. Vérifiez la connexion et réessayez.</string>
     <string name="toast_screensaver_cannot_start">Cette TV ne peut pas lancer l\'économiseur d\'écran à la demande</string>
-    <string name="toast_update_available">Piume %1$s est disponible. Mettez-la à jour dans les paramètres de Piume.</string>
+    <string name="toast_update_available">Zephyr TV %1$s est disponible. Mettez-la à jour dans les paramètres de Zephyr TV.</string>
     <string name="toast_update_check_failed">Impossible de rechercher les mises à jour. Vérifiez la connexion.</string>
-    <string name="toast_update_up_to_date">Piume est à jour</string>
-    <string name="toast_update_permission">Activez Piume dans la liste suivante, puis appuyez de nouveau sur Mises à jour</string>
+    <string name="toast_update_up_to_date">Zephyr TV est à jour</string>
+    <string name="toast_update_permission">Activez Zephyr TV dans la liste suivante, puis appuyez de nouveau sur Mises à jour</string>
     <string name="toast_update_download_failed">Impossible de télécharger la mise à jour. Vérifiez la connexion et réessayez.</string>
     <string name="toast_update_install_failed">L\'installation de la mise à jour a échoué</string>
     <string name="toast_no_cw_apps">Aucune appli installée ne prend en charge Reprendre la lecture</string>
@@ -241,26 +241,26 @@
     <string name="folder_untitled">Photos</string>
     <string name="spotlight_trailer">Bande-annonce YouTube</string>
     <!-- Merged from upstream: guided Home setup, weather location, row position, update notes -->
-    <string name="home_service_label">Piume : bouton Accueil</string>
+    <string name="home_service_label">Zephyr TV : bouton Accueil</string>
     <string name="gallery">Galerie</string>
-    <string name="home_off_hint">Désactivez \"Piume : bouton Accueil\" dans Paramètres → Système → Accessibilité</string>
-    <string name="home_on_hint">Activez \"Piume : bouton Accueil\" dans Paramètres → Système → Accessibilité</string>
-    <string name="plume_press_change">Piume : appuyez pour changer</string>
+    <string name="home_off_hint">Désactivez \"Zephyr TV : bouton Accueil\" dans Paramètres → Système → Accessibilité</string>
+    <string name="home_on_hint">Activez \"Zephyr TV : bouton Accueil\" dans Paramètres → Système → Accessibilité</string>
+    <string name="plume_press_change">Zephyr TV : appuyez pour changer</string>
     <string name="setup_home">Configurer le bouton Accueil</string>
     <string name="preview_home_setup">Aperçu de la configuration de l\'Accueil</string>
     <string name="setup_step">Étape %1$d sur 3</string>
-    <string name="setup_role_title">Faites de Piume votre écran d\'accueil</string>
-    <string name="setup_role_body">Android va vous demander quelle appli utiliser comme écran d\'accueil. Choisissez Piume.</string>
+    <string name="setup_role_title">Faites de Zephyr TV votre écran d\'accueil</string>
+    <string name="setup_role_body">Android va vous demander quelle appli utiliser comme écran d\'accueil. Choisissez Zephyr TV.</string>
     <string name="setup_test_title">Appuyez sur Accueil sur la télécommande</string>
-    <string name="setup_test_body">Piume vérifie qu\'Accueil vous ramène ici. Si un autre écran d\'accueil s\'ouvre, rouvrez Piume depuis vos applis et la configuration essaiera la méthode suivante.</string>
-    <string name="setup_service_title">Activez le bouton Accueil de Piume</string>
-    <string name="setup_service_body">Les paramètres d\'accessibilité vont s\'ouvrir. Sélectionnez \"Piume : bouton Accueil\", activez-le, puis appuyez sur Retour pour revenir ici.</string>
+    <string name="setup_test_body">Zephyr TV vérifie qu\'Accueil vous ramène ici. Si un autre écran d\'accueil s\'ouvre, rouvrez Zephyr TV depuis vos applis et la configuration essaiera la méthode suivante.</string>
+    <string name="setup_service_title">Activez le bouton Accueil de Zephyr TV</string>
+    <string name="setup_service_body">Les paramètres d\'accessibilité vont s\'ouvrir. Sélectionnez \"Zephyr TV : bouton Accueil\", activez-le, puis appuyez sur Retour pour revenir ici.</string>
     <string name="setup_adb_title">Débloquez-le une fois avec ADB</string>
-    <string name="setup_adb_body">Cette TV bloque l\'interrupteur du bouton Accueil pour les applis installées hors du Play Store. Activez le débogage réseau dans les Options pour les développeurs, puis exécutez ces commandes depuis un ordinateur ou une appli ADB sur le téléphone. Piume fait le reste.</string>
+    <string name="setup_adb_body">Cette TV bloque l\'interrupteur du bouton Accueil pour les applis installées hors du Play Store. Activez le débogage réseau dans les Options pour les développeurs, puis exécutez ces commandes depuis un ordinateur ou une appli ADB sur le téléphone. Zephyr TV fait le reste.</string>
     <string name="setup_scan_help">Aide pas à pas</string>
     <string name="setup_done_title">Accueil configuré</string>
-    <string name="setup_done_body">Le bouton Accueil de la télécommande ouvre maintenant Piume.</string>
-    <string name="setup_done_body_service">Le bouton Accueil de la télécommande ouvre maintenant Piume. Maintenez Accueil pour le tableau de bord Google TV.</string>
+    <string name="setup_done_body">Le bouton Accueil de la télécommande ouvre maintenant Zephyr TV.</string>
+    <string name="setup_done_body_service">Le bouton Accueil de la télécommande ouvre maintenant Zephyr TV. Maintenez Accueil pour le tableau de bord Google TV.</string>
     <string name="setup_continue">Continuer</string>
     <string name="setup_not_now">Pas maintenant</string>
     <string name="setup_skip_check">Ignorer cette vérification</string>
@@ -310,14 +310,14 @@
     <string name="backup_save">Enregistrer une sauvegarde sur le téléphone…</string>
     <string name="backup_restore">Restaurer depuis le téléphone…</string>
     <string name="backup_waiting">En attente du fichier de sauvegarde…</string>
-    <string name="phone_backup_title">Sauvegarde de Piume</string>
-    <string name="phone_backup_intro">Enregistrez ce fichier. Il contient vos paramètres de Piume et votre clé TMDB : gardez-le privé. Les photos et le code de verrouillage n\'y sont pas.</string>
+    <string name="phone_backup_title">Sauvegarde de Zephyr TV</string>
+    <string name="phone_backup_intro">Enregistrez ce fichier. Il contient vos paramètres de Zephyr TV et votre clé TMDB : gardez-le privé. Les photos et le code de verrouillage n\'y sont pas.</string>
     <string name="phone_backup_download">Télécharger la sauvegarde</string>
-    <string name="phone_restore_title">Restaurer Piume</string>
-    <string name="phone_restore_intro">Choisissez un fichier de sauvegarde de Piume. Ses paramètres remplacent ceux de la TV.</string>
+    <string name="phone_restore_title">Restaurer Zephyr TV</string>
+    <string name="phone_restore_intro">Choisissez un fichier de sauvegarde de Zephyr TV. Ses paramètres remplacent ceux de la TV.</string>
     <string name="phone_choose_file">Choisir un fichier</string>
-    <string name="phone_restore_done">%1$d paramètres restaurés. Piume redémarre sur la TV.</string>
-    <string name="phone_restore_bad">Ce n\'est pas un fichier de sauvegarde de Piume.</string>
+    <string name="phone_restore_done">%1$d paramètres restaurés. Zephyr TV redémarre sur la TV.</string>
+    <string name="phone_restore_bad">Ce n\'est pas un fichier de sauvegarde de Zephyr TV.</string>
     <!-- Clock and night mode -->
     <string name="setting_clock">Horloge</string>
     <string name="clock_24">24 heures</string>
@@ -337,7 +337,7 @@
     <string name="search_listening">Je vous écoute… dites un titre</string>
     <string name="search_not_heard">Je n\'ai pas compris. Choisissez Le dire à voix haute pour réessayer</string>
     <string name="search_results_tile">Résultats : « %1$s »</string>
-    <string name="toast_mic_needed">Piume a besoin du micro pour entendre le titre</string>
+    <string name="toast_mic_needed">Zephyr TV a besoin du micro pour entendre le titre</string>
     <string name="search_films_for">Films pour « %1$s »</string>
     <string name="search_series_for">Séries pour « %1$s »</string>
     <string name="search_channels_for">Chaînes TV pour « %1$s »</string>
@@ -346,8 +346,8 @@
     <string name="channel_watch">Regarder à la TV</string>
     <string name="setting_now_playing">Afficher la lecture en cours</string>
     <string name="now_playing_needs_access">Accès requis</string>
-    <string name="now_playing_on">Piume voit ce qui est lu dans les autres applis.</string>
-    <string name="now_playing_help">Pour afficher ce qui est lu dans les autres applis, Piume a besoin de l\'accès aux notifications. Sur cette TV, seul le système peut le donner : exécutez une fois cette commande depuis un ordinateur, puis revenez ici.</string>
+    <string name="now_playing_on">Zephyr TV voit ce qui est lu dans les autres applis.</string>
+    <string name="now_playing_help">Pour afficher ce qui est lu dans les autres applis, Zephyr TV a besoin de l\'accès aux notifications. Sur cette TV, seul le système peut le donner : exécutez une fois cette commande depuis un ordinateur, puis revenez ici.</string>
     <string name="play_queue">File de lecture</string>
     <string name="playing_paused">%1$s · En pause</string>
     <string name="toast_no_results">Aucun résultat pour « %1$s »</string>
@@ -467,7 +467,7 @@
     <string name="user_switched">Profil : %1$s</string>
     <string name="trakt_connect">Connecter Trakt</string>
     <string name="trakt_not_connected">Non connecté</string>
-    <string name="trakt_sign_in_intro">Scannez le code avec votre téléphone. Connectez-vous à Trakt et autorisez Piume. La TV se connecte toute seule.</string>
+    <string name="trakt_sign_in_intro">Scannez le code avec votre téléphone. Connectez-vous à Trakt et autorisez Zephyr TV. La TV se connecte toute seule.</string>
     <string name="trakt_waiting">En attente de Trakt…</string>
     <string name="trakt_expired">Le code a expiré. Rouvrez cette page.</string>
     <string name="trakt_connected">Trakt connecté : %1$s</string>
@@ -512,4 +512,11 @@
     <string name="trakt_refused">Trakt n\'a pas accepté la connexion. Rouvrez cette page et réessayez.</string>
     <string name="title_hold_hint">Maintenez OK sur un épisode pour le marquer comme vu ou non vu.</string>
     <string name="search_filter_clear">Effacer les filtres</string>
+    <!-- Coming from Piume -->
+    <string name="piume_taken">Vos paramètres, utilisateurs et historique sont arrivés depuis Piume.</string>
+    <string name="piume_failed">Impossible de reprendre les paramètres de Piume. Pour les récupérer, restaurez une sauvegarde de Piume.</string>
+    <string name="piume_uninstall_title">Désinstaller Piume ?</string>
+    <string name="piume_uninstall_intro">Zephyr TV a les paramètres, utilisateurs et historique de Piume, et c\'est maintenant votre Accueil. Piume ne reçoit plus de mises à jour : vous pouvez la désinstaller.</string>
+    <string name="piume_uninstall">Désinstaller Piume</string>
+    <string name="zephyr_later">Plus tard</string>
 </resources>

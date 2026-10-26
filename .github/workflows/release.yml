@@ -1,10 +1,10 @@
-# Builds the signed Piume.apk and publishes it as a GitHub release, which the in-app updater reads.
+# Builds the signed ZephyrTV.apk and publishes it as a GitHub release, which the in-app updater reads.
 # Runs when a v* tag is pushed, or by hand from the Actions tab (it then tags the commit itself).
 # The release version is versionName in app/build.gradle.kts; its notes are that version's CHANGELOG.md section.
 #
 # Signing uses one fixed key, from these repository secrets (Settings → Secrets and variables → Actions):
-#   PIUME_KEYSTORE_BASE64  the .jks keystore, base64-encoded
-#   PIUME_KEYSTORE_PASSWORD, PIUME_KEY_ALIAS, PIUME_KEY_PASSWORD
+#   ZEPHYR_KEYSTORE_BASE64  the .jks keystore, base64-encoded
+#   ZEPHYR_KEYSTORE_PASSWORD, ZEPHYR_KEY_ALIAS, ZEPHYR_KEY_PASSWORD
 # Every release must be signed with the same key, or Android refuses to install it over the previous one.
 name: Release
 
@@ -41,18 +41,18 @@ jobs:
 
       - name: Signing key
         env:
-          KEYSTORE_BASE64: ${{ secrets.PIUME_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.PIUME_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.PIUME_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.PIUME_KEY_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.ZEPHYR_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ZEPHYR_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ZEPHYR_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ZEPHYR_KEY_PASSWORD }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::The PIUME_KEYSTORE_* secrets are missing. Without the fixed key a release couldn't update the previous one."
+            echo "::error::The ZEPHYR_KEYSTORE_* secrets are missing. Without the fixed key a release couldn't update the previous one."
             exit 1
           fi
-          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/piume.jks"
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/zephyr.jks"
           {
-            echo "storeFile=$RUNNER_TEMP/piume.jks"
+            echo "storeFile=$RUNNER_TEMP/zephyr.jks"
             echo "storePassword=$KEYSTORE_PASSWORD"
             echo "keyAlias=$KEY_ALIAS"
             echo "keyPassword=$KEY_PASSWORD"
@@ -66,9 +66,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VER: ${{ steps.version.outputs.ver }}
         run: |
-          cp app/build/outputs/apk/release/app-release.apk Piume.apk
+          cp app/build/outputs/apk/release/app-release.apk ZephyrTV.apk
           # This version's CHANGELOG section, up to the next heading of any level.
           awk -v v="## $VER" '$0 == v {on = 1; next} on && /^#/ {exit} on' CHANGELOG.md > notes.md
           # A beta ("4.0.0-beta.1") is a pre-release: the in-app updater reads releases/latest, which leaves those out.
           pre=""; case "$VER" in *-*) pre="--prerelease";; esac
-          gh release create "v$VER" Piume.apk --title "Piume $VER" --notes-file notes.md --target "$GITHUB_SHA" $pre
+          gh release create "v$VER" ZephyrTV.apk --title "Zephyr TV $VER" --notes-file notes.md --target "$GITHUB_SHA" $pre

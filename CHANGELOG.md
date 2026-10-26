@@ -1,6 +1,6 @@
 # Changelog
 
-Piume shows the section for its own version in **Piume settings → Updates** after an update.
+Zephyr TV shows the section for its own version in **Zephyr TV settings → Updates** after an update.
 The build stops if `versionName` has no section here.
 
 Write every entry in ASD-STE100 Simplified Technical English:
@@ -8,27 +8,34 @@ Write every entry in ASD-STE100 Simplified Technical English:
 - Write one idea in each sentence. Use 20 words or fewer in each sentence.
 - Use the active voice and the present tense.
 - Write instructions as commands: "Select **Updates**", not "**Updates** can be selected".
-- Use one word for one thing. Use the names that Piume shows on the screen.
-- Start each entry with "- ". Piume shows each entry as one item. It removes `**` marks.
+- Use one word for one thing. Use the names that Zephyr TV shows on the screen.
+- Start each entry with "- ". Zephyr TV shows each entry as one item. It removes `**` marks.
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 ## Unreleased
 
+## 1.0.0
+
+- Piume is now **Zephyr TV**: a new name and a new home, github.com/mccoy88f/Zephyr_TV. Zephyr TV is an app of its own, so it installs next to Piume.
+- When Zephyr TV starts for the first time, it takes from Piume your settings, your users, what you watched, your progress and your Trakt accounts.
+- When Zephyr TV is your Home, it asks if you want to uninstall Piume.
+- Zephyr TV can restore the backups of Piume.
 - When you select a film or series, its page opens at once and shows **Loading** until the information is there.
 - The page of a series tells you that you can hold OK on an episode to mark it.
 - Search has **Clear the filters**. The results of a search with words also show the filters.
 - In the list of years, Left and Right go back and forward 10 years.
-- With Trakt, the first sync sends to Trakt what you watched in Piume before. After that, what you remove on Trakt is removed in Piume too. A title that you finish elsewhere leaves Continue Playing.
-- An episode that you watch to the end in Piume counts as watched on Trakt too, also when it is short.
+- With Trakt, the first sync sends to Trakt what you watched before. After that, what you remove on Trakt is removed in Zephyr TV too. A title that you finish elsewhere leaves Continue Playing.
+- An episode that you watch to the end in Zephyr TV counts as watched on Trakt too, also when it is short.
 - Long downloads (TV guide, channel logos, updates, Trakt) do not slow down the pages and the search any more.
-
 - To open **Settings** in the users panel, you must type the PIN when the layout lock is on. Changing the user in use does not need it.
-- Piume does not disconnect Trakt by itself any more when the home screen and the player renew the access at the same time.
-- When Trakt refuses the account, Piume tells you to connect it again. When Trakt refuses a sign-in, the TV tells you at once.
+- Zephyr TV does not disconnect Trakt by itself any more when the home screen and the player renew the access at the same time.
+- When Trakt refuses the account, Zephyr TV tells you to connect it again. When Trakt refuses a sign-in, the TV tells you at once.
 - On the page of a film, series or episode, the focus stays on its row when the page gets new information.
 - What you watch is not lost any more when the player and the home screen save it at the same time.
 - A series gets ✓ when you watched all its episodes. Specials do not count.
+
+Before Zephyr TV, this app was called Piume. The versions of Piume follow.
 
 ## 4.2.0
 
@@ -377,7 +384,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## 4.0.0-beta.1
 
-- This version is a beta. Piume does not offer it as an update. To try it, install Piume.apk by hand.
+- This version is a beta. Piume does not offer it as an update. To try it, install ZephyrTV.apk by hand.
 - Piume settings have a new section, **Stremio add-ons**. Select **Add an add-on** and type the address of the add-on's manifest. You can also paste it on your phone.
 - The TV channels of an add-on show as rows. The first row has all the channels. Then each category has a row of its own.
 - Select **TV channels** to choose where the rows show: **In the TV app**, **In an IPTV app** or **An app per add-on**. Without a TV app, they show in the IPTV app.
