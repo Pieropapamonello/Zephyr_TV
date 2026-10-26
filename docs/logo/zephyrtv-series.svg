@@ -1,11 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
-    <!-- Gradiente di sfondo profondo e pulito -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0F172A" />
-      <stop offset="100%" stop-color="#020617" />
-    </linearGradient>
-
     <!-- Gradiente cornice TV (Tonalità Indaco/Viola per le Serie) -->
     <linearGradient id="frameGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#818CF8" />
@@ -22,19 +16,9 @@
       <stop offset="0%" stop-color="#0F172A" stop-opacity="0.8" />
       <stop offset="100%" stop-color="#1E293B" stop-opacity="0.8" />
     </linearGradient>
-
-    <!-- Gradiente metallico/luminoso per il testo principale -->
-    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="100%" stop-color="#94A3B8" />
-    </linearGradient>
   </defs>
 
-  <!-- Sfondo dell'app -->
-  <rect width="512" height="512" rx="116" fill="url(#bgGrad)" />
-
-  <!-- Gruppo Icona TV / Series (Stesse dimensioni 320x196) -->
-  <g>
+  <g transform="translate(0, 26)">
     <!-- Antenna / Segnale -->
     <circle cx="256" cy="72" r="8" fill="#818CF8" />
     <line x1="256" y1="80" x2="256" y2="114" stroke="#818CF8" stroke-width="6" stroke-linecap="round" />
@@ -55,10 +39,8 @@
     <rect x="142" y="228" width="56" height="40" rx="8" fill="#64748B" fill-opacity="0.3" />
     <line x1="210" y1="240" x2="310" y2="240" stroke="#64748B" stroke-width="6" stroke-linecap="round" />
     <line x1="210" y1="258" x2="250" y2="258" stroke="#475569" stroke-width="4" stroke-linecap="round" />
+
+    <!-- Sezione Testo -->
+    <text x="256" y="365" font-family="system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" font-size="36" font-weight="900" fill="#818CF8" text-anchor="middle" letter-spacing="10">SERIES</text>
   </g>
-
-  <!-- Sezione Testo -->
-  <text x="256" y="375" font-family="system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" font-size="42" font-weight="900" fill="url(#textGrad)" text-anchor="middle" letter-spacing="6">ZEPHYR</text>
-
-  <text x="256" y="415" font-family="system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" font-size="20" font-weight="700" fill="#818CF8" text-anchor="middle" letter-spacing="10">SERIES</text>
 </svg>

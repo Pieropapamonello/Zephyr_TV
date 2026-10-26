@@ -53,6 +53,7 @@ internal object K {
     const val USERS = "users" // JSON: Zephyr TV's users, [{id, name}] (see Users)
     const val USER = "user" // the id of the user in use ("": the first)
     const val ADDONS_TV = "addons_tv" // where their TV channels show: "tv" (the TV app), "iptv" (one IPTV app), "apps" (an app each)
+    const val ADULT_ADDONS = "adult_addons" // set of manifest addresses of add-ons marked as adult (18+)
 
     // Spotlight
     const val TMDB_API_KEY = "tmdb_api_key"

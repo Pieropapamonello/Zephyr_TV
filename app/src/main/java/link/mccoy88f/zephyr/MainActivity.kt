@@ -113,7 +113,7 @@ internal const val SEARCH_PKG = "piume:search" // the search results tile, after
 
 class MainActivity : Activity() {
 
-    // picture: a tile that is a picture, whole (Zephyr TV's own apps: Films, Series, TV channels), its name in it; the
+    // picture: the tile image for Zephyr TV's own apps (Films, Series, TV channels), centered in the card; the
     // icon stays the small mark on cards.
     internal class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable, val offline: Boolean = false,
                        val picture: Drawable? = null)
@@ -1093,18 +1093,26 @@ class MainActivity : Activity() {
         val colour = colourIcons()
         val t = when {
             custom != null -> tile(name, custom, false, a.pkg) { launch(a) }
-            a.picture != null -> pictureTile(a.picture, a.pkg) {
-                if (allApps.visibility == View.VISIBLE) {
-                    closeAllApps()
-                    appRow.findViewWithTag<View>(a.pkg)?.requestFocus()
-                } else if (!playLastChannel(a.pkg) && watchApp == a.pkg) firstCard()?.requestFocus()
+            a.picture != null -> {
+                val pic = if (colour) a.picture.constantState?.newDrawable(resources) ?: a.picture
+                          else (a.picture.constantState?.newDrawable(resources) ?: a.picture).mutate().apply { colorFilter = GREYSCALE }
+                tile(null, pic, false, a.pkg) {
+                    if (allApps.visibility == View.VISIBLE) {
+                        closeAllApps()
+                        appRow.findViewWithTag<View>(a.pkg)?.requestFocus()
+                    } else if (!playLastChannel(a.pkg) && watchApp == a.pkg) firstCard()?.requestFocus()
+                }
             }
             // An add-on's tile (see addonApps): OK goes down to its channels; from All apps, to its tile in the row.
-            a.pkg.startsWith(STREMIO) -> tile(name, a.icon, a.icon !is android.graphics.drawable.BitmapDrawable, a.pkg) {
-                if (allApps.visibility == View.VISIBLE) {
-                    closeAllApps()
-                    appRow.findViewWithTag<View>(a.pkg)?.requestFocus()
-                } else if (!playLastChannel(a.pkg) && watchApp == a.pkg) firstCard()?.requestFocus()
+            a.pkg.startsWith(STREMIO) -> {
+                val icon = if (colour || a.icon !is android.graphics.drawable.BitmapDrawable) a.icon
+                           else (a.icon.constantState?.newDrawable(resources) ?: a.icon).mutate().apply { colorFilter = GREYSCALE }
+                tile(name, icon, a.icon !is android.graphics.drawable.BitmapDrawable, a.pkg) {
+                    if (allApps.visibility == View.VISIBLE) {
+                        closeAllApps()
+                        appRow.findViewWithTag<View>(a.pkg)?.requestFocus()
+                    } else if (!playLastChannel(a.pkg) && watchApp == a.pkg) firstCard()?.requestFocus()
+                }
             }
             a.pkg.startsWith(HDMI) -> tile(name, a.icon, true, a.pkg,
                 tint = BRAND_COLOURS[hdmiIcon(a.label, true)]?.takeIf { colour }) { launch(a) }
@@ -1171,22 +1179,6 @@ class MainActivity : Activity() {
     }
 
     /** White card: logo on top, name underneath. With no label the mark sits alone, centred, at one size. */
-    /**
-     * A tile that is [picture], filling the card to its rounded edges (its name is in it), lifting with the focus as
-     * the others do.
-     */
-    internal fun pictureTile(picture: Drawable, tag: String, onClick: () -> Unit): View {
-        val col = LinearLayout(this).apply { gravity = Gravity.CENTER }
-        col.addView(ImageView(this).apply {
-            setImageDrawable(picture)
-            scaleType = ImageView.ScaleType.CENTER_CROP
-        }, LinearLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
-        style(col, dp(8), card = true)
-        col.clipToOutline = true // the picture takes the card's rounded corners
-        col.tag = tag
-        col.setOnClickListener { onClick() }
-        return col
-    }
 
     internal fun tile(label: String?, icon: Drawable, mono: Boolean, tag: String, wordmarkInset: Int? = null, tint: Int? = null, onClick: () -> Unit): View {
         val col = LinearLayout(this).apply {

@@ -62,4 +62,19 @@ class VodProgressTest {
         assertTrue(VodProgress.finished(3_500_000L, 3_600_000L))
         assertFalse(VodProgress.finished(600_000L, 3_600_000L))
     }
+
+    @Test fun separatesFilmsAndSeriesEvenWithMissingMetaId() {
+        val dir = Files.createTempDirectory("vod").toFile()
+        VodWatched.add(dir, listOf(
+            VodWatched.Mark("tt1375666", "tt1375666", 1000L, "Inception"),
+            VodWatched.Mark("tt0903747:1:1", "", 2000L, "Breaking Bad"),
+            VodWatched.Mark("tt0903747:1:2", "", 3000L, "Breaking Bad"),
+        ))
+        val (films, shows) = VodWatched.titles(dir)
+        assertEquals(listOf("tt1375666"), films.map { it.id })
+        assertEquals("Inception", films.first().name)
+        assertEquals(listOf("tt0903747"), shows.map { it.id })
+        assertEquals("Breaking Bad", shows.first().name)
+        assertEquals(3000L, shows.first().at)
+    }
 }

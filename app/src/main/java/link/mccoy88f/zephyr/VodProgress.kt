@@ -135,7 +135,11 @@ internal object VodWatched {
         cache?.takeIf { it.first == stamp }?.let { return it.second }
         val marks = runCatching {
             val a = JSONArray(f.readText())
-            (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { Mark(it.getString("id"), it.optString("metaId"), it.optLong("at"), it.optString("name")) }
+            (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map {
+                val id = it.getString("id")
+                val meta = it.optString("metaId").ifEmpty { if (':' in id) id.substringBefore(':') else id }
+                Mark(id, meta, it.optLong("at"), it.optString("name"))
+            }
         }.getOrDefault(emptyList()).associateBy { it.id }
         cache = stamp to marks
         return marks
@@ -170,7 +174,12 @@ internal object VodWatched {
     @Synchronized
     fun name(dir: File, names: Map<String, String>) {
         if (names.isEmpty()) return
-        locked(dir, FILE) { write(dir, all(dir).values.map { m -> names[m.metaId]?.takeIf { m.name.isEmpty() }?.let { Mark(m.id, m.metaId, m.at, it) } ?: m }) }
+        locked(dir, FILE) {
+            write(dir, all(dir).values.map { m ->
+                val meta = m.metaId.ifEmpty { m.id.substringBefore(':') }
+                names[meta]?.takeIf { m.name.isEmpty() }?.let { Mark(m.id, meta, m.at, it) } ?: m
+            })
+        }
     }
 
     private fun write(dir: File, marks: List<Mark>) {
@@ -189,11 +198,12 @@ internal object VodWatched {
      */
     fun titles(dir: File): Pair<List<Mark>, List<Mark>> {
         val marks = all(dir).values
-        val series = marks.filter { ':' in it.id }.groupBy { it.metaId }
+        val series = marks.filter { ':' in it.id }.groupBy { it.metaId.ifEmpty { it.id.substringBefore(':') } }
         val films = marks.filter { ':' !in it.id && it.id !in series }.sortedByDescending { it.at }
         val shows = series.map { (meta, eps) ->
             val last = eps.maxBy { it.at }
-            Mark(meta, meta, last.at, eps.firstOrNull { it.name.isNotEmpty() }?.name ?: marks.firstOrNull { it.id == meta }?.name.orEmpty())
+            val showId = meta.ifEmpty { last.id.substringBefore(':') }
+            Mark(showId, showId, last.at, eps.firstOrNull { it.name.isNotEmpty() }?.name ?: marks.firstOrNull { it.id == showId }?.name.orEmpty())
         }.sortedByDescending { it.at }
         return films to shows
     }

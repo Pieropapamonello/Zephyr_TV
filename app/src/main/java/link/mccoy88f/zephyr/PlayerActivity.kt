@@ -87,6 +87,8 @@ class PlayerActivity : Activity() {
     private var tune = 0 // counts tunings, so an answer for a channel left meanwhile is dropped
     private var typed = "" // number keys pressed so far
     private var vod = false // films and episodes (see MODE): seeking, resuming, the next episode; else live channels
+    private var adult = false // whether this content is from an adult add-on (no history or continue watching)
+    private var adultSources: Set<String> = emptySet()
     private var sources: List<Pair<String, String>> = emptyList() // films' and episodes' stream add-ons: address and name, in order
     private var descs: List<String> = emptyList() // what each film or episode is about (OK on the banner shows it)
     private var pendingSeek = -1L // where the stream starts once it's ready: resumed, or where a failed one stopped
@@ -170,7 +172,9 @@ class PlayerActivity : Activity() {
         vod = intent.getStringExtra(MODE) == MODE_VOD
         base = intent.getStringExtra(BASE) ?: if (vod) "" else return finish()
         addon = intent.getStringExtra(ADDON).orEmpty()
+        adult = intent.getBooleanExtra(ADULT, false)
         fun list(key: String) = intent.getStringArrayListExtra(key).orEmpty()
+        adultSources = list(ADULT_SOURCES).toSet()
         sources = list(SOURCES).zip(list(SOURCE_NAMES))
         descs = list(DESCS)
         if (vod && sources.isEmpty()) return finish()
@@ -442,9 +446,11 @@ class PlayerActivity : Activity() {
         fillTime(channels[at])
     }
 
+    private fun isAdult(): Boolean = adult || (streams.getOrNull(tried)?.source?.let { it in adultSources } == true)
+
     /** Where the film or episode playing got to, for resuming it and for Continue Playing; at the credits, it's watched. */
     private fun saveProgress() {
-        if (!vod) return
+        if (!vod || isAdult()) return
         val p = player ?: return
         val duration = p.duration.takeIf { it > 0 && it != C.TIME_UNSET } ?: return
         if (at !in channels.indices) return
@@ -467,6 +473,7 @@ class PlayerActivity : Activity() {
     private fun watched(i: Int) {
         val c = channels.getOrNull(i) ?: return
         if (!done.add(c.id)) return
+        if (isAdult()) return
         // Watched here at the credits, maybe before Trakt's 80% (a short episode): Trakt counts it watched too.
         if (i == at) scrobble("stop", 100.0)
         val meta = intent.getStringExtra(META_ID) ?: c.id
@@ -486,7 +493,7 @@ class PlayerActivity : Activity() {
      * after a pause), "pause", "stop" (left, or ended), with how far in it is.
      */
     private fun scrobble(action: String, percent: Double? = null) {
-        if (!vod) return
+        if (!vod || isAdult()) return
         val p = player ?: return
         val c = channels.getOrNull(at) ?: return
         val duration = p.duration.takeIf { it > 0 && it != C.TIME_UNSET } ?: return
@@ -1003,7 +1010,7 @@ class PlayerActivity : Activity() {
         tried = -1
         attempts = 0
         release()
-        pendingSeek = if (vod) VodProgress.position(userDir, c.id) ?: -1L else -1L
+        pendingSeek = if (vod && !isAdult()) VodProgress.position(userDir, c.id) ?: -1L else -1L
         say(getString(R.string.player_loading))
         if (banner.visibility == View.VISIBLE) showBanner(i) // zapping: the banner keeps up with it; else the middle says it all
         net.execute {
@@ -1173,14 +1180,17 @@ class PlayerActivity : Activity() {
     }
 
     /** The channel that plays, for Continue Playing and the add-on's tile (see Addons.lastAddonChannel): a file both processes read. */
-    private fun remember(c: Channel) = ahead.execute {
-        runCatching {
-            val o = JSONObject().put("addon", addon).put("type", c.type).put("id", c.id).put("name", c.name)
-                .put("logo", c.logos.firstOrNull().orEmpty()).put("at", System.currentTimeMillis())
-            val f = File(filesDir, LAST_FILE)
-            val part = File(filesDir, "$LAST_FILE.part")
-            part.writeText(o.toString())
-            part.renameTo(f)
+    private fun remember(c: Channel) {
+        if (isAdult()) return
+        ahead.execute {
+            runCatching {
+                val o = JSONObject().put("addon", addon).put("type", c.type).put("id", c.id).put("name", c.name)
+                    .put("logo", c.logos.firstOrNull().orEmpty()).put("at", System.currentTimeMillis())
+                val f = File(filesDir, LAST_FILE)
+                val part = File(filesDir, "$LAST_FILE.part")
+                part.writeText(o.toString())
+                part.renameTo(f)
+            }
         }
     }
 
@@ -1221,6 +1231,8 @@ class PlayerActivity : Activity() {
         const val META_ID = "meta_id"
         const val POSTER = "poster" // the title's art, for its Continue Playing card
         const val USER_DIR = "user_dir" // the folder of the user watching (see Users): their progress, watched titles, Trakt
+        const val ADULT = "adult" // whether this content is from an adult add-on (no history, no continue watching)
+        const val ADULT_SOURCES = "adult_sources" // names and addresses of adult stream add-ons
         private const val VOD_WAIT_MS = 12_000L // a film's slower add-ons are waited for this long
         private const val VOD_STUCK_MS = 30_000L // a film's stream buffering longer than this: the next
         private const val CHOICES_FILE = "player" // not K.FILE: the home screen's process writes that one whole

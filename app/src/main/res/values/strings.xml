@@ -383,6 +383,7 @@
     <string name="addons_tv_iptv">In an IPTV app</string>
     <string name="addons_tv_apps">An app per add-on</string>
     <string name="setting_addon_add">Add an add-on</string>
+    <string name="addon_adult">Adult content (18+)</string>
     <string name="addon_hint">https://…/manifest.json</string>
     <string name="addon_intro">The address of a Stremio add-on\'s manifest. Its TV channels show as rows: all of them, then one row per category.</string>
     <string name="addon_checking">Reading the add-on…</string>
@@ -477,6 +478,7 @@
 
     <!-- Search filters, and Cinemeta's genres -->
     <string name="search_go">Search</string>
+    <string name="search_filters">Filters</string>
     <string name="search_filter_type">Films or series</string>
     <string name="search_filter_year">Year</string>
     <string name="search_filter_genre">Genre</string>

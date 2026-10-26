@@ -407,11 +407,18 @@ internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, epi
     val type = t?.type ?: ref.type
     val sources = streamSources(type, items.first().first).filter { only == null || it.first == only }
     if (sources.isEmpty()) return Toast.makeText(this, getString(R.string.title_no_streams), Toast.LENGTH_LONG).show()
+    val adultUrls = adultAddonUrls()
+    val adultAddons = adultUrls.mapNotNull { Stremio.saved(filesDir, it)?.addon }
+    val adultSourcesList = adultUrls + adultAddons.map { it.base } + adultAddons.map { it.name }
+    val isCatalogAdult = isAdultSource(ref.source)
+    val isOnlyAdult = only != null && isAdultSource(only)
     fun strings(f: (Triple<String, String, Stremio.Episode?>) -> String?) = ArrayList(items.map { f(it).orEmpty() })
     try {
         startActivity(Intent(this, PlayerActivity::class.java)
             .putExtra(PlayerActivity.MODE, PlayerActivity.MODE_VOD)
             .putExtra(PlayerActivity.INDEX, 0)
+            .putExtra(PlayerActivity.ADULT, isCatalogAdult || isOnlyAdult)
+            .putStringArrayListExtra(PlayerActivity.ADULT_SOURCES, ArrayList(adultSourcesList))
             .putStringArrayListExtra(PlayerActivity.SOURCES, ArrayList(sources.map { it.first }))
             .putStringArrayListExtra(PlayerActivity.SOURCE_NAMES, ArrayList(sources.map { it.second }))
             .putStringArrayListExtra(PlayerActivity.TYPES, strings { type })

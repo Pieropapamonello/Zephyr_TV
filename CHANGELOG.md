@@ -13,6 +13,14 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 1.2.0
+
+- Stremio add-ons have an **Adult content (18+)** setting. Content from these add-ons does not save viewing history or progress, and does not show in Continue Playing.
+- Search filter options are collapsed by default under a **Filters** row.
+- In the search panel, you can navigate down to focus the QR code.
+- In the Series TV virtual app, the **Series watched** row now correctly lists your series watched from Trakt.
+- The **Films**, **Series** and **TV channels** tiles use updated icons with transparency and support greyscale in monochrome mode.
+
 ## 1.1.0
 
 - In **Updates**, Down now goes from **Receive betas** to the notes of the version.

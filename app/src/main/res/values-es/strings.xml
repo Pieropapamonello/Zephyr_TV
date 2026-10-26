@@ -384,6 +384,7 @@
     <string name="addons_tv_iptv">En una app IPTV</string>
     <string name="addons_tv_apps">Una app por complemento</string>
     <string name="setting_addon_add">Añadir un complemento</string>
+    <string name="addon_adult">Contenido para adultos (+18)</string>
     <string name="addon_hint">https://…/manifest.json</string>
     <string name="addon_intro">La dirección del manifiesto de un complemento de Stremio. Sus canales de TV aparecen como filas: todos, y luego una fila por categoría.</string>
     <string name="addon_checking">Leyendo el complemento…</string>
@@ -479,6 +480,7 @@
 
     <!-- Search filters, and Cinemeta's genres -->
     <string name="search_go">Buscar</string>
+    <string name="search_filters">Filtros</string>
     <string name="search_filter_type">Películas o series</string>
     <string name="search_filter_year">Año</string>
     <string name="search_filter_genre">Género</string>

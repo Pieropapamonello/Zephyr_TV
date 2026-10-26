@@ -29,12 +29,15 @@ import java.io.IOException
 // their own in the apps row, with their cards under it; Spotlight is left alone.
 // Functions of MainActivity, kept here by topic; their state lives in MainActivity.
 
+private var searchFiltersExpanded = false
+
 /**
  * The search page: a box to type in with the remote, the filters (films or series, year, genre: Search finds
  * with them alone too, without words), dictation into that box, the TV's own assistant, and a QR code to type on a
  * phone instead. [text]: what's in the box (the page built again after a filter changed); [focus]: the row to focus.
  */
 internal fun MainActivity.openSearch(text: String = "", focus: Int? = null) {
+    if (focus == null && text.isEmpty()) searchFiltersExpanded = false
     if (settingsScrim.visibility != View.VISIBLE) showPanel()
     // The keyboard's Search wants words or a filter; the Search row goes without (Cinemeta's popular ones).
     fun go(query: String, always: Boolean = false) {
@@ -68,23 +71,30 @@ internal fun MainActivity.openSearch(text: String = "", focus: Int? = null) {
         addView(input, LinearLayout.LayoutParams(MATCH_PARENT, dp(44)))
     }
     val f = searchFilter
+    val summary = if (!f.any) getString(R.string.search_filter_any)
+        else listOfNotNull(if (f.type != "all") typeName(f.type) else null, f.year, f.genre?.let { genreName(it) }).joinToString(" · ")
     fun typed() = input.text?.toString().orEmpty()
-    val rows = listOf(
-        // Search: with words, or with the filters alone (all of Cinemeta's popular ones, without either).
-        page(getString(R.string.search_go)) { go(typed(), always = true) },
+    val filterRows = if (!searchFiltersExpanded) emptyList() else listOfNotNull(
         page(getString(R.string.search_filter_type), typeName(f.type)) {
             val types = listOf("all", "movie", "series")
             searchFilter = SearchFilter(types[(types.indexOf(f.type) + 1) % types.size], f.year, f.genre)
-            openSearch(typed(), 1)
+            openSearch(typed(), 2)
         },
         page(getString(R.string.search_filter_year), f.year ?: getString(R.string.search_filter_any)) { pickYear(typed()) },
         page(getString(R.string.search_filter_genre), f.genre?.let { genreName(it) } ?: getString(R.string.search_filter_any)) { pickGenre(typed()) },
-    ) + listOfNotNull(
         if (!f.any) null else page(getString(R.string.search_filter_clear)) {
             searchFilter = SearchFilter()
             openSearch(typed(), 1)
         },
-    ) + listOf(
+    )
+    val rows = listOf(
+        // Search: with words, or with the filters alone (all of Cinemeta's popular ones, without either).
+        page(getString(R.string.search_go)) { go(typed(), always = true) },
+        page(getString(R.string.search_filters), if (searchFiltersExpanded) "▲ $summary" else "▼ $summary") {
+            searchFiltersExpanded = !searchFiltersExpanded
+            openSearch(typed(), 1)
+        },
+    ) + filterRows + listOf(
         page(getString(R.string.search_dictate)) { listen(input, ::go) },
         page(getString(R.string.search_assistant)) { closeLauncherSettings(); assistant() },
     )
@@ -117,14 +127,38 @@ internal fun MainActivity.openSearch(text: String = "", focus: Int? = null) {
         link.stop()
         if (upload === link) upload = null
     }
+    val qrCard = FrameLayout(this).apply {
+        id = View.generateViewId()
+        isFocusable = true
+        isFocusableInTouchMode = true
+        val bg = GradientDrawable().apply {
+            cornerRadius = dp(12).toFloat()
+            setColor(Color.TRANSPARENT)
+        }
+        background = bg
+        val img = ImageView(this@openSearch).apply {
+            setImageBitmap(qrBitmap(link.url(ip), dp(160)))
+        }
+        addView(img, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER).apply {
+            setMargins(dp(6), dp(6), dp(6), dp(6))
+        })
+        setOnFocusChangeListener { _, focused ->
+            bg.setColor(if (focused) (0x22000000 or (fg and 0x00FFFFFF)) else Color.TRANSPARENT)
+            bg.setStroke(if (focused) dp(2) else 0, if (focused) fg else Color.TRANSPARENT)
+            if (focused) (settingsList.parent as? android.widget.ScrollView)?.smoothScrollTo(0, bottom + dp(40))
+        }
+    }
     settingsList.addView(LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_HORIZONTAL
-        setPadding(0, dp(20), 0, 0)
+        setPadding(0, dp(16), 0, dp(16))
         addView(label(getString(R.string.search_phone), 12f).apply { gravity = Gravity.CENTER; alpha = 0.6f; maxLines = 2 })
-        addView(ImageView(this@openSearch).apply { setImageBitmap(qrBitmap(link.url(ip), dp(160))) },
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
+        addView(qrCard, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
     })
+    val lastRow = settingsList.getChildAt(rows.size)
+    lastRow?.nextFocusDownId = qrCard.id
+    qrCard.nextFocusUpId = lastRow?.id ?: View.NO_ID
+    qrCard.nextFocusDownId = qrCard.id
 }
 
 /**
@@ -382,9 +416,9 @@ private fun MainActivity.pickYear(text: String) {
     showPage(getString(R.string.search_filter_year), years.map { y ->
         page(y ?: getString(R.string.search_filter_any), if (y == f.year) CHOSEN else "") {
             searchFilter = SearchFilter(f.type, y, f.genre)
-            openSearch(text, 2)
+            openSearch(text, 3)
         }
-    }, years.indexOf(f.year).coerceAtLeast(0)) { openSearch(text, 2) }
+    }, years.indexOf(f.year).coerceAtLeast(0)) { openSearch(text, 3) }
     // Left/Right: ten years on or back, not a hundred rows one by one.
     pageSides = { step -> focusRow(((focusedRow() ?: 0) + step * 10).coerceIn(0, years.size - 1)) }
 }
@@ -396,9 +430,9 @@ private fun MainActivity.pickGenre(text: String) {
     showPage(getString(R.string.search_filter_genre), genres.map { g ->
         page(g?.let { genreName(it) } ?: getString(R.string.search_filter_any), if (g == f.genre) CHOSEN else "") {
             searchFilter = SearchFilter(f.type, f.year, g)
-            openSearch(text, 3)
+            openSearch(text, 4)
         }
-    }, genres.indexOf(f.genre).coerceAtLeast(0)) { openSearch(text, 3) }
+    }, genres.indexOf(f.genre).coerceAtLeast(0)) { openSearch(text, 4) }
 }
 
 /** Cinemeta's genres (IMDb's, in English) in the TV's language; one Zephyr TV doesn't know as it is. */

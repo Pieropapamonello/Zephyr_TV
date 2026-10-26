@@ -191,4 +191,15 @@ internal object PhonePages {
         """const x=document.getElementById('t');
         x.oninput=()=>{b.disabled=!x.value.trim();s.textContent=''};
         b.onclick=()=>send(x.value.trim());""")
+
+    /** Add a Stremio add-on, with a checkbox for adult content (18+). */
+    fun addon(t: PhoneTexts, hint: String, adultLabel: String) = frame(t,
+        """<textarea id="t" placeholder="${esc(hint)}" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>
+        <label style="display:flex;align-items:center;gap:12px;cursor:pointer;border:0;padding:8px 0;margin-bottom:16px;text-align:left">
+          <input id="a" type="checkbox" style="display:inline;width:20px;height:20px;accent-color:currentColor"> <span>${esc(adultLabel)}</span>
+        </label>
+        <button id="b" disabled>${esc(t.send)}</button>""",
+        """const x=document.getElementById('t'),a=document.getElementById('a');
+        x.oninput=()=>{b.disabled=!x.value.trim();s.textContent=''};
+        b.onclick=()=>send(x.value.trim()+'\n'+(a.checked?'adult':''));""")
 }

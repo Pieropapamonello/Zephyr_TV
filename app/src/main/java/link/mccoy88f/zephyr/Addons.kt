@@ -74,6 +74,28 @@ internal fun MainActivity.addonUrls(): List<String> = prefs.getString(K.ADDONS, 
 
 private fun MainActivity.saveAddonUrls(urls: List<String>) = prefs.edit().putString(K.ADDONS, urls.distinct().joinToString("\n")).apply()
 
+/** Manifest addresses of add-ons marked as adult (Contenuti V.M. - Adulti). */
+internal fun MainActivity.adultAddonUrls(): Set<String> =
+    prefs.getString(K.ADULT_ADDONS, "")!!.lines().filter { it.isNotBlank() }.toSet()
+
+internal fun MainActivity.isAdultAddon(url: String?): Boolean =
+    url != null && adultAddonUrls().contains(url)
+
+internal fun MainActivity.isAdultSource(source: String?): Boolean {
+    if (source == null) return false
+    val urls = adultAddonUrls()
+    if (urls.contains(source)) return true
+    val addons = urls.mapNotNull { Stremio.saved(filesDir, it)?.addon }
+    return addons.any { it.base == source || it.name == source || it.id == source }
+}
+
+internal fun MainActivity.setAdultAddon(url: String, adult: Boolean) {
+    val current = adultAddonUrls().toMutableSet()
+    if (adult) current.add(url) else current.remove(url)
+    if (current.isEmpty()) prefs.edit().remove(K.ADULT_ADDONS).apply()
+    else prefs.edit().putString(K.ADULT_ADDONS, current.joinToString("\n")).apply()
+}
+
 /** Whether there's a TV app here: the one Android opens a channel link with (none on most boxes and sticks). */
 internal fun MainActivity.hasTvApp(): Boolean = listOf(
     Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(1)),
@@ -191,7 +213,7 @@ internal fun MainActivity.updateAddon(url: String, pkg: String?, done: ((Stremio
 }
 
 /** Adds the add-on at [input] (typed or sent from a phone) once it answers, telling how it went. */
-internal fun MainActivity.addAddon(input: String, done: () -> Unit = {}) {
+internal fun MainActivity.addAddon(input: String, adult: Boolean = false, done: () -> Unit = {}) {
     val url = Stremio.manifestUrl(input) ?: return Toast.makeText(this, getString(R.string.phone_epg_bad), Toast.LENGTH_LONG).show()
     Toast.makeText(this, getString(R.string.addon_checking), Toast.LENGTH_SHORT).show()
     updateAddon(url, null) { listing ->
@@ -205,6 +227,7 @@ internal fun MainActivity.addAddon(input: String, done: () -> Unit = {}) {
             }
             else -> {
                 saveAddonUrls(addonUrls() + url)
+                if (adult) setAdultAddon(url, true)
                 addonsChanged()
                 val channels = listing.rows.filter { it.genre == null }.sumOf { it.items.size }
                 Toast.makeText(this, if (channels > 0) getString(R.string.toast_addon_added, a.name, channels)
@@ -217,6 +240,7 @@ internal fun MainActivity.addAddon(input: String, done: () -> Unit = {}) {
 
 internal fun MainActivity.removeAddon(url: String) {
     saveAddonUrls(addonUrls() - url)
+    setAdultAddon(url, false)
     Stremio.forget(filesDir, url)
     addonsChanged()
     Toast.makeText(this, getString(R.string.toast_addon_removed), Toast.LENGTH_SHORT).show()
@@ -254,6 +278,7 @@ internal fun MainActivity.playAddonChannel(p: Prog, row: List<AddonChannel>? = n
         startActivity(Intent(this, PlayerActivity::class.java)
             .putExtra(PlayerActivity.ADDON, c.addon)
             .putExtra(PlayerActivity.BASE, base)
+            .putExtra(PlayerActivity.ADULT, isAdultAddon(c.addon))
             .putExtra(PlayerActivity.INDEX, list.indexOfFirst { it.item.id == c.item.id }.coerceAtLeast(0))
             .putStringArrayListExtra(PlayerActivity.TYPES, strings { it.item.type })
             .putStringArrayListExtra(PlayerActivity.IDS, strings { it.item.id })
@@ -269,13 +294,14 @@ internal fun MainActivity.playAddonChannel(p: Prog, row: List<AddonChannel>? = n
 /** The channel last played (written by PlayerActivity, in its own process: a file, not the preferences). */
 internal fun MainActivity.lastAddonChannel(): Pair<Long, AddonChannel>? = runCatching {
     val o = org.json.JSONObject(java.io.File(filesDir, PlayerActivity.LAST_FILE).readText())
-    val addon = o.getString("addon").takeIf { it in addonUrls() } ?: return null
+    val addon = o.getString("addon").takeIf { it in addonUrls() && !isAdultAddon(it) } ?: return null
     o.getLong("at") to AddonChannel(addon, Stremio.Item(o.getString("type"), o.getString("id"), o.getString("name"), o.optString("logo").ifEmpty { null }, null))
 }.getOrNull()
 
 /** The channel last played as a Continue Playing card: the add-on's name under it. Off the UI thread. */
 internal fun MainActivity.lastChannelCard(hidden: Set<String>): Pair<Long, Prog>? {
     val (at, c) = lastAddonChannel() ?: return null
+    if (isAdultAddon(c.addon)) return null
     if (hideKey(LAST_PKG, c.item.name) in hidden) return null
     val addon = Stremio.saved(filesDir, c.addon)?.addon
     // Marked with the tile it plays from, as the other cards are with their app.
@@ -395,13 +421,21 @@ internal fun MainActivity.addonsTvName(mode: TvPlace) = getString(when (mode) {
 })
 
 /** An add-on's manifest address typed with the remote (see addonFromPhone). Saving adds it once it answers. */
-internal fun MainActivity.configureAddon() =
-    textPage(getString(R.string.setting_addon_add), "", getString(R.string.addon_hint), getString(R.string.addon_intro), back = { addonFromPhone() }) { typed ->
-        listOf(page(getString(R.string.dialog_save)) {
-            addAddon(typed()) { refreshSettings(ADDON_ADD_ROW) }
-            renderSettings(ADDON_ADD_ROW)
-        })
+internal fun MainActivity.configureAddon(initialUrl: String = "", initialAdult: Boolean = false) {
+    var adult = initialAdult
+    textPage(getString(R.string.setting_addon_add), initialUrl, getString(R.string.addon_hint), getString(R.string.addon_intro), back = { addonFromPhone() }) { typed ->
+        listOf(
+            page(getString(R.string.addon_adult), toggle(adult)) {
+                adult = !adult
+                configureAddon(typed(), adult)
+            },
+            page(getString(R.string.dialog_save)) {
+                addAddon(typed(), adult) { refreshSettings(ADDON_ADD_ROW) }
+                renderSettings(ADDON_ADD_ROW)
+            }
+        )
     }
+}
 
 /**
  * Add an add-on: a QR code first, as the other addresses and keys, since a long address is easier pasted on a
@@ -409,12 +443,14 @@ internal fun MainActivity.configureAddon() =
  */
 internal fun MainActivity.addonFromPhone() {
     val status = label(getString(R.string.addon_phone_waiting), 14f)
-    val page = PhonePages.text(phoneTexts(R.string.phone_addon_title, R.string.phone_addon_intro), getString(R.string.addon_hint))
+    val page = PhonePages.addon(phoneTexts(R.string.phone_addon_title, R.string.phone_addon_intro), getString(R.string.addon_hint), getString(R.string.addon_adult))
     showPhoneLink(getString(R.string.setting_addon_add), PhoneTask(page, 4096) { file ->
-        val url = Stremio.manifestUrl(file.readText()) ?: return@PhoneTask 400 to getString(R.string.phone_epg_bad)
+        val lines = file.readText().lines()
+        val url = Stremio.manifestUrl(lines.firstOrNull().orEmpty()) ?: return@PhoneTask 400 to getString(R.string.phone_epg_bad)
+        val adult = lines.getOrNull(1)?.trim() == "adult"
         ui.post {
             status.text = getString(R.string.addon_checking)
-            addAddon(url)
+            addAddon(url, adult)
         }
         200 to getString(R.string.phone_addon_saved)
     }, status, listOf(page(getString(R.string.addon_type)) { configureAddon() })) { renderSettings(ADDON_ADD_ROW) }
@@ -453,6 +489,11 @@ internal fun MainActivity.addonPage(url: String, focus: Int? = null) {
                     else getString(R.string.toast_addon_updated, channels), Toast.LENGTH_LONG).show()
                 watchKey = null
             }
+        },
+        page(getString(R.string.addon_adult), toggle(isAdultAddon(url))) {
+            setAdultAddon(url, !isAdultAddon(url))
+            addonsChanged()
+            addonPage(url, R.string.addon_adult)
         },
         if (at > 0) page(getString(R.string.addon_move_up)) { moveAddon(url, -1); addonPage(url, R.string.addon_move_up) } else null,
         if (at < urls.size - 1) page(getString(R.string.addon_move_down)) { moveAddon(url, +1); addonPage(url, R.string.addon_move_down) } else null,
