@@ -391,22 +391,24 @@ internal fun MainActivity.addonRows(): List<Triple<String, String, () -> Unit>> 
  * catalog source (see cinemetaUrl); an address set as Cinemeta's before there was a list counts as one too.
  */
 internal fun MainActivity.catalogUrls(): List<String> = (prefs.getString(K.CATALOGS, "")!!.lines().filter { it.isNotBlank() } +
-    listOfNotNull(prefs.getString(K.CINEMETA_URL, null)?.let { Stremio.manifestUrl(it) })).filter { it != Stremio.CINEMETA }.distinct()
+    listOfNotNull(prefs.getString(K.CINEMETA_URL, null)?.let { Stremio.manifestUrl(it) }))
+    .filter { it != Stremio.CINEMETA && !it.startsWith(Stremio.NUVIO_BASE) }.distinct() // Nuvio has a row of its own
 
 private fun MainActivity.saveCatalogUrls(urls: List<String>) = prefs.edit().putString(K.CATALOGS, urls.distinct().joinToString("\n")).apply()
 
 /** A catalog's name, as its add-on gives it; else its address's host. */
 internal fun MainActivity.catalogName(url: String) =
-    if (url == Stremio.CINEMETA) "Cinemeta" else Stremio.saved(filesDir, url)?.addon?.name ?: android.net.Uri.parse(url).host.orEmpty()
+    if (url == Stremio.CINEMETA) "Cinemeta" else if (url.startsWith(Stremio.NUVIO_BASE)) getString(R.string.catalog_nuvio) else Stremio.saved(filesDir, url)?.addon?.name ?: android.net.Uri.parse(url).host.orEmpty()
 
 /**
- * The catalog source: where films and series come from. Cinemeta, Stremio's own, by default; or one of the catalogs
- * added here, chosen in its place. [focus]: the row to focus.
+ * The catalog source: where films and series come from. Cinemeta, Stremio's own, by default; Nuvio's (TMDB); or one
+ * of the catalogs added here, chosen in its place. [focus]: the row to focus.
  */
 internal fun MainActivity.configureCinemeta(focus: Int = 0) {
     val current = cinemetaUrl()
     val inUse = getString(R.string.catalog_in_use)
-    val rows = listOf(page(getString(R.string.cinemeta_default), if (current == Stremio.CINEMETA) inUse else "") { useCatalog(null, 0) }) +
+    val rows = listOf(page(getString(R.string.cinemeta_default), if (current == Stremio.CINEMETA) inUse else "") { useCatalog(null, 0) },
+        page(getString(R.string.catalog_nuvio), if (current.startsWith(Stremio.NUVIO_BASE)) inUse else "") { useCatalog(nuvioUrl(), 1) }) +
         catalogUrls().map { url -> page(catalogName(url), if (url == current) inUse else SUBMENU) { catalogPage(url) } } +
         page(getString(R.string.catalog_add), SUBMENU) { addCatalog() }
     val intro = label(getString(R.string.cinemeta_intro), 13f).apply {
@@ -425,7 +427,7 @@ private fun MainActivity.useCatalog(url: String?, focus: Int) {
     configureCinemeta(focus)
 }
 
-private fun MainActivity.setCatalog(url: String?) {
+internal fun MainActivity.setCatalog(url: String?) {
     if (url == null || url == Stremio.CINEMETA) prefs.edit().remove(K.CINEMETA_URL).apply() else prefs.edit().putString(K.CINEMETA_URL, url).apply()
     Toast.makeText(this, getString(R.string.addon_checking), Toast.LENGTH_SHORT).show()
     updateAddon(cinemetaUrl(), null) { listing ->
@@ -436,7 +438,7 @@ private fun MainActivity.setCatalog(url: String?) {
 
 /** An added catalog: use it in Cinemeta's place, or remove it (the one in use gives way to Cinemeta). */
 private fun MainActivity.catalogPage(url: String) {
-    val at = 1 + catalogUrls().indexOf(url)
+    val at = 2 + catalogUrls().indexOf(url)
     showPage(catalogName(url), listOfNotNull(
         if (url != cinemetaUrl()) page(getString(R.string.catalog_use)) { useCatalog(url, at) } else null,
         page(getString(R.string.addon_remove)) {
@@ -466,7 +468,7 @@ private fun MainActivity.addCatalog() {
                     }
                     else -> {
                         saveCatalogUrls(catalogUrls() + url)
-                        configureCinemeta(1 + catalogUrls().indexOf(url))
+                        configureCinemeta(2 + catalogUrls().indexOf(url))
                     }
                 }
             }

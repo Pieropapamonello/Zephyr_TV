@@ -158,6 +158,15 @@ internal fun MainActivity.homeSetupResumed() {
     }
 }
 
+/**
+ * First start: where films and series come from, Nuvio's catalog (TMDB, in the TV's language) or Cinemeta; then
+ * [next], the Home setup. Settings → Catalog source changes it later.
+ */
+internal fun MainActivity.catalogPopup(next: () -> Unit) = homePopup(0, getString(R.string.setup_catalog_title),
+    getString(R.string.setup_catalog_body), null,
+    getString(R.string.catalog_nuvio) to { setCatalog(nuvioUrl()); next() },
+    getString(R.string.cinemeta_default) to { setCatalog(null); next() })
+
 internal fun MainActivity.rolePopup() = homePopup(1, getString(R.string.setup_role_title), getString(R.string.setup_role_body), null,
     getString(R.string.setup_continue) to {
         setupStep = 1

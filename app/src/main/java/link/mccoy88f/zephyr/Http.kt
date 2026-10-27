@@ -11,19 +11,25 @@ import org.json.JSONObject
  */
 internal object Http {
     private const val TIMEOUT_MS = 6000
+
+    /**
+     * For an add-on's streams: an aggregator (AIOStreams) asks every add-on of its own before it answers, often
+     * past 6 s; the first time for a title, past 10.
+     */
+    const val STREAMS_TIMEOUT_MS = 20_000
     private const val USER_AGENT = "ZephyrTV/1 (Android TV launcher; https://github.com/mccoy88f/Zephyr_TV)"
 
-    fun connect(url: String, headers: Map<String, String> = emptyMap()): HttpURLConnection =
+    fun connect(url: String, headers: Map<String, String> = emptyMap(), timeout: Int = TIMEOUT_MS): HttpURLConnection =
         (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = TIMEOUT_MS
-            readTimeout = TIMEOUT_MS
+            readTimeout = timeout
             // Who's asking, as Wikimedia (most channel logos) wants: Android's anonymous default gets throttled there.
             setRequestProperty("User-Agent", USER_AGENT)
             headers.forEach { (k, v) -> setRequestProperty(k, v) }
         }
 
     /** The body of [url]; throws on a network error or a non-2xx answer. */
-    fun open(url: String, headers: Map<String, String> = emptyMap()): InputStream = connect(url, headers).inputStream
+    fun open(url: String, headers: Map<String, String> = emptyMap(), timeout: Int = TIMEOUT_MS): InputStream = connect(url, headers, timeout).inputStream
 
     /** A page, a list, a JSON answer: none is bigger than this; more is a server gone wrong (or a stream). */
     const val MAX_TEXT = 16L * 1024 * 1024
@@ -31,9 +37,11 @@ internal object Http {
     /** An image: a backdrop is a few hundred KB, a poster less. */
     const val MAX_IMAGE = 12L * 1024 * 1024
 
-    fun text(url: String, headers: Map<String, String> = emptyMap()) = open(url, headers).use { it.readCapped(MAX_TEXT).decodeToString() }
+    fun text(url: String, headers: Map<String, String> = emptyMap(), timeout: Int = TIMEOUT_MS) =
+        open(url, headers, timeout).use { it.readCapped(MAX_TEXT).decodeToString() }
 
-    fun json(url: String, headers: Map<String, String> = emptyMap()) = JSONObject(text(url, headers + ("Accept" to "application/json")))
+    fun json(url: String, headers: Map<String, String> = emptyMap(), timeout: Int = TIMEOUT_MS) =
+        JSONObject(text(url, headers + ("Accept" to "application/json"), timeout))
 
     /**
      * Sends [body] (JSON) to [url] with [method] (POST, or DELETE without a body); the answer's status and body,

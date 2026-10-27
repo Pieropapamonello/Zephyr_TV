@@ -428,8 +428,11 @@
     <string name="setting_addons_vod">Películas y series</string>
     <string name="addons_vod_tiles">Apps Películas y Series</string>
     <string name="setting_cinemeta">Fuente del catálogo</string>
-    <string name="cinemeta_intro">Las películas y series vienen de este catálogo. Cinemeta, la biblioteca gratuita de Stremio, es el predeterminado. Añade otro add-on de catálogo para usarlo en su lugar.</string>
+    <string name="cinemeta_intro">Las películas y series vienen de este catálogo. Cinemeta, la biblioteca gratuita de Stremio, es el predeterminado. Nuvio Catalog usa TMDB, en el idioma del televisor. Añade otro add-on de catálogo para usarlo en su lugar.</string>
     <string name="cinemeta_default">Cinemeta (predeterminado)</string>
+    <string name="catalog_nuvio">Nuvio Catalog (TMDB)</string>
+    <string name="setup_catalog_title">Películas y series</string>
+    <string name="setup_catalog_body">Elige de dónde vienen las películas y series. Nuvio usa TMDB, en el idioma del televisor. Cinemeta es la biblioteca gratuita de Stremio. Puedes cambiarlo en Ajustes, en Fuente del catálogo.</string>
     <string name="catalog_add">Añadir un catálogo</string>
     <string name="catalog_in_use">En uso</string>
     <string name="catalog_use">Usar este catálogo</string>

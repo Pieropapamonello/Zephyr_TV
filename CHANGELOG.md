@@ -13,6 +13,14 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 1.3.0
+
+- Zephyr TV shows the catalogs of add-ons with types of their own, for example adult add-ons. It plays their titles as films.
+- Zephyr TV waits longer for streams from slow add-ons, for example AIOStreams. It waits less when one add-on already has streams.
+- When one catalog of an add-on fails, Zephyr TV keeps the other catalogs.
+- **Catalog source** has **Nuvio Catalog (TMDB)**. It shows films and series in the language of the TV.
+- On the first start, Zephyr TV asks you to choose Nuvio Catalog or Cinemeta.
+
 ## 1.2.10
 
 - The text about a film or series on its page shows without a box around it.

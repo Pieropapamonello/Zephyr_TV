@@ -276,9 +276,10 @@ class MainActivity : Activity() {
         } else if (takeFromPiume()) {
             // Piume's settings and history first (the screen is built again with them); the Home setup after.
         } else if (!homeServiceOn() && !prefs.getBoolean(K.SETUP_SHOWN, false)) {
-            // Fresh install: walk through making Home land on Zephyr TV, the one step that has to happen by hand.
+            // Fresh install: pick the catalog of films and series, then walk through making Home land on Zephyr TV,
+            // the one step that has to happen by hand.
             prefs.edit().putBoolean(K.SETUP_SHOWN, true).apply()
-            ui.post { startHomeSetup() }
+            ui.post { catalogPopup { startHomeSetup() } }
         }
 
         registerReceiver(packageReceiver, IntentFilter().apply {

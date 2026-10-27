@@ -1148,16 +1148,20 @@ class PlayerActivity : Activity() {
 
     /**
      * A film's or episode's streams from every stream add-on at once, in the add-ons' order (each its best first),
-     * waiting for the slow ones up to VOD_WAIT_MS; the same kind as the one playing (its bingeGroup) first.
+     * waiting for the slow ones up to VOD_SOME_MS, or VOD_WAIT_MS while none has any; the same kind as the one playing
+     * (its bingeGroup) first.
      */
     private fun titleStreams(c: Channel): List<Stremio.Stream> {
         val asked = sources.map { (b, name) ->
             pool.submit(Callable { runCatching { Stremio.titleStreams(b, name, c.type, c.id) }.onFailure { warn("streams failed: ${b.substringAfter("://").substringBefore('/')} ($it)") }.getOrDefault(emptyList()) })
         }
-        val until = System.currentTimeMillis() + VOD_WAIT_MS
-        val all = asked.flatMap { f ->
-            runCatching { f.get((until - System.currentTimeMillis()).coerceAtLeast(0), TimeUnit.MILLISECONDS) }.getOrElse { f.cancel(true); emptyList() }
-        }.distinctBy { it.url }
+        val start = System.currentTimeMillis()
+        val got = arrayOfNulls<List<Stremio.Stream>>(asked.size)
+        for ((i, f) in asked.withIndex()) {
+            val limit = start + if (got.any { !it.isNullOrEmpty() }) VOD_SOME_MS else VOD_WAIT_MS
+            got[i] = runCatching { f.get((limit - System.currentTimeMillis()).coerceAtLeast(0), TimeUnit.MILLISECONDS) }.getOrElse { f.cancel(true); emptyList() }
+        }
+        val all = got.flatMap { it.orEmpty() }.distinctBy { it.url }
         val list = group?.let { g -> all.sortedByDescending { it.group == g } } ?: all
         if (list.isNotEmpty()) fetched[c.id] = System.currentTimeMillis() to list
         return list
@@ -1349,7 +1353,8 @@ class PlayerActivity : Activity() {
         const val USER_DIR = "user_dir" // the folder of the user watching (see Users): their progress, watched titles, Trakt
         const val ADULT = "adult" // whether this content is from an adult add-on (no history, no continue watching)
         const val ADULT_SOURCES = "adult_sources" // names and addresses of adult stream add-ons
-        private const val VOD_WAIT_MS = 12_000L // a film's slower add-ons are waited for this long
+        private const val VOD_WAIT_MS = 20_000L // a film's slower add-ons (an aggregator, AIOStreams) are waited for this long
+        private const val VOD_SOME_MS = 12_000L // ...or this long, once one has given streams
         private const val VOD_STUCK_MS = 30_000L // a film's stream buffering longer than this: the next
         private const val CHOICES_FILE = "player" // not K.FILE: the home screen's process writes that one whole
         private const val AUDIO_LANG = "audio_lang"

@@ -36,8 +36,16 @@ internal object Stremio {
     /** Stremio's own catalog add-on: the films' and series' library (IMDb's), always on, its address can be changed (see MainActivity.cinemetaUrl). */
     const val CINEMETA = "https://v3-cinemeta.strem.io/manifest.json"
 
+    /** Nuvio's catalog add-on (TMDB's lists, IMDb ids), offered beside Cinemeta: its address carries its settings. */
+    const val NUVIO_BASE = "https://catalog.nuvio.tv/"
+
+    /** Nuvio's manifest in [language] ("it-IT") with [region]'s services ("IT"). */
+    fun nuvio(language: String, region: String): String =
+        NUVIO_BASE + enc(JSONObject().put("language", language).put("region", region).toString()) + "/manifest.json"
+
     /**
-     * One of the add-on's catalogs of [type] ("tv", "movie", "series"), the categories it can be filtered by, whether
+     * One of the add-on's catalogs of [type] ("tv", "movie", "series", or an add-on's own, kept for its addresses and
+     * shown as films: see isVodType), the categories it can be filtered by, whether
      * it can be searched, and whether it can be [listed] (a search-only one can't).
      */
     internal class Catalog(val type: String, val id: String, val name: String, val genres: List<String>, val search: Boolean = false,
@@ -63,7 +71,7 @@ internal object Stremio {
         }
 
         /** Whether it gives streams for films or series (the add-ons asked when a title plays). */
-        val streamsVod get() = provides("stream", "movie") || provides("stream", "series")
+        val streamsVod get() = resources.any { r -> r.name == "stream" && r.types.any { isVodType(it) } }
     }
 
     /**
@@ -159,7 +167,13 @@ internal object Stremio {
         try {
             val manifest = Http.json(url)
             val addon = addon(url, manifest)
-            val rows = addon.catalogs.flatMap { c -> rows(addon, c) }.filter { it.items.isNotEmpty() }
+            // A catalog that fails leaves the others (an add-on can have TV, films, series or only some): only
+            // all of them failing is the add-on failing.
+            var failures = 0
+            val rows = addon.catalogs.flatMap { c ->
+                runCatching { rows(addon, c) }.getOrElse { failures++; warn("Stremio catalog failed: ${Uri.host(url)} ${c.id} ($it)"); emptyList() }
+            }.filter { it.items.isNotEmpty() }
+            if (failures > 0 && failures == addon.catalogs.size) throw java.io.IOException("every TV catalog failed")
             val items = rows.flatMap { it.items }.distinctBy { it.id }
             val saved = JSONObject().put("manifest", manifest)
                 .put("items", JSONArray(items.map { JSONObject().put("type", it.type).put("id", it.id).put("name", it.name)
@@ -192,7 +206,7 @@ internal object Stremio {
         for (i in 0 until list.length()) {
             val c = list.optJSONObject(i) ?: continue
             val type = c.optString("type")
-            if (type != "tv" && type != "movie" && type != "series") continue
+            if (type != "tv" && !isVodType(type)) continue
             val id = c.optString("id").takeIf { it.isNotEmpty() } ?: continue
             val extras = c.optJSONArray("extra")?.let { e -> (0 until e.length()).mapNotNull { e.optJSONObject(it) } }.orEmpty()
             val search = extras.any { it.optString("name") == "search" }
@@ -342,6 +356,12 @@ internal object Stremio {
         return out
     }
 
+    /**
+     * Whether items of [type] are films or series: "movie", "series", or a type of an add-on's own ("Porn", "Anime"),
+     * played as a film. Not TV channels, nor Stremio's "channel" (a YouTube channel's videos).
+     */
+    internal fun isVodType(type: String) = type.isNotBlank() && type != "tv" && type != "channel"
+
     /** The films or series in a catalog page (or a saved shelf): those with an id, a name and a type of theirs. */
     internal fun titles(page: JSONObject): List<Title> {
         val metas = page.optJSONArray("metas") ?: return emptyList()
@@ -352,7 +372,7 @@ internal object Stremio {
         val id = m.optString("id").takeIf { it.isNotEmpty() } ?: return null
         val name = m.optString("name").trim().takeIf { it.isNotEmpty() } ?: return null
         val type = m.optString("type").ifBlank { fallbackType ?: return null }
-        if (type != "movie" && type != "series") return null
+        if (!isVodType(type)) return null
         val year = (text(m, "releaseInfo") ?: text(m, "year"))?.take(9)
         val genres = (m.optJSONArray("genres") ?: m.optJSONArray("genre"))?.let { g -> (0 until g.length()).map { g.optString(it) } }.orEmpty()
             .filter { it.isNotBlank() }
@@ -388,7 +408,7 @@ internal object Stremio {
      * them: direct web addresses only (no torrents), each named by its quality line and its file ("1080p · Film.mkv").
      */
     fun titleStreams(base: String, name: String, type: String, id: String): List<Stream> =
-        streams(Http.json("$base/stream/${enc(type)}/${enc(id)}.json"), vod = true).map {
+        streams(Http.json("$base/stream/${enc(type)}/${enc(id)}.json", timeout = Http.STREAMS_TIMEOUT_MS), vod = true).map {
             Stream(it.url, it.title, it.headers, it.group, name)
         }
 
@@ -424,7 +444,8 @@ internal object Stremio {
     }
 
     /** The ways to play channel [id], in the add-on's order (best first); those without a web address are left out. */
-    fun streams(base: String, type: String, id: String): List<Stream> = streams(Http.json("$base/stream/${enc(type)}/${enc(id)}.json"))
+    fun streams(base: String, type: String, id: String): List<Stream> =
+        streams(Http.json("$base/stream/${enc(type)}/${enc(id)}.json", timeout = Http.STREAMS_TIMEOUT_MS))
 
     /**
      * The streams in an add-on's answer that have a web address (torrents, YouTube ids and outside links are left

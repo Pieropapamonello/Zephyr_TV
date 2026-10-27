@@ -22,7 +22,11 @@ internal class TitleRef(val type: String, val id: String, val name: String, val 
                         val source: String? = null, val video: String? = null, val logo: String? = null, val rating: String? = null)
 
 /** Cinemeta's manifest: Stremio's catalog of films and series, always the library's first; its address can be changed. */
-internal fun MainActivity.cinemetaUrl(): String = prefs.getString(K.CINEMETA_URL, null)?.let { Stremio.manifestUrl(it) } ?: Stremio.CINEMETA
+internal fun MainActivity.cinemetaUrl(): String = prefs.getString(K.CINEMETA_URL, null)?.let { Stremio.manifestUrl(it) }
+    ?.let { if (it.startsWith(Stremio.NUVIO_BASE)) nuvioUrl() else it } ?: Stremio.CINEMETA
+
+/** Nuvio's catalog in the TMDB language and the TV's country: it follows them when they change. */
+internal fun MainActivity.nuvioUrl() = Stremio.nuvio(tmdbLang(), TmdbClient.region(tmdbLang()))
 
 /** Where films and series show: a Films tile and a Series tile, each add-on's own tile, or nowhere. */
 internal fun MainActivity.addonsVod(): VodPlace = prefs.getString(K.ADDONS_VOD, null).let { k -> VodPlace.entries.firstOrNull { it.key == k } } ?: VodPlace.TILES
@@ -69,7 +73,8 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
     val watched = VodWatched.all(vodDir())
     return addons.flatMap { addon ->
         if (Stremio.vodDue(filesDir, addon.url) && addon.vod.any { it.listed }) refreshShelves(addon, pkg)
-        Stremio.shelves(filesDir, addon).filter { type == null || it.catalog.type == type }.mapNotNull { shelf ->
+        // Under Films, the add-ons' own types too ("Porn", "Anime"): they play as films.
+        Stremio.shelves(filesDir, addon).filter { type == null || (it.catalog.type == "series") == (type == "series") }.mapNotNull { shelf ->
             val kind = getString(if (shelf.catalog.type == "series") R.string.vod_series else R.string.vod_movies)
             val name = if (type != null) "${addon.name} · ${shelf.catalog.name}" else "$kind · ${shelf.catalog.name}"
             // In the TV's language when TMDB has the title (those it hasn't been asked about yet: once it's answered).

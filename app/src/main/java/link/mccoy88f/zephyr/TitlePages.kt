@@ -29,7 +29,7 @@ internal fun MainActivity.openTitle(ref: TitleRef) {
             if (!pageShowing(ref.name)) return@post // closed meanwhile
             when {
                 meta != null -> showVodTitle(meta, ref)
-                ref.type == "movie" -> { closeLauncherSettings(); playTitle(ref, null, null) }
+                ref.type != "series" -> { closeLauncherSettings(); playTitle(ref, null, null) }
                 else -> showPage(ref.name, listOf(page(getString(R.string.title_no_page)) { closeLauncherSettings() }), back = { closeLauncherSettings() })
             }
         }
@@ -241,7 +241,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
     // The stream add-ons asked whether they have it (how many streams each), all at once; the page again once they've said.
     if (found != null || sources.isEmpty()) return
     netIo.execute {
-        val counts = parallel(sources, 4, 15) { (base, name) -> base to runCatching { Stremio.titleStreams(base, name, t.type, e.id).size }.getOrDefault(0) }.toMap()
+        val counts = parallel(sources, 4, 22) { (base, name) -> base to runCatching { Stremio.titleStreams(base, name, t.type, e.id).size }.getOrDefault(0) }.toMap()
         ui.post { if (pageShowing(title)) showVodEpisode(meta, ref, e, services.known, counts, focusedRow() ?: targetFocus) }
     }
 }
