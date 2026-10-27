@@ -21,6 +21,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -604,6 +605,9 @@ internal fun MainActivity.showSections(sections: List<Section>) {
     val focused = currentFocus?.takeIf { it.getTag(R.id.watchRow) is Prog }
     val focusedRow = cardRows().indexOf(focused?.parent?.parent)
     val focusedAt = (focused?.parent?.parent as? ViewGroup)?.indexOfChild(focused.parent as View) ?: -1
+    val scrolled = (focused?.parent?.parent?.parent as? HorizontalScrollView)?.scrollX ?: 0
+    // The row that had focus, as far as the new list goes; it and the rows next to it get their cards at once.
+    val at = if (focusedRow >= 0) focusedRow.coerceAtMost(sections.size - 1) else -1
     watchRow.removeAllViews()
     moreSections.removeAllViews()
     val visible = if (sections.isEmpty()) View.GONE else View.VISIBLE
@@ -615,12 +619,19 @@ internal fun MainActivity.showSections(sections: List<Section>) {
         row.setTag(R.id.watchScroll, RowCards(s.items))
         // The first page of the first rows; the rest as focus nears the end of a row, or the rows above them (see
         // watchCard). An IPTV add-on can have a hundred rows: built all at once, they'd hold up the screen.
-        if (i < ROWS_AHEAD + 1) moreCards(row)
+        // A list that changes under focus (names in the TV's language, catalogs read again): the focused row up to
+        // its card, and the rows either side, now. Built later, focus would find no card there and jump to the apps.
+        if (at >= 0 && i in at - 1..at + ROWS_AHEAD) {
+            val cards = row.getTag(R.id.watchScroll) as RowCards
+            do moreCards(row, now = true) while (i == at && cards.built <= focusedAt && cards.built < cards.items.size)
+        } else if (i < ROWS_AHEAD + 1) moreCards(row)
     }
-    if (focusedRow >= 0) {
-        val row = cardRows().let { it.getOrNull(focusedRow) ?: it.last() }
+    if (at >= 0) {
+        val row = cardRows()[at]
         ((row.getChildAt(focusedAt.coerceAtMost(row.childCount - 1)) as? LinearLayout)?.getChildAt(0)
             ?: appRow.getChildAt(0))?.requestFocus()
+        // Where the row was scrolled to, so the cards stay where they were under the focus.
+        (row.parent as? HorizontalScrollView)?.let { sv -> sv.post { sv.scrollTo(scrolled, 0) } }
     }
 }
 
@@ -635,17 +646,18 @@ private const val ROWS_AHEAD = 2
 
 /**
  * Builds the next page of [row]'s cards (see RowCards). ~16 ms per card and only four show at once: four per frame,
- * not a page in one.
+ * not a page in one; [now], the whole page at once.
  */
-internal fun MainActivity.moreCards(row: ViewGroup) {
+internal fun MainActivity.moreCards(row: ViewGroup, now: Boolean = false) {
     val cards = row.getTag(R.id.watchScroll) as? RowCards ?: return
     val until = minOf(cards.built + PAGE, cards.items.size)
     if (until <= cards.built) return
     val key = watchKey
     fun add(from: Int) {
         if (watchKey != key || row.getTag(R.id.watchScroll) !== cards) return // a newer list replaced this one
-        cards.items.subList(from, minOf(from + 4, until)).forEach { row.addView(watchCard(it, row.childCount > 0)) }
-        if (from + 4 < until) ui.post { add(from + 4) }
+        val to = if (now) until else minOf(from + 4, until)
+        cards.items.subList(from, to).forEach { row.addView(watchCard(it, row.childCount > 0)) }
+        if (to < until) ui.post { add(to) }
     }
     val from = cards.built
     cards.built = until

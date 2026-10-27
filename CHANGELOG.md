@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## Unreleased
+
+- Focus stays on its card when a row under an app changes, for example when names in your language arrive. Before, focus on a lower row went back up to the apps.
+
 ## 1.2.7
 
 - In the Glass theme, the title and channel pages show the glass pane behind their picture, as the settings pages do.
