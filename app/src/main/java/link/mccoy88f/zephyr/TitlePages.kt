@@ -300,6 +300,7 @@ private fun MainActivity.titleTop(info: String, name: String?, about: String?, s
         seen?.let { addView(label("✓  $it", 13f).apply { setPadding(0, dp(4), 0, 0) }) }
         about?.let { d ->
             val v = label(d, 13f).apply {
+                id = View.generateViewId()
                 maxLines = 10
                 setLineSpacing(0f, 1.15f)
                 setPadding(dp(6), dp(6), dp(6), dp(6))
@@ -322,7 +323,19 @@ private fun MainActivity.titleTop(info: String, name: String?, about: String?, s
             descView = v
             addView(v)
         }
-        servicesBar?.let { addView(it) }
+        servicesBar?.let { sb ->
+            addView(sb)
+            val container = (sb as? android.widget.HorizontalScrollView)?.getChildAt(0) as? LinearLayout
+            if (container != null && container.childCount > 0) {
+                val firstChild = container.getChildAt(0)
+                descView?.let { dv ->
+                    dv.nextFocusDownId = firstChild.id
+                    for (c in 0 until container.childCount) {
+                        container.getChildAt(c).nextFocusUpId = dv.id
+                    }
+                }
+            }
+        }
     }
     return root to descView
 }
@@ -423,10 +436,14 @@ private fun MainActivity.serviceBar(t: Stremio.Title, available: Set<String>?): 
 
             val rest = if (glass) 0x662C2C34.toInt() else if (dark) 0x991C1C22.toInt() else 0x99DCE0E8.toInt()
 
+            val btnIds = apps.indices.map { View.generateViewId() }
             for ((idx, a) in apps.withIndex()) {
                 val btn = FrameLayout(context).apply {
+                    id = btnIds[idx]
                     isFocusable = true
                     isClickable = true
+                    nextFocusLeftId = if (idx > 0) btnIds[idx - 1] else btnIds[0]
+                    nextFocusRightId = if (idx < apps.size - 1) btnIds[idx + 1] else btnIds[idx]
                     val pad = dp(6)
                     setPadding(pad, pad, pad, pad)
                     contentDescription = if (TmdbClient.isYouTube(a.pkg)) getString(R.string.spotlight_trailer) else a.label
@@ -522,8 +539,10 @@ internal fun MainActivity.watchIcon(addon: Stremio.Addon?): android.graphics.dra
 internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, episode: Stremio.Episode?, only: String? = null) {
     val t = meta?.title
     val name = t?.name ?: ref.name
-    val poster = t?.poster ?: ref.poster
-    val art = ref.background ?: t?.background ?: poster // the card's: what loads in the player, and its Continue Playing card
+    val poster = ref.poster ?: t?.poster
+    val bg = ref.background ?: t?.background
+    val locandina = poster ?: bg
+    val backdrop = bg ?: poster
     // One item for a film; the episode and the ones after it for a series.
     val items: List<Triple<String, String, Stremio.Episode?>> = if (episode == null || meta == null) listOf(Triple(t?.id ?: ref.id, name, null))
         else meta.episodes.dropWhile { it.id != episode.id }.map { e -> Triple(e.id, name, e) }
@@ -548,12 +567,12 @@ internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, epi
             .putStringArrayListExtra(PlayerActivity.IDS, strings { it.first })
             .putStringArrayListExtra(PlayerActivity.NAMES, strings { it.second })
             .putStringArrayListExtra(PlayerActivity.NOWS, strings { it.third?.let { e -> listOf(episodeLine(e), e.name).filter { n -> n.isNotBlank() }.joinToString(" · ") } ?: t?.year ?: "" })
-            .putStringArrayListExtra(PlayerActivity.LOGOS, strings { it.third?.thumbnail ?: art })
-            .putStringArrayListExtra(PlayerActivity.FALLBACK_LOGOS, strings { "" })
+            .putStringArrayListExtra(PlayerActivity.LOGOS, strings { locandina ?: it.third?.thumbnail ?: backdrop })
+            .putStringArrayListExtra(PlayerActivity.FALLBACK_LOGOS, strings { it.third?.thumbnail ?: backdrop ?: locandina ?: "" })
             .putStringArrayListExtra(PlayerActivity.DESCS, strings { it.third?.overview ?: meta?.description })
             .putExtra(PlayerActivity.META_TYPE, type)
             .putExtra(PlayerActivity.META_ID, t?.id ?: ref.id)
-            .putExtra(PlayerActivity.POSTER, art)
+            .putExtra(PlayerActivity.POSTER, locandina ?: backdrop)
             .putExtra(PlayerActivity.USER_DIR, vodDir().path))
     } catch (e: Exception) {
         warn("player didn't open ($e)")

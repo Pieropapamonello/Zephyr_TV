@@ -1352,10 +1352,26 @@ class MainActivity : Activity() {
             }
         }
         // The settings panel is a vertical list: don't let Left/Right leak focus to the home screen behind it.
-        // The PIN boxes and the text fields (city search, API key) use them themselves.
+        // Horizontal scroll views (like the app icons bar in details), the PIN boxes and text fields use them.
+        val inHorizontal = currentFocus?.let { v ->
+            var p = v.parent
+            while (p != null && p !== settingsList) {
+                if (p is android.widget.HorizontalScrollView) return@let true
+                p = p.parent
+            }
+            false
+        } ?: false
         if (settingsScrim.visibility == View.VISIBLE && currentFocus !== pinBox && currentFocus !is EditText &&
             (e.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || e.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
         ) {
+            if (inHorizontal) {
+                if (e.action == KeyEvent.ACTION_DOWN) {
+                    val dir = if (e.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) View.FOCUS_LEFT else View.FOCUS_RIGHT
+                    val next = currentFocus?.focusSearch(dir)
+                    if (next != null && next !== currentFocus) next.requestFocus()
+                }
+                return true
+            }
             if (e.action == KeyEvent.ACTION_DOWN) pageSides?.invoke(if (e.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1)
             return true
         }

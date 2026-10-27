@@ -109,6 +109,8 @@ class PlayerActivity : Activity() {
     private class LogoBox(val frame: FrameLayout, val bg: ImageView, val fg: ImageView)
 
     private lateinit var surface: SurfaceView
+    private lateinit var blurBackdrop: ImageView
+    private lateinit var blurBackdropShade: View
     private lateinit var status: TextView // under the channel's logo and name while it loads: which stream, or none works
     private lateinit var loading: LinearLayout // in the middle while a channel loads: its logo, name and the status
     private lateinit var loadLogoBox: LogoBox
@@ -208,9 +210,20 @@ class PlayerActivity : Activity() {
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         surface = SurfaceView(this)
         root.addView(surface, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER))
+        blurBackdrop = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            visibility = View.GONE
+        }
+        blurBackdropShade = View(this).apply {
+            setBackgroundColor(0x66000000)
+            visibility = View.GONE
+        }
+        root.addView(blurBackdrop, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        root.addView(blurBackdropShade, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+
         // While a channel loads: its logo and name in the middle, and under them the stream being tried, or that
         // none works.
-        loadLogoBox = createLogoBox(dp(16), dp(12), 12)
+        loadLogoBox = createLogoBox(dp(6), dp(6), 12)
         loadName = text(28f, bold = true).apply { gravity = Gravity.CENTER; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
         loadSub = text(20f).apply { gravity = Gravity.CENTER; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(6), 0, 0) }
         status = text(18f).apply { gravity = Gravity.CENTER; alpha = 0.8f; setPadding(0, dp(10), 0, 0) }
@@ -218,7 +231,7 @@ class PlayerActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(48), 0, dp(48), 0)
-            addView(loadLogoBox.frame, LinearLayout.LayoutParams(dp(240), dp(135)).apply { bottomMargin = dp(16) })
+            addView(loadLogoBox.frame, LinearLayout.LayoutParams(dp(180), dp(240)).apply { bottomMargin = dp(16) })
             addView(loadName, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             addView(loadSub, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             addView(status, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
@@ -548,16 +561,18 @@ class PlayerActivity : Activity() {
     private fun showLogo(c: Channel) = logoInto(logoBox, c) { title.text == c.name }
 
     /** [c]'s logo in [box]: the add-on's, then Zephyr TV's own; downloaded once, set if [still] holds when it arrives. */
-    private fun logoInto(box: LogoBox, c: Channel, still: () -> Boolean) {
+    private fun logoInto(box: LogoBox, c: Channel, isFullScreenBackdrop: Boolean = false, still: () -> Boolean) {
         val knownUri = c.logos.firstOrNull { logos[it] != null }
         val known = knownUri?.let { logos[it] }
         if (known != null) {
             val blur = blurLogos[knownUri] ?: runCatching { softBlur(known) }.getOrNull()?.also { blurLogos[knownUri] = it }
             box.bg.setImageBitmap(blur)
             box.fg.setImageBitmap(known)
+            if (isFullScreenBackdrop && blur != null) blurBackdrop.setImageBitmap(blur)
         } else {
             box.bg.setImageDrawable(null)
             box.fg.setImageDrawable(null)
+            if (isFullScreenBackdrop) blurBackdrop.setImageDrawable(null)
         }
         box.frame.visibility = if (c.logos.isEmpty()) View.GONE else View.VISIBLE
         if (known != null || c.logos.isEmpty()) return
@@ -566,11 +581,11 @@ class PlayerActivity : Activity() {
             val bmp = c.logos.firstNotNullOfOrNull { uri ->
                 runCatching {
                     val bytes = Http.open(uri).use { it.readCapped(Http.MAX_IMAGE) }
-                    // A film's art is a backdrop, up to 4K: decoded at about the size it shows (240 dp wide at most).
+                    // A film's art is a backdrop, up to 4K: decoded at about the size it shows (320 dp wide at most).
                     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
                     var sample = 1
-                    while (bounds.outWidth / (sample * 2) >= dp(240)) sample *= 2
+                    while (bounds.outWidth / (sample * 2) >= dp(320)) sample *= 2
                     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
                         ?.also {
                             logos[uri] = it
@@ -583,6 +598,7 @@ class PlayerActivity : Activity() {
                 if (still()) {
                     box.bg.setImageBitmap(blur)
                     box.fg.setImageBitmap(bmp)
+                    if (isFullScreenBackdrop && blur != null) blurBackdrop.setImageBitmap(blur)
                 }
             }
         }
@@ -595,6 +611,8 @@ class PlayerActivity : Activity() {
     private fun say(text: String?) {
         if (text == null) {
             loading.visibility = View.GONE
+            blurBackdrop.visibility = View.GONE
+            blurBackdropShade.visibility = View.GONE
             return
         }
         val c = channels[at]
@@ -605,10 +623,12 @@ class PlayerActivity : Activity() {
             // A film's or episode's line (an episode's season, number and name); a channel's what's on stays in the banner.
             loadSub.text = if (vod) c.now.orEmpty() else ""
             loadSub.visibility = if (loadSub.text.isEmpty()) View.GONE else View.VISIBLE
-            logoInto(loadLogoBox, c) { loadFor == i }
+            logoInto(loadLogoBox, c, isFullScreenBackdrop = true) { loadFor == i }
         }
         status.text = text
         loading.visibility = View.VISIBLE
+        blurBackdrop.visibility = View.VISIBLE
+        blurBackdropShade.visibility = View.VISIBLE
     }
 
     // ---------- remote ----------

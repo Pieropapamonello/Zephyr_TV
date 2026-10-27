@@ -13,6 +13,13 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 1.2.6
+
+- You can navigate left and right between streaming apps in title details.
+- Pressing down from the description moves focus to the first app.
+- The player receives the exact cover poster shown in the details panel.
+- The player displays a full-screen blurred background of the title artwork while loading.
+
 ## 1.2.5
 
 - Trakt synchronization now requests full episode progress to correctly mark all watched episodes in series details.
