@@ -78,6 +78,26 @@ internal fun MainActivity.turnOnHomeButton() {
     openHomeServiceSettings()
 }
 
+/**
+ * Opens [intent]'s screen if the TV really has it: many TVs answer settings actions with an empty stub, which
+ * opens without error and shows nothing. Telling needs the action in the manifest's <queries>; one Android won't
+ * resolve for us is still tried, as before. False when nothing opened.
+ */
+internal fun MainActivity.tryScreen(intent: Intent): Boolean {
+    val found = intent.resolveActivity(packageManager)
+    if (found != null && found.className.contains("Stub", ignoreCase = true)) return false
+    return try {
+        startActivity(intent)
+        true
+    } catch (e: Exception) {
+        false
+    }
+}
+
+/** App info, where Android 13+ hides "Allow restricted settings" in the menu: it ungreys the Home button switch. */
+internal fun MainActivity.openAppInfo() =
+    tryScreen(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:$packageName")))
+
 /** False when no Settings screen opened at all. */
 internal fun MainActivity.openHomeServiceSettings(): Boolean {
     val service = ComponentName(this, HomeOverride::class.java).flattenToString()
@@ -87,14 +107,7 @@ internal fun MainActivity.openHomeServiceSettings(): Boolean {
         Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
         Intent(Settings.ACTION_SETTINGS),
     )
-    for (intent in tries) {
-        try {
-            startActivity(intent) // not resolveActivity(): Android 11+ hides other apps from that
-            return true
-        } catch (e: Exception) {
-        }
-    }
-    return false
+    return tries.any { tryScreen(it) }
 }
 
 internal fun MainActivity.isDefaultHome() = Build.VERSION.SDK_INT >= 29 &&
@@ -103,11 +116,18 @@ internal fun MainActivity.isDefaultHome() = Build.VERSION.SDK_INT >= 29 &&
 /**
  * Asks Android to make us the default home app (its own confirmation dialog). On Google TV the system
  * launcher still wins Home intents, which is why the Home button service exists; on other Android TVs
- * this alone is enough.
+ * this alone is enough. Where Android can't ask: the TV's home app settings, else Android's chooser of home
+ * apps (only shown while none is the default; "Always" makes it stick), else the ADB commands.
  */
 internal fun MainActivity.makeDefaultHome() {
-    if (canAskForHome()) askForHome()
-    else openSettings(Settings.ACTION_HOME_SETTINGS) // Android lets apps ask for Home, not give it back
+    if (canAskForHome()) return askForHome()
+    if (isDefaultHome()) return openSettings(Settings.ACTION_HOME_SETTINGS) // Android lets apps ask for Home, not give it back
+    if (tryScreen(Intent(Settings.ACTION_HOME_SETTINGS))) return
+    val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+    val current = packageManager.resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo
+    if ((current == null || current.packageName == "android") && tryScreen(home)) return
+    closeLauncherSettings()
+    adbPopup()
 }
 
 /** Android 10+ can show its own "use as home app" dialog; older versions only have the Settings screen. */
@@ -158,15 +178,25 @@ internal fun MainActivity.testPopup(way: Int) {
         getString(R.string.setup_skip_check) to { homeTest = 0; if (way == 1) tryHomeService() else adbPopup() })
 }
 
-internal fun MainActivity.servicePopup() = homePopup(2, getString(R.string.setup_service_title), getString(R.string.setup_service_body), null,
-    getString(R.string.setup_open_accessibility) to {
+/**
+ * Android 13+ greys the switch out for apps from outside the Play Store until "Allow restricted settings" in App
+ * info: a button for that too. The popup stays while App info is open, so Back comes back to it.
+ */
+internal fun MainActivity.servicePopup() {
+    val restricted = Build.VERSION.SDK_INT >= 33
+    val body = getString(R.string.setup_service_body).let { if (restricted) it + "\n\n" + getString(R.string.setup_service_restricted) else it }
+    val open: Pair<String, () -> Unit> = getString(R.string.setup_open_accessibility) to {
         setupStep = 2
         if (!openHomeServiceSettings()) {
             setupStep = 0
             adbPopup()
         }
-    },
-    getString(R.string.setup_not_now) to { setupDialog?.dismiss() })
+    }
+    val info: Pair<String, () -> Unit> = getString(R.string.setup_open_app_info) to { if (!openAppInfo()) adbPopup() }
+    val later: Pair<String, () -> Unit> = getString(R.string.setup_not_now) to { setupDialog?.dismiss() }
+    if (restricted) homePopup(2, getString(R.string.setup_service_title), body, null, open, info, later)
+    else homePopup(2, getString(R.string.setup_service_title), body, null, open, later)
+}
 
 /** The one-time grant lets Zephyr TV switch the service on itself, past the greyed-out toggle. */
 internal fun MainActivity.adbPopup() {
@@ -178,7 +208,10 @@ internal fun MainActivity.adbPopup() {
             cornerRadius = dp(10).toFloat()
             setColor(if (dark) 0xFF09090B.toInt() else 0xFFE9EBEF.toInt())
         }
-        listOfNotNull(lanAddress()?.let { "adb connect $it:5555" }, "adb shell pm grant $packageName $WRITE_SECURE", "adb shell $LISTENER_GRANT").forEach {
+        // The grant switches the Home button service on; set-home-activity makes Zephyr TV the home app where the
+        // TV has no screen for it (on TVs without Google TV's launcher that alone is enough); the listener, what's playing.
+        listOfNotNull(lanAddress()?.let { "adb connect $it:5555" }, "adb shell pm grant $packageName $WRITE_SECURE",
+            "adb shell cmd package set-home-activity $packageName/.MainActivity", "adb shell $LISTENER_GRANT").forEach {
             addView(label(it, 12f).apply { typeface = mono; maxLines = 2; ellipsize = null; setPadding(0, dp(2), 0, dp(2)) })
         }
     }
@@ -216,7 +249,7 @@ internal fun MainActivity.homePopup(step: Int, title: String, body: String, extr
         }
         if (step > 0) addView(label(getString(R.string.setup_step, step), 12f).apply { alpha = 0.6f })
         addView(label(title, 22f).apply { setTypeface(typeface, Typeface.BOLD); setPadding(0, dp(4), 0, 0) })
-        addView(label(body, 14f).apply { maxLines = 6; alpha = 0.8f; setLineSpacing(0f, 1.15f); setPadding(0, dp(10), 0, 0) })
+        addView(label(body, 14f).apply { maxLines = 9; alpha = 0.8f; setLineSpacing(0f, 1.15f); setPadding(0, dp(10), 0, 0) })
         extra?.let { addView(it) }
         buttons.forEachIndexed { i, (name, action) ->
             addView(settingsRow(name, "") { if (previewAt >= 0) previewHomeSetup(previewAt + 1) else action() },

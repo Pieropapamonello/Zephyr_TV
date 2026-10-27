@@ -34,6 +34,31 @@
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
+        <!-- Settings screens Zephyr TV opens: resolved first, to skip the empty stubs many TVs answer with (see tryScreen). -->
+        <intent>
+            <action android:name="android.settings.NOTIFICATION_LISTENER_DETAIL_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.ACCESSIBILITY_DETAILS_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.ACCESSIBILITY_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.HOME_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.APPLICATION_DETAILS_SETTINGS" />
+            <data android:scheme="package" />
+        </intent>
+        <!-- The home apps, for Android's chooser where the TV has no home app settings (see makeDefaultHome). -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
         <!-- Piume, what Zephyr TV was: its settings and history are taken on the first start (see FromPiume). -->
         <package android:name="dev.piume" />
         <!-- Sony TVs: which external inputs have a device connected (see connectedInputs). -->

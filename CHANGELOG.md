@@ -13,6 +13,15 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## Unreleased
+
+- **Show what's playing** opens the Zephyr TV switch in notification access, where the TV has it (Android 11 and newer).
+- Zephyr TV skips the empty settings screens of some TVs and shows the ADB command at once.
+- On a TV with little memory, **Show what's playing** says that it may not work there.
+- On Android 13 and newer, the Home button setup has **Open App info**. Use it to allow restricted settings.
+- **Default launcher** tries the TV's home app settings, then the Android home app chooser, then shows the ADB commands.
+- The ADB commands include one that makes Zephyr TV the home app.
+
 ## 1.2.8
 
 - Focus stays on its card when a row under an app changes, for example when names in your language arrive. Before, focus on a lower row went back up to the apps.

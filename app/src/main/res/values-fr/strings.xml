@@ -265,6 +265,8 @@
     <string name="setup_not_now">Pas maintenant</string>
     <string name="setup_skip_check">Ignorer cette vérification</string>
     <string name="setup_open_accessibility">Ouvrir l\'accessibilité</string>
+    <string name="setup_open_app_info">Ouvrir les infos de l\'appli</string>
+    <string name="setup_service_restricted">Si l\'interrupteur est grisé : sélectionnez Ouvrir les infos de l\'appli, ouvrez son menu et choisissez Autoriser les paramètres restreints. Revenez ensuite et sélectionnez Ouvrir l\'accessibilité.</string>
     <string name="setup_try_again">Réessayer</string>
     <string name="setup_close">Fermer</string>
     <string name="setup_done">Terminé</string>
@@ -348,6 +350,8 @@
     <string name="now_playing_needs_access">Accès requis</string>
     <string name="now_playing_on">Zephyr TV voit ce qui est lu dans les autres applis.</string>
     <string name="now_playing_help">Pour afficher ce qui est lu dans les autres applis, Zephyr TV a besoin de l\'accès aux notifications. Sur cette TV, seul le système peut le donner : exécutez une fois cette commande depuis un ordinateur, puis revenez ici.</string>
+    <string name="now_playing_low_ram">Cette TV a peu de mémoire : Android peut désactiver ce qui permet aux applis de voir ce qui est lu. Si vous voulez essayer, exécutez une fois cette commande depuis un ordinateur, puis revenez ici.</string>
+    <string name="now_playing_low_ram_short">Peut ne pas fonctionner sur cette TV</string>
     <string name="play_queue">File de lecture</string>
     <string name="playing_paused">%1$s · En pause</string>
     <string name="toast_no_results">Aucun résultat pour « %1$s »</string>

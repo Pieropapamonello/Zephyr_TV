@@ -265,6 +265,8 @@
     <string name="setup_not_now">Not now</string>
     <string name="setup_skip_check">Skip this check</string>
     <string name="setup_open_accessibility">Open Accessibility</string>
+    <string name="setup_open_app_info">Open App info</string>
+    <string name="setup_service_restricted">If the switch is greyed out: select Open App info, open its menu and choose Allow restricted settings. Then come back and select Open Accessibility.</string>
     <string name="setup_try_again">Try again</string>
     <string name="setup_close">Close</string>
     <string name="setup_done">Done</string>
@@ -348,6 +350,8 @@
     <string name="now_playing_needs_access">Needs access</string>
     <string name="now_playing_on">Zephyr TV sees what\'s playing in other apps.</string>
     <string name="now_playing_help">To show what\'s playing in other apps, Zephyr TV needs notification access. This TV lets only the system give it: run this command once from a computer, then come back.</string>
+    <string name="now_playing_low_ram">This TV has little memory, so Android may turn off what lets apps see what\'s playing. If you want to try, run this command once from a computer, then come back.</string>
+    <string name="now_playing_low_ram_short">May not work on this TV</string>
     <string name="play_queue">Play queue</string>
     <string name="playing_paused">%1$s · Paused</string>
     <string name="toast_no_results">Nothing found for “%1$s”</string>

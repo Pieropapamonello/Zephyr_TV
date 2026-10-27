@@ -262,7 +262,11 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                 renderSettings(HIDDEN_ROW)
             },
             // What's playing in the Play queue: allowed only by the system (adb on most TVs; see NowPlaying).
-            page(getString(R.string.setting_now_playing), getString(if (listenerAllowed()) R.string.state_on else R.string.now_playing_needs_access)) {
+            page(getString(R.string.setting_now_playing), getString(when {
+                listenerAllowed() -> R.string.state_on
+                lowRamTv() -> R.string.now_playing_low_ram_short
+                else -> R.string.now_playing_needs_access
+            })) {
                 if (listenerAllowed()) Toast.makeText(this, getString(R.string.now_playing_on), Toast.LENGTH_SHORT).show()
                 else allowListener { renderSettings(WATCH_SECTION * SECTION) }
             },

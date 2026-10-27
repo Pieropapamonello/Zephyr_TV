@@ -33,23 +33,29 @@ internal fun MainActivity.listenerAllowed(): Boolean =
     }
 
 /**
- * Where to allow it: Android's notification access screen, where the TV has one (most hide it); otherwise the adb
- * command, on the panel's page (see showListenerHelp).
+ * Low-RAM TVs (Android's own flag, set on most 1 GB boxes): Android turns notification listeners off there, so what's
+ * playing may stay hidden whatever is allowed.
+ */
+internal fun MainActivity.lowRamTv() = getSystemService(android.app.ActivityManager::class.java).isLowRamDevice
+
+/**
+ * Where to allow it: Zephyr TV's own switch in Android's notification access (Android 11+), else the list, where
+ * the TV has a real screen for it (most hide it); otherwise the adb command, on the panel's page (see
+ * showListenerHelp). A low-RAM TV gets the page straight away, saying so.
  */
 internal fun MainActivity.allowListener(back: () -> Unit) {
-    try {
-        startActivity(android.content.Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-    } catch (e: Exception) {
-        showListenerHelp(back)
-    }
+    if (lowRamTv()) return showListenerHelp(back)
+    val own = if (android.os.Build.VERSION.SDK_INT >= 30) android.content.Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+        .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, listenerComponent().flattenToString()) else null
+    if (listOfNotNull(own, android.content.Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)).none { tryScreen(it) }) showListenerHelp(back)
 }
 
-/** The adb command to allow it, in a box to copy, with a row back. */
+/** The adb command to allow it, in a box to copy, with a row back; on a low-RAM TV, why it may not work. */
 internal fun MainActivity.showListenerHelp(back: () -> Unit) {
     val box = android.widget.LinearLayout(this).apply {
         orientation = android.widget.LinearLayout.VERTICAL
         setPadding(dp(14), dp(4), dp(14), dp(12))
-        addView(label(getString(R.string.now_playing_help), 13f).apply { maxLines = 6; setLineSpacing(0f, 1.15f) })
+        addView(label(getString(if (lowRamTv()) R.string.now_playing_low_ram else R.string.now_playing_help), 13f).apply { maxLines = 8; setLineSpacing(0f, 1.15f) })
         addView(label("adb shell $LISTENER_GRANT", 12f).apply {
             typeface = android.graphics.Typeface.MONOSPACE
             maxLines = 3
