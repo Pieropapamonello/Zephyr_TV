@@ -13,10 +13,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
-## Unreleased
+## 1.2.7
 
 - In the Glass theme, the title and channel pages show the glass pane behind their picture, as the settings pages do.
-- In the Glass theme, the buttons on title and channel pages are glass panes, like the cards on the home screen. Focus makes the glass lighter.
+- In the Glass theme, the title and channel pages use glass panes under the picture, like the cards on the home screen. This includes the description and the buttons.
+- Focus makes a glass button lighter. Its text stays white.
 
 ## 1.2.6
 

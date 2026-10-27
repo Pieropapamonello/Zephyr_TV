@@ -526,9 +526,9 @@ internal fun MainActivity.focusedRow(): Int? {
     return (i - first).takeIf { it >= 0 }
 }
 
-/** [panes]: the rows as panes of glass (a title's or a channel's page in the Glass theme), see [glassPane]. */
-internal fun MainActivity.showPage(title: String, rows: List<Triple<String, String, () -> Unit>>, focus: Int = 0, top: View? = null, back: (() -> Unit)?,
-                                  panes: Boolean = false) {
+/** [panes]: [top] and the rows as panes of glass (a title's or a channel's page in the Glass theme), see [glassPane]. */
+internal fun MainActivity.showPage(title: String, rows: List<Triple<String, String, () -> Unit>>, focus: Int = 0, top: View? = null,
+                                  panes: Boolean = false, back: (() -> Unit)?) {
     pageExit?.invoke()
     pageExit = null
     pageSides = null
@@ -536,7 +536,13 @@ internal fun MainActivity.showPage(title: String, rows: List<Triple<String, Stri
     shownSection = -1 // renderSettings sets it again for section pages
     findViewById<TextView>(R.id.settingsTitle).text = title
     settingsList.removeAllViews()
-    top?.let { settingsList.addView(it) }
+    top?.let {
+        if (panes) {
+            glassPane(it, dp(12))
+            it.setPadding(it.paddingLeft, dp(12), it.paddingRight, dp(12))
+        }
+        settingsList.addView(it)
+    }
     val first = settingsList.childCount
     rows.forEach { (name, value, action) ->
         settingsList.addView(settingsRow(name, value, panes, action), LinearLayout.LayoutParams(MATCH_PARENT, dp(44)).apply {
