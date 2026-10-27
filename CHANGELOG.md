@@ -13,7 +13,7 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
-## Unreleased
+## 1.2.9
 
 - **Show what's playing** opens the Zephyr TV switch in notification access, where the TV has it (Android 11 and newer).
 - Zephyr TV skips the empty settings screens of some TVs and shows the ADB command at once.
@@ -21,6 +21,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - On Android 13 and newer, the Home button setup has **Open App info**. Use it to allow restricted settings.
 - **Default launcher** tries the TV's home app settings, then the Android home app chooser, then shows the ADB commands.
 - The ADB commands include one that makes Zephyr TV the home app.
+- **Cinemeta library** is now **Catalog source**. Cinemeta stays the default.
+- Select **Add a catalog** to add another catalog add-on. Select it in the list and select **Use this catalog** to use it in place of Cinemeta.
 
 ## 1.2.8
 

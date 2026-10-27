@@ -428,9 +428,14 @@
     <string name="vod_watched_series">Series watched</string>
     <string name="setting_addons_vod">Films and series</string>
     <string name="addons_vod_tiles">Films and Series apps</string>
-    <string name="setting_cinemeta">Cinemeta library</string>
-    <string name="cinemeta_intro">Films and series always come with Cinemeta, Stremio\'s free library. Another instance\'s address can be used instead.</string>
-    <string name="cinemeta_default">Stremio\'s own</string>
+    <string name="setting_cinemeta">Catalog source</string>
+    <string name="cinemeta_intro">Films and series come from this catalog. Cinemeta, the free library of Stremio, is the default. Add another catalog add-on to use it in its place.</string>
+    <string name="cinemeta_default">Cinemeta (default)</string>
+    <string name="catalog_add">Add a catalog</string>
+    <string name="catalog_in_use">In use</string>
+    <string name="catalog_use">Use this catalog</string>
+    <string name="catalog_add_intro">The address of a Stremio add-on with catalogs of films or series. It ends in manifest.json.</string>
+    <string name="toast_catalog_no_vod">This add-on has no catalogs of films or series.</string>
     <string name="title_watch">Watch</string>
     <string name="title_resume">Resume from %1$s</string>
     <string name="title_resume_on">Resume from %1$s on %2$s</string>

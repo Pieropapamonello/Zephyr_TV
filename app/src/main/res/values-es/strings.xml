@@ -429,9 +429,14 @@
     <string name="vod_watched_series">Series vistas</string>
     <string name="setting_addons_vod">Películas y series</string>
     <string name="addons_vod_tiles">Apps Películas y Series</string>
-    <string name="setting_cinemeta">Biblioteca Cinemeta</string>
-    <string name="cinemeta_intro">Las películas y series usan siempre Cinemeta, la biblioteca gratuita de Stremio. Puedes usar la dirección de otra instancia.</string>
-    <string name="cinemeta_default">La de Stremio</string>
+    <string name="setting_cinemeta">Fuente del catálogo</string>
+    <string name="cinemeta_intro">Las películas y series vienen de este catálogo. Cinemeta, la biblioteca gratuita de Stremio, es el predeterminado. Añade otro add-on de catálogo para usarlo en su lugar.</string>
+    <string name="cinemeta_default">Cinemeta (predeterminado)</string>
+    <string name="catalog_add">Añadir un catálogo</string>
+    <string name="catalog_in_use">En uso</string>
+    <string name="catalog_use">Usar este catálogo</string>
+    <string name="catalog_add_intro">La dirección de un add-on de Stremio con catálogos de películas o series. Termina en manifest.json.</string>
+    <string name="toast_catalog_no_vod">Este add-on no tiene catálogos de películas ni series.</string>
     <string name="title_watch">Ver</string>
     <string name="title_resume">Seguir desde %1$s</string>
     <string name="title_resume_on">Seguir desde %1$s en %2$s</string>
