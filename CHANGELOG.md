@@ -13,7 +13,7 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
-## Unreleased
+## 1.2.8
 
 - Focus stays on its card when a row under an app changes, for example when names in your language arrive. Before, focus on a lower row went back up to the apps.
 
