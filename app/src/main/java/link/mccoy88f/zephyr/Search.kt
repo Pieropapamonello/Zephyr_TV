@@ -324,7 +324,7 @@ internal fun MainActivity.showChannel(d: ChannelDetail) {
     if (settingsScrim.visibility != View.VISIBLE) showPanel()
     val panel = findViewById<LinearLayout>(R.id.settingsPanel)
     val panelWidth = dp(380) // the panel's width (activity_main.xml)
-    val picture = FrameLayout(this).apply { setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt()) }
+    val picture = FrameLayout(this).apply { setBackgroundColor(artGround()) }
     channelArt(picture, panelWidth, panelWidth * 9 / 16, d.number, d.name) {
         listOfNotNull(d.logo, d.addon?.let { ChannelLogos.match(channelLogoTable(), d.name) })
     }

@@ -791,6 +791,12 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
 }
 
 /**
+ * What a title's or a channel's picture at the top of the panel lies on, until its art is in (and under a channel
+ * logo's half-clear blur): Glass a smoked tint, so the pane's glass shows through as on the settings pages.
+ */
+internal fun MainActivity.artGround() = if (glass) 0x592C2C34 else if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt()
+
+/**
  * A TV channel's picture in [frame] ([w] by [h]): its [logo] (found on a background thread) large in the middle on a
  * blur of itself; with no logo, or until it's in, its [number] and [name] instead.
  */

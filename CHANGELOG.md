@@ -13,6 +13,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## Unreleased
+
+- In the Glass theme, the title and channel pages show the glass pane behind their picture, as the settings pages do.
+
 ## 1.2.6
 
 - You can navigate left and right between streaming apps in title details.

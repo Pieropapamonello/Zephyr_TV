@@ -352,7 +352,7 @@ private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, 
     if (settingsScrim.visibility != View.VISIBLE) showPanel()
     val panel = findViewById<LinearLayout>(R.id.settingsPanel)
     val panelWidth = dp(380) // the panel's width (activity_main.xml)
-    val picture = FrameLayout(this).apply { setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt()) }
+    val picture = FrameLayout(this).apply { setBackgroundColor(artGround()) }
     fillArt(picture, panelWidth, panelWidth * 9 / 16, art.first, art.second, art.third, name)
     showPage(title, rows, focus, top = top, back = back)
     panel.addView(picture, 0, LinearLayout.LayoutParams(panelWidth, panelWidth * 9 / 16).apply {
