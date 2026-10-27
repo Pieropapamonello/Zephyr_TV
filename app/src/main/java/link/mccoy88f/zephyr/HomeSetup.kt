@@ -94,10 +94,6 @@ internal fun MainActivity.tryScreen(intent: Intent): Boolean {
     }
 }
 
-/** App info, where Android 13+ hides "Allow restricted settings" in the menu: it ungreys the Home button switch. */
-internal fun MainActivity.openAppInfo() =
-    tryScreen(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:$packageName")))
-
 /** False when no Settings screen opened at all. */
 internal fun MainActivity.openHomeServiceSettings(): Boolean {
     val service = ComponentName(this, HomeOverride::class.java).flattenToString()
@@ -178,25 +174,15 @@ internal fun MainActivity.testPopup(way: Int) {
         getString(R.string.setup_skip_check) to { homeTest = 0; if (way == 1) tryHomeService() else adbPopup() })
 }
 
-/**
- * Android 13+ greys the switch out for apps from outside the Play Store until "Allow restricted settings" in App
- * info: a button for that too. The popup stays while App info is open, so Back comes back to it.
- */
-internal fun MainActivity.servicePopup() {
-    val restricted = Build.VERSION.SDK_INT >= 33
-    val body = getString(R.string.setup_service_body).let { if (restricted) it + "\n\n" + getString(R.string.setup_service_restricted) else it }
-    val open: Pair<String, () -> Unit> = getString(R.string.setup_open_accessibility) to {
+internal fun MainActivity.servicePopup() = homePopup(2, getString(R.string.setup_service_title), getString(R.string.setup_service_body), null,
+    getString(R.string.setup_open_accessibility) to {
         setupStep = 2
         if (!openHomeServiceSettings()) {
             setupStep = 0
             adbPopup()
         }
-    }
-    val info: Pair<String, () -> Unit> = getString(R.string.setup_open_app_info) to { if (!openAppInfo()) adbPopup() }
-    val later: Pair<String, () -> Unit> = getString(R.string.setup_not_now) to { setupDialog?.dismiss() }
-    if (restricted) homePopup(2, getString(R.string.setup_service_title), body, null, open, info, later)
-    else homePopup(2, getString(R.string.setup_service_title), body, null, open, later)
-}
+    },
+    getString(R.string.setup_not_now) to { setupDialog?.dismiss() })
 
 /** The one-time grant lets Zephyr TV switch the service on itself, past the greyed-out toggle. */
 internal fun MainActivity.adbPopup() {

@@ -265,8 +265,6 @@
     <string name="setup_not_now">Not now</string>
     <string name="setup_skip_check">Skip this check</string>
     <string name="setup_open_accessibility">Open Accessibility</string>
-    <string name="setup_open_app_info">Open App info</string>
-    <string name="setup_service_restricted">If the switch is greyed out: select Open App info, open its menu and choose Allow restricted settings. Then come back and select Open Accessibility.</string>
     <string name="setup_try_again">Try again</string>
     <string name="setup_close">Close</string>
     <string name="setup_done">Done</string>

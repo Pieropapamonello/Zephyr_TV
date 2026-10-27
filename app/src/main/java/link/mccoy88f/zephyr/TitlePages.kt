@@ -2,9 +2,7 @@ package link.mccoy88f.zephyr
 
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.StateListDrawable
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
@@ -303,19 +301,11 @@ private fun MainActivity.titleTop(info: String, name: String?, about: String?, s
                 id = View.generateViewId()
                 maxLines = 10
                 setLineSpacing(0f, 1.15f)
-                setPadding(dp(6), dp(6), dp(6), dp(6))
+                setPadding(0, dp(6), 0, dp(6)) // no box: in line with the lines above it
                 isFocusable = true
                 isClickable = true
                 nextFocusUpId = id
-                val sel = StateListDrawable().apply {
-                    val shape = GradientDrawable().apply {
-                        cornerRadius = dp(6).toFloat()
-                        setColor(if (dark) 0x22FFFFFF else 0x18000000)
-                    }
-                    addState(intArrayOf(android.R.attr.state_focused), shape)
-                    addState(intArrayOf(), ColorDrawable(Color.TRANSPARENT))
-                }
-                background = sel
+                background = null
                 setOnClickListener {
                     maxLines = if (maxLines == 10) 50 else 10
                 }
@@ -463,10 +453,9 @@ private fun MainActivity.serviceBar(t: Stremio.Title, available: Set<String>?): 
                         gravity = Gravity.CENTER
                     })
 
+                    // Focus marks it with a ring inside its own bounds: grown, it was cut off by the bar's edges.
                     setOnFocusChangeListener { _, focused ->
-                        if (light != null) light(focused) else bg.setColor(if (focused) fg else rest)
-                        scaleX = if (focused) 1.12f else 1.0f
-                        scaleY = if (focused) 1.12f else 1.0f
+                        if (light != null) light(focused) else bg.setStroke(if (focused) dp(2) else 0, if (focused) fg else Color.TRANSPARENT)
                         if (focused) {
                             (parent?.parent as? android.widget.HorizontalScrollView)?.smoothScrollTo(left - dp(16), 0)
                         }
@@ -568,8 +557,10 @@ internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, epi
             .putStringArrayListExtra(PlayerActivity.IDS, strings { it.first })
             .putStringArrayListExtra(PlayerActivity.NAMES, strings { it.second })
             .putStringArrayListExtra(PlayerActivity.NOWS, strings { it.third?.let { e -> listOf(episodeLine(e), e.name).filter { n -> n.isNotBlank() }.joinToString(" · ") } ?: t?.year ?: "" })
-            .putStringArrayListExtra(PlayerActivity.LOGOS, strings { locandina ?: it.third?.thumbnail ?: backdrop })
-            .putStringArrayListExtra(PlayerActivity.FALLBACK_LOGOS, strings { it.third?.thumbnail ?: backdrop ?: locandina ?: "" })
+            // In the player the art across: the backdrop (an episode's still without one), with the title's logo on it.
+            .putStringArrayListExtra(PlayerActivity.LOGOS, strings { bg ?: it.third?.thumbnail ?: poster })
+            .putStringArrayListExtra(PlayerActivity.FALLBACK_LOGOS, strings { it.third?.thumbnail ?: poster ?: "" })
+            .putExtra(PlayerActivity.TITLE_LOGO, ref.logo ?: t?.logo)
             .putStringArrayListExtra(PlayerActivity.DESCS, strings { it.third?.overview ?: meta?.description })
             .putExtra(PlayerActivity.META_TYPE, type)
             .putExtra(PlayerActivity.META_ID, t?.id ?: ref.id)

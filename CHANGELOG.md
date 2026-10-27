@@ -13,6 +13,14 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 1.2.10
+
+- The text about a film or series on its page shows without a box around it.
+- The app buttons on a title page show a ring when they have focus. They do not grow and get cut off.
+- When a film or episode starts, the player shows the wide picture of the title with its logo, without a box.
+- The player rounds the corners of the picture when it has no transparent parts.
+- Zephyr TV does not open App info or the Zephyr TV switch in notification access directly. Some TVs showed that the app is not safe.
+
 ## 1.2.9
 
 - **Show what's playing** opens the Zephyr TV switch in notification access, where the TV has it (Android 11 and newer).

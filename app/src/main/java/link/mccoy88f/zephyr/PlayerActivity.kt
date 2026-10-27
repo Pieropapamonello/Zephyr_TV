@@ -106,7 +106,7 @@ class PlayerActivity : Activity() {
         getSharedPreferences(K.FILE, MODE_PRIVATE).getString(K.EPG_URL, null)?.takeIf { it.isNotBlank() }?.let { Epg.saved(filesDir, it) }
     }
 
-    private class LogoBox(val frame: FrameLayout, val bg: ImageView, val fg: ImageView)
+    private class LogoBox(val frame: FrameLayout, val bg: ImageView, val fg: ImageView, val mark: ImageView)
 
     private lateinit var surface: SurfaceView
     private lateinit var blurBackdrop: ImageView
@@ -119,7 +119,9 @@ class PlayerActivity : Activity() {
     private var loadFor = -1 // the channel (film, episode) the loading screen shows
     private lateinit var banner: LinearLayout
     private lateinit var logoBox: LogoBox
+    private var titleLogo: Bitmap? = null
     private val blurLogos = ConcurrentHashMap<String, Bitmap>()
+    private val roundArt = ConcurrentHashMap<String, Bitmap>() // a film's art with its corners rounded (see rounded)
     private lateinit var title: TextView
     private lateinit var position: TextView
     private lateinit var clock: TextView
@@ -191,6 +193,7 @@ class PlayerActivity : Activity() {
         }
         if (channels.isEmpty()) return finish()
         build()
+        if (vod) markInto(logoBox)
         play(intent.getIntExtra(INDEX, 0).coerceIn(0, channels.size - 1))
         if (vod) ui.post(tick)
     }
@@ -224,6 +227,7 @@ class PlayerActivity : Activity() {
         // While a channel loads: its logo and name in the middle, and under them the stream being tried, or that
         // none works.
         loadLogoBox = createLogoBox(dp(6), dp(6), 12)
+        val loadSize = if (vod) LinearLayout.LayoutParams(dp(320), dp(180)) else LinearLayout.LayoutParams(dp(180), dp(240))
         loadName = text(28f, bold = true).apply { gravity = Gravity.CENTER; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
         loadSub = text(20f).apply { gravity = Gravity.CENTER; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(6), 0, 0) }
         status = text(18f).apply { gravity = Gravity.CENTER; alpha = 0.8f; setPadding(0, dp(10), 0, 0) }
@@ -231,7 +235,7 @@ class PlayerActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(48), 0, dp(48), 0)
-            addView(loadLogoBox.frame, LinearLayout.LayoutParams(dp(180), dp(240)).apply { bottomMargin = dp(16) })
+            addView(loadLogoBox.frame, loadSize.apply { bottomMargin = dp(16) })
             addView(loadName, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             addView(loadSub, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             addView(status, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
@@ -536,25 +540,76 @@ class PlayerActivity : Activity() {
     }
 
     private fun createLogoBox(padH: Int, padV: Int, radiusDp: Int = 10): LogoBox {
+        // A film's art stands on its own, with no box: its corners are rounded on the picture itself (see rounded).
         val frame = FrameLayout(this).apply {
-            background = GradientDrawable().apply {
-                cornerRadius = dp(radiusDp).toFloat()
-                setColor(0x33000000)
+            if (!vod) {
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(radiusDp).toFloat()
+                    setColor(0x33000000)
+                }
+                clipToOutline = true
+                outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
             }
-            clipToOutline = true
-            outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
         }
         val bg = ImageView(this).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
             alpha = 0.55f
+            if (vod) visibility = View.GONE
         }
         val fg = ImageView(this).apply {
             scaleType = ImageView.ScaleType.FIT_CENTER
-            setPadding(padH, padV, padH, padV)
+            if (!vod) setPadding(padH, padV, padH, padV)
+        }
+        // The title's logo, over the middle of its art.
+        val mark = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            visibility = View.GONE
         }
         frame.addView(bg, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         frame.addView(fg, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-        return LogoBox(frame, bg, fg)
+        frame.addView(mark, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        frame.addOnLayoutChangeListener { _, l, t, r, b, _, _, _, _ ->
+            val w = r - l
+            val h = b - t
+            if (mark.paddingLeft != w / 8) mark.setPadding(w / 8, h / 4, w / 8, h / 4)
+        }
+        return LogoBox(frame, bg, fg, mark)
+    }
+
+    /**
+     * [src] with its corners rounded, when it's a picture that fills its frame; one with see-through corners (a logo,
+     * a cut-out poster) is left as it is.
+     */
+    private fun rounded(src: Bitmap): Bitmap {
+        val w = src.width
+        val h = src.height
+        if (w < 2 || h < 2) return src
+        val corners = listOf(src.getPixel(0, 0), src.getPixel(w - 1, 0), src.getPixel(0, h - 1), src.getPixel(w - 1, h - 1))
+        if (src.hasAlpha() && corners.any { Color.alpha(it) < 255 }) return src
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            shader = android.graphics.BitmapShader(src, android.graphics.Shader.TileMode.CLAMP, android.graphics.Shader.TileMode.CLAMP)
+        }
+        val radius = w * 0.04f
+        android.graphics.Canvas(out).drawRoundRect(0f, 0f, w.toFloat(), h.toFloat(), radius, radius, paint)
+        return out
+    }
+
+    /** The title's logo over its art in [box]: decoded once, while the player is open. */
+    private fun markInto(box: LogoBox) {
+        val uri = intent.getStringExtra(TITLE_LOGO)?.takeIf { it.isNotEmpty() } ?: return
+        titleLogo?.let { box.mark.setImageBitmap(it); box.mark.visibility = View.VISIBLE; return }
+        ahead.execute {
+            val bmp = runCatching { Http.open(uri).use { it.readCapped(Http.MAX_IMAGE) } }.getOrNull()
+                ?.let { BitmapFactory.decodeByteArray(it, 0, it.size) } ?: return@execute
+            ui.post {
+                titleLogo = bmp
+                for (b in listOf(logoBox, loadLogoBox)) {
+                    b.mark.setImageBitmap(bmp)
+                    b.mark.visibility = View.VISIBLE
+                }
+            }
+        }
     }
 
     /** The channel's logo in the banner: the add-on's, then Zephyr TV's own; downloaded once, kept while the player is open. */
@@ -567,7 +622,7 @@ class PlayerActivity : Activity() {
         if (known != null) {
             val blur = blurLogos[knownUri] ?: runCatching { softBlur(known) }.getOrNull()?.also { blurLogos[knownUri] = it }
             box.bg.setImageBitmap(blur)
-            box.fg.setImageBitmap(known)
+            box.fg.setImageBitmap(if (vod) roundArt[knownUri] ?: known else known)
             if (isFullScreenBackdrop && blur != null) blurBackdrop.setImageBitmap(blur)
         } else {
             box.bg.setImageDrawable(null)
@@ -594,10 +649,11 @@ class PlayerActivity : Activity() {
                 }.getOrNull()
             } ?: return@execute
             val blur = foundUri?.let { u -> blurLogos.getOrPut(u) { softBlur(bmp) } } ?: runCatching { softBlur(bmp) }.getOrNull()
+            val shown = if (vod) runCatching { rounded(bmp) }.getOrNull()?.also { r -> foundUri?.let { roundArt[it] = r } } ?: bmp else bmp
             ui.post {
                 if (still()) {
                     box.bg.setImageBitmap(blur)
-                    box.fg.setImageBitmap(bmp)
+                    box.fg.setImageBitmap(shown)
                     if (isFullScreenBackdrop && blur != null) blurBackdrop.setImageBitmap(blur)
                 }
             }
@@ -1289,6 +1345,7 @@ class PlayerActivity : Activity() {
         const val META_TYPE = "meta_type" // the title's type and id ("series", "tt…"), for its page from Continue Playing
         const val META_ID = "meta_id"
         const val POSTER = "poster" // the title's art, for its Continue Playing card
+        const val TITLE_LOGO = "title_logo" // a film's or series' logo, over its art in the player
         const val USER_DIR = "user_dir" // the folder of the user watching (see Users): their progress, watched titles, Trakt
         const val ADULT = "adult" // whether this content is from an adult add-on (no history, no continue watching)
         const val ADULT_SOURCES = "adult_sources" // names and addresses of adult stream add-ons

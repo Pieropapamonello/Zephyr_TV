@@ -265,8 +265,6 @@
     <string name="setup_not_now">Non ora</string>
     <string name="setup_skip_check">Salta questo controllo</string>
     <string name="setup_open_accessibility">Apri Accessibilità</string>
-    <string name="setup_open_app_info">Apri Info app</string>
-    <string name="setup_service_restricted">Se l\'interruttore è grigio: seleziona Apri Info app, apri il suo menu e scegli Consenti impostazioni con limitazioni. Poi torna qui e seleziona Apri Accessibilità.</string>
     <string name="setup_try_again">Riprova</string>
     <string name="setup_close">Chiudi</string>
     <string name="setup_done">Fatto</string>

@@ -39,15 +39,13 @@ internal fun MainActivity.listenerAllowed(): Boolean =
 internal fun MainActivity.lowRamTv() = getSystemService(android.app.ActivityManager::class.java).isLowRamDevice
 
 /**
- * Where to allow it: Zephyr TV's own switch in Android's notification access (Android 11+), else the list, where
- * the TV has a real screen for it (most hide it); otherwise the adb command, on the panel's page (see
- * showListenerHelp). A low-RAM TV gets the page straight away, saying so.
+ * Where to allow it: Android's notification access list, where the TV has a real screen for it (most hide it);
+ * otherwise the adb command, on the panel's page (see showListenerHelp). A low-RAM TV gets the page straight away,
+ * saying so.
  */
 internal fun MainActivity.allowListener(back: () -> Unit) {
     if (lowRamTv()) return showListenerHelp(back)
-    val own = if (android.os.Build.VERSION.SDK_INT >= 30) android.content.Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
-        .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, listenerComponent().flattenToString()) else null
-    if (listOfNotNull(own, android.content.Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)).none { tryScreen(it) }) showListenerHelp(back)
+    if (!tryScreen(android.content.Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))) showListenerHelp(back)
 }
 
 /** The adb command to allow it, in a box to copy, with a row back; on a low-RAM TV, why it may not work. */

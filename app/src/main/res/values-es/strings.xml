@@ -265,8 +265,6 @@
     <string name="setup_not_now">Ahora no</string>
     <string name="setup_skip_check">Omitir esta comprobación</string>
     <string name="setup_open_accessibility">Abrir Accesibilidad</string>
-    <string name="setup_open_app_info">Abrir Información de la app</string>
-    <string name="setup_service_restricted">Si el interruptor está en gris: selecciona Abrir Información de la app, abre su menú y elige Permitir ajustes restringidos. Luego vuelve y selecciona Abrir Accesibilidad.</string>
     <string name="setup_try_again">Reintentar</string>
     <string name="setup_close">Cerrar</string>
     <string name="setup_done">Listo</string>
