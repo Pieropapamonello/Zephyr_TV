@@ -16,6 +16,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 ## Unreleased
 
 - In the Glass theme, the title and channel pages show the glass pane behind their picture, as the settings pages do.
+- In the Glass theme, the buttons on title and channel pages are glass panes, like the cards on the home screen. Focus makes the glass lighter.
 
 ## 1.2.6
 

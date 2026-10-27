@@ -354,7 +354,7 @@ private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, 
     val panelWidth = dp(380) // the panel's width (activity_main.xml)
     val picture = FrameLayout(this).apply { setBackgroundColor(artGround()) }
     fillArt(picture, panelWidth, panelWidth * 9 / 16, art.first, art.second, art.third, name)
-    showPage(title, rows, focus, top = top, back = back)
+    showPage(title, rows, focus, top = top, back = back, panes = glass)
     panel.addView(picture, 0, LinearLayout.LayoutParams(panelWidth, panelWidth * 9 / 16).apply {
         setMargins(-panel.paddingStart, -panel.paddingTop, -panel.paddingEnd, dp(20))
     })
@@ -403,7 +403,7 @@ private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, 
         row.setOnFocusChangeListener { v, focused ->
             orig?.onFocusChange(v, focused)
             if (icon !is android.graphics.drawable.BitmapDrawable) {
-                iv.setColorFilter(if (focused) onFg else fg, android.graphics.PorterDuff.Mode.SRC_IN)
+                iv.setColorFilter(if (focused && !glass) onFg else fg, android.graphics.PorterDuff.Mode.SRC_IN)
             }
         }
     }
@@ -453,6 +453,7 @@ private fun MainActivity.serviceBar(t: Stremio.Title, available: Set<String>?): 
                         setColor(rest)
                     }
                     background = bg
+                    val light = if (glass) glassPane(this, dp(8)) else null
 
                     val iv = ImageView(context).apply {
                         setImageDrawable(a.icon)
@@ -463,7 +464,7 @@ private fun MainActivity.serviceBar(t: Stremio.Title, available: Set<String>?): 
                     })
 
                     setOnFocusChangeListener { _, focused ->
-                        bg.setColor(if (focused) fg else rest)
+                        if (light != null) light(focused) else bg.setColor(if (focused) fg else rest)
                         scaleX = if (focused) 1.12f else 1.0f
                         scaleY = if (focused) 1.12f else 1.0f
                         if (focused) {

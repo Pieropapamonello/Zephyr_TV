@@ -526,7 +526,9 @@ internal fun MainActivity.focusedRow(): Int? {
     return (i - first).takeIf { it >= 0 }
 }
 
-internal fun MainActivity.showPage(title: String, rows: List<Triple<String, String, () -> Unit>>, focus: Int = 0, top: View? = null, back: (() -> Unit)?) {
+/** [panes]: the rows as panes of glass (a title's or a channel's page in the Glass theme), see [glassPane]. */
+internal fun MainActivity.showPage(title: String, rows: List<Triple<String, String, () -> Unit>>, focus: Int = 0, top: View? = null, back: (() -> Unit)?,
+                                  panes: Boolean = false) {
     pageExit?.invoke()
     pageExit = null
     pageSides = null
@@ -537,8 +539,8 @@ internal fun MainActivity.showPage(title: String, rows: List<Triple<String, Stri
     top?.let { settingsList.addView(it) }
     val first = settingsList.childCount
     rows.forEach { (name, value, action) ->
-        settingsList.addView(settingsRow(name, value, action), LinearLayout.LayoutParams(MATCH_PARENT, dp(44)).apply {
-            topMargin = dp(4)
+        settingsList.addView(settingsRow(name, value, panes, action), LinearLayout.LayoutParams(MATCH_PARENT, dp(44)).apply {
+            topMargin = if (panes) dp(6) else dp(4)
         })
     }
     // Keep focus inside the panel: Up from the first row and Down from the last go nowhere.
@@ -679,14 +681,36 @@ internal fun MainActivity.pinPage(title: String, back: (() -> Unit)?, done: (Str
 /** A faint outline for input boxes: their fill alone sits too close to the panel's colour to find at a glance. */
 internal fun MainActivity.fieldEdge() = (fg and 0xFFFFFF) or 0x40000000
 
-internal fun MainActivity.settingsRow(title: String, value: String, action: () -> Unit): View {
+/**
+ * Glass: [v] as a pane of smoked glass, like the cards on the home screen: the cards' tint with a gloss on its top
+ * half and a hairline rim. Returns what focus does to it: the glass lightens and the rim brightens; the content
+ * stays white, so it isn't inverted as on a plain row.
+ */
+internal fun MainActivity.glassPane(v: View, radius: Int): (Boolean) -> Unit {
+    val bg = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, cardRest).apply { cornerRadius = radius.toFloat() }
+    val gloss = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0x24FFFFFF, 0x08FFFFFF, 0x00FFFFFF)).apply {
+        cornerRadius = radius.toFloat()
+    }
+    val rim = GradientDrawable().apply { cornerRadius = radius.toFloat(); setStroke(1, 0x1FFFFFFF) }
+    v.background = LayerDrawable(arrayOf(bg, gloss))
+    v.foreground = rim
+    return { lit ->
+        bg.colors = if (lit) cardLit else cardRest
+        rim.setStroke(if (lit) dp(2) else 1, if (lit) 0x99FFFFFF.toInt() else 0x1FFFFFFF)
+    }
+}
+
+/** [pane]: a pane of glass (see [glassPane]) instead of a plain row that inverts with focus. */
+internal fun MainActivity.settingsRow(title: String, value: String, pane: Boolean = false, action: () -> Unit): View {
     val bg = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0, 0)).apply { cornerRadius = dp(8).toFloat() }
+    val lit = if (pane) fg else onFg // the content's colour with focus
     return LinearLayout(this).apply {
         id = View.generateViewId()
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(dp(14), 0, dp(14), 0)
         background = bg
+        val light = if (pane) glassPane(this, dp(8)) else null
         isFocusable = true
         isClickable = true
         val name = label(title, 14f)
@@ -711,17 +735,17 @@ internal fun MainActivity.settingsRow(title: String, value: String, action: () -
         }
         setOnClickListener { action() }
         setOnFocusChangeListener { _, focused ->
-            bg.colors = if (focused) intArrayOf(fg, fg) else intArrayOf(0, 0)
-            name.setTextColor(if (focused) onFg else fg)
-            state.setTextColor(if (focused) onFg else fg)
+            if (light != null) light(focused) else bg.colors = if (focused) intArrayOf(fg, fg) else intArrayOf(0, 0)
+            name.setTextColor(if (focused) lit else fg)
+            state.setTextColor(if (focused) lit else fg)
             state.alpha = if (focused) 0.75f else 0.6f
-            if (toggled) showSwitch(focused) // redrawn in the inverted colours on the lit row
-            arrow.setColorFilter(if (focused) onFg else fg)
+            if (toggled) showSwitch(focused && light == null) // redrawn in the inverted colours on the lit row
+            arrow.setColorFilter(if (focused) lit else fg)
             for (idx in 0 until childCount) {
                 val child = getChildAt(idx)
                 if (child is ImageView && child !== arrow) {
                     if (child.drawable !is android.graphics.drawable.BitmapDrawable) {
-                        child.setColorFilter(if (focused) onFg else fg)
+                        child.setColorFilter(if (focused) lit else fg)
                     }
                 }
             }

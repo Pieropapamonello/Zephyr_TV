@@ -363,7 +363,7 @@ internal fun MainActivity.showChannel(d: ChannelDetail) {
         val p = Prog(d.name, d.number, 0, null, d.intent, d.pkg, addon = d.addon)
         if (d.addon != null) playAddonChannel(p) else open(p)
     })
-    showPage(d.name, rows, top = top) { closeLauncherSettings() }
+    showPage(d.name, rows, top = top, back = { closeLauncherSettings() }, panes = glass)
     // Over the panel's padding, so it reaches its edges and the top of the screen; gone with the page.
     panel.addView(picture, 0, LinearLayout.LayoutParams(panelWidth, panelWidth * 9 / 16).apply {
         setMargins(-panel.paddingStart, -panel.paddingTop, -panel.paddingEnd, dp(20))
@@ -389,7 +389,7 @@ internal fun MainActivity.showChannel(d: ChannelDetail) {
         row?.setOnFocusChangeListener { v, focused ->
             orig?.onFocusChange(v, focused)
             if (icon !is android.graphics.drawable.BitmapDrawable) {
-                iv.setColorFilter(if (focused) onFg else fg, android.graphics.PorterDuff.Mode.SRC_IN)
+                iv.setColorFilter(if (focused && !glass) onFg else fg, android.graphics.PorterDuff.Mode.SRC_IN)
             }
         }
     }
