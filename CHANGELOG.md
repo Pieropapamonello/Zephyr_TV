@@ -13,6 +13,21 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 1.4.0
+
+- A film page shows **Watch on** for each add-on that has the film, with its icon and the number of streams. Before, only episodes had this.
+- When you add an add-on with channels and with films or series, the message tells all of them.
+- **Catalog source** is now **Content catalog**, in **Content**. Select the catalog there.
+- **Complete with TMDB** on the **Content catalog** page shows titles of the catalog in the language of the TV. It is off with Nuvio Catalog, because Nuvio is in that language already.
+- The TMDB key, the TMDB language, the services and the suggested apps are on the **Content catalog** page.
+- **TMDB Spotlight** is now **Spotlight**. It has only the settings of the Spotlight banner.
+- In the Glass theme, the text on title and channel pages shows without a pane around it, as the title does.
+- New: **18+ lock**, in the users menu, in **Settings**. When it is on, adult add-ons do not show in the apps row, the search or the rows.
+- Select **Unlock 18+** in the users menu and type the PIN to show adult add-ons for 2 hours. You can set it to stay unlocked until you select **Lock 18+**.
+- An add-on that says it has adult content in its manifest always counts as 18+.
+- New: **Adult add-ons**, in **Add-ons**. Set it to **In Adult Content** to show the channels, films and series of adult add-ons in an app of their own, **Adult Content**. They do not show in the other apps. With the 18+ lock, the app shows only when 18+ is unlocked.
+- In **Add-ons**, each add-on shows its icon before its name. **Watch on** rows show the icon of the add-on too.
+
 ## 1.3.0
 
 - Zephyr TV shows the catalogs of add-ons with types of their own, for example adult add-ons. It plays their titles as films.

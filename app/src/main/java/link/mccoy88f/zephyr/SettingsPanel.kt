@@ -23,6 +23,7 @@ import link.mccoy88f.zephyr.MainActivity.Companion.CHOSEN
 import link.mccoy88f.zephyr.MainActivity.Companion.CLOCK_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.FADE_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.HDMI
+import link.mccoy88f.zephyr.MainActivity.Companion.ADDON_ROWS
 import link.mccoy88f.zephyr.MainActivity.Companion.HIDDEN_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.UPDATE_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.EPG_ROW
@@ -46,11 +47,7 @@ import link.mccoy88f.zephyr.MainActivity.Companion.SPOTLIGHT_EVERY
 import link.mccoy88f.zephyr.MainActivity.Companion.SPOTLIGHT_SECTION
 import link.mccoy88f.zephyr.MainActivity.Companion.SYSTEM_SECTION
 import link.mccoy88f.zephyr.MainActivity.Companion.THEME_ROW
-import link.mccoy88f.zephyr.MainActivity.Companion.TMDB_APPS_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.TMDB_CYCLE_ROW
-import link.mccoy88f.zephyr.MainActivity.Companion.TMDB_KEY_ROW
-import link.mccoy88f.zephyr.MainActivity.Companion.TMDB_LANG_ROW
-import link.mccoy88f.zephyr.MainActivity.Companion.TMDB_PROVIDERS_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.TMDB_SOURCE_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.TMDB_TYPE_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.SUBMENU
@@ -129,7 +126,25 @@ internal fun MainActivity.renderSettings(row: Int) {
     val section = row / SECTION
     showPage(sectionTitle(section), sectionRows(section), row % SECTION) { renderSettingsHome(section) }
     shownSection = section
+    // Each add-on's row starts with its icon, as its Watch on rows on a title's page do.
+    if (section == ADDONS_SECTION) rowIcons(addonUrls().mapIndexed { i, url ->
+        ADDON_ROWS % SECTION + i to (Stremio.saved(filesDir, url)?.addon?.let { addonIcon(it) } ?: getDrawable(R.drawable.ic_stream)!!.mutate())
+    }.toMap(), first = 0)
+    if (section == ADDONS_SECTION) fetchAddonLogos()
     if (section == SYSTEM_SECTION) updateDot(UPDATE_ROW % SECTION)
+}
+
+/** Logos asked for once while Zephyr TV runs: one that won't download isn't asked again on every redraw. */
+private val askedLogos = java.util.Collections.synchronizedSet(HashSet<String>())
+
+/** The add-ons' logos not on disk yet (added before every logo was kept): downloaded, then their rows again. */
+private fun MainActivity.fetchAddonLogos() {
+    val missing = addonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon?.logo }.filter { !channelLogoFiles.has(it) && askedLogos.add(it) }
+    if (missing.isEmpty()) return
+    netIo.execute {
+        val got = missing.count { uri -> runCatching { channelLogoFiles.get(uri) { u -> openStream(u) } }.isSuccess }
+        if (got > 0) ui.post { refreshSettings(ADDON_ROWS) }
+    }
 }
 
 /** Redraws the section page holding [row] for news that arrives later (a download, an update), only if it's on screen. */
@@ -270,6 +285,8 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                 if (listenerAllowed()) Toast.makeText(this, getString(R.string.now_playing_on), Toast.LENGTH_SHORT).show()
                 else allowListener { renderSettings(WATCH_SECTION * SECTION) }
             },
+            // Where films and series come from (Cinemeta, Nuvio, an added catalog), and TMDB completing them.
+            page(getString(R.string.setting_cinemeta), catalogName(cinemetaUrl())) { configureCinemeta() },
         )
     }
     // The TV's own side: its inputs (HDMI and the like) and its channels, with their logos and guide.
@@ -320,37 +337,19 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
     )
 }
 
+/** The Spotlight section: what it shows, the user's TMDB list, films or series, and how often it moves on. */
 internal fun MainActivity.spotlightRows(): List<Triple<String, String, () -> Unit>> {
-    val hasKey = !prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank()
-    val lang = tmdbLang()
     val type = prefs.getString(K.TMDB_TYPE, "all") ?: "all"
     val typeName = when (type) {
         "movie" -> getString(R.string.tmdb_type_movie)
         "tv" -> getString(R.string.tmdb_type_tv)
         else -> getString(R.string.tmdb_type_all)
     }
-    val offSet = prefs.getStringSet(K.TMDB_DEFAULT_APPS, emptySet()) ?: emptySet()
-    val availableApps = apps.filter { !it.pkg.startsWith(HDMI) && !it.pkg.startsWith(STREMIO) && it.pkg != CW_PKG }
-    val activeCount = availableApps.count { it.pkg !in offSet }
     val every = spotlightEvery()
     return listOf(
-        page(getString(R.string.setting_tmdb_api_key), if (hasKey) getString(R.string.tmdb_api_key_set) else getString(R.string.tmdb_api_key_empty)) {
-            configureTmdbApiKey()
-        },
         // What Spotlight shows: Cinemeta's popular titles, one of TMDB's ready-made lists, or the user's own public TMDB list (a watchlist).
         page(getString(R.string.setting_tmdb_source), sourceName(spotlightSource())) { pickSpotlightSource() },
         page(getString(R.string.setting_tmdb_list), prefs.getString(K.TMDB_LIST, null) ?: getString(R.string.tmdb_list_none)) { tmdbListFromPhone() },
-        page(getString(R.string.setting_tmdb_language), lang) {
-            val langs = TmdbClient.LANGUAGES
-            showPage(getString(R.string.setting_tmdb_language), langs.map { l ->
-                page(l, if (l == lang) CHOSEN else "") {
-                    prefs.edit().putString(K.TMDB_LANG, l).apply()
-                    tmdbTrending = emptyList()
-                    loadWallpaper()
-                    renderSettings(TMDB_LANG_ROW)
-                }
-            }, langs.indexOf(lang)) { renderSettings(TMDB_LANG_ROW) }
-        },
         page(getString(R.string.setting_tmdb_media_type), typeName) {
             val types = listOf("all" to getString(R.string.tmdb_type_all), "movie" to getString(R.string.tmdb_type_movie), "tv" to getString(R.string.tmdb_type_tv))
             showPage(getString(R.string.setting_tmdb_media_type), types.map { (k, name) ->
@@ -362,19 +361,6 @@ internal fun MainActivity.spotlightRows(): List<Triple<String, String, () -> Uni
                 }
             }, types.indexOfFirst { it.first == type }) { renderSettings(TMDB_TYPE_ROW) }
         },
-        page(getString(R.string.setting_tmdb_default_apps), if (offSet.isEmpty()) getString(R.string.cw_apps_all_on) else "$activeCount") {
-            val appChoices = availableApps.map { it.label to it.pkg }
-            toggles(getString(R.string.setting_tmdb_default_apps), appChoices, K.TMDB_DEFAULT_APPS, getString(R.string.state_on), getString(R.string.state_off)) {
-                spotlightApps = null
-                renderSpotlight()
-                renderSettings(TMDB_APPS_ROW)
-            }
-        },
-        page(getString(R.string.setting_tmdb_providers), toggle(providersOn())) {
-            prefs.edit().putBoolean(K.TMDB_PROVIDERS, !providersOn()).apply()
-            spotlightItem()?.let { showProviders(it) }
-            renderSettings(TMDB_PROVIDERS_ROW)
-        },
         page(getString(R.string.setting_tmdb_cycle), cycleName(every)) {
             showPage(getString(R.string.setting_tmdb_cycle), SPOTLIGHT_EVERY.map { n ->
                 page(cycleName(n), if (n == every) CHOSEN else "") {
@@ -383,6 +369,54 @@ internal fun MainActivity.spotlightRows(): List<Triple<String, String, () -> Uni
                     renderSettings(TMDB_CYCLE_ROW)
                 }
             }, SPOTLIGHT_EVERY.indexOf(every)) { renderSettings(TMDB_CYCLE_ROW) }
+        },
+    )
+}
+
+/**
+ * TMDB on the content catalog's page, after its catalogs (see tmdbRow): Complete with TMDB (names, what it's about
+ * and episodes in the TV's language), the key, the language, and the services and apps on a title's page.
+ */
+internal fun MainActivity.tmdbContentRows(): List<Triple<String, String, () -> Unit>> {
+    val hasKey = !prefs.getString(K.TMDB_API_KEY, null).isNullOrBlank()
+    val lang = tmdbLang()
+    val offSet = prefs.getStringSet(K.TMDB_DEFAULT_APPS, emptySet()) ?: emptySet()
+    val availableApps = apps.filter { !it.pkg.startsWith(HDMI) && !it.pkg.startsWith(STREMIO) && it.pkg != CW_PKG }
+    val activeCount = availableApps.count { it.pkg !in offSet }
+    return listOf(
+        page(getString(R.string.setting_tmdb_enrich), if (!hasKey) getString(R.string.tmdb_api_key_empty) else toggle(tmdbEnrich())) {
+            if (!hasKey) return@page configureTmdbApiKey()
+            prefs.edit().putBoolean(K.TMDB_ENRICH, !tmdbEnrich()).apply()
+            addonsChanged()
+            configureCinemeta(tmdbRow(0))
+        },
+        page(getString(R.string.setting_tmdb_api_key), if (hasKey) getString(R.string.tmdb_api_key_set) else getString(R.string.tmdb_api_key_empty)) {
+            configureTmdbApiKey()
+        },
+        page(getString(R.string.setting_tmdb_language), lang) {
+            val langs = TmdbClient.LANGUAGES
+            showPage(getString(R.string.setting_tmdb_language), langs.map { l ->
+                page(l, if (l == lang) CHOSEN else "") {
+                    prefs.edit().putString(K.TMDB_LANG, l).apply()
+                    tmdbTrending = emptyList()
+                    loadWallpaper()
+                    addonsChanged() // Nuvio's catalog and the titles completed by TMDB, in the new language
+                    configureCinemeta(tmdbRow(2))
+                }
+            }, langs.indexOf(lang)) { configureCinemeta(tmdbRow(2)) }
+        },
+        page(getString(R.string.setting_tmdb_providers), toggle(providersOn())) {
+            prefs.edit().putBoolean(K.TMDB_PROVIDERS, !providersOn()).apply()
+            spotlightItem()?.let { showProviders(it) }
+            configureCinemeta(tmdbRow(3))
+        },
+        page(getString(R.string.setting_tmdb_default_apps), if (offSet.isEmpty()) getString(R.string.cw_apps_all_on) else "$activeCount") {
+            val appChoices = availableApps.map { it.label to it.pkg }
+            toggles(getString(R.string.setting_tmdb_default_apps), appChoices, K.TMDB_DEFAULT_APPS, getString(R.string.state_on), getString(R.string.state_off)) {
+                spotlightApps = null
+                renderSpotlight()
+                configureCinemeta(tmdbRow(4))
+            }
         },
     )
 }
@@ -489,20 +523,20 @@ internal fun MainActivity.saveEpgUrl(url: String?) {
 
 internal fun MainActivity.configureTmdbApiKey() =
     textPage(getString(R.string.setting_tmdb_api_key), prefs.getString(K.TMDB_API_KEY, "") ?: "", getString(R.string.tmdb_api_key_hint), null,
-        Typing.KEY, back = { renderSettings(TMDB_KEY_ROW) }) { typed ->
+        Typing.KEY, back = { configureCinemeta(tmdbRow(1)) }) { typed ->
         listOf(
             // Typing a 32-character key (or a 200-character token) with a remote is no fun: paste it on a phone.
             page(getString(R.string.setting_tmdb_key_phone)) { tmdbKeyFromPhone() },
             page(getString(R.string.dialog_save)) {
                 typed().takeIf { it.isNotBlank() }?.let { saveTmdbKey(it) }
-                renderSettings(TMDB_KEY_ROW)
+                configureCinemeta(tmdbRow(1))
             },
             page(getString(R.string.dialog_clear)) {
                 prefs.edit().remove(K.TMDB_API_KEY).apply()
                 tmdbTrending = emptyList()
                 spotlightIo.execute { backdrops.clear() } // TMDB's backdrops: Spotlight goes on with Cinemeta's
                 if (currentWallpaper() == "tmdb:trending") loadWallpaper()
-                renderSettings(TMDB_KEY_ROW)
+                configureCinemeta(tmdbRow(1))
             },
         )
     }
@@ -540,13 +574,8 @@ internal fun MainActivity.showPage(title: String, rows: List<Triple<String, Stri
     shownSection = -1 // renderSettings sets it again for section pages
     findViewById<TextView>(R.id.settingsTitle).text = title
     settingsList.removeAllViews()
-    top?.let {
-        if (panes) {
-            glassPane(it, dp(12))
-            it.setPadding(it.paddingLeft, dp(12), it.paddingRight, dp(12))
-        }
-        settingsList.addView(it)
-    }
+    // [top] stands on the panel as the page's title does, with no pane round it, even when the rows are panes.
+    top?.let { settingsList.addView(it) }
     val first = settingsList.childCount
     rows.forEach { (name, value, action) ->
         settingsList.addView(settingsRow(name, value, panes, action), LinearLayout.LayoutParams(MATCH_PARENT, dp(44)).apply {

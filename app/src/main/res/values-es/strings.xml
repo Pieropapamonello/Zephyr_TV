@@ -201,7 +201,8 @@
     <string name="toast_hidden_from_cw">Ocultado de esta sección</string>
 
     <!-- TMDB Spotlight & Channels -->
-    <string name="setting_tmdb">Destacados de TMDB</string>
+    <string name="setting_tmdb">Destacados</string>
+    <string name="setting_tmdb_enrich">Completar con TMDB</string>
     <string name="setting_tmdb_api_key">Clave API de TMDB</string>
     <string name="setting_tmdb_language">Idioma / región de TMDB</string>
     <string name="setting_tmdb_media_type">Tipo de contenido</string>
@@ -427,12 +428,12 @@
     <string name="vod_watched_series">Series vistas</string>
     <string name="setting_addons_vod">Películas y series</string>
     <string name="addons_vod_tiles">Apps Películas y Series</string>
-    <string name="setting_cinemeta">Fuente del catálogo</string>
-    <string name="cinemeta_intro">Las películas y series vienen de este catálogo. Cinemeta, la biblioteca gratuita de Stremio, es el predeterminado. Nuvio Catalog usa TMDB, en el idioma del televisor. Añade otro add-on de catálogo para usarlo en su lugar.</string>
+    <string name="setting_cinemeta">Catálogo de contenidos</string>
+    <string name="cinemeta_intro">Las películas y series vienen de este catálogo. Cinemeta, la biblioteca gratuita de Stremio, es el predeterminado. Nuvio Catalog usa TMDB, en el idioma del televisor. Completar con TMDB muestra los títulos de los otros catálogos en el idioma del televisor.</string>
     <string name="cinemeta_default">Cinemeta (predeterminado)</string>
     <string name="catalog_nuvio">Nuvio Catalog (TMDB)</string>
     <string name="setup_catalog_title">Películas y series</string>
-    <string name="setup_catalog_body">Elige de dónde vienen las películas y series. Nuvio usa TMDB, en el idioma del televisor. Cinemeta es la biblioteca gratuita de Stremio. Puedes cambiarlo en Ajustes, en Fuente del catálogo.</string>
+    <string name="setup_catalog_body">Elige de dónde vienen las películas y series. Nuvio usa TMDB, en el idioma del televisor. Cinemeta es la biblioteca gratuita de Stremio. Puedes cambiarlo en Ajustes, en Contenidos, en Catálogo de contenidos.</string>
     <string name="catalog_add">Añadir un catálogo</string>
     <string name="catalog_in_use">En uso</string>
     <string name="catalog_use">Usar este catálogo</string>
@@ -469,12 +470,30 @@
     <string name="title_no_page">Ningún complemento tiene la ficha de este título</string>
     <string name="player_episode">%1$s · T%2$d E%3$d</string>
     <string name="toast_addon_added_vod">%1$s añadido: películas y series</string>
+    <string name="toast_addon_added_both">%1$s añadido: %2$d canales, películas y series</string>
     <string name="player_stream_row">%1$d · %2$s</string>
     <string name="channel_play">Ver</string>
 
     <!-- Users and Trakt -->
     <string name="users_title">Usuarios</string>
     <string name="users_settings">Ajustes</string>
+    <string name="adult_lock">Bloqueo +18</string>
+    <string name="adult_unlock">Desbloquear +18</string>
+    <string name="adult_lock_now">Bloquear +18</string>
+    <string name="adult_locked">Bloqueado</string>
+    <string name="adult_unlocked">Desbloqueado</string>
+    <string name="adult_unlocked_until">Desbloqueado hasta las %1$s</string>
+    <string name="adult_unlock_for">Desbloquear durante</string>
+    <string name="adult_two_hours">2 horas</string>
+    <string name="adult_until_locked">Hasta que lo bloquees</string>
+    <string name="adult_pin_choose">Elige el PIN +18</string>
+    <string name="adult_pin_enter">PIN +18</string>
+    <string name="adult_locked_toast">El contenido +18 está oculto. Usa el PIN en el menú de usuarios para mostrarlo.</string>
+    <string name="addon_says_adult">Este add-on dice que tiene contenido para adultos. Siempre cuenta como +18.</string>
+    <string name="adult_app">Contenido para adultos</string>
+    <string name="setting_adult_app">Add-ons para adultos</string>
+    <string name="adult_app_own">En Contenido para adultos</string>
+    <string name="adult_app_mixed">Con los demás</string>
     <string name="user_default">Yo</string>
     <string name="user_add">Añadir usuario</string>
     <string name="user_rename">Renombrar</string>

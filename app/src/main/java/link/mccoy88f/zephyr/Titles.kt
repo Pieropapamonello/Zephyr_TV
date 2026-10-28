@@ -32,7 +32,7 @@ internal fun MainActivity.nuvioUrl() = Stremio.nuvio(tmdbLang(), TmdbClient.regi
 internal fun MainActivity.addonsVod(): VodPlace = prefs.getString(K.ADDONS_VOD, null).let { k -> VodPlace.entries.firstOrNull { it.key == k } } ?: VodPlace.TILES
 
 /** The add-ons films and series are listed from (Cinemeta first), as manifest addresses. */
-internal fun MainActivity.libraryUrls(): List<String> = (listOf(cinemetaUrl()) + addonUrls()).distinct()
+internal fun MainActivity.libraryUrls(): List<String> = (listOf(cinemetaUrl()) + shownAddonUrls()).distinct()
 
 /** The add-ons as read, those with film or series catalogs or streams. Reads them when they're missing (in the background). */
 internal fun MainActivity.vodAddons(): List<Stremio.Addon> = libraryUrls().mapNotNull { url ->
@@ -41,7 +41,7 @@ internal fun MainActivity.vodAddons(): List<Stremio.Addon> = libraryUrls().mapNo
 
 /** The add-ons that give streams for a film or episode of [type] with this [id] (address without /manifest.json, and name). */
 internal fun MainActivity.streamSources(type: String, id: String): List<Pair<String, String>> =
-    addonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.filter { it.provides("stream", type, id) }.map { it.base to it.name }
+    shownAddonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.filter { it.provides("stream", type, id) }.map { it.base to it.name }
 
 /** The tiles films and series add to the apps row: Films and Series, or nothing here (each add-on's own, see addonApps). */
 internal fun MainActivity.vodApps(): List<MainActivity.App> {
@@ -54,7 +54,7 @@ internal fun MainActivity.vodApps(): List<MainActivity.App> {
 
 /** The add-ons with film or series catalogs that get a tile of their own (films and series "apps"). */
 internal fun MainActivity.vodTileAddons(): List<Stremio.Addon> =
-    if (addonsVod() != VodPlace.APPS) emptyList() else vodAddons().filter { a -> a.vod.any { it.listed } }
+    if (addonsVod() != VodPlace.APPS) emptyList() else vodAddons().filter { a -> a.vod.any { it.listed } && !inAdultApp(a.url) }
 
 /**
  * The rows of films or series under the tile [pkg]: under Films or Series, every add-on's catalogs of that type
@@ -64,8 +64,10 @@ internal fun MainActivity.vodTileAddons(): List<Stremio.Addon> =
 internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<Section> {
     val mode = addonsVod()
     val type = when (pkg) { MOVIES_PKG -> "movie"; SERIES_PKG -> "series"; else -> null }
+    val adult = pkg == ADULT_PKG
     val addons = when {
-        mode == VodPlace.TILES && type != null -> vodAddons()
+        adult -> if (adultApp()) vodAddons().filter { isAdultAddon(it.url) } else return emptyList()
+        mode == VodPlace.TILES && type != null -> vodAddons().filter { !inAdultApp(it.url) }
         mode == VodPlace.APPS && pkg.startsWith(STREMIO) -> vodAddons().filter { STREMIO + it.id == pkg }
         else -> return emptyList()
     }
@@ -76,7 +78,7 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
         // Under Films, the add-ons' own types too ("Porn", "Anime"): they play as films.
         Stremio.shelves(filesDir, addon).filter { type == null || (it.catalog.type == "series") == (type == "series") }.mapNotNull { shelf ->
             val kind = getString(if (shelf.catalog.type == "series") R.string.vod_series else R.string.vod_movies)
-            val name = if (type != null) "${addon.name} · ${shelf.catalog.name}" else "$kind · ${shelf.catalog.name}"
+            val name = if (type != null || adult) "${addon.name} · ${shelf.catalog.name}" else "$kind · ${shelf.catalog.name}"
             // In the TV's language when TMDB has the title (those it hasn't been asked about yet: once it's answered).
             val cards = shelf.titles.map { t -> localize(t) ?: t.also { if (wantsLocal(it)) missing += it.id } }
                 .filter { hideKey(null, it.name) !in hidden }.map { titleCard(it, addon.url, pkg, it.id in watched) }
@@ -84,7 +86,7 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
         }
     }.plus(
         // Last, the films and series watched: under Films and Series, or Cinemeta's own tile.
-        if (mode == VodPlace.TILES || addons.any { it.url == cinemetaUrl() }) watchedSections(type, pkg, hidden, missing) else emptyList()
+        if (!adult && (mode == VodPlace.TILES || addons.any { it.url == cinemetaUrl() })) watchedSections(type, pkg, hidden, missing) else emptyList()
     ).also { if (missing.isNotEmpty()) localizeLater(missing.distinct(), pkg) }
 }
 
@@ -150,7 +152,7 @@ internal fun titleCard(t: Stremio.Title, source: String?, icon: String?, watched
         logo = t.logo, poster = t.poster, icon = icon, vod = TitleRef(t.type, t.id, t.name, t.poster, t.background, source, logo = t.logo, rating = t.rating))
 
 /** The tile a title of [type] from the add-on at [source] is under: Films or Series, or the add-on's own (null: none). */
-internal fun MainActivity.titleTile(type: String, source: String?): String? = when (addonsVod()) {
+internal fun MainActivity.titleTile(type: String, source: String?): String? = if (source != null && inAdultApp(source)) ADULT_PKG else when (addonsVod()) {
     VodPlace.TILES -> if (type == "series") SERIES_PKG else MOVIES_PKG
     VodPlace.APPS -> source?.let { Stremio.saved(filesDir, it)?.addon }?.let { STREMIO + it.id }
     VodPlace.OFF -> null

@@ -49,10 +49,10 @@ private fun MainActivity.titleMeta(ref: TitleRef): Stremio.TitleMeta? {
 /**
  * A film's or series' page in the side panel: its art across the top, rating, kind, year and
  * genre, what it's about; horizontally scrollable app icons without "Watch on..."; then Watch (for movies),
- * or the list of seasons (for TV series).
+ * and Watch on each add-on that has it with [found] streams (as an episode's page), or the list of seasons (for TV series).
  */
 internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, available: Set<String>? = null,
-                                       focusRow: Int? = null) {
+                                       focusRow: Int? = null, found: Map<String, Int>? = null) {
     val t = meta.title
     val kind = getString(if (t.type == "series") R.string.tmdb_badge_tv else R.string.tmdb_badge_movie)
     markWhole(meta)
@@ -72,7 +72,6 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, a
         .joinToString(" · "), null, meta.description, seenLine, servicesBar)
 
     val sources = streamSources(t.type, meta.episodes.firstOrNull()?.id ?: t.id)
-    val sole = soleAddon(sources) // the one add-on with streams for it: Watch on it, with its icon
     val rows = ArrayList<Triple<String, String, () -> Unit>>()
     val icons = HashMap<Int, android.graphics.drawable.Drawable>()
     val holds = HashMap<Int, () -> Unit>()
@@ -84,16 +83,29 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, a
     } else if (!episodic) {
         val at = VodProgress.position(vodDir(), t.id)
         val seen = t.id in marks
-        icons[rows.size] = watchIcon(sole)
-        rows += page(watchLabel(sole, at, seen), if (seen) "✓" else "") {
-            pageReturn = { showVodTitle(meta, ref, services.known) }
-            playTitle(ref, meta, null)
+        fun play(only: String?) {
+            pageReturn = { showVodTitle(meta, ref, services.known, found = found) }
+            playTitle(ref, meta, null, only)
         }
+        // Watch at once, from all of them; once they've said how many streams each has, Watch on each one too, at
+        // the bottom: the rows above stay where they are, and focus with them.
+        val having = found?.filterValues { it > 0 }?.keys?.let { keys -> sources.filter { it.first in keys } }
+        val one = soleAddon(having ?: sources)
+        if (having?.isEmpty() == true) rows += page(getString(R.string.title_no_streams)) { }
+        else {
+            icons[rows.size] = watchIcon(one)
+            rows += page(watchLabel(one, at, seen), if (seen) "✓" else "") { play(one?.base) }
+        }
+        val markRow = rows.size
         rows += page(getString(if (seen) R.string.title_mark_unwatched else R.string.title_mark_watched)) {
             VodWatched.set(vodDir(), listOf(t.id to t.id), !seen, name = t.name)
             traktHistory(listOf(t.id to t.id), !seen)
             if (!seen) VodProgress.remove(vodDir(), t.id)
-            showVodTitle(meta, ref, services.known, focusRow = 1)
+            showVodTitle(meta, ref, services.known, focusRow = markRow, found = found)
+        }
+        if (one == null && having != null) having.forEach { (base, name) ->
+            icons[rows.size] = watchIcon(soleAddon(listOf(base to name)))
+            rows += page(getString(R.string.tmdb_search_on, name), resources.getQuantityString(R.plurals.title_streams, found[base] ?: 0, found[base] ?: 0)) { play(base) }
         }
     } else {
         // TV Series: show the list of seasons on the main title page
@@ -118,7 +130,13 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, a
     val focus = focusRow ?: if (descView != null) -1 else 0
     val art = if (ref.background != null) Triple(ref.background, ref.logo, ref.poster ?: t.poster) else Triple(t.background, t.logo, ref.poster ?: t.poster)
     titlePage(t.name, art, t.name, top, rows, focus, icons, holds, descView) { closeLauncherSettings() }
-    services.later { showVodTitle(meta, ref, it, focusRow) }
+    services.later { showVodTitle(meta, ref, it, focusRow, found) }
+    // A film's stream add-ons asked how many streams each has, all at once; the page again once they've said.
+    if (episodic || found != null || sources.size < 2) return
+    netIo.execute {
+        val counts = parallel(sources, 4, 22) { (base, name) -> base to runCatching { Stremio.titleStreams(base, name, t.type, t.id).size }.getOrDefault(0) }.toMap()
+        ui.post { if (pageShowing(t.name)) showVodTitle(meta, ref, services.known, focusedRow() ?: focusRow, counts) }
+    }
 }
 
 /**
@@ -215,17 +233,18 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
             val at = VodProgress.position(vodDir(), e.id)
             icons[rows.size] = watchIcon(sole)
             rows += page(watchLabel(sole, at, seen)) { play(sole?.base) }
-            // Several add-ons have it: each of them too, with how many streams it has.
-            if (sole == null) having.forEach { (base, name) ->
-                icons[rows.size] = watchIcon(soleAddon(listOf(base to name)))
-                rows += page(getString(R.string.tmdb_search_on, name), resources.getQuantityString(R.plurals.title_streams, found[base] ?: 0, found[base] ?: 0)) { play(base) }
-            }
         }
     }
     val markRow = rows.size
     rows += page(getString(if (seen) R.string.title_mark_unwatched else R.string.title_mark_watched)) {
         markWatched(meta, listOf(e), !seen)
         showVodEpisode(meta, ref, e, services.known, found, markRow)
+    }
+    // Several add-ons have it: each of them too, with how many streams it has; at the bottom, so the rows above
+    // stay where they are when these come in, and focus with them.
+    if (having != null && having.size > 1) having.forEach { (base, name) ->
+        icons[rows.size] = watchIcon(soleAddon(listOf(base to name)))
+        rows += page(getString(R.string.tmdb_search_on, name), resources.getQuantityString(R.plurals.title_streams, found[base] ?: 0, found[base] ?: 0)) { play(base) }
     }
     val still = e.thumbnail
     val art = when {
@@ -378,9 +397,16 @@ private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, 
     }
     // What holding OK on a row does (see MainActivity.onHold).
     for ((i, hold) in holds) settingsList.getChildAt(1 + i)?.setTag(R.id.settingsList, hold)
-    // Each row with an icon starts with it, before the name. Invert tint on focus for vector/shape icons.
+    rowIcons(icons, first = 1) // after [top]
+}
+
+/**
+ * Each row with an icon in [icons] (by its index among the rows, the first at [first] in the list) starts with it,
+ * before the name. Vector and shape icons are tinted as the row's text, inverted with focus; pictures stay as they are.
+ */
+internal fun MainActivity.rowIcons(icons: Map<Int, android.graphics.drawable.Drawable>, first: Int) {
     for ((i, icon) in icons) {
-        val row = settingsList.getChildAt(1 + i) as? LinearLayout ?: continue
+        val row = settingsList.getChildAt(first + i) as? LinearLayout ?: continue
         val iv = ImageView(this).apply {
             setImageDrawable(icon)
             scaleType = ImageView.ScaleType.FIT_CENTER
@@ -508,17 +534,16 @@ internal fun MainActivity.soleAddon(sources: List<Pair<String, String>>): Stremi
  * A Watch row's icon: [addon]'s tile's (when it has a tile of its own), else its logo (once on disk), else Play,
  * tinted for the row when it's a mark rather than a picture.
  */
-internal fun MainActivity.watchIcon(addon: Stremio.Addon?): android.graphics.drawable.Drawable {
-    if (addon != null) {
-        apps.firstOrNull { it.pkg == STREMIO + addon.id }?.icon?.constantState?.newDrawable(resources)?.mutate()?.let { d ->
-            return d
-        }
-        addon.logo?.takeIf { channelLogoFiles.has(it) }?.let { uri ->
-            runCatching { android.graphics.BitmapFactory.decodeFile(channelLogoFiles.get(uri) { u -> openStream(u) }.path) }.getOrNull()
-                ?.let { return android.graphics.drawable.BitmapDrawable(resources, it) }
-        }
+internal fun MainActivity.watchIcon(addon: Stremio.Addon?): android.graphics.drawable.Drawable =
+    addon?.let { addonIcon(it) } ?: getDrawable(R.drawable.ic_play)!!.mutate()
+
+/** [addon]'s icon: its tile's (when it has a tile of its own), else its logo once on disk (see updateAddon); else none. */
+internal fun MainActivity.addonIcon(addon: Stremio.Addon): android.graphics.drawable.Drawable? {
+    apps.firstOrNull { it.pkg == STREMIO + addon.id }?.icon?.constantState?.newDrawable(resources)?.mutate()?.let { return it }
+    return addon.logo?.takeIf { channelLogoFiles.has(it) }?.let { uri ->
+        runCatching { android.graphics.BitmapFactory.decodeFile(channelLogoFiles.get(uri) { u -> openStream(u) }.path) }.getOrNull()
+            ?.let { android.graphics.drawable.BitmapDrawable(resources, it) }
     }
-    return getDrawable(R.drawable.ic_play)!!.mutate()
 }
 
 /**

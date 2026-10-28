@@ -12,7 +12,6 @@ import android.widget.TextView
 import android.widget.Toast
 import link.mccoy88f.zephyr.MainActivity.Companion.BACKUP_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.PROBLEMS_ROW
-import link.mccoy88f.zephyr.MainActivity.Companion.TMDB_KEY_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.TMDB_LIST_ROW
 import java.io.IOException
 
@@ -126,7 +125,7 @@ internal fun MainActivity.tmdbKeyFromPhone() {
             status.text = getString(R.string.phone_tmdb_saved)
         }
         200 to getString(if (ok == true) R.string.phone_tmdb_saved else R.string.phone_tmdb_unchecked)
-    }, status) { renderSettings(TMDB_KEY_ROW) }
+    }, status) { configureCinemeta(tmdbRow(1)) }
 }
 
 /** The guide's address pasted on a phone: saved like the Save row does, and fetched at once. */

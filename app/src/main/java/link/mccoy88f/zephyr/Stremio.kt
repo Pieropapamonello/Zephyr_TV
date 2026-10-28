@@ -62,7 +62,7 @@ internal object Stremio {
      * films' and series' ones (each listable without a filter, or searchable).
      */
     internal class Addon(val url: String, val id: String, val name: String, val logo: String?, val catalogs: List<Catalog>,
-                         val resources: List<Resource> = emptyList(), val vod: List<Catalog> = emptyList()) {
+                         val resources: List<Resource> = emptyList(), val vod: List<Catalog> = emptyList(), val adult: Boolean = false) {
         val base get() = url.removeSuffix("/manifest.json")
 
         /** Whether the add-on answers [resource] for an item of [type] with this [id] (or any id, when null). */
@@ -227,7 +227,7 @@ internal object Stremio {
             catalogs += Catalog("tv", id, name, genres, search)
         }
         return Addon(url, m.optString("id").ifBlank { url }, m.optString("name").ifBlank { Uri.host(url) }, text(m, "logo"), catalogs,
-            resources(m), vod)
+            resources(m), vod, adult = m.optJSONObject("behaviorHints")?.optBoolean("adult") == true)
     }
 
     /**

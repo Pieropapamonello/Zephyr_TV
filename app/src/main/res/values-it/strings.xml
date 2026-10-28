@@ -201,7 +201,8 @@
     <string name="toast_hidden_from_cw">Nascosto da questa sezione</string>
 
     <!-- TMDB Spotlight & Channels -->
-    <string name="setting_tmdb">In evidenza TMDB</string>
+    <string name="setting_tmdb">In evidenza</string>
+    <string name="setting_tmdb_enrich">Completa con TMDB</string>
     <string name="setting_tmdb_api_key">API Key TMDB</string>
     <string name="setting_tmdb_language">Lingua / Nazione TMDB</string>
     <string name="setting_tmdb_media_type">Tipo di contenuti</string>
@@ -427,12 +428,12 @@
     <string name="vod_watched_series">Serie TV già viste</string>
     <string name="setting_addons_vod">Film e serie</string>
     <string name="addons_vod_tiles">App Film e Serie TV</string>
-    <string name="setting_cinemeta">Fonte catalogo</string>
-    <string name="cinemeta_intro">Film e serie arrivano da questo catalogo. Il predefinito è Cinemeta, la libreria gratuita di Stremio. Nuvio Catalog usa TMDB, nella lingua del TV. Aggiungi un altro add-on catalogo per usarlo al loro posto.</string>
+    <string name="setting_cinemeta">Catalogo contenuti</string>
+    <string name="cinemeta_intro">Film e serie arrivano da questo catalogo. Il predefinito è Cinemeta, la libreria gratuita di Stremio. Nuvio Catalog usa TMDB, nella lingua del TV. Completa con TMDB mostra i titoli degli altri cataloghi nella lingua del TV.</string>
     <string name="cinemeta_default">Cinemeta (predefinito)</string>
     <string name="catalog_nuvio">Nuvio Catalog (TMDB)</string>
     <string name="setup_catalog_title">Film e serie</string>
-    <string name="setup_catalog_body">Scegli da dove arrivano film e serie. Nuvio usa TMDB, nella lingua del TV. Cinemeta è la libreria gratuita di Stremio. Puoi cambiarlo nelle impostazioni, in Fonte catalogo.</string>
+    <string name="setup_catalog_body">Scegli da dove arrivano film e serie. Nuvio usa TMDB, nella lingua del TV. Cinemeta è la libreria gratuita di Stremio. Puoi cambiarlo nelle impostazioni, in Contenuti, in Catalogo contenuti.</string>
     <string name="catalog_add">Aggiungi un catalogo</string>
     <string name="catalog_in_use">In uso</string>
     <string name="catalog_use">Usa questo catalogo</string>
@@ -469,12 +470,30 @@
     <string name="title_no_page">Nessun addon ha la scheda di questo titolo</string>
     <string name="player_episode">%1$s · S%2$d E%3$d</string>
     <string name="toast_addon_added_vod">%1$s aggiunto: film e serie</string>
+    <string name="toast_addon_added_both">%1$s aggiunto: %2$d canali, film e serie</string>
     <string name="player_stream_row">%1$d · %2$s</string>
     <string name="channel_play">Guarda</string>
 
     <!-- Users and Trakt -->
     <string name="users_title">Utenti</string>
     <string name="users_settings">Impostazioni</string>
+    <string name="adult_lock">Blocco VM18</string>
+    <string name="adult_unlock">Sblocca VM18</string>
+    <string name="adult_lock_now">Blocca VM18</string>
+    <string name="adult_locked">Bloccati</string>
+    <string name="adult_unlocked">Sbloccati</string>
+    <string name="adult_unlocked_until">Sbloccati fino alle %1$s</string>
+    <string name="adult_unlock_for">Sblocco per</string>
+    <string name="adult_two_hours">2 ore</string>
+    <string name="adult_until_locked">Fino al riblocco</string>
+    <string name="adult_pin_choose">Scegli il PIN VM18</string>
+    <string name="adult_pin_enter">PIN VM18</string>
+    <string name="adult_locked_toast">I contenuti VM18 sono nascosti. Usa il PIN nel menu utenti per mostrarli.</string>
+    <string name="addon_says_adult">Questo add-on dichiara contenuti per adulti. Conta sempre come VM18.</string>
+    <string name="adult_app">Contenuti per adulti</string>
+    <string name="setting_adult_app">Add-on per adulti</string>
+    <string name="adult_app_own">In Contenuti per adulti</string>
+    <string name="adult_app_mixed">Con gli altri</string>
     <string name="user_default">Io</string>
     <string name="user_add">Aggiungi utente</string>
     <string name="user_rename">Rinomina</string>

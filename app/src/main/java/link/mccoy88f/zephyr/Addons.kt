@@ -11,6 +11,7 @@ import link.mccoy88f.zephyr.MainActivity.Companion.ADDONS_TV_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.ADDONS_VOD_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.CINEMETA_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.ADDON_ADD_ROW
+import link.mccoy88f.zephyr.MainActivity.Companion.ADULT_APP_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.ADDON_ROWS
 import link.mccoy88f.zephyr.MainActivity.Companion.SUBMENU
 
@@ -74,12 +75,18 @@ internal fun MainActivity.addonUrls(): List<String> = prefs.getString(K.ADDONS, 
 
 private fun MainActivity.saveAddonUrls(urls: List<String>) = prefs.edit().putString(K.ADDONS, urls.distinct().joinToString("\n")).apply()
 
-/** Manifest addresses of add-ons marked as adult (Contenuti V.M. - Adulti). */
-internal fun MainActivity.adultAddonUrls(): Set<String> =
+/** Manifest addresses of add-ons marked as adult by the user (Contenuti V.M. - Adulti). */
+private fun MainActivity.markedAdultUrls(): Set<String> =
     prefs.getString(K.ADULT_ADDONS, "")!!.lines().filter { it.isNotBlank() }.toSet()
 
+/** Whether the add-on says it's adult itself, in its manifest (behaviorHints.adult): then it always is. */
+internal fun MainActivity.saysAdult(url: String) = Stremio.saved(filesDir, url)?.addon?.adult == true
+
+/** Manifest addresses of the adult add-ons: those marked by the user, and those that say so themselves. */
+internal fun MainActivity.adultAddonUrls(): Set<String> = markedAdultUrls() + addonUrls().filter { saysAdult(it) }
+
 internal fun MainActivity.isAdultAddon(url: String?): Boolean =
-    url != null && adultAddonUrls().contains(url)
+    url != null && (url in markedAdultUrls() || saysAdult(url))
 
 internal fun MainActivity.isAdultSource(source: String?): Boolean {
     if (source == null) return false
@@ -90,7 +97,7 @@ internal fun MainActivity.isAdultSource(source: String?): Boolean {
 }
 
 internal fun MainActivity.setAdultAddon(url: String, adult: Boolean) {
-    val current = adultAddonUrls().toMutableSet()
+    val current = markedAdultUrls().toMutableSet()
     if (adult) current.add(url) else current.remove(url)
     if (current.isEmpty()) prefs.edit().remove(K.ADULT_ADDONS).apply()
     else prefs.edit().putString(K.ADULT_ADDONS, current.joinToString("\n")).apply()
@@ -120,7 +127,7 @@ internal fun MainActivity.addonsTv(): TvPlace {
  * Titles). An add-on with both has one tile, with both. Runs on the io thread.
  */
 internal fun MainActivity.addonApps(): List<MainActivity.App> {
-    val urls = addonUrls()
+    val urls = shownAddonUrls().filter { !inAdultApp(it) } // those in Adult content: under its tile alone
     fun icon(res: Int) = getDrawable(res)!!
     // Its logo once it's on disk (downloaded with its channels, see updateAddon), else the [res] mark.
     fun tile(addon: Stremio.Addon, res: Int): MainActivity.App {
@@ -138,12 +145,13 @@ internal fun MainActivity.addonApps(): List<MainActivity.App> {
         }
         TvPlace.TV -> emptyList()
     }
-    return (tv + vodApps() + vodTileAddons().map { tile(it, R.drawable.ic_movie) }).distinctBy { it.pkg }
+    return (tv + vodApps() + vodTileAddons().map { tile(it, R.drawable.ic_movie) } + adultTile()).distinctBy { it.pkg }
 }
 
 /** The add-ons whose channels show under the tile [pkg]: all of them under the TV app or the IPTV app, one under its own. */
 internal fun MainActivity.addonsUnder(pkg: String): List<String> {
-    val urls = addonUrls()
+    if (pkg == ADULT_PKG) return if (adultApp()) shownAddonUrls().filter { isAdultAddon(it) } else emptyList()
+    val urls = shownAddonUrls().filter { !inAdultApp(it) }
     val mode = addonsTv()
     return when {
         pkg == IPTV_PKG -> if (mode == TvPlace.IPTV) urls else emptyList()
@@ -160,7 +168,7 @@ internal fun MainActivity.addonsUnder(pkg: String): List<String> {
  * channels are read again when due, and the rows built again once they're in. Runs on the io thread.
  */
 internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<Section> {
-    val own = pkg.startsWith(STREMIO) && pkg != IPTV_PKG
+    val own = pkg.startsWith(STREMIO) && pkg != IPTV_PKG && pkg != ADULT_PKG // shared rows: named by catalog too
     val urls = addonsUnder(pkg)
     if (urls.isEmpty()) return emptyList()
     // What's on: the add-on's own, else the guide set in Zephyr TV settings (by the channel's name).
@@ -201,9 +209,9 @@ internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<
 internal fun MainActivity.updateAddon(url: String, pkg: String?, done: ((Stremio.Listing?) -> Unit)? = null) = netIo.execute {
     val first = Stremio.saved(filesDir, url) == null
     val listing = Stremio.update(filesDir, url)
-    // Its logo, for its tile: downloaded here, not while the apps row loads.
+    // Its logo, for its tile and its icon on its settings row and Watch on rows: downloaded here, not while they show.
     val tiles = addonsTv() == TvPlace.APPS
-    val logo = listing?.addon?.logo?.takeIf { tiles && !channelLogoFiles.has(it) }
+    val logo = listing?.addon?.logo?.takeIf { !channelLogoFiles.has(it) }
         ?.let { runCatching { channelLogoFiles.get(it) { u -> openStream(u) } }.isSuccess } == true
     ui.post {
         done?.invoke(listing)
@@ -230,8 +238,13 @@ internal fun MainActivity.addAddon(input: String, adult: Boolean = false, done: 
                 if (adult) setAdultAddon(url, true)
                 addonsChanged()
                 val channels = listing.rows.filter { it.genre == null }.sumOf { it.items.size }
-                Toast.makeText(this, if (channels > 0) getString(R.string.toast_addon_added, a.name, channels)
-                    else getString(R.string.toast_addon_added_vod, a.name), Toast.LENGTH_LONG).show()
+                // Films and series too (its catalogs, or streams for them): said, not only the channels.
+                val vod = a.vod.isNotEmpty() || a.streamsVod
+                Toast.makeText(this, when {
+                    channels > 0 && vod -> getString(R.string.toast_addon_added_both, a.name, channels)
+                    channels > 0 -> getString(R.string.toast_addon_added, a.name, channels)
+                    else -> getString(R.string.toast_addon_added_vod, a.name)
+                }, Toast.LENGTH_LONG).show()
             }
         }
         done()
@@ -310,6 +323,7 @@ internal fun MainActivity.lastChannelCard(hidden: Set<String>): Pair<Long, Prog>
 
 /** The tile [c]'s channels show under, as addonsTv puts them: the add-on's own app, the IPTV app, or the TV app. */
 internal fun MainActivity.addonTile(c: AddonChannel): MainActivity.App? {
+    if (inAdultApp(c.addon)) return apps.firstOrNull { it.pkg == ADULT_PKG }
     val pkg = when (addonsTv()) {
         TvPlace.APPS -> Stremio.saved(filesDir, c.addon)?.addon?.let { STREMIO + it.id }
         TvPlace.IPTV -> IPTV_PKG
@@ -330,7 +344,7 @@ internal fun MainActivity.playLastChannel(pkg: String): Boolean {
 internal fun MainActivity.findAddonChannels(words: String): List<ChannelDetail> {
     val logos = channelLogoTable()
     val guide = epgUrl()?.let { Epg.saved(filesDir, it) }
-    return addonUrls().flatMap { url ->
+    return shownAddonUrls().flatMap { url ->
         Stremio.saved(filesDir, url)?.rows.orEmpty().filter { it.genre == null }.flatMap { r -> r.items.map { url to it } }
     }.filter { (_, item) -> ChannelLogos.normalize(item.name).contains(words) }.distinctBy { it.second.name }.map { (url, item) ->
         addonDetail(AddonChannel(url, item), logos, guide, null)
@@ -371,15 +385,19 @@ internal fun MainActivity.addonRows(): List<Triple<String, String, () -> Unit>> 
             if (next == TvPlace.APPS) addonUrls().forEach { updateAddon(it, null) }
             renderSettings(ADDONS_TV_ROW)
         },
-        // Films and series: the Films and Series tiles, an app per add-on, or none; and their catalog source,
-        // Cinemeta or a catalog added in its place.
+        // Films and series: the Films and Series tiles, an app per add-on, or none (their catalog: under Content).
         page(getString(R.string.setting_addons_vod), addonsVodName(addonsVod())) {
             val modes = VodPlace.entries
             prefs.edit().putString(K.ADDONS_VOD, modes[(modes.indexOf(addonsVod()) + 1) % modes.size].key).apply()
             addonsChanged()
             renderSettings(ADDONS_VOD_ROW)
         },
-        page(getString(R.string.setting_cinemeta), catalogName(cinemetaUrl())) { configureCinemeta() },
+        // The adult add-ons: with the others, or in Adult content, a tile of their own (hidden while the 18+ lock holds).
+        page(getString(R.string.setting_adult_app), getString(if (adultApp()) R.string.adult_app_own else R.string.adult_app_mixed)) {
+            prefs.edit().putBoolean(K.ADULT_APP, !adultApp()).apply()
+            addonsChanged()
+            renderSettings(ADULT_APP_ROW)
+        },
         page(getString(R.string.setting_addon_add), SUBMENU) { addonFromPhone() },
     ) + addonUrls().mapIndexed { i, url ->
         page(Stremio.saved(filesDir, url)?.addon?.name ?: url, SUBMENU) { addonPage(url) }
@@ -410,15 +428,19 @@ internal fun MainActivity.configureCinemeta(focus: Int = 0) {
     val rows = listOf(page(getString(R.string.cinemeta_default), if (current == Stremio.CINEMETA) inUse else "") { useCatalog(null, 0) },
         page(getString(R.string.catalog_nuvio), if (current.startsWith(Stremio.NUVIO_BASE)) inUse else "") { useCatalog(nuvioUrl(), 1) }) +
         catalogUrls().map { url -> page(catalogName(url), if (url == current) inUse else SUBMENU) { catalogPage(url) } } +
-        page(getString(R.string.catalog_add), SUBMENU) { addCatalog() }
+        page(getString(R.string.catalog_add), SUBMENU) { addCatalog() } +
+        tmdbContentRows()
     val intro = label(getString(R.string.cinemeta_intro), 13f).apply {
         alpha = 0.7f
-        maxLines = 5
+        maxLines = 7
         setLineSpacing(0f, 1.15f)
         setPadding(dp(14), 0, dp(14), dp(12))
     }
     showPage(getString(R.string.setting_cinemeta), rows, focus, top = intro) { renderSettings(CINEMETA_ROW) }
 }
+
+/** Row [i] of the TMDB rows on the content catalog's page (see tmdbContentRows): after Cinemeta, Nuvio, the added catalogs and Add. */
+internal fun MainActivity.tmdbRow(i: Int) = 3 + catalogUrls().size + i
 
 /** Makes [url] the catalog source (null: Cinemeta) and reads it at once; then the list again, [focus] on its row. */
 private fun MainActivity.useCatalog(url: String?, focus: Int) {
@@ -429,6 +451,8 @@ private fun MainActivity.useCatalog(url: String?, focus: Int) {
 
 internal fun MainActivity.setCatalog(url: String?) {
     if (url == null || url == Stremio.CINEMETA) prefs.edit().remove(K.CINEMETA_URL).apply() else prefs.edit().putString(K.CINEMETA_URL, url).apply()
+    // Nuvio is in the TV's language already (TMDB's, without a key): Complete with TMDB off; on with the others.
+    prefs.edit().putBoolean(K.TMDB_ENRICH, url?.startsWith(Stremio.NUVIO_BASE) != true).apply()
     Toast.makeText(this, getString(R.string.addon_checking), Toast.LENGTH_SHORT).show()
     updateAddon(cinemetaUrl(), null) { listing ->
         if (listing?.addon == null) Toast.makeText(this, getString(R.string.toast_addon_failed), Toast.LENGTH_LONG).show()
@@ -559,6 +583,7 @@ internal fun MainActivity.addonPage(url: String, focus: Int? = null) {
             }
         },
         page(getString(R.string.addon_adult), toggle(isAdultAddon(url))) {
+            if (saysAdult(url)) return@page Toast.makeText(this, getString(R.string.addon_says_adult), Toast.LENGTH_LONG).show()
             setAdultAddon(url, !isAdultAddon(url))
             addonsChanged()
             addonPage(url, R.string.addon_adult)

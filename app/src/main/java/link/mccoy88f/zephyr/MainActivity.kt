@@ -309,6 +309,7 @@ class MainActivity : Activity() {
         super.onResume()
         ensureHomeService()
         homeSetupResumed()
+        checkAdultLock()
         if (wantDark() != dark) {
             recreate()
             return
@@ -812,6 +813,7 @@ class MainActivity : Activity() {
 
     internal var unlockedUntil = 0L // one PIN covers a few minutes of changes, until the home screen is left
     internal var pinFails = 0
+    internal var adultShown = true // whether the adult add-ons showed last time the rows were built (see checkAdultLock)
     internal var pinWaitUntil = 0L // ponytail: in memory, so restarting Zephyr TV resets the wait; fine for kids at a remote
     internal var pinBox: View? = null
 
@@ -2054,17 +2056,14 @@ class MainActivity : Activity() {
         const val EPG_ROW = TV_SECTION * SECTION + 4
         const val ADDONS_TV_ROW = ADDONS_SECTION * SECTION
         const val ADDONS_VOD_ROW = ADDONS_TV_ROW + 1
-        const val CINEMETA_ROW = ADDONS_TV_ROW + 2
+        const val ADULT_APP_ROW = ADDONS_TV_ROW + 2
         const val ADDON_ADD_ROW = ADDONS_TV_ROW + 3
         const val ADDON_ROWS = ADDONS_TV_ROW + 4 // then one row per add-on
-        const val TMDB_KEY_ROW = SPOTLIGHT_SECTION * SECTION
-        const val TMDB_SOURCE_ROW = TMDB_KEY_ROW + 1
-        const val TMDB_LIST_ROW = TMDB_KEY_ROW + 2
-        const val TMDB_LANG_ROW = TMDB_KEY_ROW + 3
-        const val TMDB_TYPE_ROW = TMDB_KEY_ROW + 4
-        const val TMDB_APPS_ROW = TMDB_KEY_ROW + 5
-        const val TMDB_PROVIDERS_ROW = TMDB_KEY_ROW + 6
-        const val TMDB_CYCLE_ROW = TMDB_KEY_ROW + 7
+        const val CINEMETA_ROW = WATCH_SECTION * SECTION + 3 // the content catalog, last of Content
+        const val TMDB_SOURCE_ROW = SPOTLIGHT_SECTION * SECTION
+        const val TMDB_LIST_ROW = TMDB_SOURCE_ROW + 1
+        const val TMDB_TYPE_ROW = TMDB_SOURCE_ROW + 2
+        const val TMDB_CYCLE_ROW = TMDB_SOURCE_ROW + 3
         const val SCREENSAVER_ROW = SCREENSAVER_SECTION * SECTION
         const val HOME_BUTTON_ROW = SYSTEM_SECTION * SECTION + 1 // after "Set up Home button"
         const val DEFAULT_HOME_ROW = HOME_BUTTON_ROW + 1

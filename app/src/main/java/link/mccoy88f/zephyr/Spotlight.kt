@@ -233,7 +233,7 @@ internal fun MainActivity.renderSpotlightActions() {
     spotlightActions.removeAllViews()
     val targetApps = titleApps()
     spotlightApps = targetApps
-    val streamers = addonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.filter { it.streamsVod }
+    val streamers = shownAddonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.filter { it.streamsVod }
     val watch = if (streamers.isEmpty()) emptyList() else listOf(MainActivity.App(WATCH_ACTION, getString(R.string.title_watch),
         android.content.Intent(), watchIcon(streamers.singleOrNull())))
 

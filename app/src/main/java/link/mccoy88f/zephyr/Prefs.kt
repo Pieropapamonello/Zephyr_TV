@@ -55,12 +55,17 @@ internal object K {
     const val USER = "user" // the id of the user in use ("": the first)
     const val ADDONS_TV = "addons_tv" // where their TV channels show: "tv" (the TV app), "iptv" (one IPTV app), "apps" (an app each)
     const val ADULT_ADDONS = "adult_addons" // set of manifest addresses of add-ons marked as adult (18+)
+    const val ADULT_PIN = "adult_pin" // the 18+ lock's PIN, hashed (see AdultLock); none: the lock is off
+    const val ADULT_UNTIL = "adult_until" // when the 18+ unlock runs out (wall clock ms; Long.MAX_VALUE: until locked again)
+    const val ADULT_FOREVER = "adult_forever" // an 18+ unlock lasts until locked again, not two hours
+    const val ADULT_APP = "adult_app" // the adult add-ons in an app of their own, Adult content (see AdultLock)
 
     // Spotlight
     const val TMDB_API_KEY = "tmdb_api_key"
     const val TMDB_LANG = "tmdb_lang"
     const val TMDB_TYPE = "tmdb_type"
     const val TMDB_DEFAULT_APPS = "tmdb_default_apps"
+    const val TMDB_ENRICH = "tmdb_enrich" // Complete with TMDB: catalog titles in the TV's language (see tmdbEnrich)
     const val TMDB_CYCLE = "tmdb_cycle"
     const val TMDB_PROVIDERS = "tmdb_providers"
     const val TMDB_SOURCE = "tmdb_source" // "trending" or "list"

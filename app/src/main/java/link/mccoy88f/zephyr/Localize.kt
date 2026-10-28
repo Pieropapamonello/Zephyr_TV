@@ -61,6 +61,13 @@ private fun TmdbClient.Localized.rating() = vote.takeIf { it > 0 }?.let { "%.1f"
 
 internal fun MainActivity.tmdbKey() = prefs.getString(K.TMDB_API_KEY, null)?.takeIf { it.isNotBlank() }
 
+/**
+ * Complete with TMDB: catalog titles' names, art, what they're about and episodes in the TV's language. Off by
+ * default with Nuvio's catalog (in it already). TMDB is still asked for each title's TMDB id without it: the
+ * services and apps on its page need that.
+ */
+internal fun MainActivity.tmdbEnrich() = prefs.getBoolean(K.TMDB_ENRICH, !cinemetaUrl().startsWith(Stremio.NUVIO_BASE))
+
 /** Whether [t] could be had in the TV's language and TMDB wasn't asked yet. */
 internal fun MainActivity.wantsLocal(t: Stremio.Title): Boolean {
     if (tmdbKey() == null || !t.id.startsWith("tt")) return false
@@ -70,7 +77,7 @@ internal fun MainActivity.wantsLocal(t: Stremio.Title): Boolean {
 
 /** [t] in the TV's language, as TMDB has it (its logo, written in English, left out); null when it isn't known (yet). */
 internal fun MainActivity.localize(t: Stremio.Title): Stremio.Title? {
-    if (tmdbKey() == null || !t.id.startsWith("tt")) return null
+    if (tmdbKey() == null || !tmdbEnrich() || !t.id.startsWith("tt")) return null
     Local.use(filesDir, tmdbLang())
     val l = Local.get(t.id) ?: return null
     val same = l.title.equals(t.name, ignoreCase = true)
@@ -113,6 +120,7 @@ internal fun MainActivity.localizeMeta(meta: Stremio.TitleMeta): Stremio.TitleMe
     Local.use(filesDir, lang)
     val l = Local.get(t.id) ?: if (Local.asked(t.id)) return meta else
         runCatching { TmdbClient.localized(key, t.id, lang) }.getOrNull().also { Local.put(t.id, it); runCatching { Local.save(filesDir) } } ?: return meta
+    if (!tmdbEnrich()) return meta // its TMDB id known, for its services; the rest as the catalog has it
     val title = localize(t) ?: t
     val episodes = if (!l.tv || meta.episodes.isEmpty()) meta.episodes else {
         val seasons = meta.episodes.map { it.season }.distinct().take(40)

@@ -52,7 +52,11 @@ internal fun MainActivity.showUsers(focus: Int? = null) {
             if (u.id != current.id) useUser(u)
             closeLauncherSettings()
         }
-    } + page(getString(R.string.users_settings), SUBMENU) { unlock { usersSettings() } }, // adding, removing, Trakt: behind the layout lock
+    } + listOfNotNull(
+        // The 18+ lock, when it's on: unlock with its PIN, or lock again.
+        if (adultLockOn()) adultMenuRow { showUsers(list.size) } else null,
+        page(getString(R.string.users_settings), SUBMENU) { unlock { usersSettings() } }, // adding, removing, Trakt: behind the layout lock
+    ),
         focus ?: list.indexOfFirst { it.id == current.id }.coerceAtLeast(0)) { closeLauncherSettings() }
 }
 
@@ -64,7 +68,8 @@ private fun MainActivity.usersSettings(focus: Int = 0) {
     showPage(getString(R.string.users_settings), list.map { u ->
         val trakt = Trakt.account(vodDir(u.id))?.user?.let { "Trakt: $it" }
         page(u.name, listOfNotNull(trakt, if (u.id == current.id) CHOSEN else null).joinToString("  ")) { userPage(u) }
-    } + page(getString(R.string.user_add)) { userName(null) }, focus) { showUsers(list.size) }
+    } + page(getString(R.string.user_add)) { userName(null) } +
+        adultSettingsRows { usersSettings(list.size + 1) }, focus) { showUsers(list.size + if (adultLockOn()) 1 else 0) }
 }
 
 /** A user's page: their Trakt account (connect, or sync and disconnect), rename, remove. */

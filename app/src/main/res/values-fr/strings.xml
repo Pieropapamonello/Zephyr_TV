@@ -201,7 +201,8 @@
     <string name="toast_hidden_from_cw">Masqué de cette section</string>
 
     <!-- TMDB Spotlight & Channels -->
-    <string name="setting_tmdb">À la une TMDB</string>
+    <string name="setting_tmdb">À la une</string>
+    <string name="setting_tmdb_enrich">Compléter avec TMDB</string>
     <string name="setting_tmdb_api_key">Clé API TMDB</string>
     <string name="setting_tmdb_language">Langue / région TMDB</string>
     <string name="setting_tmdb_media_type">Type de contenu</string>
@@ -427,12 +428,12 @@
     <string name="vod_watched_series">Séries déjà vues</string>
     <string name="setting_addons_vod">Films et séries</string>
     <string name="addons_vod_tiles">Apps Films et Séries</string>
-    <string name="setting_cinemeta">Source du catalogue</string>
-    <string name="cinemeta_intro">Les films et séries viennent de ce catalogue. Cinemeta, la bibliothèque gratuite de Stremio, est celui par défaut. Nuvio Catalog utilise TMDB, dans la langue du téléviseur. Ajoutez un autre add-on de catalogue pour l\'utiliser à leur place.</string>
+    <string name="setting_cinemeta">Catalogue de contenus</string>
+    <string name="cinemeta_intro">Les films et séries viennent de ce catalogue. Cinemeta, la bibliothèque gratuite de Stremio, est celui par défaut. Nuvio Catalog utilise TMDB, dans la langue du téléviseur. Compléter avec TMDB montre les titres des autres catalogues dans la langue du téléviseur.</string>
     <string name="cinemeta_default">Cinemeta (par défaut)</string>
     <string name="catalog_nuvio">Nuvio Catalog (TMDB)</string>
     <string name="setup_catalog_title">Films et séries</string>
-    <string name="setup_catalog_body">Choisissez d\'où viennent les films et séries. Nuvio utilise TMDB, dans la langue du téléviseur. Cinemeta est la bibliothèque gratuite de Stremio. Vous pouvez le changer dans les paramètres, dans Source du catalogue.</string>
+    <string name="setup_catalog_body">Choisissez d\'où viennent les films et séries. Nuvio utilise TMDB, dans la langue du téléviseur. Cinemeta est la bibliothèque gratuite de Stremio. Vous pouvez le changer dans les paramètres, dans Contenus, dans Catalogue de contenus.</string>
     <string name="catalog_add">Ajouter un catalogue</string>
     <string name="catalog_in_use">Utilisé</string>
     <string name="catalog_use">Utiliser ce catalogue</string>
@@ -469,12 +470,30 @@
     <string name="title_no_page">Aucune extension n\'a de fiche pour ce titre</string>
     <string name="player_episode">%1$s · S%2$d E%3$d</string>
     <string name="toast_addon_added_vod">%1$s ajoutée : films et séries</string>
+    <string name="toast_addon_added_both">%1$s ajouté : %2$d chaînes, films et séries</string>
     <string name="player_stream_row">%1$d · %2$s</string>
     <string name="channel_play">Regarder</string>
 
     <!-- Users and Trakt -->
     <string name="users_title">Utilisateurs</string>
     <string name="users_settings">Paramètres</string>
+    <string name="adult_lock">Verrou -18</string>
+    <string name="adult_unlock">Déverrouiller -18</string>
+    <string name="adult_lock_now">Verrouiller -18</string>
+    <string name="adult_locked">Verrouillé</string>
+    <string name="adult_unlocked">Déverrouillé</string>
+    <string name="adult_unlocked_until">Déverrouillé jusqu\'à %1$s</string>
+    <string name="adult_unlock_for">Déverrouiller pendant</string>
+    <string name="adult_two_hours">2 heures</string>
+    <string name="adult_until_locked">Jusqu\'au verrouillage</string>
+    <string name="adult_pin_choose">Choisissez le PIN -18</string>
+    <string name="adult_pin_enter">PIN -18</string>
+    <string name="adult_locked_toast">Le contenu -18 est masqué. Utilisez le PIN dans le menu des utilisateurs pour l\'afficher.</string>
+    <string name="addon_says_adult">Cet add-on indique du contenu pour adultes. Il compte toujours comme -18.</string>
+    <string name="adult_app">Contenu pour adultes</string>
+    <string name="setting_adult_app">Add-ons pour adultes</string>
+    <string name="adult_app_own">Dans Contenu pour adultes</string>
+    <string name="adult_app_mixed">Avec les autres</string>
     <string name="user_default">Moi</string>
     <string name="user_add">Ajouter un utilisateur</string>
     <string name="user_rename">Renommer</string>
