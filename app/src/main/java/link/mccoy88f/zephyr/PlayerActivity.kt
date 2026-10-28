@@ -1102,7 +1102,9 @@ class PlayerActivity : Activity() {
     /** The languages picked before, as preferences for a new stream's player: Off stays off. */
     private fun applyChoices(p: ExoPlayer) {
         p.trackSelectionParameters = p.trackSelectionParameters.buildUpon().apply {
-            choices.getString(AUDIO_LANG, null)?.let { setPreferredAudioLanguage(it) }
+            // The audio last picked; before any, the TV's language (the TMDB one's): a stream's own default may be another.
+            setPreferredAudioLanguage(choices.getString(AUDIO_LANG, null)
+                ?: (prefs.getString(K.TMDB_LANG, null) ?: TmdbClient.defaultLanguage()).substringBefore('-'))
             when (val t = choices.getString(TEXT_LANG, null)) {
                 null -> {}
                 "" -> setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)

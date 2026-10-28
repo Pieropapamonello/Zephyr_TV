@@ -14,6 +14,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 2.1.1
+
+- Before you choose an audio language in the player, it plays the audio in the language of the TV, when the stream has it. Before, it played the stream's default audio, often English.
+
 ## 2.1.0
 
 - The Settings section is now **Add-ons and Plugins**. Its **TV Channels**, **Films and TV Series** and **Adult Content** have the same choices: **System TV app** (TV channels only), **Virtual app**, **One app per add-on**, and **With the others** or off.
