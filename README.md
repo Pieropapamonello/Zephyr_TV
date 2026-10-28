@@ -23,8 +23,8 @@
 </p>
 
 <p align="center">
-  <img src="docs/screens/en-home-light.jpg" alt="Home screen, light theme" width="49%">
-  <img src="docs/screens/en-home-dark.jpg" alt="Home screen, dark theme" width="49%">
+  <img src="docs/screens/zephyr-home.jpg" alt="Home screen: Spotlight, Favourites and Continue Playing" width="49%">
+  <img src="docs/screens/zephyr-settings.jpg" alt="Zephyr TV settings, grouped in sections" width="49%">
 </p>
 
 Zephyr TV replaces the cluttered stock home screen with the two things you actually use: your apps and what you were watching. There are no ads, no sponsored rows, no account and no tracking, and it stays out of the way of the apps it launches.

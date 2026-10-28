@@ -86,6 +86,7 @@ class PlayerActivity : Activity() {
     private var attempts = 0 // streams tried since the channel was tuned, or one was picked: all of them, and it's none
     private var lateLeft = 0 // a film's sources still looking after the first streams came (slow Nuvio plugins)
     private var waitingLate = false // all the streams so far failed: waiting for theirs rather than saying none works
+    private var searchIfChosenFails = false // a resumed film's kept stream failing: look for others (see next)
     private var holdForLanguage = false // none in the TV's language so far: waiting for the sources still looking
     private var expanded = false // the banner shows all of what's on, not just its first line
     private var tune = 0 // counts tunings, so an answer for a channel left meanwhile is dropped
@@ -207,7 +208,9 @@ class PlayerActivity : Activity() {
                 list(NOWS).getOrNull(i)?.ifEmpty { null })
         }
         if (channels.isEmpty()) return finish()
-        // A stream picked by hand (see pickStream): the one the first episode or film plays, none looked for.
+        // A stream picked by hand (see pickStream), or the one it played when it's resumed: the one the first episode or
+        // film plays, none looked for; one resumed that no longer plays gives way to a search (see next).
+        searchIfChosenFails = intent.getBooleanExtra(CHOSEN_ELSE_SEARCH, false)
         intent.getStringExtra(CHOSEN)?.let { j -> runCatching { streamOf(JSONObject(j)) }.getOrNull() }?.let { s ->
             channels.getOrNull(intent.getIntExtra(INDEX, 0))?.let { fetched[it.id] = System.currentTimeMillis() to listOf(s) }
         }
@@ -506,8 +509,11 @@ class PlayerActivity : Activity() {
 
     private fun entry(i: Int, position: Long, duration: Long): VodProgress.Entry {
         val c = channels[i]
+        // The stream playing, kept with where it got to: Continue Playing starts with it, without a search.
+        val playing = if (i == at) streams.getOrNull(tried)?.let { streamJson(it).toString() } else null
         return VodProgress.Entry(c.id, intent.getStringExtra(META_TYPE) ?: c.type, intent.getStringExtra(META_ID) ?: c.id,
-            c.name, c.now.orEmpty(), intent.getStringExtra(POSTER) ?: c.logos.firstOrNull(), position, duration, System.currentTimeMillis())
+            c.name, c.now.orEmpty(), intent.getStringExtra(POSTER) ?: c.logos.firstOrNull(), position, duration, System.currentTimeMillis(),
+            playing)
     }
 
     /**
@@ -978,8 +984,20 @@ class PlayerActivity : Activity() {
     /** Stream: the channel's streams, as the add-on lists them; the one picked plays (then the next ones, if it fails). */
     private fun openStreams() {
         if (streams.size < 2) return
+        // Grouped by quality, the highest first, each group under its heading; picking one plays it from the list as is.
         openPanel(getString(R.string.player_streams)) { row ->
-            streams.forEachIndexed { k, s ->
+            var group = -1
+            for (k in streams.indices.sortedByDescending { streamQuality(streams[it].title) }) {
+                val s = streams[k]
+                val q = streamQuality(s.title)
+                if (q != group) {
+                    group = q
+                    tracksList.addView(text(13f).apply {
+                        text = if (q == UNKNOWN_QUALITY) getString(R.string.player_quality_unknown) else if (q >= 2160) "${q}p · 4K" else "${q}p"
+                        alpha = 0.6f
+                        setPadding(dp(14), dp(16), 0, dp(6))
+                    })
+                }
                 val name = if (s.source != null && !s.title.contains(s.source, ignoreCase = true)) "${s.source} · ${s.title}" else s.title
                 row(getString(R.string.player_stream_row, k + 1, name), k == tried, 1) {
                     tried = k - 1
@@ -1076,8 +1094,9 @@ class PlayerActivity : Activity() {
             .setOverrideForType(TrackSelectionOverride(t.group.mediaTrackGroup, t.index))
             .apply { if (type == C.TRACK_TYPE_AUDIO) setPreferredAudioLanguage(lang) else setPreferredTextLanguage(lang) }
             .build()
-        val key = if (type == C.TRACK_TYPE_AUDIO) AUDIO_LANG else TEXT_LANG
-        choices.edit().apply { if (lang != null) putString(key, lang) else if (type == C.TRACK_TYPE_AUDIO) remove(key) else putString(key, "und") }.apply()
+        // Subtitles picked are kept for what plays next; audio isn't: the next stream starts with its default.
+        if (type == C.TRACK_TYPE_AUDIO) return
+        choices.edit().putString(TEXT_LANG, lang ?: "und").apply()
     }
 
     private fun subtitlesOff() {
@@ -1102,9 +1121,9 @@ class PlayerActivity : Activity() {
     /** The languages picked before, as preferences for a new stream's player: Off stays off. */
     private fun applyChoices(p: ExoPlayer) {
         p.trackSelectionParameters = p.trackSelectionParameters.buildUpon().apply {
-            // The audio last picked; before any, the TV's language (the TMDB one's): a stream's own default may be another.
-            setPreferredAudioLanguage(choices.getString(AUDIO_LANG, null)
-                ?: (prefs.getString(K.TMDB_LANG, null) ?: TmdbClient.defaultLanguage()).substringBefore('-'))
+            // Each stream starts with the default audio: the TV's language (the TMDB one's) where it has it, else its
+            // own; one picked in Audio is for that stream alone (see pick).
+            setPreferredAudioLanguage((prefs.getString(K.TMDB_LANG, null) ?: TmdbClient.defaultLanguage()).substringBefore('-'))
             when (val t = choices.getString(TEXT_LANG, null)) {
                 null -> {}
                 "" -> setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
@@ -1245,7 +1264,9 @@ class PlayerActivity : Activity() {
         var done = 0
         var hit: Stremio.Stream? = null
         while (done < sources.size && hit == null) {
-            val limit = start + if (got.isNotEmpty()) VOD_SOME_MS else VOD_WAIT_MS
+            // Every source is waited for, unless one in the preferred quality plays first: without it, the best a step
+            // below (then the next, and so on) is picked out of them all.
+            val limit = start + VOD_ALL_MS
             val answer = answers.poll((limit - System.currentTimeMillis()).coerceAtLeast(0), TimeUnit.MILLISECONDS) ?: break
             done++
             val more = runCatching { answer.get() }.getOrDefault(emptyList()).filter { s -> got.none { it.url == s.url } }
@@ -1379,6 +1400,12 @@ class PlayerActivity : Activity() {
         if (vod) player?.let { if (it.currentPosition > 5000) pendingSeek = it.currentPosition }
         if (streams.isEmpty() || ++attempts > streams.size) {
             release()
+            // The stream it played, kept to resume with, no longer plays (an address that expired): a search after all.
+            if (searchIfChosenFails) {
+                searchIfChosenFails = false
+                channels.getOrNull(at)?.let { fetched.remove(it.id) }
+                return play(at)
+            }
             attempts = streams.size // the next one to come is the next to try
             // Sources still looking (slow plugins): their streams are waited for before saying none works.
             if (lateLeft > 0) {
@@ -1549,6 +1576,7 @@ class PlayerActivity : Activity() {
         const val BASE = "base" // the add-on's address, without /manifest.json
         const val INDEX = "index" // the channel picked, in the lists below
         const val CHOSEN = "chosen" // a film's or episode's stream picked by hand, as streamJson writes it
+        const val CHOSEN_ELSE_SEARCH = "chosen_else_search" // the chosen one is the one kept to resume with: if it fails, search
 
         /** [s] for an Intent: its address, name, headers and source. */
         internal fun streamJson(s: Stremio.Stream): JSONObject = JSONObject().put("url", s.url).put("title", s.title)
@@ -1585,7 +1613,6 @@ class PlayerActivity : Activity() {
         private const val VOD_SOME_MS = 12_000L // ...or this long, once one has given streams
         private const val VOD_STUCK_MS = 30_000L // a film's stream buffering longer than this: the next
         private const val CHOICES_FILE = "player" // not K.FILE: the home screen's process writes that one whole
-        private const val AUDIO_LANG = "audio_lang"
         private const val TEXT_LANG = "text_lang" // "" for off; none for the stream's own choice
         private const val BANNER_MS = 5000L
         private const val BUTTONS_MS = 10_000L // the banner stays up this long after a key on its buttons

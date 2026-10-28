@@ -14,6 +14,13 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 2.1.3
+
+- In the player, **Stream** groups the streams by quality, the highest first.
+- **Continue Playing** starts a film or episode with the stream it played before, without looking for others. When that stream no longer plays, the player looks for a new one.
+- With **Quick start**, when no source has a stream in the preferred quality, the player waits for all the sources, up to 30 seconds, and starts the best one a step below.
+- Each stream starts with the default audio: in the language of the TV, when the stream has it. The audio you choose is for that stream only, and does not carry over to the next stream.
+
 ## 2.1.2
 
 - New: **Guide**, in **Settings → System**. The user guide, chapter by chapter, in Italian on a TV in Italian and in English in every other language.

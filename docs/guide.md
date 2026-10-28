@@ -125,11 +125,11 @@ While it looks for streams, the player says where it is: **Loading the available
 | **Play / Pause** | Pause and play | Pause and play |
 | **Hold OK**, **Menu** | Audio and subtitles | Audio and subtitles |
 
-The banner has the **Previous episode**, **Play/Pause**, **Next episode**, **Audio**, **Subtitles** and **Stream** buttons. **Stream** lists all the streams found, each with its source, to pick another one.
+The banner has the **Previous episode**, **Play/Pause**, **Next episode**, **Audio**, **Subtitles** and **Stream** buttons. **Stream** lists all the streams found, grouped by quality from the highest, each with its source, to pick another one.
 
 - **Series**: when an episode ends, the next one starts. At the last episode of a season, the player asks if you want to go on to the **next season**.
-- **Audio**: the player keeps the language you choose. Until you choose one, it uses the language of the TV, when the stream has it.
-- **Resume**: a film or episode left halfway starts again where you were, and shows in **Continue Playing**.
+- **Audio**: each stream starts with the audio in the language of the TV, when it has it, else with its main track. A language you choose in **Audio** is for the stream you're watching.
+- **Resume**: a film or episode left halfway starts again where you were, and shows in **Continue Playing**. It starts with the same stream as before, without looking for others. When that stream no longer plays, the player looks for a new one.
 
 ## 9. Choosing streams: quality, language, quick start
 
@@ -139,7 +139,7 @@ The banner has the **Previous episode**, **Play/Pause**, **Next episode**, **Aud
 |---|---|---|
 | **Stream choice** | Automatic | **Automatic**: the player picks and starts the best stream. **Manual**: **Watch** opens **Choose a stream**, one list of every add-on's and plugin's streams, each with its source |
 | **Preferred quality** | Highest | **Highest**, 2160p, 1440p, 1080p, 720p or 480p. With 1080p, for example, the player tries 1080p and lower first, then the higher ones. 4K streams stay in the list |
-| **Quick start** | On | Starts at once with the first working stream in the preferred quality and in the language of the TV, while the other sources keep looking. Not with **Highest**: then the player waits for every source (up to 30 seconds) and picks the best |
+| **Quick start** | On | Starts at once with the first working stream in the preferred quality and in the language of the TV, while the other sources keep looking. When no source has that quality, it waits for every source (up to 30 seconds) and starts the best one a step below. Not with **Highest**: then the player waits for every source and picks the best |
 | **Streams in the TV's language first** | On | Tries the streams in the language of the TV first, then those that say no language, then those in other languages. With none in the language of the TV, it waits for every source before it plays one in another language |
 | **Hide streams without a language** | Off | Hides the streams that don't say their language |
 
@@ -328,7 +328,7 @@ With **Quick start** on and a preferred quality, the player starts with the firs
 <details>
 <summary><b>The audio is in the wrong language</b></summary>
 
-Choose your language in the player's **Audio** (or hold OK). The player keeps it for what you watch next.
+Each stream starts with the audio in the language of the TV, when the stream has it. Otherwise, choose the language in the player's **Audio** (or hold OK): it's for the stream you're watching.
 </details>
 
 <details>

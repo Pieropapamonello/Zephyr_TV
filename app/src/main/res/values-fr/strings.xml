@@ -443,6 +443,7 @@
     <string name="player_track_forced">(forcés)</string>
     <string name="player_tracks_line">Audio : %1$s · Sous-titres : %2$s</string>
     <string name="player_streams">Flux</string>
+    <string name="player_quality_unknown">Qualité non indiquée</string>
     <string name="player_pause">Pause</string>
     <string name="player_episode_previous">Épisode précédent</string>
     <string name="player_episode_next">Épisode suivant</string>

@@ -125,11 +125,11 @@ Mentre il player cerca gli stream mostra a che punto è: **Caricamento degli str
 | **Play / Pausa** | Pausa e ripresa | Pausa e ripresa |
 | **OK tenuto premuto**, **Menu** | Audio e sottotitoli | Audio e sottotitoli |
 
-Nel banner ci sono i pulsanti **Episodio precedente**, **Play/Pausa**, **Episodio successivo**, **Audio**, **Sottotitoli** e **Stream**. Quest'ultimo mostra tutti gli stream trovati, con la loro fonte, per sceglierne un altro.
+Nel banner ci sono i pulsanti **Episodio precedente**, **Play/Pausa**, **Episodio successivo**, **Audio**, **Sottotitoli** e **Stream**. Quest'ultimo mostra tutti gli stream trovati, raggruppati per qualità dalla più alta, ognuno con la sua fonte, per sceglierne un altro.
 
 - **Serie**: a fine episodio parte il successivo. All'ultimo episodio di una stagione il player chiede se passare alla **stagione successiva**.
-- **Audio**: il player ricorda la lingua scelta. Finché non ne scegli una, usa quella del TV, se lo stream ce l'ha.
-- **Ripresa**: un film o un episodio lasciato a metà riparte da dove eri, e compare in **Continua la riproduzione**.
+- **Audio**: ogni stream parte con l'audio nella lingua del TV, se ce l'ha, altrimenti con la sua traccia principale. La lingua che scegli da **Audio** vale per lo stream che stai guardando.
+- **Ripresa**: un film o un episodio lasciato a metà riparte da dove eri, e compare in **Continua la riproduzione**. Riparte con lo stesso stream di prima, senza cercarne altri. Se quello stream non funziona più, il player ne cerca uno nuovo.
 
 ## 9. Scegliere gli stream: qualità, lingua, avvio rapido
 
@@ -139,7 +139,7 @@ Nel banner ci sono i pulsanti **Episodio precedente**, **Play/Pausa**, **Episodi
 |---|---|---|
 | **Scelta dello stream** | Automatica | **Automatica**: il player sceglie e avvia lo stream migliore. **Manuale**: **Guarda** apre **Scegli lo stream**, una lista con gli stream di tutti gli add-on e plugin, ognuno con la sua fonte |
 | **Qualità preferita** | Massima | **Massima**, 2160p, 1440p, 1080p, 720p o 480p. Con 1080p, per esempio, il player prova prima 1080p e le qualità più basse, poi quelle più alte. Gli stream 4K restano in lista |
-| **Avvio rapido dei contenuti** | Attivo | Parte subito con il primo stream che funziona nella qualità preferita e nella lingua del TV, mentre le altre fonti continuano a cercare. Non vale con **Massima**: in quel caso il player aspetta tutte le fonti (fino a 30 secondi) e sceglie il migliore |
+| **Avvio rapido dei contenuti** | Attivo | Parte subito con il primo stream che funziona nella qualità preferita e nella lingua del TV, mentre le altre fonti continuano a cercare. Se nessuna fonte ha quella qualità, aspetta tutte le fonti (fino a 30 secondi) e parte con il migliore del gradino inferiore. Non vale con **Massima**: in quel caso il player aspetta tutte le fonti e sceglie il migliore |
 | **Prima gli stream nella lingua del TV** | Attivo | Prova prima gli stream nella lingua del TV, poi quelli senza lingua, per ultimi quelli in altre lingue. Se non ne trova nessuno nella lingua del TV, aspetta tutte le fonti prima di avviarne uno in un'altra lingua |
 | **Nascondi stream senza lingua** | Spento | Nasconde gli stream che non dicono in che lingua sono |
 
@@ -328,7 +328,7 @@ Con **Avvio rapido** attivo e una qualità preferita, il player parte con il pri
 <details>
 <summary><b>L'audio è in inglese</b></summary>
 
-Scegli l'italiano da **Audio** nel player (o tieni premuto OK). Il player lo ricorda per i contenuti successivi.
+Ogni stream parte con l'audio nella lingua del TV, se lo stream ce l'ha. Altrimenti scegli la lingua da **Audio** nel player (o tieni premuto OK): vale per lo stream che stai guardando.
 </details>
 
 <details>

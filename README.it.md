@@ -23,8 +23,8 @@
 </p>
 
 <p align="center">
-  <img src="docs/screens/it-home-light.jpg" alt="Schermata Home, tema chiaro" width="49%">
-  <img src="docs/screens/it-home-dark.jpg" alt="Schermata Home, tema scuro" width="49%">
+  <img src="docs/screens/zephyr-home.jpg" alt="Schermata Home: In evidenza, Preferiti e Continua la riproduzione" width="49%">
+  <img src="docs/screens/zephyr-settings.jpg" alt="Le impostazioni di Zephyr TV, raggruppate in sezioni" width="49%">
 </p>
 
 Zephyr TV sostituisce la Home di serie, piena di elementi, con le due cose che usi davvero: le tue app e quello che stavi guardando. Niente pubblicità, niente righe sponsorizzate, nessun account e nessun tracciamento, e non intralcia le app che apre.

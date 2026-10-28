@@ -21,7 +21,8 @@ internal object VodProgress {
      * card says ([name]: the series' name, [sub]: the episode's season, number and name), its art, and where it got to.
      */
     internal class Entry(val id: String, val type: String, val metaId: String, val name: String, val sub: String, val poster: String?,
-                         val position: Long, val duration: Long, val at: Long) {
+                         val position: Long, val duration: Long, val at: Long,
+                         val stream: String? = null) { // the stream it played (see PlayerActivity.streamJson): resumed with it
         val percent get() = if (upNext) 0 else if (duration > 0) (position * 100 / duration).toInt().coerceIn(1, 99) else 0
 
         /** The next episode, after one watched to the end: not begun yet (see putNext). */
@@ -43,7 +44,8 @@ internal object VodProgress {
             val a = JSONArray(f.readText())
             (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { o ->
                 Entry(o.getString("id"), o.optString("type"), o.optString("metaId"), o.optString("name"), o.optString("sub"),
-                    o.optString("poster").ifEmpty { null }, o.optLong("position"), o.optLong("duration"), o.optLong("at"))
+                    o.optString("poster").ifEmpty { null }, o.optLong("position"), o.optLong("duration"), o.optLong("at"),
+                    o.optString("stream").ifEmpty { null })
             }
         }.getOrDefault(emptyList()).sortedByDescending { it.at }
         cache = stamp to list
@@ -85,6 +87,7 @@ internal object VodProgress {
         part.writeText(JSONArray(list.map { e ->
             JSONObject().put("id", e.id).put("type", e.type).put("metaId", e.metaId).put("name", e.name).put("sub", e.sub)
                 .put("poster", e.poster.orEmpty()).put("position", e.position).put("duration", e.duration).put("at", e.at)
+                .put("stream", e.stream.orEmpty())
         }).toString())
         part.renameTo(f)
         cache = null

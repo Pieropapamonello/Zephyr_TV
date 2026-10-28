@@ -579,7 +579,7 @@ internal fun MainActivity.addonIcon(addon: Stremio.Addon): android.graphics.draw
  * address. The player shows the series' name, and the episode's season, number and name under it.
  */
 internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, episode: Stremio.Episode?, only: String? = null,
-                                    chosen: Stremio.Stream? = null) {
+                                    chosen: Stremio.Stream? = null, resumeWith: String? = null) {
     val t = meta?.title
     val name = t?.name ?: ref.name
     val poster = ref.poster ?: t?.poster
@@ -608,6 +608,8 @@ internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, epi
             .putExtra(PlayerActivity.MODE, PlayerActivity.MODE_VOD)
             .putExtra(PlayerActivity.INDEX, start)
             .apply { chosen?.let { putExtra(PlayerActivity.CHOSEN, PlayerActivity.streamJson(it).toString()) } }
+            // Resumed: the stream it played, kept with its progress; a search only if it no longer plays.
+            .apply { if (chosen == null && resumeWith != null) putExtra(PlayerActivity.CHOSEN, resumeWith).putExtra(PlayerActivity.CHOSEN_ELSE_SEARCH, true) }
             .putExtra(PlayerActivity.ADULT, isCatalogAdult || isOnlyAdult)
             .putStringArrayListExtra(PlayerActivity.ADULT_SOURCES, ArrayList(adultSourcesList))
             .putStringArrayListExtra(PlayerActivity.SOURCES, ArrayList(sources.map { it.first }))
@@ -684,7 +686,8 @@ private fun MainActivity.resumeTitle(ref: TitleRef) {
         val meta = titleMeta(ref)
         ui.post {
             val episode = meta?.episodes?.firstOrNull { it.id == ref.video }
-            playTitle(ref, meta, episode)
+            val kept = VodProgress.all(vodDir()).firstOrNull { it.id == ref.video }?.takeIf { !it.upNext }?.stream
+            playTitle(ref, meta, episode, resumeWith = kept)
         }
     }
 }
