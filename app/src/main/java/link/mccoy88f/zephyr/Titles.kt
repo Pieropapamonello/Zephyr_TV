@@ -50,8 +50,11 @@ internal fun MainActivity.vodAddons(): List<Stremio.Addon> = libraryUrls().mapNo
 }
 
 /** The add-ons that give streams for a film or episode of [type] with this [id] (address without /manifest.json, and name). */
-internal fun MainActivity.streamSources(type: String, id: String): List<Pair<String, String>> =
-    shownAddonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.filter { it.provides("stream", type, id) }.map { it.base to it.name }
+internal fun MainActivity.streamSources(type: String, id: String): List<Pair<String, String>> {
+    refreshPlugins()
+    return shownAddonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.filter { it.provides("stream", type, id) }.map { it.base to it.name } +
+        pluginSources(prefs, filesDir, type, id, adultUnlocked()) // Nuvio's plugins after the add-ons
+}
 
 /** The tiles films and series add to the apps row: Films and Series, or nothing here (each add-on's own, see addonApps). */
 internal fun MainActivity.vodApps(): List<MainActivity.App> {

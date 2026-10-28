@@ -60,6 +60,12 @@ internal object K {
     const val ADULT_UNTIL = "adult_until" // when the 18+ unlock runs out (wall clock ms; Long.MAX_VALUE: until locked again)
     const val ADULT_BOOT = "adult_boot" // when the TV had started at the 18+ unlock (see adultUnlocked)
     const val ADULT_FOREVER = "adult_forever" // an 18+ unlock lasts until locked again, not two hours
+    const val ADDONS_OFF = "addons_off" // add-ons switched off: kept, with their settings, but not shown nor asked
+    const val NUVIO_REPOS_OFF = "nuvio_repos_off" // Nuvio repositories switched off, the same way
+    const val NUVIO_REPOS = "nuvio_repos" // Nuvio plugin repositories, manifest addresses one per line (see Plugins)
+    const val NUVIO_ON = "nuvio_on" // plugins switched on that their manifest has off ("<manifest>#<id>")
+    const val NUVIO_OFF = "nuvio_off" // plugins switched off that their manifest has on
+    const val NUVIO_ADULT = "nuvio_adult" // repositories marked 18+
     const val ADULT_APP = "adult_app" // the adult add-ons in an app of their own, Adult content (see AdultLock)
 
     // Spotlight

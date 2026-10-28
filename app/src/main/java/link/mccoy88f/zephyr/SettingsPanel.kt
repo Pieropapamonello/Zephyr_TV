@@ -113,7 +113,9 @@ internal fun MainActivity.sectionTitle(section: Int) = getString(when (section) 
 internal fun MainActivity.renderSettingsHome(focus: Int = 0) {
     val sections = listOf(LOOK_SECTION, APPS_SECTION, WATCH_SECTION, TV_SECTION, ADDONS_SECTION, SPOTLIGHT_SECTION, SCREENSAVER_SECTION, SYSTEM_SECTION)
     showPage(getString(R.string.plume_settings), sections.map { section ->
-        page(sectionTitle(section), SUBMENU) { renderSettings(section * SECTION) }
+        // Add-ons and plugins: Stremio's add-ons and Nuvio's plugins, a page that leads to each.
+        if (section == ADDONS_SECTION) page(getString(R.string.settings_section_addons_plugins), SUBMENU) { addonsAndPlugins() }
+        else page(sectionTitle(section), SUBMENU) { renderSettings(section * SECTION) }
     }, focus, back = null)
     updateDot(sections.indexOf(SYSTEM_SECTION))
     // The one thing that needs doing by hand still shows on its section: Zephyr TV isn't fully set up as the home screen.
@@ -124,7 +126,7 @@ internal fun MainActivity.renderSettingsHome(focus: Int = 0) {
 /** Shows the section page holding [row], focused on it. */
 internal fun MainActivity.renderSettings(row: Int) {
     val section = row / SECTION
-    showPage(sectionTitle(section), sectionRows(section), row % SECTION) { renderSettingsHome(section) }
+    showPage(sectionTitle(section), sectionRows(section), row % SECTION) { if (section == ADDONS_SECTION) addonsAndPlugins(0) else renderSettingsHome(section) }
     shownSection = section
     // Each add-on's row starts with its icon, as its Watch on rows on a title's page do.
     if (section == ADDONS_SECTION) rowIcons(addonUrls().mapIndexed { i, url ->

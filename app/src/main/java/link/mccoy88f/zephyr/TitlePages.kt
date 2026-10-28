@@ -107,7 +107,7 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, a
             showVodTitle(meta, ref, services.known, focusRow = markRow, found = found)
         }
         if (one == null && having != null) having.forEach { (base, name) ->
-            icons[rows.size] = watchIcon(soleAddon(listOf(base to name)))
+            icons[rows.size] = sourceIcon(base, name)
             rows += page(getString(R.string.tmdb_search_on, name), resources.getQuantityString(R.plurals.title_streams, found[base] ?: 0, found[base] ?: 0)) { play(base) }
         }
     } else {
@@ -137,7 +137,7 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, a
     // A film's stream add-ons asked how many streams each has, all at once; the page again once they've said.
     if (episodic || found != null || sources.size < 2) return
     netIo.execute {
-        val counts = parallel(sources, 4, 22) { (base, name) -> base to runCatching { Stremio.titleStreams(base, name, t.type, t.id).size }.getOrDefault(0) }.toMap()
+        val counts = parallel(sources, 4, 30) { (base, name) -> base to runCatching { sourceStreams(prefs, filesDir, base, name, t.type, t.id).size }.getOrDefault(0) }.toMap()
         ui.post { if (pageShowing(t.name)) showVodTitle(meta, ref, services.known, focusedRow() ?: focusRow, counts) }
     }
 }
@@ -246,7 +246,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
     // Several add-ons have it: each of them too, with how many streams it has; at the bottom, so the rows above
     // stay where they are when these come in, and focus with them.
     if (having != null && having.size > 1) having.forEach { (base, name) ->
-        icons[rows.size] = watchIcon(soleAddon(listOf(base to name)))
+        icons[rows.size] = sourceIcon(base, name)
         rows += page(getString(R.string.tmdb_search_on, name), resources.getQuantityString(R.plurals.title_streams, found[base] ?: 0, found[base] ?: 0)) { play(base) }
     }
     val still = e.thumbnail
@@ -263,7 +263,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
     // The stream add-ons asked whether they have it (how many streams each), all at once; the page again once they've said.
     if (found != null || sources.isEmpty()) return
     netIo.execute {
-        val counts = parallel(sources, 4, 22) { (base, name) -> base to runCatching { Stremio.titleStreams(base, name, t.type, e.id).size }.getOrDefault(0) }.toMap()
+        val counts = parallel(sources, 4, 30) { (base, name) -> base to runCatching { sourceStreams(prefs, filesDir, base, name, t.type, e.id).size }.getOrDefault(0) }.toMap()
         ui.post { if (pageShowing(title)) showVodEpisode(meta, ref, e, services.known, counts, focusedRow() ?: targetFocus) }
     }
 }
@@ -540,6 +540,10 @@ internal fun MainActivity.soleAddon(sources: List<Pair<String, String>>): Stremi
 internal fun MainActivity.watchIcon(addon: Stremio.Addon?): android.graphics.drawable.Drawable =
     addon?.let { addonIcon(it) } ?: getDrawable(R.drawable.ic_play)!!.mutate()
 
+/** A Watch on row's icon for the stream source [base]: a Nuvio plugin's mark, else its add-on's (see watchIcon). */
+internal fun MainActivity.sourceIcon(base: String, name: String): android.graphics.drawable.Drawable =
+    if (base.startsWith(PLUGIN)) getDrawable(R.drawable.ic_stream)!!.mutate() else watchIcon(soleAddon(listOf(base to name)))
+
 /** [addon]'s icon: its tile's (when it has a tile of its own), else its logo once on disk (see updateAddon); else none. */
 internal fun MainActivity.addonIcon(addon: Stremio.Addon): android.graphics.drawable.Drawable? {
     apps.firstOrNull { it.pkg == STREMIO + addon.id }?.icon?.constantState?.newDrawable(resources)?.mutate()?.let { return it }
@@ -569,7 +573,7 @@ internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, epi
     if (sources.isEmpty()) return Toast.makeText(this, getString(R.string.title_no_streams), Toast.LENGTH_LONG).show()
     val adultUrls = adultAddonUrls()
     val adultAddons = adultUrls.mapNotNull { Stremio.saved(filesDir, it)?.addon }
-    val adultSourcesList = adultUrls + adultAddons.map { it.base } + adultAddons.map { it.name }
+    val adultSourcesList = adultUrls + adultAddons.map { it.base } + adultAddons.map { it.name } + adultPluginSources(prefs, filesDir)
     val isCatalogAdult = isAdultSource(ref.source)
     val isOnlyAdult = only != null && isAdultSource(only)
     fun strings(f: (Triple<String, String, Stremio.Episode?>) -> String?) = ArrayList(items.map { f(it).orEmpty() })

@@ -13,6 +13,17 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.0.0-beta.1
+
+- New: **Nuvio plugins**. Settings has **Add-ons and plugins**, with **Stremio add-ons** and **Nuvio plugins**.
+- Select **Add a repository** to add a Nuvio plugin repository, from your phone or with the remote. Each plugin has its own switch.
+- The plugins find streams for films, series and TV channels. Their streams show as **Watch on** rows on the title page, after the add-ons, and the player uses them too.
+- Mark a repository 18+ to show its plugins only when 18+ content is unlocked.
+- Zephyr TV reads each repository again once a day, for new plugins and new versions.
+- Plugins that use cheerio or crypto-js work too: Zephyr TV has them built in, as Nuvio does.
+- You can switch off an add-on or a plugin repository and switch it on again. When it is off, it keeps its settings, but its content does not show.
+- Select a plugin repository to move it up or down. Its **Watch on** rows come in this order, as the add-ons' do.
+
 ## 1.5.2
 
 - In **Search**, **Say it** comes before **Filters**.

@@ -37,6 +37,7 @@ import androidx.media3.common.VideoSize
 import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -141,6 +142,13 @@ class PlayerActivity : Activity() {
     /** The audio and subtitle languages picked, for every channel: a file only this process writes (see pick). */
     private val choices by lazy { getSharedPreferences(CHOICES_FILE, MODE_PRIVATE) }
 
+    /**
+     * The home screen's preferences, read again whenever the file changed (it's written in the other process): the
+     * Nuvio plugins on, and whether 18+ shows, as they are now.
+     */
+    @Suppress("DEPRECATION")
+    private val prefs get() = getSharedPreferences(K.FILE, MODE_MULTI_PROCESS)
+
     /** One audio or subtitle track of the stream playing, as the panel lists it. */
     private class Track(val group: Tracks.Group, val index: Int, val name: String, val selected: Boolean)
 
@@ -175,6 +183,7 @@ class PlayerActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Nuvio.useAssets(applicationContext) // the modules Nuvio's plugins require(), in this process too
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         vod = intent.getStringExtra(MODE) == MODE_VOD
         base = intent.getStringExtra(BASE) ?: if (vod) "" else return finish()
@@ -1142,8 +1151,12 @@ class PlayerActivity : Activity() {
     private fun streamsOf(c: Channel): List<Stremio.Stream> {
         fetched[c.id]?.takeIf { System.currentTimeMillis() - it.first < FRESH_MS }?.let { return it.second }
         if (vod) return titleStreams(c)
-        return runCatching { Stremio.streams(base, c.type, c.id) }.onFailure { warn("streams failed: $it") }.getOrDefault(emptyList())
-            .also { if (it.isNotEmpty()) fetched[c.id] = System.currentTimeMillis() to it }
+        // The channel's add-on, then the Nuvio plugins that can play it (those for TV channels, by its id).
+        val own = runCatching { Stremio.streams(base, c.type, c.id) }.onFailure { warn("streams failed: $it") }.getOrDefault(emptyList())
+        val plugins = pluginSources(prefs, filesDir, c.type, c.id, adultShows(prefs)).flatMap { (b, name) ->
+            runCatching { sourceStreams(prefs, filesDir, b, name, c.type, c.id) }.getOrDefault(emptyList())
+        }
+        return (own + plugins).also { if (it.isNotEmpty()) fetched[c.id] = System.currentTimeMillis() to it }
     }
 
     /**
@@ -1153,7 +1166,7 @@ class PlayerActivity : Activity() {
      */
     private fun titleStreams(c: Channel): List<Stremio.Stream> {
         val asked = sources.map { (b, name) ->
-            pool.submit(Callable { runCatching { Stremio.titleStreams(b, name, c.type, c.id) }.onFailure { warn("streams failed: ${b.substringAfter("://").substringBefore('/')} ($it)") }.getOrDefault(emptyList()) })
+            pool.submit(Callable { runCatching { sourceStreams(prefs, filesDir, b, name, c.type, c.id) }.onFailure { warn("streams failed: ${b.substringAfter("://").substringBefore('/')} ($it)") }.getOrDefault(emptyList()) })
         }
         val start = System.currentTimeMillis()
         val got = arrayOfNulls<List<Stremio.Stream>>(asked.size)
@@ -1213,7 +1226,8 @@ class PlayerActivity : Activity() {
         // optical, Bluetooth): taking the audio focus, so the TV routes it there and other sound stops; pausing when
         // headphones or a Bluetooth speaker go away. The sink follows the output's changes and what it can decode
         // (Dolby, DTS passed through to a receiver that can).
-        val p = ExoPlayer.Builder(this).setMediaSourceFactory(DefaultMediaSourceFactory(http))
+        // The web through [http]; a playlist written in its address (data:, from a Nuvio plugin) read as it is.
+        val p = ExoPlayer.Builder(this).setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this, http)))
             .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
             .setHandleAudioBecomingNoisy(true)
             .build()

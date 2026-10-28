@@ -455,7 +455,8 @@ internal object Stremio {
     internal fun streams(answer: JSONObject, vod: Boolean = false): List<Stream> {
         val list = answer.optJSONArray("streams") ?: return emptyList()
         return (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { s ->
-            val url = text(s, "url")?.takeIf { it.startsWith("http://") || it.startsWith("https://") } ?: return@mapNotNull null
+            // A web address, or the playlist itself written in it (data:, as some Nuvio plugins hand an HLS one).
+            val url = text(s, "url")?.takeIf { it.startsWith("http://") || it.startsWith("https://") || it.startsWith("data:") } ?: return@mapNotNull null
             val hints = s.optJSONObject("behaviorHints")
             val request = hints?.optJSONObject("proxyHeaders")?.optJSONObject("request")
             val headers = request?.keys()?.asSequence()?.associateWith { request.optString(it) }?.filterValues { it.isNotEmpty() }.orEmpty()
@@ -476,6 +477,8 @@ internal object Stremio {
      * answer's type, the final address's extension, and the first bytes. Network: off the UI thread.
      */
     fun probe(url: String, headers: Map<String, String>): Probe {
+        // The playlist written in its address: nothing to ask, its type says what it is.
+        if (url.startsWith("data:")) return Probe(true, format(url.substringAfter("data:").substringBefore(';').substringBefore(','), "", ByteArray(0)))
         var at = url
         for (hop in 0..5) {
             val c = Http.connect(at, headers).apply { instanceFollowRedirects = false }

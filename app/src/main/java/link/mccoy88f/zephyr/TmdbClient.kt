@@ -471,7 +471,7 @@ object TmdbClient {
      * Accepts either kind of TMDB credential: a v4 read access token (a long JWT, sent as a Bearer header,
      * so it stays out of the URL) or a classic 32-character v3 API key (which TMDB only takes as a parameter).
      */
-    private fun get(apiKey: String, path: String): String {
+    internal fun get(apiKey: String, path: String): String {
         val bearer = apiKey.length > 40
         val url = if (bearer) BASE_URL + path
             else BASE_URL + path + (if ('?' in path) "&" else "?") + "api_key=" + Uri.encode(apiKey)

@@ -1,0 +1,640 @@
+package link.mccoy88f.zephyr
+
+import com.dokar.quickjs.binding.asyncFunction
+import com.dokar.quickjs.binding.function
+import com.dokar.quickjs.quickJs
+import java.io.File
+import java.net.URL
+import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import org.json.JSONArray
+import org.json.JSONObject
+
+/**
+ * Nuvio's plugins: a repository is a manifest.json listing its scrapers, each a JavaScript file with one function,
+ * getStreams(tmdbId, mediaType, season, episode), that finds a film's or episode's streams by itself (asking the
+ * sites with fetch) and hands them back as Stremio does. Unlike an add-on there's no server to ask: the script runs
+ * here, in QuickJS, a context of its own each time, with only the network (no files, no settings), a memory limit and
+ * a time limit. Its fetch is ours (Http), so cookies and redirects are seen as a browser wouldn't let a page see them.
+ */
+internal object Nuvio {
+    /** One of a repository's plugins, as its manifest describes it. [types]: "movie", "series", "tv" (Nuvio's word for series, a TV channel's too), "anime". */
+    internal class Scraper(val id: String, val name: String, val description: String, val version: String, val file: String,
+                           val types: List<String>, val prefixes: List<String>?, val enabled: Boolean, val languages: List<String>)
+
+    /** A repository: its manifest's address, name, version and author, and its plugins. */
+    internal class Repo(val url: String, val name: String, val version: String, val author: String, val description: String,
+                        val scrapers: List<Scraper>)
+
+    private const val RUN_MS = 25_000L // a plugin finding its streams, at most
+    private const val FETCH_MS = 15_000 // one of its requests, at most
+    private const val MEMORY = 64L * 1024 * 1024
+    private const val BROWSER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+
+    @Volatile private var repos: Map<String, Repo> = emptyMap()
+
+    /**
+     * The modules Nuvio gives its plugins with require(), by name, and the global each bundle defines: HTML read as
+     * jQuery does (cheerio) and ciphers (crypto-js), bundled from npm into assets/nuvio. [modules] reads one's source:
+     * the app's assets (set by the activities), files in the unit tests.
+     */
+    private val MODULES = mapOf("cheerio-without-node-native" to ("cheerio.js" to "__mod_cheerio"), "cheerio" to ("cheerio.js" to "__mod_cheerio"),
+        "crypto-js" to ("crypto-js.js" to "__mod_crypto"))
+    @Volatile var modules: (String) -> String? = { null }
+
+    /** Where a plugin's console goes: nowhere, but in the tests. */
+    @Volatile var console: ((String) -> Unit)? = null
+
+    /** The modules from the app's assets (assets/nuvio), each read once. */
+    fun useAssets(context: android.content.Context) {
+        val read = ConcurrentHashMap<String, String>()
+        modules = { file -> read[file] ?: runCatching { context.assets.open("nuvio/$file").use { it.readBytes().decodeToString() } }.getOrNull()?.also { read[file] = it } }
+    }
+
+    /** Nuvio's plugins are given a title's TMDB id: IMDb's ("tt…") turned into it once, then kept. */
+    private val tmdbIds = ConcurrentHashMap<String, String>()
+
+    /**
+     * The TMDB id of the film or series with IMDb's [imdb]: Cinemeta's page has it, without a key; else TMDB's own
+     * answer, with [key]. Null when neither knows. Network: off the UI thread.
+     */
+    fun tmdbIdOf(type: String, imdb: String, key: String?): String? {
+        tmdbIds[imdb]?.let { return it }
+        val kind = if (type == "movie") "movie" else "series"
+        val found = runCatching { Http.json("https://v3-cinemeta.strem.io/meta/$kind/$imdb.json").optJSONObject("meta")?.optLong("moviedb_id") }
+            .getOrNull()?.takeIf { it > 0 }?.toString()
+            ?: key?.let { k ->
+                runCatching {
+                    val answer = JSONObject(TmdbClient.get(k, "/find/$imdb?external_source=imdb_id"))
+                    val list = answer.optJSONArray(if (type == "movie") "movie_results" else "tv_results")
+                    list?.optJSONObject(0)?.optLong("id")?.takeIf { it > 0 }?.toString()
+                }.getOrNull()
+            }
+        return found?.also { tmdbIds[imdb] = it }
+    }
+
+    /** A repository's manifest address from what was typed or sent: an address ending in .json, else its folder's manifest.json. */
+    fun manifestUrl(input: String): String? {
+        val url = input.trim().removeSuffix("/")
+        if (!url.startsWith("https://") && !url.startsWith("http://")) return null
+        if (url.substringAfter("://").substringBefore('/').isEmpty()) return null
+        return if (url.substringBefore('?').endsWith(".json")) url else "$url/manifest.json"
+    }
+
+    private fun host(url: String) = url.substringAfter("://").substringBefore('/').substringBefore('?')
+
+    private fun key(url: String) = MessageDigest.getInstance("SHA-1").digest(url.toByteArray()).joinToString("") { "%02x".format(it) }.take(16)
+    private fun folder(dir: File, url: String) = File(dir, "nuvio/${key(url)}")
+    private fun scriptFile(dir: File, url: String, s: Scraper) = File(folder(dir, url), s.id.replace(Regex("[^A-Za-z0-9_.-]"), "_") + ".js")
+
+    internal fun repo(url: String, m: JSONObject): Repo {
+        fun strings(a: JSONArray?) = a?.let { (0 until it.length()).map { i -> it.optString(i) }.filter { s -> s.isNotBlank() } }
+        val list = m.optJSONArray("scrapers") ?: JSONArray()
+        val scrapers = (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { s ->
+            val id = s.optString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val file = s.optString("filename").takeIf { it.isNotBlank() && !it.contains("..") } ?: return@mapNotNull null
+            Scraper(id, s.optString("name").ifBlank { id }, s.optString("description"), s.optString("version"), file,
+                strings(s.optJSONArray("supportedTypes")).orEmpty().map { it.lowercase() },
+                strings(s.optJSONArray("idPrefixes"))?.takeIf { it.isNotEmpty() }, s.optBoolean("enabled", true),
+                strings(s.optJSONArray("contentLanguage")).orEmpty())
+        }
+        return Repo(url, m.optString("name").ifBlank { host(url) }, m.optString("version"), m.optString("author"),
+            m.optString("description"), scrapers)
+    }
+
+    /** The repository at [url] as last read, or null. Reads the disk the first time. */
+    fun saved(dir: File, url: String): Repo? {
+        repos[url]?.let { return it }
+        val f = File(folder(dir, url), "manifest.json")
+        val r = runCatching { repo(url, JSONObject(f.readText())) }.getOrNull() ?: return null
+        repos = repos + (url to r)
+        return r
+    }
+
+    /**
+     * Reads the repository at [url] again: its manifest, and each plugin's script whose version changed or that's
+     * missing. The repository, or null when its manifest couldn't be read. Network: off the UI thread.
+     */
+    fun update(dir: File, url: String): Repo? {
+        val m = runCatching { Http.json(url) }.onFailure { warn("Nuvio repository failed: ${host(url)} ($it)") }.getOrNull() ?: return null
+        val r = repo(url, m)
+        val old = saved(dir, url)?.scrapers?.associateBy { it.id }.orEmpty()
+        val base = url.substringBefore('?').substringBeforeLast('/')
+        folder(dir, url).mkdirs()
+        for (s in r.scrapers) {
+            val f = scriptFile(dir, url, s)
+            if (f.exists() && old[s.id]?.version == s.version) continue
+            runCatching {
+                val code = Http.open("$base/${s.file.removePrefix("/")}").use { it.readCapped(Http.MAX_TEXT) }
+                val part = File(f.path + ".part")
+                part.writeBytes(code)
+                part.renameTo(f)
+            }.onFailure { warn("Nuvio plugin failed: ${s.name} ($it)") }
+        }
+        File(folder(dir, url), "manifest.json").writeText(m.toString())
+        repos = repos + (url to r)
+        return r
+    }
+
+    /** How long ago the repository at [url] was last read (forever when never). */
+    fun age(dir: File, url: String) = File(folder(dir, url), "manifest.json").let { if (it.exists()) System.currentTimeMillis() - it.lastModified() else Long.MAX_VALUE }
+
+    /** Forgets a repository the user removed, and its scripts. */
+    fun forget(dir: File, url: String) {
+        repos = repos - url
+        folder(dir, url).deleteRecursively()
+    }
+
+    /**
+     * Whether [s] can find streams for an item of Stremio's [type] ("movie", "series", "tv" for a TV channel, or an
+     * add-on's own) with this [id]: by its types (Nuvio says "tv" for series) and its id prefixes.
+     */
+    fun provides(s: Scraper, type: String, id: String): Boolean {
+        if (type == "tv") {
+            // A TV channel: Nuvio's "tv" is series, so only a plugin that says channels ("live", "channel"), or "tv"
+            // with ids of its own (not films' and series'), and one of them.
+            val ownIds = s.prefixes?.filter { p -> TITLE_IDS.none { p.startsWith(it) } }.orEmpty()
+            val live = s.types.any { it == "live" || it == "channel" } || ("tv" in s.types && ownIds.isNotEmpty())
+            return live && (s.prefixes == null || s.prefixes.any { id.startsWith(it) })
+        }
+        val kinds = when (type) {
+            "movie" -> setOf("movie")
+            "series" -> setOf("series", "tv", "anime")
+            else -> setOf(type.lowercase())
+        }
+        if (s.types.none { it in kinds }) return false
+        // Without prefixes, the ids Nuvio gives every plugin: TMDB's, which IMDb's are turned into (see streams).
+        return (s.prefixes ?: listOf("tt", "tmdb:")).any { id.startsWith(it) }
+    }
+
+    /** The ids films and series go by (IMDb's, TMDB's, the anime databases'), as plugins' prefixes write them. */
+    private val TITLE_IDS = listOf("tt", "tmdb", "kitsu", "mal", "anilist", "anidb", "imdb", "tvdb")
+
+    /**
+     * [s]'s streams for the film or episode [id] of Stremio's [type] (an episode's id ends ":season:episode"), named
+     * [name] in the lists. [tmdbKey]: the user's, for the plugins that ask TMDB (they have their own otherwise).
+     * Empty when it finds none, fails or runs out of time. Network: off the UI thread.
+     */
+    fun streams(dir: File, url: String, s: Scraper, name: String, type: String, id: String, tmdbKey: String?): List<Stremio.Stream> {
+        val script = runCatching { scriptFile(dir, url, s).readText() }.getOrNull() ?: return emptyList()
+        val parts = id.split(':')
+        val episodic = type == "series" && parts.size >= 3 && parts.takeLast(2).all { p -> p.isNotEmpty() && p.all(Char::isDigit) }
+        val own = if (episodic) parts.dropLast(2).joinToString(":") else id
+        // TMDB's id, as Nuvio gives it (most plugins know no other); IMDb's when TMDB's can't be had.
+        val base = if (own.startsWith("tt")) tmdbIdOf(type, own, tmdbKey) ?: own else own.removePrefix("tmdb:")
+        val season = if (episodic) parts[parts.size - 2] else "null"
+        val episode = if (episodic) parts.last() else "null"
+        val media = if (type == "movie") "movie" else "tv"
+        val call = "(typeof getStreams === \"function\" ? getStreams : module.exports.getStreams)(" +
+            "${JSONObject.quote(base)}, ${JSONObject.quote(media)}, $season, $episode)"
+        val globals = "globalThis.TMDB_API_KEY = ${tmdbKey?.let { JSONObject.quote(it) } ?: "undefined"}; globalThis.SCRAPER_SETTINGS = {};"
+        val found = runCatching { run(script, call, globals) }.onFailure { warn("Nuvio plugin failed: ${s.name} ($it)") }.getOrNull()
+            ?: return emptyList()
+        return Stremio.streams(asStremio(found), vod = true).map { Stremio.Stream(it.url, it.title, it.headers, it.group, name) }
+    }
+
+    /** A plugin's streams as a Stremio add-on's answer: its headers where Stremio keeps them, its title as the description. */
+    internal fun asStremio(found: JSONArray): JSONObject {
+        val out = JSONArray()
+        for (i in 0 until found.length()) {
+            val s = found.optJSONObject(i) ?: continue
+            val hints = s.optJSONObject("behaviorHints") ?: JSONObject()
+            val request = JSONObject()
+            listOfNotNull(hints.optJSONObject("headers"), hints.optJSONObject("proxyHeaders")?.optJSONObject("request"), s.optJSONObject("headers"))
+                .forEach { h -> h.keys().forEach { k -> request.put(k, h.optString(k)) } }
+            hints.put("proxyHeaders", JSONObject().put("request", request))
+            val name = listOfNotNull(s.optString("name").takeIf { it.isNotBlank() }, s.optString("quality").takeIf { it.isNotBlank() })
+                .joinToString(" ").replace(Regex("[​-‍⁠-⁤]"), "") // zero-width marks some plugins sort by
+            out.put(JSONObject().put("url", s.optString("url")).put("name", name)
+                .put("description", s.optString("title").ifBlank { s.optString("description") }).put("behaviorHints", hints))
+        }
+        return JSONObject().put("streams", out)
+    }
+
+    /** What a plugin's fetch got: the final address, the answer's status and headers, and its body. */
+    internal class Fetched(val status: Int, val statusText: String, val url: String, val headers: List<Pair<String, String>>, val body: ByteArray,
+                           val charset: String?) {
+        fun text() = String(body, runCatching { charset(charset ?: "UTF-8") }.getOrDefault(Charsets.UTF_8))
+    }
+
+    /**
+     * A plugin's request ([req]: url, method, headers, body or body64, redirect), as fetch would make it: redirects
+     * followed (http to https too) unless "manual", any status answered rather than thrown.
+     */
+    internal fun httpFetch(req: JSONObject): Fetched {
+        var at = req.getString("url")
+        var method = req.optString("method", "GET").uppercase()
+        val headers = LinkedHashMap<String, String>()
+        headers["User-Agent"] = BROWSER
+        req.optJSONObject("headers")?.let { h -> h.keys().forEach { k -> headers[k] = h.optString(k) } }
+        headers.keys.filter { it.equals("accept-encoding", true) || it.equals("content-length", true) || it.equals("host", true) }
+            .forEach { headers.remove(it) } // Android decompresses gzip itself only when it asked for it
+        var body: ByteArray? = when {
+            !req.isNull("body64") -> java.util.Base64.getDecoder().decode(req.getString("body64"))
+            !req.isNull("body") -> req.getString("body").toByteArray()
+            else -> null
+        }
+        val manual = req.optString("redirect") == "manual"
+        for (hop in 0..8) {
+            val c = Http.connect(at, headers, FETCH_MS).apply {
+                instanceFollowRedirects = false
+                requestMethod = method
+            }
+            try {
+                if (body != null && method != "GET" && method != "HEAD") {
+                    c.doOutput = true
+                    c.outputStream.use { it.write(body) }
+                }
+                val code = c.responseCode
+                val location = c.getHeaderField("Location")
+                if (!manual && code in 300..399 && location != null) {
+                    at = URL(URL(at), location).toString()
+                    if (code == 303 || ((code == 301 || code == 302) && method == "POST")) { method = "GET"; body = null }
+                    continue
+                }
+                val hs = c.headerFields.filterKeys { it != null }.flatMap { (k, vs) -> vs.map { k.lowercase() to it } }
+                val bytes = (if (code >= 400) c.errorStream else c.inputStream)?.use { it.readCapped(Http.MAX_TEXT) } ?: ByteArray(0)
+                val charset = c.contentType?.substringAfter("charset=", "")?.substringBefore(';')?.trim()?.trim('"')?.takeIf { it.isNotEmpty() }
+                return Fetched(code, c.responseMessage.orEmpty(), at, hs, bytes, charset)
+            } finally {
+                c.disconnect()
+            }
+        }
+        throw java.io.IOException("too many redirects")
+    }
+
+    /**
+     * Runs [script] in a QuickJS context of its own, with [globals] and our fetch ([fetch], Http by default), then
+     * [call], a promise of the streams; their list, or null when it ran out of time. Throws when the script fails.
+     */
+    internal fun run(script: String, call: String, globals: String = "", timeoutMs: Long = RUN_MS,
+                     fetch: (JSONObject) -> Fetched = ::httpFetch): JSONArray? = runBlocking {
+        withTimeoutOrNull(timeoutMs) {
+            withContext(Dispatchers.IO) {
+                quickJs {
+                    memoryLimit = MEMORY
+                    val bodies = ConcurrentHashMap<Int, Fetched>()
+                    val next = AtomicInteger()
+                    function("__log") { args: Array<Any?> -> console?.invoke(args.firstOrNull()?.toString().orEmpty()); null }
+                    asyncFunction("__sleep") { args -> delay((args.getOrNull(0) as? Number)?.toLong() ?: 0L); null }
+                    asyncFunction("__fetch") { args ->
+                        try {
+                            val got = runInterruptible(Dispatchers.IO) { fetch(JSONObject(args[0] as String)) }
+                            val n = next.incrementAndGet()
+                            bodies[n] = got
+                            JSONObject().put("id", n).put("status", got.status).put("statusText", got.statusText).put("url", got.url)
+                                .put("headers", JSONArray(got.headers.map { (k, v) -> JSONArray().put(k).put(v) })).toString().let(::ascii)
+                        } catch (e: Exception) {
+                            if (e is kotlinx.coroutines.CancellationException) throw e
+                            ascii(JSONObject().put("error", e.toString()).toString())
+                        }
+                    }
+                    function("__text") { args -> ascii(JSONObject.quote(bodies[(args[0] as Number).toInt()]?.text() ?: "")) }
+                    function("__body64") { args -> bodies[(args[0] as Number).toInt()]?.let { java.util.Base64.getEncoder().encodeToString(it.body) } ?: "" }
+                    // Each ends in undefined: what a script leaves is turned into Kotlin, a module (circular) can't be.
+                    evaluate<Any?>(PRELUDE + globals + END, "prelude.js", false)
+                    // The modules it require()s, those we have: each bundle defines its global, then is registered.
+                    for (name in Regex("""require\(\s*['"]([^'"]+)['"]\s*\)""").findAll(script).map { it.groupValues[1] }.toSet()) {
+                        val (file, global) = MODULES[name] ?: continue
+                        val code = modules(file) ?: continue
+                        evaluate<Any?>(code + END, file, false)
+                        evaluate<Any?>("__modules[${JSONObject.quote(name)}] = $global;$END", "require.js", false)
+                    }
+                    evaluate<Any?>(script + END, "plugin.js", false)
+                    val out = evaluate<String?>("__ascii(JSON.stringify((await $call) || []))", "call.js", false)
+                    out?.let { JSONArray(it) }
+                }
+            }
+        }
+    }
+
+    /**
+     * [s] with every character past ASCII written \uXXXX: strings cross between QuickJS and Kotlin as JSON in ASCII,
+     * since the native bridge mangles what isn't in Unicode's first plane (a plugin's 💎).
+     */
+    internal fun ascii(s: String): String {
+        if (s.all { it.code < 128 }) return s
+        val out = StringBuilder(s.length + 16)
+        for (c in s) if (c.code < 128) out.append(c) else out.append("\\u").append("%04x".format(c.code))
+        return out.toString()
+    }
+
+    /** Ends what's evaluated with nothing to hand back (see run). */
+    private const val END = "\n;undefined;\n"
+
+    /** What a plugin expects of a browser and QuickJS hasn't: fetch, timers, console, base64, a UTF-8 TextDecoder. */
+    private val PRELUDE = """
+        (function () {
+          var g = globalThis;
+          g.__ascii = function (s) {
+            return String(s).replace(/[\u0080-\uffff]/g, function (c) { return "\\u" + ("000" + c.charCodeAt(0).toString(16)).slice(-4); });
+          };
+          var say = function () {
+            var line = Array.prototype.map.call(arguments, function (a) {
+              if (typeof a === "string") return a;
+              try { return JSON.stringify(a); } catch (e) { return String(a); }
+            }).join(" ");
+            __log(g.__ascii(line.length > 2000 ? line.slice(0, 2000) : line));
+          };
+          g.console = { log: say, info: say, warn: say, error: say, debug: say };
+          var timers = 0, cleared = {};
+          g.setTimeout = function (fn, ms) {
+            var args = Array.prototype.slice.call(arguments, 2), id = ++timers;
+            __sleep(Number(ms) || 0).then(function () { if (!cleared[id] && typeof fn === "function") fn.apply(null, args); });
+            return id;
+          };
+          g.clearTimeout = function (id) { cleared[id] = true; };
+          var B = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+          function toB64(bytes) {
+            var out = "", i;
+            for (i = 0; i + 2 < bytes.length; i += 3) {
+              var n = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+              out += B[n >> 18 & 63] + B[n >> 12 & 63] + B[n >> 6 & 63] + B[n & 63];
+            }
+            if (i < bytes.length) {
+              var m = bytes[i] << 16 | (i + 1 < bytes.length ? bytes[i + 1] << 8 : 0);
+              out += B[m >> 18 & 63] + B[m >> 12 & 63] + (i + 1 < bytes.length ? B[m >> 6 & 63] : "=") + "=";
+            }
+            return out;
+          }
+          function fromB64(s) {
+            s = String(s).replace(/[^A-Za-z0-9+/]/g, "");
+            var out = new Uint8Array(Math.floor(s.length * 3 / 4)), o = 0, buf = 0, bits = 0;
+            for (var i = 0; i < s.length; i++) {
+              buf = (buf << 6) | B.indexOf(s[i]); bits += 6;
+              if (bits >= 8) { bits -= 8; out[o++] = (buf >> bits) & 255; }
+            }
+            return out.subarray(0, o);
+          }
+          if (typeof g.btoa !== "function") g.btoa = function (s) {
+            s = String(s); var b = new Uint8Array(s.length);
+            for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i) & 255;
+            return toB64(b);
+          };
+          if (typeof g.atob !== "function") g.atob = function (s) {
+            var b = fromB64(s), out = "";
+            for (var i = 0; i < b.length; i++) out += String.fromCharCode(b[i]);
+            return out;
+          };
+          function utf8(bytes) {
+            var out = "", i = 0;
+            while (i < bytes.length) {
+              var c = bytes[i++];
+              if (c < 128) out += String.fromCharCode(c);
+              else if (c < 224) out += String.fromCharCode(((c & 31) << 6) | (bytes[i++] & 63));
+              else if (c < 240) out += String.fromCharCode(((c & 15) << 12) | ((bytes[i++] & 63) << 6) | (bytes[i++] & 63));
+              else {
+                var p = (((c & 7) << 18) | ((bytes[i++] & 63) << 12) | ((bytes[i++] & 63) << 6) | (bytes[i++] & 63)) - 65536;
+                out += String.fromCharCode(55296 + (p >> 10), 56320 + (p & 1023));
+              }
+            }
+            return out;
+          }
+          g.module = { exports: {} };
+          g.exports = g.module.exports;
+          g.__modules = {};
+          g.require = function (n) {
+            if (g.__modules[n]) return g.__modules[n];
+            throw new Error("Cannot find module '" + n + "'");
+          };
+          function dec(s) { try { return decodeURIComponent(String(s).replace(/\+/g, " ")); } catch (e) { return String(s); } }
+          function enc(s) {
+            return encodeURIComponent(String(s)).replace(/%20/g, "+").replace(/[!'()~]/g, function (c) { return "%" + c.charCodeAt(0).toString(16).toUpperCase(); });
+          }
+          function SearchParams(init) {
+            this._l = []; this._u = null;
+            var self = this;
+            if (init == null) return;
+            if (typeof init === "string") String(init).replace(/^\?/, "").split("&").forEach(function (p) {
+              if (!p) return;
+              var i = p.indexOf("=");
+              self._l.push(i < 0 ? [dec(p), ""] : [dec(p.slice(0, i)), dec(p.slice(i + 1))]);
+            });
+            else if (Array.isArray(init)) init.forEach(function (p) { self._l.push([String(p[0]), String(p[1])]); });
+            else if (init instanceof SearchParams) init._l.forEach(function (p) { self._l.push([p[0], p[1]]); });
+            else for (var k in init) self._l.push([k, String(init[k])]);
+          }
+          SearchParams.prototype._changed = function () { if (this._u) this._u._search = this._l.length ? "?" + this.toString() : ""; };
+          SearchParams.prototype.append = function (k, v) { this._l.push([String(k), String(v)]); this._changed(); };
+          SearchParams.prototype["delete"] = function (k) { this._l = this._l.filter(function (p) { return p[0] !== String(k); }); this._changed(); };
+          SearchParams.prototype.get = function (k) { for (var i = 0; i < this._l.length; i++) if (this._l[i][0] === String(k)) return this._l[i][1]; return null; };
+          SearchParams.prototype.getAll = function (k) { return this._l.filter(function (p) { return p[0] === String(k); }).map(function (p) { return p[1]; }); };
+          SearchParams.prototype.has = function (k) { return this.get(k) !== null; };
+          SearchParams.prototype.set = function (k, v) {
+            k = String(k); v = String(v);
+            var i = -1;
+            this._l = this._l.filter(function (p, n) { if (p[0] !== k) return true; if (i < 0) { i = n; return true; } return false; });
+            if (i < 0) this._l.push([k, v]); else this._l[i][1] = v;
+            this._changed();
+          };
+          SearchParams.prototype.sort = function () { this._l.sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; }); this._changed(); };
+          SearchParams.prototype.toString = function () { return this._l.map(function (p) { return enc(p[0]) + "=" + enc(p[1]); }).join("&"); };
+          SearchParams.prototype.forEach = function (fn) { var self = this; this._l.forEach(function (p) { fn(p[1], p[0], self); }); };
+          SearchParams.prototype.entries = function () { return this._l.map(function (p) { return [p[0], p[1]]; })[Symbol.iterator](); };
+          SearchParams.prototype.keys = function () { return this._l.map(function (p) { return p[0]; })[Symbol.iterator](); };
+          SearchParams.prototype.values = function () { return this._l.map(function (p) { return p[1]; })[Symbol.iterator](); };
+          SearchParams.prototype[Symbol.iterator] = SearchParams.prototype.entries;
+          Object.defineProperty(SearchParams.prototype, "size", { get: function () { return this._l.length; } });
+          if (typeof g.URLSearchParams !== "function") g.URLSearchParams = SearchParams;
+          var SCHEME = /^([a-zA-Z][a-zA-Z0-9+.-]*:)(.*)$/;
+          var PORTS = { "http:": "80", "https:": "443", "ws:": "80", "wss:": "443", "ftp:": "21" };
+          function dots(path) {
+            var out = [];
+            path.split("/").forEach(function (s, i, all) {
+              if (s === "..") { if (out.length > 1) out.pop(); if (i === all.length - 1) out.push(""); }
+              else if (s === ".") { if (i === all.length - 1) out.push(""); }
+              else out.push(s);
+            });
+            var p = out.join("/");
+            return p.charAt(0) === "/" ? p : "/" + p;
+          }
+          function Url(url, base) {
+            url = String(url).replace(/^[\s\u0000-\u001f]+|[\s\u0000-\u001f]+$/g, "");
+            var m = SCHEME.exec(url);
+            if (!m) {
+              if (base === undefined) throw new TypeError("Invalid URL: " + url);
+              var b = base instanceof Url ? base : new Url(base);
+              url = resolve(b, url);
+              m = SCHEME.exec(url);
+            }
+            this._parse(m[1].toLowerCase(), m[2]);
+          }
+          function resolve(b, rel) {
+            if (rel.slice(0, 2) === "//") return b.protocol + rel;
+            if (rel.charAt(0) === "/") return b.protocol + "//" + b.host + rel;
+            if (rel === "") return b.href.split("#")[0];
+            if (rel.charAt(0) === "?") return b.protocol + "//" + b.host + b.pathname + rel;
+            if (rel.charAt(0) === "#") return b.href.split("#")[0] + rel;
+            return b.protocol + "//" + b.host + b.pathname.slice(0, b.pathname.lastIndexOf("/") + 1) + rel;
+          }
+          Url.prototype._parse = function (protocol, rest) {
+            this.protocol = protocol;
+            var h = rest.indexOf("#");
+            this._hash = h >= 0 && h < rest.length - 1 ? rest.slice(h) : "";
+            if (h >= 0) rest = rest.slice(0, h);
+            var q = rest.indexOf("?");
+            this._search = q >= 0 && q < rest.length - 1 ? rest.slice(q) : "";
+            if (q >= 0) rest = rest.slice(0, q);
+            this.username = ""; this.password = ""; this.hostname = ""; this.port = "";
+            if (rest.slice(0, 2) === "//") {
+              rest = rest.slice(2);
+              var s = rest.search(/[\/\\]/), auth = s < 0 ? rest : rest.slice(0, s);
+              rest = s < 0 ? "" : rest.slice(s).replace(/\\/g, "/");
+              var at = auth.lastIndexOf("@");
+              if (at >= 0) {
+                var user = auth.slice(0, at), c = user.indexOf(":");
+                this.username = c < 0 ? user : user.slice(0, c);
+                this.password = c < 0 ? "" : user.slice(c + 1);
+                auth = auth.slice(at + 1);
+              }
+              var pm = /^(\[[^\]]*\]|[^:]*)(?::(\d*))?$/.exec(auth) || [auth, auth, ""];
+              this.hostname = pm[1].toLowerCase();
+              this.port = pm[2] && pm[2] !== PORTS[protocol] ? pm[2] : "";
+              this.pathname = PORTS[protocol] ? dots(rest || "/") : rest;
+              this._special = true;
+            } else {
+              this.pathname = rest;
+              this._special = false;
+            }
+            this._sp = null;
+          };
+          function prop(name, get, set) { Object.defineProperty(Url.prototype, name, { get: get, set: set, configurable: true }); }
+          prop("host", function () { return this.hostname + (this.port ? ":" + this.port : ""); }, function (v) {
+            var p = String(v).split(":"); this.hostname = p[0].toLowerCase(); this.port = p[1] && p[1] !== PORTS[this.protocol] ? p[1] : "";
+          });
+          prop("origin", function () { return this._special ? this.protocol + "//" + this.host : "null"; });
+          prop("search", function () { return this._search; }, function (v) {
+            v = String(v); this._search = v === "" || v === "?" ? "" : (v.charAt(0) === "?" ? v : "?" + v);
+            if (this._sp) { this._sp._l = new SearchParams(this._search)._l; }
+          });
+          prop("hash", function () { return this._hash; }, function (v) { v = String(v); this._hash = v === "" || v === "#" ? "" : (v.charAt(0) === "#" ? v : "#" + v); });
+          prop("searchParams", function () {
+            if (!this._sp) { this._sp = new SearchParams(this._search); this._sp._u = this; }
+            return this._sp;
+          });
+          prop("href", function () {
+            var auth = this.username ? this.username + (this.password ? ":" + this.password : "") + "@" : "";
+            return this.protocol + (this._special ? "//" + auth + this.host : "") + this.pathname + this._search + this._hash;
+          }, function (v) { var m = SCHEME.exec(String(v)); if (!m) throw new TypeError("Invalid URL: " + v); this._parse(m[1].toLowerCase(), m[2]); });
+          Url.prototype.toString = function () { return this.href; };
+          Url.prototype.toJSON = function () { return this.href; };
+          if (typeof g.URL !== "function") g.URL = Url;
+          function utf8Bytes(str) {
+            var out = [];
+            for (var i = 0; i < str.length; i++) {
+              var c = str.charCodeAt(i);
+              if (c >= 55296 && c < 56320 && i + 1 < str.length) { c = 65536 + ((c - 55296) << 10) + (str.charCodeAt(++i) - 56320); }
+              if (c < 128) out.push(c);
+              else if (c < 2048) out.push(192 | c >> 6, 128 | c & 63);
+              else if (c < 65536) out.push(224 | c >> 12, 128 | c >> 6 & 63, 128 | c & 63);
+              else out.push(240 | c >> 18, 128 | c >> 12 & 63, 128 | c >> 6 & 63, 128 | c & 63);
+            }
+            return new Uint8Array(out);
+          }
+          if (typeof g.TextEncoder !== "function") g.TextEncoder = function () {};
+          if (!g.TextEncoder.prototype.encode) g.TextEncoder.prototype.encode = function (s) { return utf8Bytes(String(s == null ? "" : s)); };
+          // Node's Buffer, as far as plugins (and cheerio) use it: bytes from and to text in utf8, base64, hex, latin1.
+          if (typeof g.Buffer !== "function") {
+            var Buf = function (n) { var b = new Uint8Array(n); Object.setPrototypeOf(b, Buf.prototype); return b; };
+            Buf.prototype = Object.create(Uint8Array.prototype);
+            Buf.prototype.constructor = Buf;
+            var wrap = function (u8) { var b = new Uint8Array(u8); Object.setPrototypeOf(b, Buf.prototype); return b; };
+            Buf.isBuffer = function (x) { return x instanceof Buf; };
+            Buf.alloc = function (n) { return Buf(n); };
+            Buf.byteLength = function (s, e) { return Buf.from(s, e).length; };
+            Buf.from = function (x, e) {
+              if (x instanceof ArrayBuffer) return wrap(new Uint8Array(x));
+              if (ArrayBuffer.isView(x)) return wrap(new Uint8Array(x.buffer, x.byteOffset, x.byteLength));
+              if (Array.isArray(x)) return wrap(new Uint8Array(x));
+              x = String(x); e = String(e || "utf8").toLowerCase();
+              if (e === "base64" || e === "base64url") return wrap(fromB64(x.replace(/-/g, "+").replace(/_/g, "/")));
+              if (e === "hex") { var h = new Uint8Array(x.length >> 1); for (var i = 0; i < h.length; i++) h[i] = parseInt(x.substr(i * 2, 2), 16); return wrap(h); }
+              if (e === "latin1" || e === "binary" || e === "ascii") { var l = new Uint8Array(x.length); for (var j = 0; j < x.length; j++) l[j] = x.charCodeAt(j) & 255; return wrap(l); }
+              return wrap(utf8Bytes(x));
+            };
+            Buf.concat = function (list) {
+              var n = list.reduce(function (a, b) { return a + b.length; }, 0), out = Buf(n), at = 0;
+              list.forEach(function (b) { out.set(b, at); at += b.length; });
+              return out;
+            };
+            Buf.prototype.toString = function (e) {
+              e = String(e || "utf8").toLowerCase();
+              if (e === "base64") return toB64(this);
+              if (e === "hex") return Array.prototype.map.call(this, function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+              if (e === "latin1" || e === "binary" || e === "ascii") { var s = ""; for (var i = 0; i < this.length; i++) s += String.fromCharCode(this[i]); return s; }
+              return utf8(this);
+            };
+            Buf.prototype.slice = Buf.prototype.subarray = function (a, b) { return wrap(Uint8Array.prototype.slice.call(this, a, b)); };
+            g.Buffer = Buf;
+          }
+          if (typeof g.TextDecoder !== "function") g.TextDecoder = function () {};
+          if (!g.TextDecoder.prototype.decode) g.TextDecoder.prototype.decode = function (b) {
+            if (!b) return "";
+            return utf8(b instanceof ArrayBuffer ? new Uint8Array(b) : new Uint8Array(b.buffer, b.byteOffset, b.byteLength));
+          };
+          function Headers(list) {
+            this._l = [];
+            var self = this;
+            if (Array.isArray(list)) list.forEach(function (p) { self._l.push([String(p[0]).toLowerCase(), String(p[1])]); });
+            else if (list) for (var k in list) self._l.push([k.toLowerCase(), String(list[k])]);
+          }
+          Headers.prototype.get = function (n) {
+            n = String(n).toLowerCase();
+            var v = this._l.filter(function (p) { return p[0] === n; }).map(function (p) { return p[1]; });
+            return v.length ? v.join(", ") : null;
+          };
+          Headers.prototype.has = function (n) { return this.get(n) !== null; };
+          Headers.prototype.getSetCookie = function () {
+            return this._l.filter(function (p) { return p[0] === "set-cookie"; }).map(function (p) { return p[1]; });
+          };
+          Headers.prototype.forEach = function (fn) { var self = this; this._l.forEach(function (p) { fn(p[1], p[0], self); }); };
+          Headers.prototype.entries = function () { return this._l.slice()[Symbol.iterator](); };
+          Headers.prototype.keys = function () { return this._l.map(function (p) { return p[0]; })[Symbol.iterator](); };
+          Headers.prototype.values = function () { return this._l.map(function (p) { return p[1]; })[Symbol.iterator](); };
+          Headers.prototype[Symbol.iterator] = Headers.prototype.entries;
+          if (typeof g.Headers !== "function") g.Headers = Headers;
+          function Response(m) {
+            this._id = m.id; this.status = m.status; this.statusText = m.statusText; this.url = m.url;
+            this.ok = m.status >= 200 && m.status < 300; this.redirected = false; this.type = "basic";
+            this.headers = new Headers(m.headers);
+          }
+          Response.prototype.text = function () { return Promise.resolve(JSON.parse(__text(this._id))); };
+          Response.prototype.json = function () { return this.text().then(function (t) { return JSON.parse(t); }); };
+          Response.prototype.arrayBuffer = function () {
+            var b = fromB64(__body64(this._id));
+            return Promise.resolve(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength));
+          };
+          Response.prototype.clone = function () { return this; };
+          g.fetch = function (input, init) {
+            init = init || {};
+            var url = typeof input === "string" ? input : (input && input.url) || String(input);
+            var headers = {}, h = init.headers;
+            if (h) {
+              if (Array.isArray(h)) h.forEach(function (p) { headers[p[0]] = String(p[1]); });
+              else if (typeof h.forEach === "function") h.forEach(function (v, k) { headers[k] = String(v); });
+              else for (var k in h) headers[k] = String(h[k]);
+            }
+            var body = init.body, text = null, b64 = null;
+            if (body != null) {
+              if (typeof body === "string") text = body;
+              else if (body instanceof ArrayBuffer) b64 = toB64(new Uint8Array(body));
+              else if (ArrayBuffer.isView(body)) b64 = toB64(new Uint8Array(body.buffer, body.byteOffset, body.byteLength));
+              else text = String(body);
+            }
+            var req = { url: url, method: init.method || "GET", headers: headers, body: text, body64: b64, redirect: init.redirect || "follow" };
+            return __fetch(g.__ascii(JSON.stringify(req))).then(function (s) {
+              var m = JSON.parse(s);
+              if (m.error) throw new TypeError("fetch failed: " + m.error);
+              return new Response(m);
+            });
+          };
+        })();
+    """.trimIndent() + "\n"
+}

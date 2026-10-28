@@ -17,8 +17,11 @@ internal fun MainActivity.adultLockOn() = prefs.contains(K.ADULT_PIN)
  * Whether 18+ content shows now: the lock off, or unlocked, not yet run out, and since the TV last started (an unlock
  * doesn't outlast turning the TV off: see AdultRelock).
  */
-internal fun MainActivity.adultUnlocked() = !adultLockOn() || (System.currentTimeMillis() < prefs.getLong(K.ADULT_UNTIL, 0L) &&
-    kotlin.math.abs(bootTime() - prefs.getLong(K.ADULT_BOOT, 0L)) < BOOT_SLACK_MS)
+internal fun MainActivity.adultUnlocked() = adultShows(prefs)
+
+/** [adultUnlocked] from the preferences alone, for the player (which isn't the home screen). */
+internal fun adultShows(p: android.content.SharedPreferences) = !p.contains(K.ADULT_PIN) ||
+    (System.currentTimeMillis() < p.getLong(K.ADULT_UNTIL, 0L) && kotlin.math.abs(bootTime() - p.getLong(K.ADULT_BOOT, 0L)) < BOOT_SLACK_MS)
 
 /** When the TV last started, on the wall clock: the same while it runs, give or take a clock correction. */
 private fun bootTime() = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime()
@@ -48,8 +51,9 @@ internal class AdultRelock : android.content.BroadcastReceiver() {
 internal fun MainActivity.adultUntilLocked() = prefs.getBoolean(K.ADULT_FOREVER, false)
 
 /** The add-ons that show now: the adult ones left out while the 18+ lock holds. For what's shown, never for saving. */
-internal fun MainActivity.shownAddonUrls(): List<String> =
-    if (adultUnlocked()) addonUrls() else addonUrls().filter { !isAdultAddon(it) }
+internal fun MainActivity.shownAddonUrls(): List<String> = addonUrls().filter { addonOn(it) }.let { on ->
+    if (adultUnlocked()) on else on.filter { !isAdultAddon(it) }
+}
 
 /** The tile of Adult content: the adult add-ons' channels, films and series, when they have an app of their own. */
 internal const val ADULT_PKG = STREMIO + "adult"

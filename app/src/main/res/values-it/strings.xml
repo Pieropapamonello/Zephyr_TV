@@ -386,6 +386,17 @@
 
     <!-- Stremio add-ons -->
     <string name="settings_section_addons">Addon Stremio</string>
+    <string name="settings_section_addons_plugins">Add-on e plugin</string>
+    <string name="addons_stremio">Add-on Stremio</string>
+    <string name="nuvio_plugins">Plugin Nuvio</string>
+    <string name="nuvio_intro">I plugin Nuvio trovano da soli gli stream di film, serie e canali, dai siti che conoscono. Sono programmi scritti da altre persone: Zephyr TV li esegue separati da tutto il resto, con accesso solo a internet. Aggiungi solo repository di cui ti fidi.</string>
+    <string name="nuvio_plugins_on">%1$d di %2$d attivi</string>
+    <string name="nuvio_add">Aggiungi un repository</string>
+    <string name="nuvio_hint">Indirizzo del manifest.json del repository</string>
+    <string name="nuvio_add_intro">L\'indirizzo di un repository di plugin Nuvio. Di solito finisce con manifest.json.</string>
+    <string name="nuvio_phone_title">Repository Nuvio</string>
+    <string name="nuvio_added">%1$s: %2$d plugin</string>
+    <string name="nuvio_empty">Questo repository non ha plugin.</string>
     <string name="setting_addons_tv">Canali TV</string>
     <string name="addons_tv_tv">Nell\'app TV</string>
     <string name="addons_tv_iptv">In un\'app IPTV</string>
@@ -401,6 +412,7 @@
     <string name="toast_addon_updated">Addon aggiornato: %1$d canali</string>
     <string name="toast_addon_removed">Addon rimosso</string>
     <string name="addon_update">Aggiorna ora</string>
+    <string name="addon_on">Attivo</string>
     <string name="addon_remove">Rimuovi</string>
     <string name="addon_move_up">Sposta su</string>
     <string name="addon_move_down">Sposta giù</string>

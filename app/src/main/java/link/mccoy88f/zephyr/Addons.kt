@@ -75,6 +75,9 @@ internal fun MainActivity.addonUrls(): List<String> = prefs.getString(K.ADDONS, 
 
 private fun MainActivity.saveAddonUrls(urls: List<String>) = prefs.edit().putString(K.ADDONS, urls.distinct().joinToString("\n")).apply()
 
+/** Whether the add-on at [url] is on: an add-on switched off stays, with its settings, but isn't shown nor asked. */
+internal fun MainActivity.addonOn(url: String) = url !in prefs.getStringSet(K.ADDONS_OFF, emptySet())!!
+
 /** Manifest addresses of add-ons marked as adult by the user (Contenuti V.M. - Adulti). */
 private fun MainActivity.markedAdultUrls(): Set<String> =
     prefs.getString(K.ADULT_ADDONS, "")!!.lines().filter { it.isNotBlank() }.toSet()
@@ -400,7 +403,7 @@ internal fun MainActivity.addonRows(): List<Triple<String, String, () -> Unit>> 
         },
         page(getString(R.string.setting_addon_add), SUBMENU) { addonFromPhone() },
     ) + addonUrls().mapIndexed { i, url ->
-        page(Stremio.saved(filesDir, url)?.addon?.name ?: url, SUBMENU) { addonPage(url) }
+        page(Stremio.saved(filesDir, url)?.addon?.name ?: url, if (addonOn(url)) SUBMENU else getString(R.string.state_off)) { addonPage(url) }
     }
 }
 
@@ -583,6 +586,14 @@ internal fun MainActivity.addonPage(url: String, focus: Int? = null) {
     val at = urls.indexOf(url)
     val row = ADDON_ROWS + at
     val rows = listOfNotNull(
+        // On or off: off, it stays here with its settings, but its channels, films and streams don't show.
+        page(getString(R.string.addon_on), toggle(addonOn(url))) {
+            val off = prefs.getStringSet(K.ADDONS_OFF, emptySet())!!.toMutableSet()
+            if (!off.remove(url)) off += url
+            prefs.edit().putStringSet(K.ADDONS_OFF, off).apply()
+            addonsChanged()
+            addonPage(url, R.string.addon_on)
+        },
         page(getString(R.string.addon_update)) {
             Toast.makeText(this, getString(R.string.addon_checking), Toast.LENGTH_SHORT).show()
             updateAddon(url, null) { listing ->
