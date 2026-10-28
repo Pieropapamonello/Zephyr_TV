@@ -13,6 +13,13 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.0.0-beta.2
+
+- A search with filters and no words finds titles again with every catalog. Before, with Nuvio Catalog as the main catalog, it found nothing.
+- A search with filters and no words looks in all the catalogs of **Content catalog**, the main catalog first.
+- A search for a year and a genre together finds more titles.
+- The genres in the search filter are those of the main catalog.
+
 ## 2.0.0-beta.1
 
 - New: **Nuvio plugins**. Settings has **Add-ons and plugins**, with **Stremio add-ons** and **Nuvio plugins**.

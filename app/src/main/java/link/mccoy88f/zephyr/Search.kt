@@ -533,4 +533,6 @@ internal val GENRES = linkedMapOf(
     "Sport" to R.string.genre_sport, "Thriller" to R.string.genre_thriller, "War" to R.string.genre_war,
     "Western" to R.string.genre_western, "Reality-TV" to R.string.genre_reality, "Talk-Show" to R.string.genre_talk,
     "Game-Show" to R.string.genre_game,
+    // TMDB's names for the same (Nuvio's catalog uses them)
+    "Science Fiction" to R.string.genre_scifi, "Reality" to R.string.genre_reality, "Talk" to R.string.genre_talk,
 )

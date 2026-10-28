@@ -73,25 +73,49 @@ internal class SearchFilter(val type: String = "all", val year: String? = null, 
 }
 
 /**
- * The films and series for [filter] without words: Cinemeta's catalogs by year ("New", filtered by genre here) or by
- * genre ("Popular"), else its popular ones; two pages of each type. In the TV's language. Off the UI thread.
+ * The films and series for [filter] without words, from the catalog sources (the main one first: see catalogSources):
+ * in each, for each type, the catalog its manifest offers the year in (Cinemeta's "year", Nuvio's "by year"), else
+ * the genre (Cinemeta's "top", Nuvio's "popular"), else its first; its first pages, more when a genre is then picked
+ * out of a year's titles here. In the TV's language. Off the UI thread.
  */
 internal fun MainActivity.browseLibrary(filter: SearchFilter): List<Pair<Stremio.Title, String>> {
-    val url = cinemetaUrl()
-    val base = url.removeSuffix("/manifest.json")
     val kinds = if (filter.type == "all") listOf("movie", "series") else listOf(filter.type)
-    val catalog = if (filter.year != null) "year/genre=${filter.year}" else filter.genre?.let { "top/genre=${Stremio.enc(it)}" } ?: "top"
-    val found = parallel(kinds.flatMap { kind -> (0 until 2).map { page -> kind to page } }, 4, 20) { (kind, page) ->
-        val skip = if (page == 0) "" else (if ('=' in catalog) "&" else "/") + "skip=${page * 50}"
-        Stremio.titles(Http.json("$base/catalog/$kind/$catalog$skip.json"))
+    val asks = catalogSources().mapNotNull { Stremio.saved(filesDir, it)?.addon }.flatMap { addon ->
+        kinds.mapNotNull { kind ->
+            val catalogs = addon.vod.filter { it.type == kind }
+            fun offering(v: String) = catalogs.firstNotNullOfOrNull { c -> c.genres.firstOrNull { it.equals(v, ignoreCase = true) }?.let { c to it } }
+            when {
+                filter.year != null -> offering(filter.year)
+                filter.genre != null -> offering(filter.genre)
+                else -> catalogs.firstOrNull { it.listed }?.let { it to null }
+            }?.let { (c, option) -> Triple(addon, c, option) }
+        }
+    }
+    val pages = if (filter.year != null && filter.genre != null) 4 else 2
+    // Each catalog page after page, skipping as many as it gave (Cinemeta's pages are 50, Nuvio's 20); catalogs at once.
+    val found = parallel(asks, 6, 25) { (addon, c, option) ->
+        val out = ArrayList<Pair<Stremio.Title, String>>()
+        var read = 0
+        for (page in 0 until pages) {
+            val extra = listOfNotNull(option?.let { "genre=${Stremio.enc(it)}" }, if (page == 0) null else "skip=$read").joinToString("&")
+            val got = runCatching {
+                Stremio.titles(Http.json("${addon.base}/catalog/${Stremio.enc(c.type)}/${Stremio.enc(c.id)}" + (if (extra.isEmpty()) "" else "/$extra") + ".json"))
+            }.getOrDefault(emptyList())
+            if (got.isEmpty()) break
+            read += got.size
+            out += got.map { it to addon.url }
+        }
+        out
     }.flatten()
-    return localizeAll(found.filter { filter.accepts(it) }.distinctBy { it.type + it.id }.map { it to url })
+    // The genre by its name in English (Cinemeta's) or in the TV's language (Nuvio's titles have it so).
+    return localizeAll(found.filter { (t, _) -> filter.accepts(t) { g -> genreName(g) } }.distinctBy { it.first.type + it.first.id })
 }
 
-/** Cinemeta's genres, for the search filter (its films' and series' catalogs' options), as its manifest lists them. */
+/** The main catalog's genres, for the search filter (its films' and series' catalogs' options), as its manifest lists them. */
 internal fun MainActivity.libraryGenres(): List<String> =
-    Stremio.saved(filesDir, cinemetaUrl())?.addon?.vod.orEmpty().filter { it.id == "top" }.flatMap { it.genres }.distinct()
-        .ifEmpty { GENRES.keys.toList() }
+    // Its catalogs that filter by genre (one of them a genre known here): not those by year, nor Nuvio's by language.
+    Stremio.saved(filesDir, cinemetaUrl())?.addon?.vod.orEmpty().filter { c -> c.genres.any { it in GENRES } }.flatMap { it.genres }
+        .distinct().ifEmpty { GENRES.keys.toList() }
 
 // ---------- Spotlight ----------
 
