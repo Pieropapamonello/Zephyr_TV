@@ -192,7 +192,11 @@ internal fun MainActivity.listen(input: EditText, go: (String) -> Unit) {
             stopListening()
             val said = words(b)
             input.hint = getString(R.string.search_hint)
-            if (said != null) go(said)
+            if (said == null) return
+            // What was heard, in the box, a moment before the search starts: some TVs give no words until the end.
+            input.setText(said)
+            input.setSelection(said.length)
+            ui.postDelayed({ if (input.isAttachedToWindow) go(said) }, HEARD_MS)
         }
 
         override fun onError(error: Int) {
@@ -228,6 +232,15 @@ internal fun MainActivity.searchTmdb(query: String) {
     // What the results are for: the words, else the filters ("2020 · Drama"), else Cinemeta's popular ones.
     // With words and filters, both: the filters stay until they're cleared, and say so.
     val label = if (query.isBlank()) filterLabel(filter) else listOfNotNull(query, filterLabel(filter).takeIf { filter.any }).joinToString(" · ")
+    // Its tile at once, focused, with its words over cards loading; the results fill it once they're in.
+    val n = ++searchCount
+    searchLoading = n
+    searchQuery = label
+    searchChannels = emptyList()
+    searchTitles = emptyList()
+    watchApp = null
+    renderApps()
+    (0 until appRow.childCount).map { appRow.getChildAt(it) }.firstOrNull { it.tag == SEARCH_PKG }?.requestFocus()
     spotlightIo.execute {
         // TV channels only for words, and not when films or series alone are asked for.
         val channels = if (query.isBlank() || filter.type != "all") emptyList() else runCatching { findChannels(query) }.getOrDefault(emptyList())
@@ -236,15 +249,21 @@ internal fun MainActivity.searchTmdb(query: String) {
             else searchLibrary(query).filter { (t, _) -> filter.accepts(t) { g -> genreName(g) } }
         }.getOrDefault(emptyList())
         ui.post {
-            if (channels.isEmpty() && titles.isEmpty()) return@post Toast.makeText(this, getString(R.string.toast_no_results, label), Toast.LENGTH_SHORT).show()
-            searchQuery = label
+            if (searchLoading != n) return@post // closed, or another search started meanwhile
+            searchLoading = 0
+            if (channels.isEmpty() && titles.isEmpty()) {
+                endSearch()
+                return@post Toast.makeText(this, getString(R.string.toast_no_results, label), Toast.LENGTH_SHORT).show()
+            }
             searchChannels = channels
             searchTitles = titles
-            watchApp = null // the tile's cards are new even if it's focused already
-            renderApps()
-            (0 until appRow.childCount).map { appRow.getChildAt(it) }.firstOrNull { it.tag == SEARCH_PKG }?.requestFocus()
-            val n = channels.size + titles.size
-            Toast.makeText(this, resources.getQuantityString(R.plurals.toast_search_results, n, n, label), Toast.LENGTH_LONG).show()
+            // Its cards in place of the loading ones, where the tile (or a card under it) still has focus.
+            if (watchApp == SEARCH_PKG || currentFocus?.tag == SEARCH_PKG) {
+                watchApp = null
+                showSearchResults()
+            }
+            val found = channels.size + titles.size
+            Toast.makeText(this, resources.getQuantityString(R.plurals.toast_search_results, found, found, label), Toast.LENGTH_LONG).show()
         }
     }
 }
@@ -256,6 +275,7 @@ internal fun MainActivity.searchTmdb(query: String) {
 internal fun MainActivity.showSearchResults() {
     val query = searchQuery ?: return
     watchApp = SEARCH_PKG
+    if (searchLoading != 0) return showSearchLoading(query)
     val channels = searchChannels.takeIf { it.isNotEmpty() }?.let { list ->
         Section("channels", query, getString(R.string.search_channels_for, query), list.map { d ->
             Prog(d.name, listOfNotNull(d.number, d.now?.title).filter { it.isNotEmpty() }.joinToString(" · "), d.now?.let { Epg.progress(it) } ?: 0,
@@ -272,6 +292,22 @@ internal fun MainActivity.showSearchResults() {
         channels,
     ))
 }
+
+/** The search's words over a row of cards loading, while its results come (see searchTmdb). */
+private fun MainActivity.showSearchLoading(query: String) {
+    val key = "loading:$SEARCH_PKG/$query"
+    if (watchKey == key) return
+    watchKey = key
+    watchRow.removeAllViews()
+    moreSections.removeAllViews()
+    watchTitle.visibility = View.VISIBLE
+    watchScroll.visibility = View.VISIBLE
+    watchTitle.text = getString(R.string.search_loading_for, query)
+    repeat(4) { watchRow.addView(placeholderCard(it > 0, it * 120L)) }
+}
+
+/** How long what was dictated shows in the box before the search starts. */
+private const val HEARD_MS = 700L
 
 /** A TV channel the search found: what its card and its page show. */
 internal class ChannelDetail(
@@ -400,6 +436,7 @@ internal fun MainActivity.endSearch(): Boolean {
     if (searchQuery == null) return false
     val onIt = currentFocus?.let { it.tag == SEARCH_PKG || (it.getTag(R.id.watchRow) as? Prog)?.let { p -> p.channelPage != null || p.vod != null } == true } ?: true
     searchQuery = null
+    searchLoading = 0
     searchChannels = emptyList()
     searchTitles = emptyList()
     if (watchApp == SEARCH_PKG) watchApp = null

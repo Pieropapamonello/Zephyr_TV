@@ -13,6 +13,12 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 1.5.1
+
+- When you dictate a search, the words show in the search box before the search starts.
+- The search results tile shows at once, with the words you search for, while the results load.
+- When the TV goes to standby or turns off, 18+ content locks again.
+
 ## 1.5.0
 
 - **Content catalog** can have more than one catalog. Select **Add a catalog** to add Cinemeta, Nuvio Catalog, a catalog added before, or a new address.

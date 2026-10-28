@@ -279,6 +279,7 @@
     <string name="automatic_ip">Automatic (from your internet address)</string>
     <string name="city_hint">Type a city, then Search</string>
     <string name="searching">Searching…</string>
+    <string name="search_loading_for">Searching “%1$s”…</string>
     <string name="search_failed">Couldn\'t search. Check the connection and try again.</string>
     <string name="no_places">No places called \"%1$s\".</string>
     <string name="row_position">Favourites position</string>

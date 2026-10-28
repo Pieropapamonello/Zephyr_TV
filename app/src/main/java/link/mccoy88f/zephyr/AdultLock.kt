@@ -13,8 +13,36 @@ private const val UNLOCK_MS = 2 * 3600_000L
 /** Whether the 18+ lock is on (a PIN set for it). */
 internal fun MainActivity.adultLockOn() = prefs.contains(K.ADULT_PIN)
 
-/** Whether 18+ content shows now: the lock off, or unlocked and not yet run out. */
-internal fun MainActivity.adultUnlocked() = !adultLockOn() || System.currentTimeMillis() < prefs.getLong(K.ADULT_UNTIL, 0L)
+/**
+ * Whether 18+ content shows now: the lock off, or unlocked, not yet run out, and since the TV last started (an unlock
+ * doesn't outlast turning the TV off: see AdultRelock).
+ */
+internal fun MainActivity.adultUnlocked() = !adultLockOn() || (System.currentTimeMillis() < prefs.getLong(K.ADULT_UNTIL, 0L) &&
+    kotlin.math.abs(bootTime() - prefs.getLong(K.ADULT_BOOT, 0L)) < BOOT_SLACK_MS)
+
+/** When the TV last started, on the wall clock: the same while it runs, give or take a clock correction. */
+private fun bootTime() = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime()
+
+/** A clock correction (network time) moves bootTime this much at most; a restart, far more. */
+private const val BOOT_SLACK_MS = 60_000L
+
+/**
+ * Locks 18+ again when the TV goes to standby (its screen off) or shuts down: registered by the home screen while it
+ * runs and by the Home button service, which runs all the time. A restart is told by adultUnlocked.
+ */
+internal class AdultRelock : android.content.BroadcastReceiver() {
+    override fun onReceive(c: android.content.Context, i: android.content.Intent) {
+        val p = c.getSharedPreferences(K.FILE, android.content.Context.MODE_PRIVATE)
+        if (p.getLong(K.ADULT_UNTIL, 0L) != 0L) p.edit().putLong(K.ADULT_UNTIL, 0L).apply()
+    }
+
+    companion object {
+        val FILTER = android.content.IntentFilter().apply {
+            addAction(android.content.Intent.ACTION_SCREEN_OFF)
+            addAction(android.content.Intent.ACTION_SHUTDOWN)
+        }
+    }
+}
 
 /** Whether an unlock lasts until locked again rather than two hours. */
 internal fun MainActivity.adultUntilLocked() = prefs.getBoolean(K.ADULT_FOREVER, false)
@@ -55,7 +83,7 @@ internal fun MainActivity.adultMenuRow(back: () -> Unit) =
             back()
         } else askAdultPin(back) {
             val until = if (adultUntilLocked()) Long.MAX_VALUE else System.currentTimeMillis() + UNLOCK_MS
-            prefs.edit().putLong(K.ADULT_UNTIL, until).apply()
+            prefs.edit().putLong(K.ADULT_UNTIL, until).putLong(K.ADULT_BOOT, bootTime()).apply()
             adultChanged()
             Toast.makeText(this, adultState(), Toast.LENGTH_SHORT).show()
             closeLauncherSettings()

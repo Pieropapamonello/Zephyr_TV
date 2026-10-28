@@ -12,13 +12,18 @@ import android.view.accessibility.AccessibilityEvent
  * opens it (e.g. Back out of the last app).
  */
 class HomeOverride : AccessibilityService() {
+    private val adultRelock = AdultRelock()
+
     override fun onServiceConnected() {
         running = this
+        // It runs all the time, the home screen not: standby locks 18+ again while an app is in front too.
+        registerReceiver(adultRelock, AdultRelock.FILTER)
     }
 
     /** Turned off, from Zephyr TV's switch or Android's Accessibility settings: the app mustn't turn it back on. */
     override fun onUnbind(intent: Intent?): Boolean {
         running = null
+        runCatching { unregisterReceiver(adultRelock) }
         getSharedPreferences(K.FILE, MODE_PRIVATE).edit().putBoolean(K.HOME_OFF, true).apply()
         return super.onUnbind(intent)
     }

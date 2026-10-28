@@ -195,6 +195,8 @@ class MainActivity : Activity() {
     internal var searchFilter = SearchFilter() // the search's filters: films or series, year, genre (see Search)
     internal var searchChannels: List<ChannelDetail> = emptyList() // the TV channels the search found
     internal var searchTitles: List<Pair<Stremio.Title, String>> = emptyList() // without a TMDB key, the films and series the add-ons found (and from which)
+    internal var searchLoading = 0 // the search under way (its number), its tile up with its words while its results come; 0 for none
+    internal var searchCount = 0 // searches started, to tell the last one's results from an earlier one's
     internal var recognizer: android.speech.SpeechRecognizer? = null // dictating into the search box
     internal var afterMicAccess: (() -> Unit)? = null // what asked, while Android's microphone prompt is up
     internal val appChannelDebounce = Runnable { queryAppChannels(tmdbLastFocusApp) }
@@ -282,6 +284,7 @@ class MainActivity : Activity() {
             ui.post { catalogPopup { startHomeSetup() } }
         }
 
+        registerReceiver(adultRelock, AdultRelock.FILTER) // standby locks 18+ again (see AdultLock)
         registerReceiver(packageReceiver, IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
@@ -406,6 +409,7 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        unregisterReceiver(adultRelock)
         unregisterReceiver(packageReceiver)
         applicationContext.getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(net)
         getSystemService(TvInputManager::class.java)?.unregisterCallback(inputCallback)
@@ -813,6 +817,7 @@ class MainActivity : Activity() {
 
     internal var unlockedUntil = 0L // one PIN covers a few minutes of changes, until the home screen is left
     internal var pinFails = 0
+    private val adultRelock = AdultRelock()
     internal var adultShown = true // whether the adult add-ons showed last time the rows were built (see checkAdultLock)
     internal var pinWaitUntil = 0L // ponytail: in memory, so restarting Zephyr TV resets the wait; fine for kids at a remote
     internal var pinBox: View? = null
