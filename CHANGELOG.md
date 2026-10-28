@@ -13,6 +13,14 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.0.0-beta.4
+
+- In the player, the lines of the stream, the audio and the subtitles under the progress bar scroll when they are too long.
+- A title page shows what the title is about at once, before its other details load. Its episodes in your language come after, and focus stays where it is.
+- Plugin streams written into their address (MovyITA, VixSrc) now play: Zephyr TV reads what they are from their first lines.
+- A stream you pick by hand plays even if the check before it fails. Some servers refuse only the check.
+- Zephyr TV no longer passes to the player the headers it sets itself, such as Accept-Encoding. With some plugins they stopped the stream.
+
 ## 2.0.0-beta.3
 
 - In the player, a series can go back to the episodes before the one you started, not only on to the next ones.

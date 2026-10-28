@@ -348,6 +348,7 @@ internal object Stremio {
                 JSONObject().put("type", t.type).put("id", t.id).put("name", t.name).put("poster", t.poster ?: JSONObject.NULL)
                     .put("background", t.background ?: JSONObject.NULL).put("logo", t.logo ?: JSONObject.NULL).put("releaseInfo", t.year ?: JSONObject.NULL)
                     .put("genres", JSONArray(t.genres)).put("imdbRating", t.rating ?: JSONObject.NULL)
+                    .put("description", t.description ?: JSONObject.NULL) // on its page at once, before the add-on answers
             }))
         })).toString())
         if (!part.renameTo(f)) throw java.io.IOException("can't save ${f.name}")
@@ -456,7 +457,9 @@ internal object Stremio {
         val list = answer.optJSONArray("streams") ?: return emptyList()
         return (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { s ->
             // A web address, or the playlist itself written in it (data:, as some Nuvio plugins hand an HLS one).
-            val url = text(s, "url")?.takeIf { it.startsWith("http://") || it.startsWith("https://") || it.startsWith("data:") } ?: return@mapNotNull null
+            val url = text(s, "url")?.takeIf { it.startsWith("http://") || it.startsWith("https://") || it.startsWith("data:") }
+                ?.let { if (it.startsWith("data://")) "data:" + it.removePrefix("data://") else it } // "data://": a plugin's slip
+                ?: return@mapNotNull null
             val hints = s.optJSONObject("behaviorHints")
             val request = hints?.optJSONObject("proxyHeaders")?.optJSONObject("request")
             val headers = request?.keys()?.asSequence()?.associateWith { request.optString(it) }?.filterValues { it.isNotEmpty() }.orEmpty()
@@ -478,7 +481,16 @@ internal object Stremio {
      */
     fun probe(url: String, headers: Map<String, String>): Probe {
         // The playlist written in its address: nothing to ask, its type says what it is.
-        if (url.startsWith("data:")) return Probe(true, format(url.substringAfter("data:").substringBefore(';').substringBefore(','), "", ByteArray(0)))
+        if (url.startsWith("data:")) {
+            // By its type, else by its first bytes ("#EXTM3U"): some plugins write a type of their own ("application/m3u8/").
+            val meta = url.substringAfter("data:").substringBefore(',')
+            val payload = url.substringAfter(',', "").substringBefore('#').take(400) // "#.m3u8": a hint some add, not data
+            val head = runCatching {
+                if (meta.endsWith(";base64")) java.util.Base64.getMimeDecoder().decode(payload.take(payload.length / 4 * 4))
+                else java.net.URLDecoder.decode(payload, "UTF-8").toByteArray()
+            }.getOrDefault(ByteArray(0))
+            return Probe(true, format(meta.substringBefore(';').trim('/'), "", head))
+        }
         var at = url
         for (hop in 0..5) {
             val c = Http.connect(at, headers).apply { instanceFollowRedirects = false }

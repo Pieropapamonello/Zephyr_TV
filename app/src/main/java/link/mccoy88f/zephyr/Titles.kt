@@ -19,7 +19,8 @@ private const val VOD_PKG = STREMIO + "vod"
  * first), and, on a Continue Playing card, the film or episode to go on with ([video]).
  */
 internal class TitleRef(val type: String, val id: String, val name: String, val poster: String?, val background: String?,
-                        val source: String? = null, val video: String? = null, val logo: String? = null, val rating: String? = null)
+                        val source: String? = null, val video: String? = null, val logo: String? = null, val rating: String? = null,
+                        val about: String? = null) // what it's about, as its card knows it: on its page at once
 
 /**
  * The catalog sources, in the user's order (Content catalog): the first, the main one, gives titles' details, search
@@ -162,7 +163,8 @@ private fun MainActivity.refreshShelves(addon: Stremio.Addon, pkg: String) {
  */
 internal fun titleCard(t: Stremio.Title, source: String?, icon: String?, watched: Boolean = false, sub: String? = null) =
     Prog(t.name, sub ?: listOfNotNull("✓".takeIf { watched }, t.year, t.genres.firstOrNull(), t.rating?.let { "★ $it" }).joinToString(" · "), 0, t.background, null, null,
-        logo = t.logo, poster = t.poster, icon = icon, vod = TitleRef(t.type, t.id, t.name, t.poster, t.background, source, logo = t.logo, rating = t.rating))
+        logo = t.logo, poster = t.poster, icon = icon,
+        vod = TitleRef(t.type, t.id, t.name, t.poster, t.background, source, logo = t.logo, rating = t.rating, about = t.description))
 
 /** The tile a title of [type] from the add-on at [source] is under: Films or Series, or the add-on's own (null: none). */
 internal fun MainActivity.titleTile(type: String, source: String?): String? = if (source != null && inAdultApp(source)) ADULT_PKG else when (addonsVod()) {

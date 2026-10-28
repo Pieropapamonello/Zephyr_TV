@@ -215,6 +215,14 @@ class PlayerActivity : Activity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
+    /** One line that scrolls round when it's longer than its room. */
+    private fun TextView.scrolling() {
+        isSingleLine = true
+        ellipsize = TextUtils.TruncateAt.MARQUEE
+        marqueeRepeatLimit = -1
+        isSelected = true
+    }
+
     private fun text(size: Float, bold: Boolean = false) = TextView(this).apply {
         setTextColor(Color.WHITE)
         textSize = size
@@ -272,8 +280,10 @@ class PlayerActivity : Activity() {
             )).apply { setId(0, android.R.id.background); setId(1, android.R.id.progress) }
         }
         more = text(14f).apply { alpha = 0.85f; maxLines = 14; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(8), 0, 0) }
-        source = text(12f).apply { alpha = 0.6f; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
-        trackLine = text(12f).apply { alpha = 0.6f; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(4), 0, 0) }
+        // The stream's line and the audio and subtitles' under the bar: too long for it, they scroll (selected: they
+        // scroll without focus, which stays on the buttons).
+        source = text(12f).apply { alpha = 0.6f; scrolling() }
+        trackLine = text(12f).apply { alpha = 0.6f; scrolling(); setPadding(0, dp(4), 0, 0) }
         buttons = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; clipChildren = false }
         // What's on: framed while it has the focus, so it's clear OK there shows all of it.
         val descBg = GradientDrawable().apply { cornerRadius = dp(10).toFloat(); setColor(Color.TRANSPARENT) }
@@ -1246,7 +1256,9 @@ class PlayerActivity : Activity() {
             val probe = Stremio.probe(s.url, s.headers)
             ui.post {
                 if (isFinishing || tuning != tune || n != tried) return@post
-                if (!probe.ok) next() else start(s, probe.format)
+                // The only stream (one picked by hand) is played even when the check failed: some servers turn the
+                // check away (too many requests) and not the player.
+                if (!probe.ok && streams.size > 1) next() else start(s, probe.format)
             }
         }
     }
@@ -1255,7 +1267,8 @@ class PlayerActivity : Activity() {
         release()
         val http = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true) // OMG's addresses go from https to the proxy's http, and back
-            .setDefaultRequestProperties(s.headers.filterKeys { !it.equals("User-Agent", ignoreCase = true) })
+            // Not what the connection sets itself: a plugin's Accept-Encoding: gzip would hand the player packed bytes.
+            .setDefaultRequestProperties(s.headers.filterKeys { k -> SKIPPED_HEADERS.none { it.equals(k, ignoreCase = true) } })
         s.headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.let { http.setUserAgent(it.value) }
         // Sound as a film's, through the output the TV has chosen (its speakers, a soundbar or receiver on HDMI ARC or
         // optical, Bluetooth): taking the audio focus, so the TV routes it there and other sound stops; pausing when
@@ -1423,6 +1436,7 @@ class PlayerActivity : Activity() {
         private const val BUTTONS_MS = 10_000L // the banner stays up this long after a key on its buttons
         private const val ZAP_MS = 700L // the keys rest this long before the channel is tuned
         private const val STUCK_MS = 15_000L // buffering longer than this: the next stream
+        private val SKIPPED_HEADERS = listOf("User-Agent", "Accept-Encoding", "Content-Length", "Host", "Connection")
         private const val FRESH_MS = 90_000L // fetched streams are used this long (their addresses can expire)
     }
 }

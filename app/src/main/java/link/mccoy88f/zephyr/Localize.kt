@@ -82,7 +82,8 @@ internal fun MainActivity.localize(t: Stremio.Title): Stremio.Title? {
     val l = Local.get(t.id) ?: return null
     val same = l.title.equals(t.name, ignoreCase = true)
     return t.copy(name = l.title, poster = l.poster ?: t.poster, background = l.backdrop ?: t.background, logo = t.logo.takeIf { same },
-        year = t.year ?: l.year, genres = l.genres.ifEmpty { t.genres }, rating = t.rating ?: l.rating())
+        year = t.year ?: l.year, genres = l.genres.ifEmpty { t.genres }, rating = t.rating ?: l.rating(),
+        description = l.overview.ifBlank { t.description.orEmpty() }.ifBlank { null })
 }
 
 /** Asks TMDB for [todo] (marked as being asked) in [lang], a few at a time, and keeps what it says. Network: off the UI thread. */
@@ -106,6 +107,18 @@ internal fun MainActivity.localizeLater(ids: List<String>, pkg: String) {
         askLocal(todo, key, lang)
         ui.post { rowsAgain(pkg) }
     }
+}
+
+/**
+ * [meta] in the TV's language as far as it's known already (asked of TMDB before): name, art, genres and what it's
+ * about, not a series' episodes. No network: for a title's page at once, localizeMeta's whole after.
+ */
+internal fun MainActivity.localizeKnown(meta: Stremio.TitleMeta): Stremio.TitleMeta {
+    if (tmdbKey() == null || !tmdbEnrich() || !meta.title.id.startsWith("tt")) return meta
+    Local.use(filesDir, tmdbLang())
+    val l = Local.get(meta.title.id) ?: return meta
+    return Stremio.TitleMeta(localize(meta.title) ?: meta.title, l.overview.ifBlank { meta.description.orEmpty() }.ifBlank { null },
+        l.genres.ifEmpty { meta.genres }, meta.rating ?: l.rating(), meta.runtime, meta.episodes)
 }
 
 /**

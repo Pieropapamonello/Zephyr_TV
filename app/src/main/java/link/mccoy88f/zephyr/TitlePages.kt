@@ -19,20 +19,28 @@ import android.widget.Toast
  */
 internal fun MainActivity.openTitle(ref: TitleRef) {
     if (ref.video != null) return resumeTitle(ref)
-    // The page at once, with the card's art and Loading…: it fills in once the add-on answers (if it's still open).
-    val (top, _) = titleTop("", null, null)
+    // The page at once, with the card's art, what it's about as the card knows it, and Loading…; then the add-on's page
+    // as it answers (in the TV's language as far as it's known already); then all of it in the TV's language (a
+    // series' episodes too, asked season by season), focus where it is. Each only while the page is still open.
+    val (top, _) = titleTop("", null, ref.about)
     titlePage(ref.name, Triple(ref.background, ref.logo, ref.poster), ref.name, top,
         listOf(page(getString(R.string.player_loading)) { }), 0, emptyMap()) { closeLauncherSettings() }
     netIo.execute {
-        val meta = titleMeta(ref)
+        val raw = addonMeta(ref)
+        val known = raw?.let { localizeKnown(it) }
         ui.post {
             if (!pageShowing(ref.name)) return@post // closed meanwhile
             when {
-                meta != null -> showVodTitle(meta, ref)
+                known != null -> showVodTitle(known, ref)
                 ref.type != "series" -> { closeLauncherSettings(); playTitle(ref, null, null) }
                 else -> showPage(ref.name, listOf(page(getString(R.string.title_no_page)) { closeLauncherSettings() }), back = { closeLauncherSettings() })
             }
         }
+        if (raw == null || known == null) return@execute
+        val whole = localizeMeta(raw)
+        if (whole === raw) return@execute // nothing TMDB adds
+        wholeMeta[wholeKey(whole.title.id)] = whole
+        ui.post { if (pageShowing(known.title.name)) showVodTitle(whole, ref, focusRow = focusedRow()) }
     }
 }
 
@@ -40,12 +48,21 @@ internal fun MainActivity.openTitle(ref: TitleRef) {
  * [ref]'s page from the add-on it came from, else the first with pages for it; in the TV's language when TMDB has
  * it (see localizeMeta). Network: off the UI thread.
  */
-private fun MainActivity.titleMeta(ref: TitleRef): Stremio.TitleMeta? {
+private fun MainActivity.titleMeta(ref: TitleRef): Stremio.TitleMeta? = addonMeta(ref)?.let { localizeMeta(it) }
+
+/** Titles' pages in the TV's language as last had whole (see openTitle), by id: a page drawn again keeps them. */
+private val wholeMeta = java.util.concurrent.ConcurrentHashMap<String, Stremio.TitleMeta>()
+
+/** Its key: in this language, and whether TMDB completes titles (either changed, it's had again). */
+private fun MainActivity.wholeKey(id: String) = "${tmdbLang()}|${tmdbEnrich()}|$id"
+
+/** [ref]'s page as the add-on has it, before TMDB is asked (see titleMeta). Network: off the UI thread. */
+private fun MainActivity.addonMeta(ref: TitleRef): Stremio.TitleMeta? {
     // The catalog sources first, the main one first (see catalogSources); then the add-on it came from; then the rest.
     val sources = catalogSources()
     val addons = vodAddons().filter { it.provides("meta", ref.type, ref.id) }
         .sortedBy { a -> sources.indexOf(a.url).takeIf { it >= 0 } ?: if (a.url == ref.source) sources.size else sources.size + 1 }
-    for (a in addons) runCatching { Stremio.titleMeta(a.base, ref.type, ref.id) }.getOrNull()?.let { return localizeMeta(it) }
+    for (a in addons) runCatching { Stremio.titleMeta(a.base, ref.type, ref.id) }.getOrNull()?.let { return it }
     return null
 }
 
@@ -54,8 +71,10 @@ private fun MainActivity.titleMeta(ref: TitleRef): Stremio.TitleMeta? {
  * genre, what it's about; horizontally scrollable app icons without "Watch on..."; then Watch (for movies),
  * and Watch on each add-on that has it with [found] streams (as an episode's page), or the list of seasons (for TV series).
  */
-internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, available: Set<String>? = null,
+internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, available: Set<String>? = null,
                                        focusRow: Int? = null, found: Map<String, Int>? = null) {
+    // Drawn again by what was started with an earlier version of it (the streams counted): the whole one, once in.
+    val meta = wholeMeta[wholeKey(given.title.id)] ?: given
     val t = meta.title
     val kind = getString(if (t.type == "series") R.string.tmdb_badge_tv else R.string.tmdb_badge_movie)
     markWhole(meta)
