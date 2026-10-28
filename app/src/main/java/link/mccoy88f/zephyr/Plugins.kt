@@ -59,13 +59,17 @@ internal fun sourceStreams(p: SharedPreferences, dir: File, base: String, name: 
         declared = s.languages.map { it.lowercase().take(2) }.toSet()
         Nuvio.streams(dir, repo, s, name, type, id, p.getString(K.TMDB_API_KEY, null)?.takeIf { it.isNotBlank() })
     }
-    val hideUnknown = p.getBoolean(K.HIDE_UNKNOWN_LANG, true)
-    return if (lang == null) all else all.filter { inLanguage(it.title, lang, declared, hideUnknown) }
+    if (lang == null) return all
+    // Each marked with its language against the TV's: the player and the streams' page put ours first, then those
+    // saying none (unless they're hidden), then the others, as a last choice.
+    val hideUnknown = p.getBoolean(K.HIDE_UNKNOWN_LANG, false)
+    return all.map { s -> Stremio.Stream(s.url, s.title, s.headers, s.group, s.source, languageRank(s.title, lang, declared)) }
+        .filter { !(hideUnknown && it.langRank == Stremio.LANG_UNKNOWN) }
 }
 
 /**
- * The language streams are kept in ("it", from the TMDB language "it-IT"), or null when Content → Streams in the TV's
- * language is off: then every stream is kept.
+ * The language streams are preferred in ("it", from the TMDB language "it-IT"), or null when Content → Streams in
+ * the TV's language first is off: then no language comes first.
  */
 internal fun streamLanguage(p: SharedPreferences): String? {
     if (!p.getBoolean(K.STREAM_LANG_ONLY, true)) return null
@@ -118,6 +122,12 @@ internal val QUALITIES = listOf(0, 2160, 1440, 1080, 720, 480)
 internal fun preferredQuality(p: SharedPreferences) = p.getInt(K.STREAM_QUALITY, 0)
 
 /**
+ * Whether a film starts with the first working stream in the preferred quality (Content → Quick start): never for the
+ * highest, which only all the sources' answers can tell.
+ */
+internal fun quickStart(p: SharedPreferences) = p.getBoolean(K.FAST_START, true) && preferredQuality(p) != 0
+
+/**
  * Streams in the order of [preferred]: those up to it first, the best of them first; then those above it, the
  * nearest first (a 4K one stays, after the 1080p ones, for a TV set to 1080p). With 0, simply the best first.
  */
@@ -134,13 +144,17 @@ internal fun streamLanguages(title: String): Set<String> {
 }
 
 /**
- * Whether a stream named [title] is in [lang]: it says so (or "multi"), or, saying none, its plugin's [declared]
- * languages have it; saying none and from a source that doesn't tell, only when [hideUnknown] is off.
+ * A stream named [title] against [lang] (see Stremio.Stream.langRank): ours when it says so (or "multi"), or, saying
+ * none, its plugin's [declared] languages have it; unknown when neither says any; another language otherwise.
  */
-internal fun inLanguage(title: String, lang: String, declared: Set<String> = emptySet(), hideUnknown: Boolean = true): Boolean {
-    if (Regex("(?<![\\p{L}])multi").containsMatchIn(title.lowercase())) return true
+internal fun languageRank(title: String, lang: String, declared: Set<String> = emptySet()): Int {
+    if (Regex("(?<![\\p{L}])multi").containsMatchIn(title.lowercase())) return Stremio.LANG_OURS
     val said = streamLanguages(title).ifEmpty { declared }
-    return if (said.isEmpty()) !hideUnknown else lang in said
+    return when {
+        said.isEmpty() -> Stremio.LANG_UNKNOWN
+        lang in said -> Stremio.LANG_OURS
+        else -> Stremio.LANG_OTHER
+    }
 }
 
 /** A day: a repository is read again (new plugins, new versions of them) once its copy is this old. */

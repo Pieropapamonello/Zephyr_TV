@@ -86,6 +86,7 @@ class PlayerActivity : Activity() {
     private var attempts = 0 // streams tried since the channel was tuned, or one was picked: all of them, and it's none
     private var lateLeft = 0 // a film's sources still looking after the first streams came (slow Nuvio plugins)
     private var waitingLate = false // all the streams so far failed: waiting for theirs rather than saying none works
+    private var holdForLanguage = false // none in the TV's language so far: waiting for the sources still looking
     private var expanded = false // the banner shows all of what's on, not just its first line
     private var tune = 0 // counts tunings, so an answer for a channel left meanwhile is dropped
     private var typed = "" // number keys pressed so far
@@ -1191,17 +1192,77 @@ class PlayerActivity : Activity() {
         if (banner.visibility == View.VISIBLE) showBanner(i) // zapping: the banner keeps up with it; else the middle says it all
         lateLeft = 0
         waitingLate = false
+        holdForLanguage = false
         net.execute {
-            val found = streamsOf(c) { more -> val ok = more?.let { checked(it) }; ui.post { late(tuning, ok) } }
-            if (vod && found.size > 1) ui.post { if (tuning == tune) say(getString(R.string.player_checking_streams)) }
-            val list = checked(found)
+            val lateOnes: (List<Stremio.Stream>?) -> Unit = { more -> val ok = more?.let { checked(it) }; ui.post { late(tuning, ok) } }
+            val cached = fetched[c.id]?.takeIf { System.currentTimeMillis() - it.first < FRESH_MS } != null
+            // Quick start: the first stream in the preferred quality that works plays at once (see quickStreams).
+            val (found, ready) = if (vod && !cached && quickStart(prefs)) quickStreams(c, lateOnes)
+                else streamsOf(c, lateOnes) to false
+            if (!ready && vod && found.size > 1) ui.post { if (tuning == tune) say(getString(R.string.player_checking_streams)) }
+            val list = if (ready) found else checked(found)
             ui.post {
                 if (isFinishing || tuning != tune) return@post
                 streams = list
-                next()
                 prefetch(i)
+                // None in the TV's language yet, and sources still looking: theirs are waited for before another
+                // language's (or one that says none) plays.
+                if (vod && list.isNotEmpty() && list.none { it.langRank == Stremio.LANG_OURS } && lateLeft > 0) {
+                    holdForLanguage = true
+                    return@post say(getString(R.string.player_finding_language))
+                }
+                next()
             }
         }
+    }
+
+    /**
+     * The order a film's streams are tried in: answering first (not yet known, then failed, after); in the TV's
+     * language first, then saying none, then another; then the preferred quality's order.
+     */
+    private fun streamOrder(): Comparator<Stremio.Stream> =
+        compareBy<Stremio.Stream> { s -> when (probes[s.url]?.ok) { true -> 0; null -> 1; false -> 2 } }
+            .thenBy { it.langRank }.then(qualityOrder(preferredQuality(prefs)))
+
+    /**
+     * Quick start: a film's sources asked all at once, each one's streams looked at as they come; the first in the
+     * preferred quality (with the highest preferred, 2160p) that the check finds to be a video is the one to play,
+     * with the rest so far after it, and the sources still looking go on in the background ([late]): ready (true).
+     * None in time: all that came, to be checked and ordered as usual (false). Off the UI thread.
+     */
+    private fun quickStreams(c: Channel, late: (List<Stremio.Stream>?) -> Unit): Pair<List<Stremio.Stream>, Boolean> {
+        if (sources.isEmpty()) return emptyList<Stremio.Stream>() to false
+        val preferred = preferredQuality(prefs)
+        val answers = java.util.concurrent.ExecutorCompletionService<List<Stremio.Stream>>(pool)
+        for ((b, name) in sources) answers.submit {
+            runCatching { sourceStreams(prefs, filesDir, b, name, c.type, c.id) }
+                .onFailure { warn("streams failed: ${b.substringAfter("://").substringBefore('/')} ($it)") }.getOrDefault(emptyList())
+        }
+        val start = System.currentTimeMillis()
+        val got = ArrayList<Stremio.Stream>()
+        var done = 0
+        var hit: Stremio.Stream? = null
+        while (done < sources.size && hit == null) {
+            val limit = start + if (got.isNotEmpty()) VOD_SOME_MS else VOD_WAIT_MS
+            val answer = answers.poll((limit - System.currentTimeMillis()).coerceAtLeast(0), TimeUnit.MILLISECONDS) ?: break
+            done++
+            val more = runCatching { answer.get() }.getOrDefault(emptyList()).filter { s -> got.none { it.url == s.url } }
+            got += more
+            // Its best few at the preferred quality (or above, for the highest) checked: the first that answers plays.
+            hit = more.filter { s -> s.langRank == Stremio.LANG_OURS && streamQuality(s.title) == preferred }
+                .sortedWith(qualityOrder(preferred)).take(3)
+                .firstOrNull { s -> (probes[s.url] ?: Stremio.probe(s.url, s.headers).also { probes[s.url] = it }).ok }
+        }
+        // The sources still looking: their streams come in the background, checked, at the end of the list.
+        val left = sources.size - done
+        if (left > 0) {
+            ui.post { lateLeft += left }
+            repeat(left) { lateWaits.execute { late(runCatching { answers.poll(VOD_LATE_MS, TimeUnit.MILLISECONDS)?.get() }.getOrNull()) } }
+        }
+        val found = hit ?: return got.also { if (it.isNotEmpty()) fetched[c.id] = System.currentTimeMillis() to it } to false
+        val list = listOf(found) + got.filter { it.url != found.url }.sortedWith(compareBy<Stremio.Stream> { it.langRank }.then(qualityOrder(preferred)))
+        fetched[c.id] = System.currentTimeMillis() to list
+        return list to true
     }
 
     private fun streamsOf(c: Channel, late: ((List<Stremio.Stream>?) -> Unit)? = null): List<Stremio.Stream> {
@@ -1227,8 +1288,10 @@ class PlayerActivity : Activity() {
         val start = System.currentTimeMillis()
         val got = arrayOfNulls<List<Stremio.Stream>>(asked.size)
         val slow = ArrayList<java.util.concurrent.Future<List<Stremio.Stream>>>()
+        // Without quick start (or for the highest quality) every source is waited for, to pick the best of all.
+        val waitAll = !quickStart(prefs)
         for ((i, f) in asked.withIndex()) {
-            val limit = start + if (got.any { !it.isNullOrEmpty() }) VOD_SOME_MS else VOD_WAIT_MS
+            val limit = start + if (waitAll) VOD_ALL_MS else if (got.any { !it.isNullOrEmpty() }) VOD_SOME_MS else VOD_WAIT_MS
             got[i] = runCatching { f.get((limit - System.currentTimeMillis()).coerceAtLeast(0), TimeUnit.MILLISECONDS) }.getOrElse {
                 // Too slow to wait for before playing: played as it comes (see late), or dropped when no one waits.
                 if (late != null) slow += f else f.cancel(true)
@@ -1258,8 +1321,7 @@ class PlayerActivity : Activity() {
         }
         // Answering first, then not yet known (still being checked when time ran out), then those that failed; in each,
         // the best quality first (as its name says it).
-        return list.sortedWith(compareBy<Stremio.Stream> { s -> when (probes[s.url]?.ok) { true -> 0; null -> 1; false -> 2 } }
-            .then(qualityOrder(preferredQuality(prefs))))
+        return list.sortedWith(streamOrder())
     }
 
     /**
@@ -1274,6 +1336,15 @@ class PlayerActivity : Activity() {
         if (new.isNotEmpty()) {
             streams = streams + new
             channels.getOrNull(at)?.let { c -> fetched[c.id] = System.currentTimeMillis() to streams }
+        }
+        // Waiting for one in the TV's language: it came, or every source has answered; the best of all then plays.
+        if (holdForLanguage) {
+            if (new.none { it.langRank == Stremio.LANG_OURS } && lateLeft > 0) return
+            holdForLanguage = false
+            streams = streams.sortedWith(streamOrder())
+            tried = -1
+            attempts = 0
+            return next()
         }
         if (!waitingLate) return
         if (new.isNotEmpty()) {
@@ -1507,6 +1578,7 @@ class PlayerActivity : Activity() {
         const val ADULT_SOURCES = "adult_sources" // names and addresses of adult stream add-ons
         private const val VOD_WAIT_MS = 20_000L // a film's slower add-ons (an aggregator) are waited for this long
         private const val CHECK_MS = 15_000L // a film's streams checked all at once, at most this long
+        private const val VOD_ALL_MS = 30_000L // ...or, to pick the best of them all, every one up to this long
         private const val VOD_LATE_MS = 40_000L // ...and those that didn't, waited for this long while it plays
         private const val VOD_SOME_MS = 12_000L // ...or this long, once one has given streams
         private const val VOD_STUCK_MS = 30_000L // a film's stream buffering longer than this: the next

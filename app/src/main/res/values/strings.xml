@@ -385,7 +385,7 @@
 
     <!-- Stremio add-ons -->
     <string name="settings_section_addons">Stremio add-ons</string>
-    <string name="settings_section_addons_plugins">Add-ons and plugins</string>
+    <string name="settings_section_addons_plugins">Add-ons and Plugins</string>
     <string name="addons_stremio">Stremio add-ons</string>
     <string name="nuvio_plugins">Nuvio plugins</string>
     <string name="nuvio_intro">Nuvio plugins find the streams of films, series and channels by themselves, from the sites they know. They are programs written by other people: Zephyr TV runs them apart from everything else, with access to the internet only. Add only repositories you trust.</string>
@@ -396,10 +396,7 @@
     <string name="nuvio_phone_title">Nuvio repository</string>
     <string name="nuvio_added">%1$s: %2$d plugins</string>
     <string name="nuvio_empty">This repository has no plugins.</string>
-    <string name="setting_addons_tv">TV channels</string>
-    <string name="addons_tv_tv">In the TV app</string>
-    <string name="addons_tv_iptv">In an IPTV app</string>
-    <string name="addons_tv_apps">An app per add-on</string>
+    <string name="setting_addons_tv">TV Channels</string>
     <string name="setting_addon_add">Add an add-on</string>
     <string name="addon_adult">Adult content (18+)</string>
     <string name="addon_hint">https://…/manifest.json</string>
@@ -424,11 +421,15 @@
     <string name="player_loading">Loading…</string>
     <string name="player_no_streams">No stream available</string>
     <string name="player_finding_more">Looking for more streams…</string>
+    <string name="player_finding_language">Looking for streams in the TV\'s language…</string>
     <string name="player_finding_streams">Loading the available streams…</string>
     <string name="player_checking_streams">Checking which sources work…</string>
-    <string name="setting_stream_language">Streams in the TV\'s language only</string>
+    <string name="setting_stream_language">Streams in the TV\'s language first</string>
     <string name="setting_stream_quality">Preferred quality</string>
     <string name="stream_quality_max">Highest</string>
+    <string name="setting_fast_start">Quick start</string>
+    <string name="fast_start_not_highest">Not with Highest</string>
+    <string name="fast_start_pick_quality">Quick start needs a preferred quality: with Highest, every source is waited for.</string>
     <string name="setting_hide_unknown_language">Hide streams without a language</string>
     <string name="player_stream_n">Loading stream %1$d of %2$d…</string>
     <string name="player_channel_n">%1$d / %2$d</string>
@@ -453,8 +454,7 @@
     <string name="vod_series">Series</string>
     <string name="vod_watched_movies">Films watched</string>
     <string name="vod_watched_series">Series watched</string>
-    <string name="setting_addons_vod">Films and series</string>
-    <string name="addons_vod_tiles">Films and Series apps</string>
+    <string name="setting_addons_vod">Films and TV Series</string>
     <string name="setting_cinemeta">Content catalog</string>
     <string name="setting_stream_choice">Stream choice</string>
     <string name="stream_choice_auto">Automatic</string>
@@ -522,9 +522,11 @@
     <string name="adult_locked_toast">18+ content is hidden. Use the PIN in the users menu to show it.</string>
     <string name="addon_says_adult">This add-on says it has adult content. It always counts as 18+.</string>
     <string name="adult_app">Adult Content</string>
-    <string name="setting_adult_app">Adult add-ons</string>
-    <string name="adult_app_own">In Adult Content</string>
-    <string name="adult_app_mixed">With the others</string>
+    <string name="setting_adult_app">Adult Content</string>
+    <string name="place_mixed">With the others</string>
+    <string name="place_per_addon">One app per add-on</string>
+    <string name="place_virtual">Virtual app</string>
+    <string name="place_system">System TV app</string>
     <string name="user_default">Me</string>
     <string name="user_add">Add user</string>
     <string name="user_rename">Rename</string>

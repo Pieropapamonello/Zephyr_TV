@@ -107,7 +107,8 @@ internal object Stremio {
      * player must send; [group] is its bingeGroup (the same kind of stream for the next episode).
      */
     internal class Stream(val url: String, val title: String, val headers: Map<String, String>, val group: String? = null,
-                          val source: String? = null) // source: the add-on it came from, when streams of several are mixed
+                          val source: String? = null, // source: the add-on it came from, when streams of several are mixed
+                          val langRank: Int = LANG_OURS) // in the TV's language (0), saying none (1), in another (2)
 
     @Volatile private var listings: Map<String, Listing> = emptyMap() // manifest address to what's saved, once read
     private val updating = java.util.Collections.synchronizedSet(HashSet<String>())
@@ -453,6 +454,11 @@ internal object Stremio {
      * out), with the headers they need. A channel's is named by its title's first line; a film's or episode's
      * ([vod]) by its name (the quality, "1080p") and its description's first line (the file).
      */
+    /** A stream's language against the TV's (see Stream.langRank): ours, unknown, another; tried in that order. */
+    const val LANG_OURS = 0
+    const val LANG_UNKNOWN = 1
+    const val LANG_OTHER = 2
+
     internal fun streams(answer: JSONObject, vod: Boolean = false): List<Stream> {
         val list = answer.optJSONArray("streams") ?: return emptyList()
         return (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { s ->

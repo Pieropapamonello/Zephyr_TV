@@ -60,7 +60,8 @@ internal object K {
     const val ADULT_UNTIL = "adult_until" // when the 18+ unlock runs out (wall clock ms; Long.MAX_VALUE: until locked again)
     const val ADULT_BOOT = "adult_boot" // when the TV had started at the 18+ unlock (see adultUnlocked)
     const val ADULT_FOREVER = "adult_forever" // an 18+ unlock lasts until locked again, not two hours
-    const val HIDE_UNKNOWN_LANG = "hide_unknown_lang" // streams that say no language hidden (see inLanguage)
+    const val HIDE_UNKNOWN_LANG = "hide_unknown_lang" // streams that say no language hidden, not last (see languageRank)
+    const val FAST_START = "fast_start" // a film starts with the first working stream in the preferred quality (see quickStreams)
     const val STREAM_QUALITY = "stream_quality" // the quality streams are preferred in, by height; none: the highest
     const val STREAM_LANG_ONLY = "stream_lang_only" // films' and episodes' streams in the TV's language only (see streamLanguage)
     const val STREAM_MANUAL = "stream_manual" // films' and episodes' streams picked by hand from one list (see pickStream)
@@ -70,6 +71,7 @@ internal object K {
     const val NUVIO_ON = "nuvio_on" // plugins switched on that their manifest has off ("<manifest>#<id>")
     const val NUVIO_OFF = "nuvio_off" // plugins switched off that their manifest has on
     const val NUVIO_ADULT = "nuvio_adult" // repositories marked 18+
+    const val ADULT_PLACE = "adult_place" // where the adult add-ons show: virtual, apps, mixed (see AdultPlace)
     const val ADULT_APP = "adult_app" // the adult add-ons in an app of their own, Adult content (see AdultLock)
 
     // Spotlight

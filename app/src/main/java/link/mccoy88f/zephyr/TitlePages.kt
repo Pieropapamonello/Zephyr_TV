@@ -667,7 +667,8 @@ internal fun MainActivity.pickStream(ref: TitleRef, meta: Stremio.TitleMeta, epi
             .map { Stremio.Stream(it.url, it.title, it.headers, it.group, it.source ?: name) }
         ui.post {
             left--
-            found += got.sortedWith(qualityOrder(preferredQuality(prefs))) // each source's, in the preferred quality's order, under those already there
+            // Each source's, in the TV's language first then the preferred quality's order, under those already there.
+            found += got.sortedWith(compareBy<Stremio.Stream> { it.langRank }.then(qualityOrder(preferredQuality(prefs))))
             if (pageShowing(title)) show()
         }
     }

@@ -305,15 +305,23 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                 prefs.edit().putInt(K.STREAM_QUALITY, QUALITIES[(now + 1) % QUALITIES.size]).apply()
                 renderSettings(WATCH_SECTION * SECTION + 5)
             },
+            // Quick start: the first working stream in the preferred quality plays; the other sources go on looking.
+            // Not with the highest quality: that one waits for every source (see quickStart).
+            page(getString(R.string.setting_fast_start),
+                if (preferredQuality(prefs) == 0) getString(R.string.fast_start_not_highest) else toggle(prefs.getBoolean(K.FAST_START, true))) {
+                if (preferredQuality(prefs) == 0) return@page Toast.makeText(this, getString(R.string.fast_start_pick_quality), Toast.LENGTH_LONG).show()
+                prefs.edit().putBoolean(K.FAST_START, !prefs.getBoolean(K.FAST_START, true)).apply()
+                renderSettings(WATCH_SECTION * SECTION + 6)
+            },
             // Films' and episodes' streams in the TV's language only (the TMDB language's), or all of them.
             page(getString(R.string.setting_stream_language), toggle(streamLanguage(prefs) != null)) {
                 prefs.edit().putBoolean(K.STREAM_LANG_ONLY, streamLanguage(prefs) == null).apply()
-                renderSettings(WATCH_SECTION * SECTION + 6)
+                renderSettings(WATCH_SECTION * SECTION + 7)
             },
             // Streams that say no language (and whose plugin doesn't either): hidden, with the TV's language only on.
-            page(getString(R.string.setting_hide_unknown_language), toggle(prefs.getBoolean(K.HIDE_UNKNOWN_LANG, true))) {
-                prefs.edit().putBoolean(K.HIDE_UNKNOWN_LANG, !prefs.getBoolean(K.HIDE_UNKNOWN_LANG, true)).apply()
-                renderSettings(WATCH_SECTION * SECTION + 7)
+            page(getString(R.string.setting_hide_unknown_language), toggle(prefs.getBoolean(K.HIDE_UNKNOWN_LANG, false))) {
+                prefs.edit().putBoolean(K.HIDE_UNKNOWN_LANG, !prefs.getBoolean(K.HIDE_UNKNOWN_LANG, false)).apply()
+                renderSettings(WATCH_SECTION * SECTION + 8)
             },
         )
     }

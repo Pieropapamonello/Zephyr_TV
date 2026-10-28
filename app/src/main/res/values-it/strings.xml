@@ -386,7 +386,7 @@
 
     <!-- Stremio add-ons -->
     <string name="settings_section_addons">Addon Stremio</string>
-    <string name="settings_section_addons_plugins">Add-on e plugin</string>
+    <string name="settings_section_addons_plugins">Add-on e Plugin</string>
     <string name="addons_stremio">Add-on Stremio</string>
     <string name="nuvio_plugins">Plugin Nuvio</string>
     <string name="nuvio_intro">I plugin Nuvio trovano da soli gli stream di film, serie e canali, dai siti che conoscono. Sono programmi scritti da altre persone: Zephyr TV li esegue separati da tutto il resto, con accesso solo a internet. Aggiungi solo repository di cui ti fidi.</string>
@@ -398,9 +398,6 @@
     <string name="nuvio_added">%1$s: %2$d plugin</string>
     <string name="nuvio_empty">Questo repository non ha plugin.</string>
     <string name="setting_addons_tv">Canali TV</string>
-    <string name="addons_tv_tv">Nell\'app TV</string>
-    <string name="addons_tv_iptv">In un\'app IPTV</string>
-    <string name="addons_tv_apps">Un\'app per addon</string>
     <string name="setting_addon_add">Aggiungi un addon</string>
     <string name="addon_adult">Contenuti V.M. - Adulti</string>
     <string name="addon_hint">https://…/manifest.json</string>
@@ -425,11 +422,15 @@
     <string name="player_loading">Caricamento…</string>
     <string name="player_no_streams">Nessuno streaming disponibile</string>
     <string name="player_finding_more">Cerco altri stream…</string>
+    <string name="player_finding_language">Cerco stream nella lingua del TV…</string>
     <string name="player_finding_streams">Caricamento degli stream disponibili…</string>
     <string name="player_checking_streams">Verifica delle fonti valide…</string>
-    <string name="setting_stream_language">Solo stream nella lingua del TV</string>
+    <string name="setting_stream_language">Prima gli stream nella lingua del TV</string>
     <string name="setting_stream_quality">Qualità preferita</string>
     <string name="stream_quality_max">Massima</string>
+    <string name="setting_fast_start">Avvio rapido dei contenuti</string>
+    <string name="fast_start_not_highest">Non con Massima</string>
+    <string name="fast_start_pick_quality">L\'avvio rapido richiede una qualità preferita: con Massima si aspettano tutte le fonti.</string>
     <string name="setting_hide_unknown_language">Nascondi stream senza lingua</string>
     <string name="player_stream_n">Carico stream %1$d di %2$d…</string>
     <string name="player_channel_n">%1$d / %2$d</string>
@@ -454,8 +455,7 @@
     <string name="vod_series">Serie TV</string>
     <string name="vod_watched_movies">Film già visti</string>
     <string name="vod_watched_series">Serie TV già viste</string>
-    <string name="setting_addons_vod">Film e serie</string>
-    <string name="addons_vod_tiles">App Film e Serie TV</string>
+    <string name="setting_addons_vod">Film e Serie TV</string>
     <string name="setting_cinemeta">Catalogo contenuti</string>
     <string name="setting_stream_choice">Scelta dello stream</string>
     <string name="stream_choice_auto">Automatica</string>
@@ -525,9 +525,11 @@
     <string name="adult_locked_toast">I contenuti VM18 sono nascosti. Usa il PIN nel menu utenti per mostrarli.</string>
     <string name="addon_says_adult">Questo add-on dichiara contenuti per adulti. Conta sempre come VM18.</string>
     <string name="adult_app">Contenuti per adulti</string>
-    <string name="setting_adult_app">Add-on per adulti</string>
-    <string name="adult_app_own">In Contenuti per adulti</string>
-    <string name="adult_app_mixed">Con gli altri</string>
+    <string name="setting_adult_app">Contenuti per Adulti</string>
+    <string name="place_mixed">Insieme agli altri</string>
+    <string name="place_per_addon">Un\'app per add-on</string>
+    <string name="place_virtual">App virtuale</string>
+    <string name="place_system">App TV di sistema</string>
     <string name="user_default">Io</string>
     <string name="user_add">Aggiungi utente</string>
     <string name="user_rename">Rinomina</string>

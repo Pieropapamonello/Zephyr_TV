@@ -386,7 +386,7 @@
 
     <!-- Stremio add-ons -->
     <string name="settings_section_addons">Complementos de Stremio</string>
-    <string name="settings_section_addons_plugins">Complementos y plugins</string>
+    <string name="settings_section_addons_plugins">Complementos y Plugins</string>
     <string name="addons_stremio">Complementos de Stremio</string>
     <string name="nuvio_plugins">Plugins de Nuvio</string>
     <string name="nuvio_intro">Los plugins de Nuvio encuentran por sí mismos los streams de películas, series y canales, en los sitios que conocen. Son programas escritos por otras personas: Zephyr TV los ejecuta aparte de todo lo demás, solo con acceso a internet. Añade solo repositorios de confianza.</string>
@@ -398,9 +398,6 @@
     <string name="nuvio_added">%1$s: %2$d plugins</string>
     <string name="nuvio_empty">Este repositorio no tiene plugins.</string>
     <string name="setting_addons_tv">Canales de TV</string>
-    <string name="addons_tv_tv">En la app de TV</string>
-    <string name="addons_tv_iptv">En una app IPTV</string>
-    <string name="addons_tv_apps">Una app por complemento</string>
     <string name="setting_addon_add">Añadir un complemento</string>
     <string name="addon_adult">Contenido para adultos (+18)</string>
     <string name="addon_hint">https://…/manifest.json</string>
@@ -425,11 +422,15 @@
     <string name="player_loading">Cargando…</string>
     <string name="player_no_streams">Ningún stream disponible</string>
     <string name="player_finding_more">Buscando más streams…</string>
+    <string name="player_finding_language">Buscando streams en el idioma del televisor…</string>
     <string name="player_finding_streams">Cargando los streams disponibles…</string>
     <string name="player_checking_streams">Comprobando las fuentes válidas…</string>
-    <string name="setting_stream_language">Solo streams en el idioma del televisor</string>
+    <string name="setting_stream_language">Primero los streams en el idioma del televisor</string>
     <string name="setting_stream_quality">Calidad preferida</string>
     <string name="stream_quality_max">Máxima</string>
+    <string name="setting_fast_start">Inicio rápido de los contenidos</string>
+    <string name="fast_start_not_highest">No con Máxima</string>
+    <string name="fast_start_pick_quality">El inicio rápido necesita una calidad preferida: con Máxima se esperan todas las fuentes.</string>
     <string name="setting_hide_unknown_language">Ocultar streams sin idioma</string>
     <string name="player_stream_n">Cargando stream %1$d de %2$d…</string>
     <string name="player_channel_n">%1$d / %2$d</string>
@@ -454,8 +455,7 @@
     <string name="vod_series">Series</string>
     <string name="vod_watched_movies">Películas vistas</string>
     <string name="vod_watched_series">Series vistas</string>
-    <string name="setting_addons_vod">Películas y series</string>
-    <string name="addons_vod_tiles">Apps Películas y Series</string>
+    <string name="setting_addons_vod">Películas y Series de TV</string>
     <string name="setting_cinemeta">Catálogo de contenidos</string>
     <string name="setting_stream_choice">Elección del stream</string>
     <string name="stream_choice_auto">Automática</string>
@@ -525,9 +525,11 @@
     <string name="adult_locked_toast">El contenido +18 está oculto. Usa el PIN en el menú de usuarios para mostrarlo.</string>
     <string name="addon_says_adult">Este add-on dice que tiene contenido para adultos. Siempre cuenta como +18.</string>
     <string name="adult_app">Contenido para adultos</string>
-    <string name="setting_adult_app">Add-ons para adultos</string>
-    <string name="adult_app_own">En Contenido para adultos</string>
-    <string name="adult_app_mixed">Con los demás</string>
+    <string name="setting_adult_app">Contenido para Adultos</string>
+    <string name="place_mixed">Junto a los demás</string>
+    <string name="place_per_addon">Una app por complemento</string>
+    <string name="place_virtual">App virtual</string>
+    <string name="place_system">App de TV del sistema</string>
     <string name="user_default">Yo</string>
     <string name="user_add">Añadir usuario</string>
     <string name="user_rename">Renombrar</string>

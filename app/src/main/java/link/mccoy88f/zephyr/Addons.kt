@@ -127,7 +127,7 @@ internal fun MainActivity.addonsTv(): TvPlace {
  * Titles). An add-on with both has one tile, with both. Runs on the io thread.
  */
 internal fun MainActivity.addonApps(): List<MainActivity.App> {
-    val urls = shownAddonUrls().filter { !inAdultApp(it) } // those in Adult content: under its tile alone
+    val urls = shownAddonUrls().filter { !adultApart(it) } // adult ones apart: under their own tiles alone
     fun icon(res: Int) = getDrawable(res)!!
     // Its logo once it's on disk (downloaded with its channels, see updateAddon), else the [res] mark.
     fun tile(addon: Stremio.Addon, res: Int): MainActivity.App {
@@ -145,13 +145,16 @@ internal fun MainActivity.addonApps(): List<MainActivity.App> {
         }
         TvPlace.TV -> emptyList()
     }
-    return (tv + vodApps() + vodTileAddons().map { tile(it, R.drawable.ic_movie) } + adultTile()).distinctBy { it.pkg }
+    // An adult add-on with an app of its own: one tile, its channels, films and series in it.
+    val adultOwn = shownAddonUrls().filter { adultOwnApp(it) }.mapNotNull { url -> Stremio.saved(filesDir, url)?.addon?.let { tile(it, R.drawable.ic_adult) } }
+    return (tv + vodApps() + vodTileAddons().map { tile(it, R.drawable.ic_movie) } + adultTile() + adultOwn).distinctBy { it.pkg }
 }
 
 /** The add-ons whose channels show under the tile [pkg]: all of them under the TV app or the IPTV app, one under its own. */
 internal fun MainActivity.addonsUnder(pkg: String): List<String> {
     if (pkg == ADULT_PKG) return if (adultApp()) shownAddonUrls().filter { isAdultAddon(it) } else emptyList()
-    val urls = shownAddonUrls().filter { !inAdultApp(it) }
+    adultOwnUrl(pkg)?.let { return listOf(it) } // an adult add-on's own app: its channels, whatever the others do
+    val urls = shownAddonUrls().filter { !adultApart(it) }
     val mode = addonsTv()
     return when {
         pkg == IPTV_PKG -> if (mode == TvPlace.IPTV) urls else emptyList()
@@ -324,6 +327,7 @@ internal fun MainActivity.lastChannelCard(hidden: Set<String>): Pair<Long, Prog>
 /** The tile [c]'s channels show under, as addonsTv puts them: the add-on's own app, the IPTV app, or the TV app. */
 internal fun MainActivity.addonTile(c: AddonChannel): MainActivity.App? {
     if (inAdultApp(c.addon)) return apps.firstOrNull { it.pkg == ADULT_PKG }
+    if (adultOwnApp(c.addon)) return Stremio.saved(filesDir, c.addon)?.addon?.let { a -> apps.firstOrNull { it.pkg == STREMIO + a.id } }
     val pkg = when (addonsTv()) {
         TvPlace.APPS -> Stremio.saved(filesDir, c.addon)?.addon?.let { STREMIO + it.id }
         TvPlace.IPTV -> IPTV_PKG
@@ -387,18 +391,24 @@ internal fun MainActivity.placementRows(back: (Int) -> Unit): List<Triple<String
             addonsChanged()
             // An app each: their logos, for the tiles, come with their channels.
             if (next == TvPlace.APPS) addonUrls().forEach { updateAddon(it, null) }
+            if (next == TvPlace.IPTV) toFavourites(IPTV_PKG)
             back(0)
         },
-        // Films and series: the Films and Series tiles, an app per add-on, or none (their catalog: under Content).
+        // Films and series: the Films and Series virtual apps, an app per add-on, or none (their catalog: under Content).
         page(getString(R.string.setting_addons_vod), addonsVodName(addonsVod())) {
             val modes = VodPlace.entries
-            prefs.edit().putString(K.ADDONS_VOD, modes[(modes.indexOf(addonsVod()) + 1) % modes.size].key).apply()
+            val next = modes[(modes.indexOf(addonsVod()) + 1) % modes.size]
+            prefs.edit().putString(K.ADDONS_VOD, next.key).apply()
+            if (next == VodPlace.TILES) toFavourites(MOVIES_PKG, SERIES_PKG)
             addonsChanged()
             back(1)
         },
-        // The adult add-ons: with the others, or in Adult content, a tile of their own (hidden while the 18+ lock holds).
-        page(getString(R.string.setting_adult_app), getString(if (adultApp()) R.string.adult_app_own else R.string.adult_app_mixed)) {
-            prefs.edit().putBoolean(K.ADULT_APP, !adultApp()).apply()
+        // The adult add-ons: in Adult content, an app each, or with the others (apart, hidden while the 18+ lock holds).
+        page(getString(R.string.setting_adult_app), adultPlaceName(adultPlace())) {
+            val modes = AdultPlace.entries
+            val next = modes[(modes.indexOf(adultPlace()) + 1) % modes.size]
+            prefs.edit().putString(K.ADULT_PLACE, next.key).apply()
+            if (next == AdultPlace.VIRTUAL) toFavourites(ADULT_PKG)
             addonsChanged()
             back(2)
         },
@@ -517,17 +527,29 @@ private fun MainActivity.addCatalog() {
     }
 }
 
+// The same words for each kind of content: the system's TV app, a virtual app, an app per add-on, with the others, off.
 internal fun MainActivity.addonsVodName(mode: VodPlace) = getString(when (mode) {
-    VodPlace.TILES -> R.string.addons_vod_tiles
-    VodPlace.APPS -> R.string.addons_tv_apps
+    VodPlace.TILES -> R.string.place_virtual
+    VodPlace.APPS -> R.string.place_per_addon
     VodPlace.OFF -> R.string.state_off
 })
 
 internal fun MainActivity.addonsTvName(mode: TvPlace) = getString(when (mode) {
-    TvPlace.TV -> R.string.addons_tv_tv
-    TvPlace.IPTV -> R.string.addons_tv_iptv
-    TvPlace.APPS -> R.string.addons_tv_apps
+    TvPlace.TV -> R.string.place_system
+    TvPlace.IPTV -> R.string.place_virtual
+    TvPlace.APPS -> R.string.place_per_addon
 })
+
+internal fun MainActivity.adultPlaceName(mode: AdultPlace) = getString(when (mode) {
+    AdultPlace.VIRTUAL -> R.string.place_virtual
+    AdultPlace.APPS -> R.string.place_per_addon
+    AdultPlace.MIXED -> R.string.place_mixed
+})
+
+/** A virtual app just chosen goes among the favourites (the apps row), if it had been taken out; it can be again. */
+internal fun MainActivity.toFavourites(vararg pkgs: String) {
+    prefs.edit().putStringSet(K.ROW_HIDDEN, rowHiddenSet() - pkgs.toSet()).apply()
+}
 
 /** An add-on's manifest address typed with the remote (see addonFromPhone). Saving adds it once it answers. */
 internal fun MainActivity.configureAddon(initialUrl: String = "", initialAdult: Boolean = false) {

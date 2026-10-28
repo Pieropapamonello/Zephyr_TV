@@ -68,7 +68,7 @@ internal fun MainActivity.vodApps(): List<MainActivity.App> {
 
 /** The add-ons with film or series catalogs that get a tile of their own (films and series "apps"). */
 internal fun MainActivity.vodTileAddons(): List<Stremio.Addon> =
-    if (addonsVod() != VodPlace.APPS) emptyList() else vodAddons().filter { a -> a.vod.any { it.listed } && !inAdultApp(a.url) }
+    if (addonsVod() != VodPlace.APPS) emptyList() else vodAddons().filter { a -> a.vod.any { it.listed } && !adultApart(a.url) }
 
 /**
  * The rows of films or series under the tile [pkg]: under Films or Series, every add-on's catalogs of that type
@@ -78,10 +78,12 @@ internal fun MainActivity.vodTileAddons(): List<Stremio.Addon> =
 internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<Section> {
     val mode = addonsVod()
     val type = when (pkg) { MOVIES_PKG -> "movie"; SERIES_PKG -> "series"; else -> null }
-    val adult = pkg == ADULT_PKG
+    val ownAdult = adultOwnUrl(pkg)
+    val adult = pkg == ADULT_PKG || ownAdult != null
     val addons = when {
+        ownAdult != null -> vodAddons().filter { it.url == ownAdult } // an adult add-on's own app: its films and series
         adult -> if (adultApp()) vodAddons().filter { isAdultAddon(it.url) } else return emptyList()
-        mode == VodPlace.TILES && type != null -> vodAddons().filter { !inAdultApp(it.url) }
+        mode == VodPlace.TILES && type != null -> vodAddons().filter { !adultApart(it.url) }
         mode == VodPlace.APPS && pkg.startsWith(STREMIO) -> vodAddons().filter { STREMIO + it.id == pkg }
         else -> return emptyList()
     }
@@ -167,7 +169,8 @@ internal fun titleCard(t: Stremio.Title, source: String?, icon: String?, watched
         vod = TitleRef(t.type, t.id, t.name, t.poster, t.background, source, logo = t.logo, rating = t.rating, about = t.description))
 
 /** The tile a title of [type] from the add-on at [source] is under: Films or Series, or the add-on's own (null: none). */
-internal fun MainActivity.titleTile(type: String, source: String?): String? = if (source != null && inAdultApp(source)) ADULT_PKG else when (addonsVod()) {
+internal fun MainActivity.titleTile(type: String, source: String?): String? = if (source != null && inAdultApp(source)) ADULT_PKG
+    else if (source != null && adultOwnApp(source)) Stremio.saved(filesDir, source)?.addon?.let { STREMIO + it.id } else when (addonsVod()) {
     VodPlace.TILES -> if (type == "series") SERIES_PKG else MOVIES_PKG
     VodPlace.APPS -> source?.let { Stremio.saved(filesDir, it)?.addon }?.let { STREMIO + it.id }
     VodPlace.OFF -> null

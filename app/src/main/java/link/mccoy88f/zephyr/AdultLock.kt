@@ -58,11 +58,28 @@ internal fun MainActivity.shownAddonUrls(): List<String> = addonUrls().filter { 
 /** The tile of Adult content: the adult add-ons' channels, films and series, when they have an app of their own. */
 internal const val ADULT_PKG = STREMIO + "adult"
 
-/** Whether the adult add-ons have an app of their own (Adult content) instead of showing with the others. */
-internal fun MainActivity.adultApp() = prefs.getBoolean(K.ADULT_APP, false)
+/** Where the adult add-ons show: one virtual app (Adult content), an app each, or with the others; kept by [key]. */
+internal enum class AdultPlace(val key: String) { VIRTUAL("virtual"), APPS("apps"), MIXED("mixed") }
+
+/** Where the adult add-ons show, as chosen; before there was a choice of three, an app of their own or not. */
+internal fun MainActivity.adultPlace(): AdultPlace = prefs.getString(K.ADULT_PLACE, null)?.let { k -> AdultPlace.entries.firstOrNull { it.key == k } }
+    ?: if (prefs.getBoolean(K.ADULT_APP, false)) AdultPlace.VIRTUAL else AdultPlace.MIXED
+
+/** Whether the adult add-ons have one virtual app of their own (Adult content). */
+internal fun MainActivity.adultApp() = adultPlace() == AdultPlace.VIRTUAL
 
 /** Whether the add-on at [url] shows in Adult content, and so not in the other tiles. */
 internal fun MainActivity.inAdultApp(url: String) = adultApp() && isAdultAddon(url)
+
+/** Whether the add-on at [url] is an adult one with an app of its own (its channels, films and series in it). */
+internal fun MainActivity.adultOwnApp(url: String) = adultPlace() == AdultPlace.APPS && isAdultAddon(url)
+
+/** Whether the add-on at [url] shows apart from the others: in Adult content, or in an app of its own. */
+internal fun MainActivity.adultApart(url: String) = inAdultApp(url) || adultOwnApp(url)
+
+/** The adult add-on with an app of its own that [pkg] is, if it is one. */
+internal fun MainActivity.adultOwnUrl(pkg: String): String? =
+    shownAddonUrls().firstOrNull { adultOwnApp(it) && Stremio.saved(filesDir, it)?.addon?.let { a -> STREMIO + a.id } == pkg }
 
 /** Adult content's tile, when it has an app and an adult add-on shows (unlocked, or no 18+ lock). */
 internal fun MainActivity.adultTile(): List<MainActivity.App> =

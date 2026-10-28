@@ -14,6 +14,17 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 2.1.0
+
+- The Settings section is now **Add-ons and Plugins**. Its **TV Channels**, **Films and TV Series** and **Adult Content** have the same choices: **System TV app** (TV channels only), **Virtual app**, **One app per add-on**, and **With the others** or off.
+- **Adult Content** can now give each adult add-on an app of its own.
+- When you choose **Virtual app**, the app goes into your favourites. You can take it out again.
+- New: **Quick start**, in **Content**, on by default. A film or episode starts with the first stream in the preferred quality that works, without waiting for all the add-ons and plugins. The others keep looking, and their streams join the list in the player.
+- **Streams in the TV's language only** is now **Streams in the TV's language first**. The streams in the language of the TV come first, then those that say no language, then those in other languages, as a last choice. They are no longer hidden.
+- **Hide streams without a language** is now off by default.
+- When no stream in the language of the TV has come yet, the player waits for all the add-ons and plugins before it plays a stream in another language, or one that says no language. Quick start plays only a stream in the language of the TV.
+- Quick start needs a preferred quality. With **Highest**, the player waits for all the add-ons and plugins, up to 30 seconds, and then starts the best stream. The same happens when quick start is off.
+
 ## 2.0.1
 
 - A title page no longer asks the add-ons and plugins for streams when it opens. The player asks them when you select **Watch**, or the streams page does when **Stream choice** is **Manual**.

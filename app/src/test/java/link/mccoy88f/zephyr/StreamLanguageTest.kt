@@ -1,8 +1,6 @@
 package link.mccoy88f.zephyr
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class StreamLanguageTest {
@@ -39,12 +37,11 @@ class StreamLanguageTest {
             streams.sortedWith(qualityOrder(1080)).map { it.title })
     }
 
-    @Test fun keptInTheTvsLanguage() {
-        assertTrue(inLanguage("Source C 1080p · Host D", "it", declared = setOf("it"))) // its plugin's language
-        assertTrue(inLanguage("Torrent 1080p ITA ENG", "it"))
-        assertTrue(inLanguage("Multi audio 4K", "it"))
-        assertFalse(inLanguage("Torrent 1080p ENG", "it"))
-        assertFalse(inLanguage("Torrent 1080p", "it")) // says none, from an add-on: hidden by default
-        assertTrue(inLanguage("Torrent 1080p", "it", hideUnknown = false))
+    @Test fun rankedAgainstTheTvsLanguage() {
+        assertEquals(Stremio.LANG_OURS, languageRank("Source C 1080p · Host D", "it", declared = setOf("it"))) // its plugin's language
+        assertEquals(Stremio.LANG_OURS, languageRank("Torrent 1080p ITA ENG", "it"))
+        assertEquals(Stremio.LANG_OURS, languageRank("Multi audio 4K", "it"))
+        assertEquals(Stremio.LANG_OTHER, languageRank("Torrent 1080p ENG", "it"))
+        assertEquals(Stremio.LANG_UNKNOWN, languageRank("Torrent 1080p", "it")) // says none: a last choice, not hidden
     }
 }
