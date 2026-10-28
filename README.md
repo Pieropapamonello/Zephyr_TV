@@ -6,6 +6,8 @@
   <b>English</b> · <a href="README.it.md">Italiano</a>
 </p>
 
+<p align="center">📖 <a href="docs/guide.md"><b>User guide</b></a>: every feature, step by step.</p>
+
 <p align="center">
   <em>Light as a breeze.</em> A minimal, ad-free home screen for Android TV and Google TV.
 </p>

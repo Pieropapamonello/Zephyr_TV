@@ -6,6 +6,8 @@
   <a href="README.md">English</a> · <b>Italiano</b>
 </p>
 
+<p align="center">📖 <a href="docs/guida.md"><b>Guida all'uso</b></a>: tutte le funzioni, passo per passo.</p>
+
 <p align="center">
   <em>Leggero come una brezza.</em> Una schermata Home minimale e senza pubblicità per Android TV e Google TV.
 </p>
