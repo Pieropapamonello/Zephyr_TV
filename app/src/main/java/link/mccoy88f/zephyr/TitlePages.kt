@@ -155,12 +155,7 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
     val art = if (ref.background != null) Triple(ref.background, ref.logo, ref.poster ?: t.poster) else Triple(t.background, t.logo, ref.poster ?: t.poster)
     titlePage(t.name, art, t.name, top, rows, focus, icons, holds, descView) { closeLauncherSettings() }
     services.later { showVodTitle(meta, ref, it, focusRow, found) }
-    // A film's stream add-ons asked how many streams each has, all at once; the page again once they've said.
-    if (episodic || found != null || sources.size < 2 || manualStreams()) return // picked from all of them, by hand
-    netIo.execute {
-        val counts = parallel(sources, 4, 30) { (base, name) -> base to runCatching { sourceStreams(prefs, filesDir, base, name, t.type, t.id).size }.getOrDefault(0) }.toMap()
-        ui.post { if (pageShowing(t.name)) showVodTitle(meta, ref, services.known, focusedRow() ?: focusRow, counts) }
-    }
+    // No source is asked from here: the player asks them all when Watch starts it (or the streams' page, picked by hand).
 }
 
 /**
@@ -253,13 +248,14 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
     when {
         sources.isEmpty() || having?.isEmpty() == true -> rows += page(getString(R.string.title_no_streams)) { }
         // Picked by hand: Watch lists every source's streams at once (see pickStream), nothing to count first.
-        manual -> {
-            icons[rows.size] = watchIcon(null)
-            rows += page(watchLabel(null, VodProgress.position(vodDir(), e.id), seen)) {
-                pickStream(ref, meta, e) { showVodEpisode(meta, ref, e, services.known, found, 0) }
+        // Watch at once: the player asks every source (or, picked by hand, the streams' page does: see pickStream).
+        having == null -> {
+            val sole = soleAddon(sources)
+            icons[rows.size] = watchIcon(sole)
+            rows += page(watchLabel(sole, VodProgress.position(vodDir(), e.id), seen)) {
+                if (manual) pickStream(ref, meta, e) { showVodEpisode(meta, ref, e, services.known, found, 0) } else play(sole?.base)
             }
         }
-        having == null -> rows += page(getString(R.string.title_finding_streams)) { }
         else -> {
             val sole = soleAddon(having)
             val at = VodProgress.position(vodDir(), e.id)
@@ -289,12 +285,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
         showVodSeason(meta, ref, e.season, services.known, e.id)
     }
     services.later { showVodEpisode(meta, ref, e, it, found, focusedRow() ?: targetFocus) }
-    // The stream add-ons asked whether they have it (how many streams each), all at once; the page again once they've said.
-    if (found != null || sources.isEmpty() || manual) return
-    netIo.execute {
-        val counts = parallel(sources, 4, 30) { (base, name) -> base to runCatching { sourceStreams(prefs, filesDir, base, name, t.type, e.id).size }.getOrDefault(0) }.toMap()
-        ui.post { if (pageShowing(title)) showVodEpisode(meta, ref, e, services.known, counts, focusedRow() ?: targetFocus) }
-    }
+    // No source is asked from here: the player asks them all when Watch starts it (or the streams' page, picked by hand).
 }
 
 /**
@@ -676,7 +667,7 @@ internal fun MainActivity.pickStream(ref: TitleRef, meta: Stremio.TitleMeta, epi
             .map { Stremio.Stream(it.url, it.title, it.headers, it.group, it.source ?: name) }
         ui.post {
             left--
-            found += got
+            found += got.sortedWith(qualityOrder(preferredQuality(prefs))) // each source's, in the preferred quality's order, under those already there
             if (pageShowing(title)) show()
         }
     }

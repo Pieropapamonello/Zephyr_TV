@@ -44,12 +44,12 @@ class NuvioPluginsTest {
     }
 
     @Test fun pluginStreamsReadAsAnAddOnsWithTheirHeaders() {
-        val found = org.json.JSONArray("""[{"name":"​‌💎 VixSrc","quality":"1080p","title":"Film\n🎬 HLS","url":"https://cdn/x.m3u8",
-            "headers":{"Referer":"https://vixsrc.to/"}}, {"name":"no address"}]""")
+        val found = org.json.JSONArray("""[{"name":"​‌💎 Source A","quality":"1080p","title":"Film\n🎬 HLS","url":"https://cdn/x.m3u8",
+            "headers":{"Referer":"https://source-a.example/"}}, {"name":"no address"}]""")
         val streams = Stremio.streams(Nuvio.asStremio(found), vod = true)
         assertEquals(1, streams.size)
-        assertEquals("💎 VixSrc 1080p · Film", streams[0].title)
-        assertEquals("https://vixsrc.to/", streams[0].headers["Referer"])
+        assertEquals("💎 Source A 1080p · Film", streams[0].title)
+        assertEquals("https://source-a.example/", streams[0].headers["Referer"])
     }
 
     @Test fun repositoryAndWhatEachPluginServes() {
@@ -66,7 +66,7 @@ class NuvioPluginsTest {
         assertTrue(Nuvio.provides(repo.scrapers[1], "tv", "tv:rai1"))
         val anyId = Nuvio.Scraper("y", "Y", "", "1", "y.js", listOf("movie", "tv"), null, true, emptyList())
         assertTrue(Nuvio.provides(anyId, "series", "tt0944947:1:1"))
-        assertTrue(!Nuvio.provides(anyId, "tv", "vavoo_SKY|group:it")) // "tv" without ids of its own: series, not channels
+        assertTrue(!Nuvio.provides(anyId, "tv", "channel_one|group:it")) // "tv" without ids of its own: series, not channels
         assertTrue(!Nuvio.provides(anyId, "movie", "jstrm:abc")) // an add-on's own id: no TMDB id to give it
         assertEquals("https://h/x/manifest.json", Nuvio.manifestUrl("https://h/x/"))
         assertEquals("https://h/x/repo.json", Nuvio.manifestUrl(" https://h/x/repo.json "))
@@ -103,11 +103,11 @@ class NuvioPluginsTest {
 
     /**
      * Every plugin of a repository on a film and an episode, over the network: run with NUVIO_LIVE=1 and, for another
-     * repository than yoruix's, NUVIO_REPO=<its manifest>. Prints what each found.
+     * NUVIO_REPO=<a repository's manifest>. Prints what each found.
      */
     @Test fun repositoryOverTheNetwork() {
         assumeTrue(System.getenv("NUVIO_LIVE") == "1")
-        val url = System.getenv("NUVIO_REPO") ?: "https://raw.githubusercontent.com/yoruix/nuvio-providers/refs/heads/main/manifest.json"
+        val url = System.getenv("NUVIO_REPO") ?: return
         val dir = java.nio.file.Files.createTempDirectory("nuvio").toFile()
         val repo = Nuvio.update(dir, url)!!
         val only = System.getenv("NUVIO_ONLY")?.split(',')?.toSet()
@@ -126,20 +126,5 @@ class NuvioPluginsTest {
             println("%-22s %-17s %s".format(s.id, film, episode))
         }
         pool.shutdownNow()
-    }
-
-    /** The real PriSynx plugins, over the network: run with NUVIO_LIVE=1 (not in CI, where sites may block or change). */
-    @Test fun prisynxFindsStreams() {
-        assumeTrue(System.getenv("NUVIO_LIVE") == "1")
-        val base = "https://raw.githubusercontent.com/qwertyuiop8899/PriSynx/main/providers/"
-        for (file in listOf("vixsrc.js", "raiplay.js")) {
-            val script = Nuvio.httpFetch(JSONObject().put("url", base + file)).text()
-            val movie = Nuvio.run(script, "getStreams(\"603\", \"movie\", null, null)") // The Matrix
-            println("$file movie: ${movie?.length()} ${movie?.optJSONObject(0)?.optString("url")}")
-        }
-        val script = Nuvio.httpFetch(JSONObject().put("url", base + "vixsrc.js")).text()
-        val episode = Nuvio.run(script, "getStreams(\"1399\", \"tv\", 1, 1)") // Game of Thrones 1x1
-        println("vixsrc episode: ${episode?.length()} ${episode?.optJSONObject(0)?.optString("url")}")
-        assertTrue((episode?.length() ?: 0) > 0)
     }
 }

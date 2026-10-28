@@ -425,6 +425,12 @@
     <string name="player_loading">Cargando…</string>
     <string name="player_no_streams">Ningún stream disponible</string>
     <string name="player_finding_more">Buscando más streams…</string>
+    <string name="player_finding_streams">Cargando los streams disponibles…</string>
+    <string name="player_checking_streams">Comprobando las fuentes válidas…</string>
+    <string name="setting_stream_language">Solo streams en el idioma del televisor</string>
+    <string name="setting_stream_quality">Calidad preferida</string>
+    <string name="stream_quality_max">Máxima</string>
+    <string name="setting_hide_unknown_language">Ocultar streams sin idioma</string>
     <string name="player_stream_n">Cargando stream %1$d de %2$d…</string>
     <string name="player_channel_n">%1$d / %2$d</string>
     <string name="player_stream">Stream %1$d de %2$d · %3$s</string>

@@ -60,6 +60,9 @@ internal object K {
     const val ADULT_UNTIL = "adult_until" // when the 18+ unlock runs out (wall clock ms; Long.MAX_VALUE: until locked again)
     const val ADULT_BOOT = "adult_boot" // when the TV had started at the 18+ unlock (see adultUnlocked)
     const val ADULT_FOREVER = "adult_forever" // an 18+ unlock lasts until locked again, not two hours
+    const val HIDE_UNKNOWN_LANG = "hide_unknown_lang" // streams that say no language hidden (see inLanguage)
+    const val STREAM_QUALITY = "stream_quality" // the quality streams are preferred in, by height; none: the highest
+    const val STREAM_LANG_ONLY = "stream_lang_only" // films' and episodes' streams in the TV's language only (see streamLanguage)
     const val STREAM_MANUAL = "stream_manual" // films' and episodes' streams picked by hand from one list (see pickStream)
     const val ADDONS_OFF = "addons_off" // add-ons switched off: kept, with their settings, but not shown nor asked
     const val NUVIO_REPOS_OFF = "nuvio_repos_off" // Nuvio repositories switched off, the same way

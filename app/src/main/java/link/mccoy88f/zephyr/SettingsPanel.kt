@@ -109,9 +109,12 @@ internal fun MainActivity.sectionTitle(section: Int) = getString(when (section) 
     else -> R.string.settings_section_system
 })
 
+/** The sections in the order the settings' first page lists them (their numbers aren't that order). */
+internal val HOME_SECTIONS = listOf(LOOK_SECTION, APPS_SECTION, WATCH_SECTION, TV_SECTION, ADDONS_SECTION, SPOTLIGHT_SECTION, SCREENSAVER_SECTION, SYSTEM_SECTION)
+
 /** The sections, each a page of its own: an arrow says so (a value here would only repeat the page's first row). */
 internal fun MainActivity.renderSettingsHome(focus: Int = 0) {
-    val sections = listOf(LOOK_SECTION, APPS_SECTION, WATCH_SECTION, TV_SECTION, ADDONS_SECTION, SPOTLIGHT_SECTION, SCREENSAVER_SECTION, SYSTEM_SECTION)
+    val sections = HOME_SECTIONS
     showPage(getString(R.string.plume_settings), sections.map { section ->
         // Add-ons and plugins: Stremio's add-ons and Nuvio's plugins, a page that leads to each.
         if (section == ADDONS_SECTION) page(getString(R.string.settings_section_addons_plugins), SUBMENU) { addonsAndPlugins() }
@@ -126,7 +129,9 @@ internal fun MainActivity.renderSettingsHome(focus: Int = 0) {
 /** Shows the section page holding [row], focused on it. */
 internal fun MainActivity.renderSettings(row: Int) {
     val section = row / SECTION
-    showPage(sectionTitle(section), sectionRows(section), row % SECTION) { if (section == ADDONS_SECTION) addonsAndPlugins(0) else renderSettingsHome(section) }
+    showPage(sectionTitle(section), sectionRows(section), row % SECTION) {
+        if (section == ADDONS_SECTION) addonsAndPlugins(3) else renderSettingsHome(HOME_SECTIONS.indexOf(section))
+    }
     shownSection = section
     // Each add-on's row starts with its icon, as its Watch on rows on a title's page do.
     if (section == ADDONS_SECTION) rowIcons(addonUrls().mapIndexed { i, url ->
@@ -294,6 +299,22 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                 prefs.edit().putBoolean(K.STREAM_MANUAL, !manualStreams()).apply()
                 renderSettings(WATCH_SECTION * SECTION + 4)
             },
+            // The quality tried first: the highest, or one the TV shows (a 1080p one: 1080p down, then those above).
+            page(getString(R.string.setting_stream_quality), qualityName(preferredQuality(prefs))) {
+                val now = QUALITIES.indexOf(preferredQuality(prefs)).coerceAtLeast(0)
+                prefs.edit().putInt(K.STREAM_QUALITY, QUALITIES[(now + 1) % QUALITIES.size]).apply()
+                renderSettings(WATCH_SECTION * SECTION + 5)
+            },
+            // Films' and episodes' streams in the TV's language only (the TMDB language's), or all of them.
+            page(getString(R.string.setting_stream_language), toggle(streamLanguage(prefs) != null)) {
+                prefs.edit().putBoolean(K.STREAM_LANG_ONLY, streamLanguage(prefs) == null).apply()
+                renderSettings(WATCH_SECTION * SECTION + 6)
+            },
+            // Streams that say no language (and whose plugin doesn't either): hidden, with the TV's language only on.
+            page(getString(R.string.setting_hide_unknown_language), toggle(prefs.getBoolean(K.HIDE_UNKNOWN_LANG, true))) {
+                prefs.edit().putBoolean(K.HIDE_UNKNOWN_LANG, !prefs.getBoolean(K.HIDE_UNKNOWN_LANG, true)).apply()
+                renderSettings(WATCH_SECTION * SECTION + 7)
+            },
         )
     }
     // The TV's own side: its inputs (HDMI and the like) and its channels, with their logos and guide.
@@ -427,6 +448,9 @@ internal fun MainActivity.tmdbContentRows(): List<Triple<String, String, () -> U
         },
     )
 }
+
+/** A preferred quality's name: "Highest", or its height ("1080p"). */
+internal fun MainActivity.qualityName(height: Int) = if (height == 0) getString(R.string.stream_quality_max) else "${height}p"
 
 internal fun MainActivity.cycleName(seconds: Int) = if (seconds == 0) getString(R.string.tmdb_cycle_off) else getString(R.string.tmdb_cycle_seconds, seconds)
 
@@ -574,6 +598,9 @@ internal fun MainActivity.focusedRow(): Int? {
 /** [panes]: [top] and the rows as panes of glass (a title's or a channel's page in the Glass theme), see [glassPane]. */
 internal fun MainActivity.showPage(title: String, rows: List<Triple<String, String, () -> Unit>>, focus: Int = 0, top: View? = null,
                                   panes: Boolean = false, back: (() -> Unit)?) {
+    // The page left keeps the row it had focus on; Back to a page puts focus there again, wherever it was.
+    findViewById<TextView>(R.id.settingsTitle).text?.toString()?.let { left -> focusedRow()?.let { pageFocus[left] = it } }
+    val focus = if (goingBack) pageFocus[title]?.takeIf { it in rows.indices } ?: focus else focus
     pageExit?.invoke()
     pageExit = null
     pageSides = null

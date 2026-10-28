@@ -13,7 +13,7 @@ internal object Http {
     private const val TIMEOUT_MS = 6000
 
     /**
-     * For an add-on's streams: an aggregator (AIOStreams) asks every add-on of its own before it answers, often
+     * For an add-on's streams: an aggregator asks every add-on of its own before it answers, often
      * past 6 s; the first time for a title, past 10.
      */
     const val STREAMS_TIMEOUT_MS = 20_000

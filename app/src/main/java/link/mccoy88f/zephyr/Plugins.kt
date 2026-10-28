@@ -32,8 +32,11 @@ internal fun pluginOn(p: SharedPreferences, repo: String, s: Nuvio.Scraper): Boo
  */
 internal fun pluginSources(p: SharedPreferences, dir: File, type: String, id: String, adult: Boolean): List<Pair<String, String>> {
     val hidden = (if (adult) emptySet() else nuvioAdultRepos(p)) + p.getStringSet(K.NUVIO_REPOS_OFF, emptySet())!!
+    val lang = streamLanguage(p)
     return nuvioRepoUrls(p).filter { it !in hidden }.flatMap { repo ->
         Nuvio.saved(dir, repo)?.scrapers.orEmpty().filter { pluginOn(p, repo, it) && Nuvio.provides(it, type, id) }
+            // A plugin for other languages only (its manifest's contentLanguage) isn't asked, with the language on.
+            .filter { s -> lang == null || s.languages.isEmpty() || s.languages.any { it.lowercase().startsWith(lang) } }
             .map { "$PLUGIN$repo#${it.id}" to it.name }
     }
 }
@@ -48,10 +51,96 @@ internal fun adultPluginSources(p: SharedPreferences, dir: File) = nuvioAdultRep
  * run. Throws when an add-on can't be asked; a plugin that fails finds none. Network: off the UI thread.
  */
 internal fun sourceStreams(p: SharedPreferences, dir: File, base: String, name: String, type: String, id: String): List<Stremio.Stream> {
-    if (!base.startsWith(PLUGIN)) return Stremio.titleStreams(base, name, type, id)
-    val repo = base.removePrefix(PLUGIN).substringBeforeLast('#')
-    val s = Nuvio.saved(dir, repo)?.scrapers?.firstOrNull { it.id == base.substringAfterLast('#') } ?: return emptyList()
-    return Nuvio.streams(dir, repo, s, name, type, id, p.getString(K.TMDB_API_KEY, null)?.takeIf { it.isNotBlank() })
+    val lang = streamLanguage(p)
+    var declared = emptySet<String>() // a plugin's languages (its manifest's): a stream of it that says none is in those
+    val all = if (!base.startsWith(PLUGIN)) Stremio.titleStreams(base, name, type, id) else {
+        val repo = base.removePrefix(PLUGIN).substringBeforeLast('#')
+        val s = Nuvio.saved(dir, repo)?.scrapers?.firstOrNull { it.id == base.substringAfterLast('#') } ?: return emptyList()
+        declared = s.languages.map { it.lowercase().take(2) }.toSet()
+        Nuvio.streams(dir, repo, s, name, type, id, p.getString(K.TMDB_API_KEY, null)?.takeIf { it.isNotBlank() })
+    }
+    val hideUnknown = p.getBoolean(K.HIDE_UNKNOWN_LANG, true)
+    return if (lang == null) all else all.filter { inLanguage(it.title, lang, declared, hideUnknown) }
+}
+
+/**
+ * The language streams are kept in ("it", from the TMDB language "it-IT"), or null when Content → Streams in the TV's
+ * language is off: then every stream is kept.
+ */
+internal fun streamLanguage(p: SharedPreferences): String? {
+    if (!p.getBoolean(K.STREAM_LANG_ONLY, true)) return null
+    return (p.getString(K.TMDB_LANG, null) ?: TmdbClient.defaultLanguage()).substringBefore('-').lowercase()
+}
+
+/**
+ * The words and flags a stream's name says its language with, by language: those add-ons and plugins write ("ITA",
+ * "🇮🇹", "Italian", "SUB-ITA"). Words only whole, and none that's an everyday word too.
+ */
+private val LANGUAGE_MARKS = mapOf(
+    "it" to listOf("ita", "italian", "italiano", "\uD83C\uDDEE\uD83C\uDDF9"),
+    "en" to listOf("eng", "english", "\uD83C\uDDEC\uD83C\uDDE7", "\uD83C\uDDFA\uD83C\uDDF8"),
+    "es" to listOf("spa", "esp", "spanish", "español", "castellano", "\uD83C\uDDEA\uD83C\uDDF8", "\uD83C\uDDF2\uD83C\uDDFD"),
+    "fr" to listOf("fre", "french", "français", "vff", "vostfr", "\uD83C\uDDEB\uD83C\uDDF7"),
+    "de" to listOf("ger", "deu", "german", "deutsch", "\uD83C\uDDE9\uD83C\uDDEA"),
+    "pt" to listOf("portuguese", "português", "\uD83C\uDDF5\uD83C\uDDF9", "\uD83C\uDDE7\uD83C\uDDF7"),
+    "hi" to listOf("hin", "hindi", "\uD83C\uDDEE\uD83C\uDDF3"),
+    "ta" to listOf("tamil"), "te" to listOf("telugu"), "ml" to listOf("malayalam"), "kn" to listOf("kannada"),
+    "ja" to listOf("jpn", "japanese", "\uD83C\uDDEF\uD83C\uDDF5"), "ko" to listOf("korean", "\uD83C\uDDF0\uD83C\uDDF7"),
+    "ar" to listOf("arabic"), "ru" to listOf("rus", "russian", "\uD83C\uDDF7\uD83C\uDDFA"),
+)
+
+/**
+ * The picture's height a stream's name says ("2160p", "4K", "FHD", "720"), for putting the best first; [UNKNOWN_QUALITY]
+ * when it says none (an "Auto" HLS one, which picks as it plays, among them).
+ */
+internal fun streamQuality(title: String): Int {
+    val t = title.lowercase()
+    Regex("""(?<![0-9])(4320|2160|1440|1080|720|576|540|480|360|240)\s*[pi]?(?![0-9])""").findAll(t)
+        .map { it.groupValues[1].toInt() }.maxOrNull()?.let { return it }
+    return when {
+        Regex("""(?<![\p{L}0-9])(8k)(?![\p{L}])""").containsMatchIn(t) -> 4320
+        Regex("""(?<![\p{L}0-9])(4k|uhd)(?![\p{L}])""").containsMatchIn(t) -> 2160
+        Regex("""(?<![\p{L}0-9])(qhd|2k)(?![\p{L}])""").containsMatchIn(t) -> 1440
+        Regex("""(?<![\p{L}])(fhd|full[\s_.-]*hd)(?![\p{L}])""").containsMatchIn(t) -> 1080
+        Regex("""(?<![\p{L}])hd(?![\p{L}])""").containsMatchIn(t) -> 720
+        Regex("""(?<![\p{L}])sd(?![\p{L}])""").containsMatchIn(t) -> 480
+        else -> UNKNOWN_QUALITY
+    }
+}
+
+/** A stream that says no quality ranks as this: after the full HD ones, before the plain HD ones. */
+internal const val UNKNOWN_QUALITY = 900
+
+/** The qualities Content → Preferred quality offers, by height; 0 is the highest there is. */
+internal val QUALITIES = listOf(0, 2160, 1440, 1080, 720, 480)
+
+/** The quality streams are preferred in (see QUALITIES): 0, the highest, by default. */
+internal fun preferredQuality(p: SharedPreferences) = p.getInt(K.STREAM_QUALITY, 0)
+
+/**
+ * Streams in the order of [preferred]: those up to it first, the best of them first; then those above it, the
+ * nearest first (a 4K one stays, after the 1080p ones, for a TV set to 1080p). With 0, simply the best first.
+ */
+internal fun qualityOrder(preferred: Int): Comparator<Stremio.Stream> = compareBy<Stremio.Stream> { s ->
+    if (preferred == 0 || streamQuality(s.title) <= preferred) 0 else 1
+}.thenBy { s -> streamQuality(s.title).let { q -> if (preferred == 0 || q <= preferred) -q else q } }
+
+/** The languages [title] says a stream is in, as LANGUAGE_MARKS knows them; none when it doesn't say. */
+internal fun streamLanguages(title: String): Set<String> {
+    val t = title.lowercase()
+    return LANGUAGE_MARKS.filterValues { marks ->
+        marks.any { m -> if (m.first().isLetter()) Regex("(?<![\\p{L}])${Regex.escape(m)}(?![\\p{L}])").containsMatchIn(t) else m in title }
+    }.keys
+}
+
+/**
+ * Whether a stream named [title] is in [lang]: it says so (or "multi"), or, saying none, its plugin's [declared]
+ * languages have it; saying none and from a source that doesn't tell, only when [hideUnknown] is off.
+ */
+internal fun inLanguage(title: String, lang: String, declared: Set<String> = emptySet(), hideUnknown: Boolean = true): Boolean {
+    if (Regex("(?<![\\p{L}])multi").containsMatchIn(title.lowercase())) return true
+    val said = streamLanguages(title).ifEmpty { declared }
+    return if (said.isEmpty()) !hideUnknown else lang in said
 }
 
 /** A day: a repository is read again (new plugins, new versions of them) once its copy is this old. */
@@ -68,10 +157,11 @@ internal fun MainActivity.refreshPlugins() {
 /** Add-ons and plugins: Stremio's add-ons (their section) and Nuvio's plugins, each a page of its own. */
 internal fun MainActivity.addonsAndPlugins(focus: Int = 0) {
     val repos = nuvioRepoUrls(prefs)
-    showPage(getString(R.string.settings_section_addons_plugins), listOf(
-        page(getString(R.string.addons_stremio), "${addonUrls().size}") { renderSettings(MainActivity.ADDONS_TV_ROW) },
+    // Where their content shows (TV channels, films and series, adult ones), then Stremio's add-ons and Nuvio's plugins.
+    showPage(getString(R.string.settings_section_addons_plugins), placementRows { addonsAndPlugins(it) } + listOf(
+        page(getString(R.string.addons_stremio), "${addonUrls().size}") { renderSettings(MainActivity.ADDON_ADD_ROW) },
         page(getString(R.string.nuvio_plugins), "${repos.size}") { nuvioPage() },
-    ), focus) { renderSettingsHome(4) } // Add-ons and plugins' row on the settings' first page
+    ), focus) { renderSettingsHome(HOME_SECTIONS.indexOf(MainActivity.ADDONS_SECTION)) }
 }
 
 /** Nuvio's page: what plugins are (and that they run code from elsewhere), each repository, and Add a repository. */
@@ -92,7 +182,7 @@ internal fun MainActivity.nuvioPage(focus: Int = 0) {
             else -> getString(R.string.nuvio_plugins_on, on, r.scrapers.size)
         }
         page(r?.name ?: url, value) { repoPage(url) }
-    } + page(getString(R.string.nuvio_add), SUBMENU) { nuvioFromPhone() }, focus, top = intro) { addonsAndPlugins(1) }
+    } + page(getString(R.string.nuvio_add), SUBMENU) { nuvioFromPhone() }, focus, top = intro) { addonsAndPlugins(4) }
 }
 
 /**

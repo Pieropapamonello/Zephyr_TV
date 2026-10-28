@@ -456,7 +456,11 @@ class MainActivity : Activity() {
     @Deprecated("Home screen: Back only closes overlays, and goes back up to an app's first section")
     override fun onBackPressed() {
         when {
-            settingsScrim.visibility == View.VISIBLE -> pageBack?.invoke() ?: closeLauncherSettings()
+            // Back to the page before: focus on the row it was left from (see showPage).
+            settingsScrim.visibility == View.VISIBLE -> {
+                goingBack = true
+                try { pageBack?.invoke() ?: closeLauncherSettings() } finally { goingBack = false }
+            }
             allApps.visibility == View.VISIBLE -> closeAllApps()
             endSearch() -> {}
             // On a card in a section further down (an IPTV add-on's categories): the first section's first card.
@@ -812,6 +816,8 @@ class MainActivity : Activity() {
     // match Zephyr TV's look. Back goes up one page; from the main list it closes the panel.
 
     internal var pageBack: (() -> Unit)? = null
+    internal var goingBack = false // Back is drawing the page before: its row left from gets focus (see showPage)
+    internal val pageFocus = HashMap<String, Int>() // each page's row last left from, by its title
     internal var pageExit: (() -> Unit)? = null // cleanup when the page goes away (stops the upload server)
     internal var pageSides: ((Int) -> Unit)? = null // Left/Right (-1, +1) on a page that has them: a series' seasons
     internal var pageReturn: (() -> Unit)? = null // the page to show again, as it was, back from the player it opened
@@ -2060,11 +2066,8 @@ class MainActivity : Activity() {
         const val INPUTS_IN_APPS_ROW = TV_SECTION * SECTION + 1
         const val CHANNEL_LOGOS_ROW = TV_SECTION * SECTION + 2
         const val EPG_ROW = TV_SECTION * SECTION + 4
-        const val ADDONS_TV_ROW = ADDONS_SECTION * SECTION
-        const val ADDONS_VOD_ROW = ADDONS_TV_ROW + 1
-        const val ADULT_APP_ROW = ADDONS_TV_ROW + 2
-        const val ADDON_ADD_ROW = ADDONS_TV_ROW + 3
-        const val ADDON_ROWS = ADDONS_TV_ROW + 4 // then one row per add-on
+        const val ADDON_ADD_ROW = ADDONS_SECTION * SECTION // the Stremio add-ons' section: Add, then one row per add-on
+        const val ADDON_ROWS = ADDON_ADD_ROW + 1
         const val CINEMETA_ROW = WATCH_SECTION * SECTION + 3 // the content catalog, last of Content
         const val TMDB_SOURCE_ROW = SPOTLIGHT_SECTION * SECTION
         const val TMDB_LIST_ROW = TMDB_SOURCE_ROW + 1

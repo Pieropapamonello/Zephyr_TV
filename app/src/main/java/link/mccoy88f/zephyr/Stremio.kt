@@ -10,7 +10,7 @@ import org.json.JSONObject
 /**
  * Stremio add-ons, for TV channels and for films and series. The user adds an add-on by its manifest's address.
  *
- * TV: each "tv" catalog (an OMG+ TV configuration's) becomes rows, the whole catalog and one per category (its "genre"
+ * TV: each "tv" catalog becomes rows, the whole catalog and one per category (its "genre"
  * options). What the add-on lists is saved in a small file and read again every few minutes, so the rows show at
  * once and what's on stays fresh.
  *
@@ -23,7 +23,7 @@ import org.json.JSONObject
 internal object Stremio {
     private const val MAX_AGE_MS = 5 * 60_000L // the channels are read again after this long ("on now" goes stale)
     private const val RETRY_MS = 5 * 60_000L // and after a failure, not before five minutes
-    private const val MAX_PAGES = 40 // a catalog's pages read at most (100 channels each, on OMG)
+    private const val MAX_PAGES = 40 // a catalog's pages read at most (some give 100 channels a page)
     private const val VOD_AGE_MS = 6 * 3600_000L // films' and series' catalogs are read again after this long
     private const val VOD_PAGES = 2 // a film or series catalog's pages read (Cinemeta: 50 a page)
 
@@ -198,7 +198,7 @@ internal object Stremio {
         }
     }
 
-    /** The add-on in a manifest: its name, logo and TV catalogs (categories without a letter or digit are left out: OMG's ⚙️). */
+    /** The add-on in a manifest: its name, logo and TV catalogs (categories without a letter or digit are left out: a ⚙️ for the add-on's settings). */
     internal fun addon(url: String, m: JSONObject): Addon {
         val catalogs = ArrayList<Catalog>()
         val vod = ArrayList<Catalog>()
@@ -252,7 +252,7 @@ internal object Stremio {
     }
 
     /**
-     * A catalog's rows: the whole of it, then one per category. When its channels say their categories (OMG's do),
+     * A catalog's rows: the whole of it, then one per category. When its channels say their categories (some do),
      * those rows come from the whole one, without asking again for each; else each category is asked for.
      */
     private fun rows(addon: Addon, c: Catalog): List<Row> {
@@ -282,7 +282,7 @@ internal object Stremio {
         return (0 until metas.length()).mapNotNull { metas.optJSONObject(it) }.mapNotNull { m ->
             val id = m.optString("id").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
             val name = m.optString("name").trim().takeIf { it.isNotEmpty() } ?: return@mapNotNull null
-            // "LIVE" is what OMG says when it has no guide for the channel: nothing to show.
+            // "LIVE" is what some add-ons say when they have no guide for the channel: nothing to show.
             val now = text(m, "releaseInfo")?.takeIf { !it.equals("LIVE", ignoreCase = true) }
             val genres = (m.optJSONArray("genre") ?: m.optJSONArray("genres"))?.let { g -> (0 until g.length()).map { g.optString(it) } }.orEmpty()
             Item(m.optString("type").ifBlank { "tv" }, id, name, logo(text(m, "logo") ?: text(m, "poster")), now, genres)
@@ -422,7 +422,7 @@ internal object Stremio {
     internal fun meta(answer: JSONObject): Meta {
         val m = answer.optJSONObject("meta") ?: return Meta(null, null)
         val now = text(m, "releaseInfo")?.takeIf { !it.equals("LIVE", ignoreCase = true) }
-        // Without a guide OMG says only "Channel: <name> - ID: <id>": nothing to tell, the fallback guide tells more.
+        // Without a guide some add-ons say only "Channel: <name> - ID: <id>": nothing to tell, the fallback guide tells more.
         val description = text(m, "description")?.takeIf { now != null }
             ?.lines()?.map { it.trim() }?.filterIndexed { i, line -> line.isNotEmpty() || i == 0 }?.joinToString("\n")
         return Meta(description, now)
@@ -430,7 +430,7 @@ internal object Stremio {
 
     /**
      * How far into the program on now [at] is (1 to 100), from the first "HH:MM - HH:MM" in an add-on's description
-     * (OMG writes "⏰ 05:00 - 00:30"), on today's clock (an end before the start is after midnight). Null without one.
+     * (as some add-ons write it: "⏰ 05:00 - 00:30"), on today's clock (an end before the start is after midnight). Null without one.
      */
     internal fun progress(description: String?, at: java.util.Calendar = java.util.Calendar.getInstance()): Int? {
         val m = Regex("""(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})""").find(description ?: return null) ?: return null
@@ -475,7 +475,7 @@ internal object Stremio {
     internal class Probe(val ok: Boolean, val format: String?)
 
     /**
-     * Asks [url] what it is before the player gets it: its addresses (OMG's /s/<token>) have no extension to tell HLS
+     * Asks [url] what it is before the player gets it: some addresses (a proxy's /s/<token>) have no extension to tell HLS
      * from DASH by, and the player can't tell either. Follows the redirects (also http to https), then goes by the
      * answer's type, the final address's extension, and the first bytes. Network: off the UI thread.
      */

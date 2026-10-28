@@ -13,6 +13,19 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+
+## 2.0.1
+
+- A title page no longer asks the add-ons and plugins for streams when it opens. The player asks them when you select **Watch**, or the streams page does when **Stream choice** is **Manual**.
+- The player says what it does: **Loading the available streams…**, then **Checking which sources work…**, then **Loading stream 1 of 5…**.
+- The **Watch on** rows with the number of streams are gone. Set **Stream choice** to **Manual** to pick the source.
+- New: **Streams in the TV's language only**, in **Content**, on by default. Films and series show and play only the streams in the language of the TV. Plugins for other languages are not asked.
+- New: **Hide streams without a language**, in **Content**, under **Streams in the TV's language only**, on by default. A stream from a plugin that says no language counts in the plugin's languages.
+- The player tries the streams with the highest quality first, among those that work. In the manual list, each source's streams come with the highest quality first.
+- In Settings, Back goes to the row you left the page from. Before, focus could land on another row.
+- New: **Preferred quality**, in **Content**, under **Stream choice**: **Highest** by default, or 2160p, 1440p, 1080p, 720p, 480p. With 1080p, for example, the player tries 1080p and lower first, then the higher ones. The 4K streams stay in the list.
+- **TV channels**, **Films and series** and **Adult add-ons** are now on the **Add-ons and plugins** page, for add-ons and plugins alike. **Stremio add-ons** has the list of add-ons and **Add an add-on**.
+
 ## 2.0.0
 
 - New: **Nuvio plugins**, in **Add-ons and plugins**. Add a plugin repository from your phone or with the remote. Each plugin has its own switch.

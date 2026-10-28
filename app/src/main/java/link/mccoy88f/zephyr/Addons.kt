@@ -7,11 +7,8 @@ import android.graphics.drawable.BitmapDrawable
 import android.media.tv.TvContract
 import android.widget.Toast
 import link.mccoy88f.zephyr.MainActivity.Prog
-import link.mccoy88f.zephyr.MainActivity.Companion.ADDONS_TV_ROW
-import link.mccoy88f.zephyr.MainActivity.Companion.ADDONS_VOD_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.CINEMETA_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.ADDON_ADD_ROW
-import link.mccoy88f.zephyr.MainActivity.Companion.ADULT_APP_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.ADDON_ROWS
 import link.mccoy88f.zephyr.MainActivity.Companion.SUBMENU
 
@@ -167,7 +164,7 @@ internal fun MainActivity.addonsUnder(pkg: String): List<String> {
 /**
  * The rows of the add-ons under the tile [pkg] (see addonsUnder): per add-on, each TV catalog whole and then by
  * category, as the add-on lists them. Under an add-on's own tile a row is called by its category alone; under
- * the TV or IPTV app, where add-ons share the rows, by its catalog too ("OMG+ TV - SAT · Sport"). An add-on's
+ * the TV or IPTV app, where add-ons share the rows, by its catalog too ("<add-on> · Sport"). An add-on's
  * channels are read again when due, and the rows built again once they're in. Runs on the io thread.
  */
 internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<Section> {
@@ -376,7 +373,11 @@ internal fun MainActivity.readsListings() = checkSelfPermission(MainActivity.TV_
 // ---------- settings: the Stremio add-ons section ----------
 
 /** Where the add-ons' channels show, then Add an add-on, then each add-on (its page: update, remove). */
-internal fun MainActivity.addonRows(): List<Triple<String, String, () -> Unit>> {
+/**
+ * Where the add-ons' and plugins' content shows (on Add-ons and plugins, see addonsAndPlugins): TV channels, films
+ * and series, the adult ones. Each changed, that page again with [back] (focus on the row).
+ */
+internal fun MainActivity.placementRows(back: (Int) -> Unit): List<Triple<String, String, () -> Unit>> {
     val mode = addonsTv()
     val modes = TvPlace.entries.filter { it != TvPlace.TV || hasTvApp() }
     return listOf(
@@ -386,26 +387,29 @@ internal fun MainActivity.addonRows(): List<Triple<String, String, () -> Unit>> 
             addonsChanged()
             // An app each: their logos, for the tiles, come with their channels.
             if (next == TvPlace.APPS) addonUrls().forEach { updateAddon(it, null) }
-            renderSettings(ADDONS_TV_ROW)
+            back(0)
         },
         // Films and series: the Films and Series tiles, an app per add-on, or none (their catalog: under Content).
         page(getString(R.string.setting_addons_vod), addonsVodName(addonsVod())) {
             val modes = VodPlace.entries
             prefs.edit().putString(K.ADDONS_VOD, modes[(modes.indexOf(addonsVod()) + 1) % modes.size].key).apply()
             addonsChanged()
-            renderSettings(ADDONS_VOD_ROW)
+            back(1)
         },
         // The adult add-ons: with the others, or in Adult content, a tile of their own (hidden while the 18+ lock holds).
         page(getString(R.string.setting_adult_app), getString(if (adultApp()) R.string.adult_app_own else R.string.adult_app_mixed)) {
             prefs.edit().putBoolean(K.ADULT_APP, !adultApp()).apply()
             addonsChanged()
-            renderSettings(ADULT_APP_ROW)
+            back(2)
         },
-        page(getString(R.string.setting_addon_add), SUBMENU) { addonFromPhone() },
-    ) + addonUrls().mapIndexed { i, url ->
+    )
+}
+
+/** The Stremio add-ons' section: Add an add-on, then each add-on (on or off, its page). */
+internal fun MainActivity.addonRows(): List<Triple<String, String, () -> Unit>> =
+    listOf(page(getString(R.string.setting_addon_add), SUBMENU) { addonFromPhone() }) + addonUrls().mapIndexed { i, url ->
         page(Stremio.saved(filesDir, url)?.addon?.name ?: url, if (addonOn(url)) SUBMENU else getString(R.string.state_off)) { addonPage(url) }
     }
-}
 
 /**
  * The catalogs added as alternatives to Cinemeta, as manifest addresses, in the order added. One of them may be the

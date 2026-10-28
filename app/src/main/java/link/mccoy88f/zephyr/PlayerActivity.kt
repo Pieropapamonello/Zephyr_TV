@@ -1185,12 +1185,16 @@ class PlayerActivity : Activity() {
         attempts = 0
         release()
         pendingSeek = if (vod && !isAdult()) VodProgress.position(userDir, c.id) ?: -1L else -1L
-        say(getString(R.string.player_loading))
+        // A film's or episode's: its streams looked for, then checked, then each tried ("stream 1 of 5").
+        val known = fetched[c.id]?.takeIf { System.currentTimeMillis() - it.first < FRESH_MS } != null
+        say(getString(if (vod && !known) R.string.player_finding_streams else R.string.player_loading))
         if (banner.visibility == View.VISIBLE) showBanner(i) // zapping: the banner keeps up with it; else the middle says it all
         lateLeft = 0
         waitingLate = false
         net.execute {
-            val list = checked(streamsOf(c) { more -> val ok = more?.let { checked(it) }; ui.post { late(tuning, ok) } })
+            val found = streamsOf(c) { more -> val ok = more?.let { checked(it) }; ui.post { late(tuning, ok) } }
+            if (vod && found.size > 1) ui.post { if (tuning == tune) say(getString(R.string.player_checking_streams)) }
+            val list = checked(found)
             ui.post {
                 if (isFinishing || tuning != tune) return@post
                 streams = list
@@ -1252,8 +1256,10 @@ class PlayerActivity : Activity() {
         runCatching {
             checks.invokeAll(todo.map { s -> Callable { probes[s.url] = Stremio.probe(s.url, s.headers) } }, CHECK_MS, TimeUnit.MILLISECONDS)
         }
-        // Answering first, then not yet known (still being checked when time ran out), then those that failed.
-        return list.sortedBy { s -> when (probes[s.url]?.ok) { true -> 0; null -> 1; false -> 2 } }
+        // Answering first, then not yet known (still being checked when time ran out), then those that failed; in each,
+        // the best quality first (as its name says it).
+        return list.sortedWith(compareBy<Stremio.Stream> { s -> when (probes[s.url]?.ok) { true -> 0; null -> 1; false -> 2 } }
+            .then(qualityOrder(preferredQuality(prefs))))
     }
 
     /**
@@ -1280,7 +1286,7 @@ class PlayerActivity : Activity() {
         }
     }
 
-    /** The streams of the channels either side, so CH+ and CH- don't wait for the add-on (OMG checks each: ~1.5 s). */
+    /** The streams of the channels either side, so CH+ and CH- don't wait for the add-on (some check each stream first: seconds). */
     private fun prefetch(i: Int) {
         if (vod) return run { if (i + 1 < channels.size) channels[i + 1].let { c -> ahead.execute { streamsOf(c) } } } // the next episode only
         if (channels.size < 2) return
@@ -1327,7 +1333,7 @@ class PlayerActivity : Activity() {
     private fun start(s: Stremio.Stream, format: String?) {
         release()
         val http = DefaultHttpDataSource.Factory()
-            .setAllowCrossProtocolRedirects(true) // OMG's addresses go from https to the proxy's http, and back
+            .setAllowCrossProtocolRedirects(true) // some add-ons' addresses go from https to a proxy's http, and back
             // Not what the connection sets itself: a plugin's Accept-Encoding: gzip would hand the player packed bytes.
             .setDefaultRequestProperties(s.headers.filterKeys { k -> SKIPPED_HEADERS.none { it.equals(k, ignoreCase = true) } })
         s.headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.let { http.setUserAgent(it.value) }
@@ -1499,7 +1505,7 @@ class PlayerActivity : Activity() {
         const val USER_DIR = "user_dir" // the folder of the user watching (see Users): their progress, watched titles, Trakt
         const val ADULT = "adult" // whether this content is from an adult add-on (no history, no continue watching)
         const val ADULT_SOURCES = "adult_sources" // names and addresses of adult stream add-ons
-        private const val VOD_WAIT_MS = 20_000L // a film's slower add-ons (an aggregator, AIOStreams) are waited for this long
+        private const val VOD_WAIT_MS = 20_000L // a film's slower add-ons (an aggregator) are waited for this long
         private const val CHECK_MS = 15_000L // a film's streams checked all at once, at most this long
         private const val VOD_LATE_MS = 40_000L // ...and those that didn't, waited for this long while it plays
         private const val VOD_SOME_MS = 12_000L // ...or this long, once one has given streams

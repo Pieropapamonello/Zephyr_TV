@@ -7,26 +7,26 @@ import org.junit.Test
 
 class StremioTest {
     @Test fun findsTheManifestAddress() {
-        assertEquals("https://omg.example/c/abc/manifest.json", Stremio.manifestUrl(" https://omg.example/c/abc/manifest.json "))
-        assertEquals("https://omg.example/c/abc/manifest.json", Stremio.manifestUrl("stremio://omg.example/c/abc/manifest.json"))
-        assertEquals("https://omg.example/c/abc/manifest.json", Stremio.manifestUrl("https://omg.example/c/abc/"))
-        assertNull(Stremio.manifestUrl("omg.example/c/abc"))
+        assertEquals("https://addon.example/c/abc/manifest.json", Stremio.manifestUrl(" https://addon.example/c/abc/manifest.json "))
+        assertEquals("https://addon.example/c/abc/manifest.json", Stremio.manifestUrl("stremio://addon.example/c/abc/manifest.json"))
+        assertEquals("https://addon.example/c/abc/manifest.json", Stremio.manifestUrl("https://addon.example/c/abc/"))
+        assertNull(Stremio.manifestUrl("addon.example/c/abc"))
         assertNull(Stremio.manifestUrl("https://"))
     }
 
-    // As OMG+ TV 8.5.1 answers: one TV catalog, its categories, OMG's ⚙️ (refresh items, not channels) among them.
+    // As a TV add-on answers: one TV catalog, its categories, a ⚙️ (refresh items, not channels) among them.
     @Test fun readsTheTvCatalogsOfAManifest() {
-        val m = JSONObject("""{"id":"org.mccoy88f.omgpremiumtv.abc","name":"OMG+ TV - SAT","logo":"https://x/tv.png",
+        val m = JSONObject("""{"id":"org.example.tv.abc","name":"TV Add-on - SAT","logo":"https://x/tv.png",
             "types":["tv"],"catalogs":[
-              {"type":"tv","id":"omg_plus_tv_abc","name":"OMG+ TV - SAT","extra":[
+              {"type":"tv","id":"tv_abc","name":"TV Add-on - SAT","extra":[
                 {"name":"genre","isRequired":false,"options":["Mediaset","Sport","Rai","⚙️"]},
                 {"name":"search","isRequired":false},{"name":"skip","isRequired":false}]},
               {"type":"tv","id":"search_only","name":"Search","extra":[{"name":"search","isRequired":true}]},
               {"type":"movie","id":"films","name":"Films"}]}""")
-        val addon = Stremio.addon("https://omg.example/c/abc/manifest.json", m)
-        assertEquals("OMG+ TV - SAT", addon.name)
-        assertEquals("https://omg.example/c/abc", addon.base)
-        assertEquals(listOf("omg_plus_tv_abc"), addon.catalogs.map { it.id })
+        val addon = Stremio.addon("https://addon.example/c/abc/manifest.json", m)
+        assertEquals("TV Add-on - SAT", addon.name)
+        assertEquals("https://addon.example/c/abc", addon.base)
+        assertEquals(listOf("tv_abc"), addon.catalogs.map { it.id })
         assertEquals(listOf("Mediaset", "Sport", "Rai"), addon.catalogs[0].genres)
     }
 
@@ -48,7 +48,7 @@ class StremioTest {
 
     @Test fun readsTheStreamsWithTheirHeaders() {
         val answer = JSONObject("""{"streams":[
-            {"name":"RAI 1","title":"🌐 RAI 1 (1)\n[EasyProxy HLS]","url":"https://omg.example/s/token1","behaviorHints":{"notWebReady":false}},
+            {"name":"RAI 1","title":"🌐 RAI 1 (1)\n[EasyProxy HLS]","url":"https://addon.example/s/token1","behaviorHints":{"notWebReady":false}},
             {"name":"RAI 1","title":"RAI 1 (2)","url":"https://cdn.example/live.m3u8","behaviorHints":{"proxyHeaders":{"request":{"User-Agent":"VLC","Referer":"https://r.example/"}}}},
             {"name":"torrent","infoHash":"abc"}]}""")
         val streams = Stremio.streams(answer)
@@ -72,7 +72,7 @@ class StremioTest {
         assertNull(Stremio.format("video/mp4", "https://x/s/token", "....ftypisom".toByteArray()))
     }
 
-    // As OMG answers for a channel's page: what's on in short, then on and next; without a guide, a line with its id.
+    // As a TV add-on answers for a channel's page: what's on in short, then on and next; without a guide, a line with its id.
     @Test fun readsWhatTheAddOnSaysIsOn() {
         val meta = Stremio.meta(JSONObject("""{"meta":{"id":"tv|rai1.it","releaseInfo":"RaiNews24 (05:00)",
             "description":"📺 IN ONDA ORA:\nRaiNews24\n\nNOTIZIARIO.\n\n⏰ 05:00 - 00:30\n\n• 11:15 - A Sua immagine"}}"""))
