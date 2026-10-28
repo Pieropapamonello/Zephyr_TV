@@ -99,9 +99,9 @@ internal fun MainActivity.adultMenuRow(back: () -> Unit) =
     page(getString(if (adultUnlocked()) R.string.adult_lock_now else R.string.adult_unlock), adultState()) {
         if (adultUnlocked()) {
             prefs.edit().putLong(K.ADULT_UNTIL, 0L).apply()
+            closeLauncherSettings() // back to the home screen, focus on its first app (see adultChanged)
             adultChanged()
             Toast.makeText(this, getString(R.string.adult_locked_toast), Toast.LENGTH_SHORT).show()
-            back()
         } else askAdultPin(back) {
             val until = if (adultUntilLocked()) Long.MAX_VALUE else System.currentTimeMillis() + UNLOCK_MS
             prefs.edit().putLong(K.ADULT_UNTIL, until).putLong(K.ADULT_BOOT, bootTime()).apply()
@@ -165,6 +165,8 @@ private fun MainActivity.askAdultPin(back: () -> Unit, then: () -> Unit) {
 /** Locked or unlocked: what shows the add-ons again (the apps row, its rows, the search). */
 internal fun MainActivity.adultChanged() {
     adultShown = adultUnlocked()
+    // Locked: the adult apps go from the row, focus to its first app (Continue Playing) once it's built again.
+    if (!adultShown) focusFirstApp = true
     addonsChanged()
 }
 

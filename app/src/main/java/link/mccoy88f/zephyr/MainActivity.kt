@@ -825,7 +825,8 @@ class MainActivity : Activity() {
     internal var unlockedUntil = 0L // one PIN covers a few minutes of changes, until the home screen is left
     internal var pinFails = 0
     private val adultRelock = AdultRelock()
-    internal var adultShown = true // whether the adult add-ons showed last time the rows were built (see checkAdultLock)
+    internal var adultShown = true
+    internal var focusFirstApp = false // the apps row built again: focus on its first app (18+ just locked) // whether the adult add-ons showed last time the rows were built (see checkAdultLock)
     internal var pinWaitUntil = 0L // ponytail: in memory, so restarting Zephyr TV resets the wait; fine for kids at a remote
     internal var pinBox: View? = null
 
@@ -892,6 +893,8 @@ class MainActivity : Activity() {
                 spotlightApps = null
                 renderSpotlight()
                 updateInputsDot()
+                if (focusFirstApp && settingsScrim.visibility != View.VISIBLE) appRow.getChildAt(0)?.requestFocus()
+                focusFirstApp = false
             }
         }
     }
@@ -2079,7 +2082,8 @@ class MainActivity : Activity() {
         const val UPDATE_ROW = HOME_BUTTON_ROW + 2
         const val BACKUP_ROW = HOME_BUTTON_ROW + 3
         const val PROBLEMS_ROW = HOME_BUTTON_ROW + 4
-        const val ABOUT_ROW = HOME_BUTTON_ROW + 5
+        const val GUIDE_ROW = HOME_BUTTON_ROW + 5
+        const val ABOUT_ROW = HOME_BUTTON_ROW + 6
         val SPOTLIGHT_EVERY = listOf(0, 5, 8, 10, 15, 30) // seconds between Spotlight titles; 0 = off
         val ROW_ALIGN = linkedMapOf( // setting -> its name, and the row's gravity in the scroller
             "left" to (R.string.align_left to Gravity.START),

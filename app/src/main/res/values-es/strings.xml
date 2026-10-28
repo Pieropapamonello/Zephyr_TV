@@ -594,6 +594,7 @@
     <string name="piume_uninstall">Desinstalar Piume</string>
     <string name="zephyr_later">Más tarde</string>
     <!-- System → About -->
+    <string name="setting_guide">Guía</string>
     <string name="setting_about">Información</string>
     <string name="about_version">Versión %1$s</string>
     <string name="about_made">Zephyr TV la hace mccoy88f, con la ayuda de Claude Code. Nació como Piume, un fork de Plume Launcher de aradhyas8, del que conserva el diseño y buena parte del código.</string>

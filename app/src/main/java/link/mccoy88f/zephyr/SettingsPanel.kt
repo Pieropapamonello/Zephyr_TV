@@ -367,6 +367,7 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
         page(getString(R.string.setting_updates), updatesValue()) { showUpdates() },
         page(getString(R.string.setting_backup)) { showBackup() },
         page(getString(R.string.setting_problems), Problems.recent().size.let { if (it == 0) getString(R.string.problems_none) else "$it" }) { showProblems() },
+        page(getString(R.string.setting_guide), SUBMENU) { showGuide() }, // the user guide, in the TV's language
         page(getString(R.string.setting_about), myVersion()) { showAbout() },
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) null
         else page(getString(R.string.preview_home_setup)) { closeLauncherSettings(); previewHomeSetup() },

@@ -185,7 +185,11 @@ internal fun MainActivity.titleProgressCards(hidden: Set<String>): List<Pair<Lon
         val left = ((e.duration - e.position) / 60_000).coerceAtLeast(1)
         val tile = if (addonsVod() == VodPlace.TILES) (if (e.type == "series") SERIES_PKG else MOVIES_PKG) else null
         val state = if (e.upNext) getString(R.string.title_up_next) else getString(R.string.time_left_min, left.toInt())
+        // Wide art with its logo, as the Films and Series rows have: for an IMDb title its background, whatever was kept
+        // (a poster, before), else what was kept.
+        val wide = if (e.metaId.startsWith("tt")) Stremio.art(e.metaId, "background/medium") else e.poster
+        val logo = if (e.metaId.startsWith("tt")) Stremio.art(e.metaId, "logo/medium") else null
         e.at to Prog(e.name, listOf(e.sub, state).filter { it.isNotBlank() }.joinToString(" · "),
-            e.percent, e.poster, null, VOD_PKG, poster = e.poster, icon = tile,
-            vod = TitleRef(e.type, e.metaId, e.name.substringBefore(" · "), null, e.poster, video = e.id))
+            e.percent, wide, null, VOD_PKG, logo = logo, poster = e.poster, icon = tile,
+            vod = TitleRef(e.type, e.metaId, e.name.substringBefore(" · "), null, wide, video = e.id, logo = logo))
     }

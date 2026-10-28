@@ -14,8 +14,8 @@ android {
         applicationId = "link.mccoy88f.zephyr"
         minSdk = 26
         targetSdk = 36
-        versionCode = 26
-        versionName = "2.1.1"
+        versionCode = 27
+        versionName = "2.1.2"
         // What's new: only this version's section of CHANGELOG.md ships, one entry per line, without ** marks.
         val notes = rootProject.file("CHANGELOG.md").readText().replace("\r", "")
             .substringAfter("\n## $versionName\n", "").substringBefore("\n## ")
@@ -57,6 +57,16 @@ android {
         }
     }
 }
+
+// The user guide (docs/guida.md, docs/guide.md) shown in Settings → System → Guide: copied into the app's assets
+// at build time, so the guide is written once, in docs.
+val guideAssets = file("build/generated/guide-assets")
+val copyGuide = tasks.register<Copy>("copyGuide") {
+    from(rootProject.file("docs")) { include("guide.md", "guida.md") }
+    into(File(guideAssets, "guide"))
+}
+android.sourceSets.getByName("main").assets.srcDir(guideAssets)
+tasks.named("preBuild") { dependsOn(copyGuide) }
 
 val QUICKJS = "1.0.5" // the last built with Kotlin 2.3: the compiler here reads no newer
 

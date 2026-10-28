@@ -14,6 +14,12 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 2.1.2
+
+- New: **Guide**, in **Settings → System**. The user guide, chapter by chapter, in Italian on a TV in Italian and in English in every other language.
+- The cards in **Continue Playing** show the wide picture of the film or series with its logo, as the Films and TV Series rows do, instead of its poster.
+- When you lock 18+ content, Zephyr TV goes back to the home screen with focus on the first app, Continue Playing. The same happens when 18+ locks again by itself, for example after standby.
+
 ## 2.1.1
 
 - Before you choose an audio language in the player, it plays the audio in the language of the TV, when the stream has it. Before, it played the stream's default audio, often English.

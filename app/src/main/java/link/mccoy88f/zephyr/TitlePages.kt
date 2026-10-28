@@ -623,7 +623,7 @@ internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, epi
             .putStringArrayListExtra(PlayerActivity.DESCS, strings { it.third?.overview ?: meta?.description })
             .putExtra(PlayerActivity.META_TYPE, type)
             .putExtra(PlayerActivity.META_ID, t?.id ?: ref.id)
-            .putExtra(PlayerActivity.POSTER, locandina ?: backdrop)
+            .putExtra(PlayerActivity.POSTER, backdrop) // its Continue Playing card's: the wide picture (the poster without one)
             .putExtra(PlayerActivity.USER_DIR, vodDir().path))
     } catch (e: Exception) {
         warn("player didn't open ($e)")

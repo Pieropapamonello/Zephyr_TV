@@ -306,6 +306,7 @@ The page works only while that screen is open on the TV, and what you send goes 
 | **Updates** | Looks for and installs new versions. You can get the **betas** too |
 | **Backup and restore** | Saves the settings to your phone and restores them. The file holds the TMDB key and the add-ons' addresses: keep it private |
 | **Recent problems** | What went wrong lately. For a stream that fails: its source, its server and what the server sent |
+| **Guide** | This guide, on the TV, chapter by chapter |
 | **About** | Version, licences, data sources |
 
 ## 23. Questions and answers
