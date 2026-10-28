@@ -13,6 +13,18 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.0.0
+
+- New: **Nuvio plugins**, in **Add-ons and plugins**. Add a plugin repository from your phone or with the remote. Each plugin has its own switch.
+- The plugins find streams for films, series and TV channels. Their streams show as **Watch on** rows on the title page, and the player uses them too.
+- You can switch off an add-on or a plugin repository, and move a repository up or down.
+- The player checks all the streams of a title at the same time, and starts with those that answer with a video. It waits for slow plugins, and skips dead links and web pages.
+- New: **Stream choice**, in **Content**. Set it to **Manual** to pick the stream yourself from one list of all the add-ons and plugins.
+- For series, the player has **Previous episode** and **Next episode**. At the end of a season, it asks if you want to start the next season.
+- A title page shows what the title is about at once, before its other details load.
+- A search with filters and no words looks in all the catalogs of **Content catalog**, the main catalog first.
+- When a stream fails, **Settings → System → Problems** shows its source, its server and what the server sent.
+
 ## 2.0.0-beta.5
 
 - The player checks all the streams of a film or episode at the same time, and tries first those that answer with a video. Dead links and web pages no longer make you wait.
