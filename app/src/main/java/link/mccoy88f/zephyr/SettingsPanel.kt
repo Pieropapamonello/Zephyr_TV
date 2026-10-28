@@ -289,6 +289,11 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
             },
             // Where films and series come from (Cinemeta, Nuvio, an added catalog), and TMDB completing them.
             page(getString(R.string.setting_cinemeta), sourcesValue()) { configureCinemeta() },
+            // How a film or episode starts: its streams tried in turn, or picked by hand from one list of them all.
+            page(getString(R.string.setting_stream_choice), getString(if (manualStreams()) R.string.stream_choice_manual else R.string.stream_choice_auto)) {
+                prefs.edit().putBoolean(K.STREAM_MANUAL, !manualStreams()).apply()
+                renderSettings(WATCH_SECTION * SECTION + 4)
+            },
         )
     }
     // The TV's own side: its inputs (HDMI and the like) and its channels, with their logos and guide.
@@ -754,7 +759,12 @@ internal fun MainActivity.settingsRow(title: String, value: String, pane: Boolea
         val light = if (pane) glassPane(this, dp(8)) else null
         isFocusable = true
         isClickable = true
-        val name = label(title, 14f)
+        // A name too long for the row scrolls while the row has focus (a stream's, an add-on's).
+        val name = label(title, 14f).apply {
+            isSingleLine = true
+            ellipsize = android.text.TextUtils.TruncateAt.MARQUEE
+            marqueeRepeatLimit = -1
+        }
         val toggled = value == TOGGLE_ON || value == TOGGLE_OFF
         val submenu = value == SUBMENU
         // The value gives way to the name: capped, so a long one ("Not set: press to enter") is shortened, not the name.
@@ -778,6 +788,7 @@ internal fun MainActivity.settingsRow(title: String, value: String, pane: Boolea
         setOnFocusChangeListener { _, focused ->
             if (light != null) light(focused) else bg.colors = if (focused) intArrayOf(fg, fg) else intArrayOf(0, 0)
             name.setTextColor(if (focused) lit else fg)
+            name.isSelected = focused
             state.setTextColor(if (focused) lit else fg)
             state.alpha = if (focused) 0.75f else 0.6f
             if (toggled) showSwitch(focused && light == null) // redrawn in the inverted colours on the lit row

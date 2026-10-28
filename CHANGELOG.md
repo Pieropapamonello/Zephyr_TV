@@ -13,6 +13,15 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.0.0-beta.3
+
+- In the player, a series can go back to the episodes before the one you started, not only on to the next ones.
+- The player has **Previous episode** and **Next episode** buttons for series. The remote's previous and next keys do the same.
+- A series stops at its first and last episode. It does not go round.
+- At the end of the last episode of a season, the player asks if you want to watch the first episode of the next season.
+- New: **Stream choice**, in **Content**. Set it to **Manual** to pick the stream yourself: **Watch** shows the streams of all the add-ons and plugins in one list, with the source of each.
+- A name that is too long for its row scrolls when the row has focus, for example the name of a stream.
+
 ## 2.0.0-beta.2
 
 - A search with filters and no words finds titles again with every catalog. Before, with Nuvio Catalog as the main catalog, it found nothing.

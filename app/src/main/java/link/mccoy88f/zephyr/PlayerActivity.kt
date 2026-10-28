@@ -201,6 +201,10 @@ class PlayerActivity : Activity() {
                 list(NOWS).getOrNull(i)?.ifEmpty { null })
         }
         if (channels.isEmpty()) return finish()
+        // A stream picked by hand (see pickStream): the one the first episode or film plays, none looked for.
+        intent.getStringExtra(CHOSEN)?.let { j -> runCatching { streamOf(JSONObject(j)) }.getOrNull() }?.let { s ->
+            channels.getOrNull(intent.getIntExtra(INDEX, 0))?.let { fetched[it.id] = System.currentTimeMillis() to listOf(s) }
+        }
         build()
         if (vod) markInto(logoBox)
         play(intent.getIntExtra(INDEX, 0).coerceIn(0, channels.size - 1))
@@ -537,7 +541,23 @@ class PlayerActivity : Activity() {
     private fun ended() {
         scrobble("stop")
         watched(at)
-        if (at < channels.size - 1) play(at + 1) else finish()
+        if (at >= channels.size - 1) return finish()
+        // A season's last episode: the next season's first only if the user wants it; Back leaves it there.
+        val now = season(channels[at].id)
+        val next = season(channels[at + 1].id)
+        if (now == null || next == null || now == next) return play(at + 1)
+        release()
+        openPanel(getString(R.string.player_season_end, now)) { row ->
+            row(getString(R.string.player_next_season, next), false, 1) { play(at + 1) }
+            row(getString(R.string.player_leave), false, 1) { finish() }
+        }
+    }
+
+    /** The season of the episode [id] ("tt0944947:2:1": 2), or null for a film or an id without one. */
+    private fun season(id: String): Int? {
+        val parts = id.split(':')
+        if (parts.size < 3 || !parts.takeLast(2).all { p -> p.isNotEmpty() && p.all(Char::isDigit) }) return null
+        return parts[parts.size - 2].toInt()
     }
 
     /** OK on what's on: all of it (the description, what's next), or back to its first line. */
@@ -735,6 +755,8 @@ class PlayerActivity : Activity() {
         when (keyCode) {
             KeyEvent.KEYCODE_CHANNEL_UP -> zap(+1)
             KeyEvent.KEYCODE_CHANNEL_DOWN -> zap(-1)
+            KeyEvent.KEYCODE_MEDIA_NEXT -> zap(+1) // a series' next episode (a channel's next, live)
+            KeyEvent.KEYCODE_MEDIA_PREVIOUS -> zap(-1)
             KeyEvent.KEYCODE_DPAD_LEFT -> if (vod) seek(-1, event.repeatCount) else otherStream(-1)
             KeyEvent.KEYCODE_DPAD_RIGHT -> if (vod) seek(+1, event.repeatCount) else otherStream(+1)
             KeyEvent.KEYCODE_MEDIA_REWIND -> if (vod) seek(-1, 6)
@@ -832,8 +854,11 @@ class PlayerActivity : Activity() {
         val keep = (currentFocus?.parent === buttons).let { if (it) buttons.indexOfChild(currentFocus) else -1 }
         val paused = player?.playWhenReady == false
         val list = if (i != at || player == null) emptyList() else listOfNotNull(
+            // A series' episodes: the one before and the one after, either side of play and pause.
+            if (vod && at > 0) Triple(R.drawable.ic_chevron_left, R.string.player_episode_previous) { zap(-1) } else null,
             if (paused) Triple(R.drawable.ic_play, R.string.player_play) { setPlaying(true) }
             else Triple(R.drawable.ic_pause, R.string.player_pause) { setPlaying(false) },
+            if (vod && at < channels.size - 1) Triple(R.drawable.ic_chevron_right, R.string.player_episode_next) { zap(+1) } else null,
             if (tracks(C.TRACK_TYPE_AUDIO).size > 1) Triple(R.drawable.ic_audio, R.string.player_audio) { openTracks(C.TRACK_TYPE_AUDIO) } else null,
             if (tracks(C.TRACK_TYPE_TEXT).isNotEmpty()) Triple(R.drawable.ic_subtitles, R.string.player_subtitles) { openTracks(C.TRACK_TYPE_TEXT) } else null,
             if (streams.size > 1) Triple(R.drawable.ic_stream, R.string.player_streams) { openStreams() } else null,
@@ -940,7 +965,7 @@ class PlayerActivity : Activity() {
         openPanel(getString(R.string.player_streams)) { row ->
             streams.forEachIndexed { k, s ->
                 val name = if (s.source != null && !s.title.contains(s.source, ignoreCase = true)) "${s.source} · ${s.title}" else s.title
-                row(getString(R.string.player_stream_row, k + 1, name), k == tried, 2) {
+                row(getString(R.string.player_stream_row, k + 1, name), k == tried, 1) {
                     tried = k - 1
                     attempts = 0
                     next()
@@ -991,8 +1016,15 @@ class PlayerActivity : Activity() {
             TextView(this).apply {
                 this.text = if (on) "✓  $name" else "     $name"
                 textSize = 16f
-                if (lines == 1) isSingleLine = true else maxLines = lines
-                ellipsize = TextUtils.TruncateAt.END
+                // One line scrolls while it has focus (a stream's long name); more are cut short.
+                if (lines == 1) {
+                    isSingleLine = true
+                    ellipsize = TextUtils.TruncateAt.MARQUEE
+                    marqueeRepeatLimit = -1
+                } else {
+                    maxLines = lines
+                    ellipsize = TextUtils.TruncateAt.END
+                }
                 setPadding(dp(14), dp(12), dp(14), dp(12))
                 isFocusable = true
                 isClickable = true
@@ -1002,6 +1034,7 @@ class PlayerActivity : Activity() {
                 setOnFocusChangeListener { _, has ->
                     bg.setColor(if (has) Color.WHITE else Color.TRANSPARENT)
                     setTextColor(if (has) Color.BLACK else Color.WHITE)
+                    isSelected = has
                 }
                 setOnClickListener { pick(); closeTracks() }
                 tracksList.addView(this)
@@ -1101,6 +1134,8 @@ class PlayerActivity : Activity() {
     /** CH+ / CH-: the banner moves on at once; the channel is tuned once the keys rest (holding one runs through). */
     private fun zap(step: Int) {
         if (channels.size < 2) return showBanner(shown)
+        // A series' episodes stop at its first and last; channels go round.
+        if (vod) return (shown + step).let { to -> if (to in channels.indices) zapTo(to, delay = ZAP_MS) else showBanner(shown) }
         zapTo(Math.floorMod(shown + step, channels.size), delay = ZAP_MS)
     }
 
@@ -1348,6 +1383,17 @@ class PlayerActivity : Activity() {
         const val ADDON = "addon" // the add-on's manifest address
         const val BASE = "base" // the add-on's address, without /manifest.json
         const val INDEX = "index" // the channel picked, in the lists below
+        const val CHOSEN = "chosen" // a film's or episode's stream picked by hand, as streamJson writes it
+
+        /** [s] for an Intent: its address, name, headers and source. */
+        internal fun streamJson(s: Stremio.Stream): JSONObject = JSONObject().put("url", s.url).put("title", s.title)
+            .put("headers", JSONObject(s.headers as Map<*, *>)).put("group", s.group ?: JSONObject.NULL).put("source", s.source ?: JSONObject.NULL)
+
+        private fun streamOf(j: JSONObject): Stremio.Stream {
+            val h = j.optJSONObject("headers") ?: JSONObject()
+            return Stremio.Stream(j.getString("url"), j.optString("title"), h.keys().asSequence().associateWith { h.optString(it) },
+                j.optString("group").takeIf { !j.isNull("group") && it.isNotEmpty() }, j.optString("source").takeIf { !j.isNull("source") && it.isNotEmpty() })
+        }
         const val TYPES = "types"
         const val IDS = "ids"
         const val NAMES = "names"

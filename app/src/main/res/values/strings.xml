@@ -435,6 +435,11 @@
     <string name="player_tracks_line">Audio: %1$s · Subtitles: %2$s</string>
     <string name="player_streams">Stream</string>
     <string name="player_pause">Pause</string>
+    <string name="player_episode_previous">Previous episode</string>
+    <string name="player_episode_next">Next episode</string>
+    <string name="player_season_end">End of season %1$d</string>
+    <string name="player_next_season">Watch season %1$d, episode 1</string>
+    <string name="player_leave">Close the player</string>
     <string name="player_play">Play</string>
     <string name="player_paused">Paused</string>
     <string name="vod_movies">Films</string>
@@ -444,6 +449,10 @@
     <string name="setting_addons_vod">Films and series</string>
     <string name="addons_vod_tiles">Films and Series apps</string>
     <string name="setting_cinemeta">Content catalog</string>
+    <string name="setting_stream_choice">Stream choice</string>
+    <string name="stream_choice_auto">Automatic</string>
+    <string name="stream_choice_manual">Manual</string>
+    <string name="stream_pick_title">Choose a stream</string>
     <string name="cinemeta_intro">Films and series come from these catalogs. The first is the main catalog: it gives the details, the search and the pictures of the titles. The other catalogs add their rows to Films and Series, in this order. Cinemeta is the free library of Stremio. Nuvio Catalog uses TMDB, in the language of the TV.</string>
     <string name="cinemeta_default">Cinemeta (default)</string>
     <string name="catalog_nuvio">Nuvio Catalog (TMDB)</string>

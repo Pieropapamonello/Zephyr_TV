@@ -97,7 +97,9 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, a
         if (having?.isEmpty() == true) rows += page(getString(R.string.title_no_streams)) { }
         else {
             icons[rows.size] = watchIcon(one)
-            rows += page(watchLabel(one, at, seen), if (seen) "✓" else "") { play(one?.base) }
+            rows += page(watchLabel(one, at, seen), if (seen) "✓" else "") {
+                if (manualStreams()) pickStream(ref, meta, null) { showVodTitle(meta, ref, services.known, found = found) } else play(one?.base)
+            }
         }
         val markRow = rows.size
         rows += page(getString(if (seen) R.string.title_mark_unwatched else R.string.title_mark_watched)) {
@@ -106,7 +108,7 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, a
             if (!seen) VodProgress.remove(vodDir(), t.id)
             showVodTitle(meta, ref, services.known, focusRow = markRow, found = found)
         }
-        if (one == null && having != null) having.forEach { (base, name) ->
+        if (one == null && having != null && !manualStreams()) having.forEach { (base, name) ->
             icons[rows.size] = sourceIcon(base, name)
             rows += page(getString(R.string.tmdb_search_on, name), resources.getQuantityString(R.plurals.title_streams, found[base] ?: 0, found[base] ?: 0)) { play(base) }
         }
@@ -135,7 +137,7 @@ internal fun MainActivity.showVodTitle(meta: Stremio.TitleMeta, ref: TitleRef, a
     titlePage(t.name, art, t.name, top, rows, focus, icons, holds, descView) { closeLauncherSettings() }
     services.later { showVodTitle(meta, ref, it, focusRow, found) }
     // A film's stream add-ons asked how many streams each has, all at once; the page again once they've said.
-    if (episodic || found != null || sources.size < 2) return
+    if (episodic || found != null || sources.size < 2 || manualStreams()) return // picked from all of them, by hand
     netIo.execute {
         val counts = parallel(sources, 4, 30) { (base, name) -> base to runCatching { sourceStreams(prefs, filesDir, base, name, t.type, t.id).size }.getOrDefault(0) }.toMap()
         ui.post { if (pageShowing(t.name)) showVodTitle(meta, ref, services.known, focusedRow() ?: focusRow, counts) }
@@ -228,8 +230,16 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
         playTitle(ref, meta, e, only)
     }
     val having = found?.filterValues { it > 0 }?.keys?.let { keys -> sources.filter { it.first in keys } }
+    val manual = manualStreams()
     when {
         sources.isEmpty() || having?.isEmpty() == true -> rows += page(getString(R.string.title_no_streams)) { }
+        // Picked by hand: Watch lists every source's streams at once (see pickStream), nothing to count first.
+        manual -> {
+            icons[rows.size] = watchIcon(null)
+            rows += page(watchLabel(null, VodProgress.position(vodDir(), e.id), seen)) {
+                pickStream(ref, meta, e) { showVodEpisode(meta, ref, e, services.known, found, 0) }
+            }
+        }
         having == null -> rows += page(getString(R.string.title_finding_streams)) { }
         else -> {
             val sole = soleAddon(having)
@@ -245,7 +255,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
     }
     // Several add-ons have it: each of them too, with how many streams it has; at the bottom, so the rows above
     // stay where they are when these come in, and focus with them.
-    if (having != null && having.size > 1) having.forEach { (base, name) ->
+    if (having != null && having.size > 1 && !manual) having.forEach { (base, name) ->
         icons[rows.size] = sourceIcon(base, name)
         rows += page(getString(R.string.tmdb_search_on, name), resources.getQuantityString(R.plurals.title_streams, found[base] ?: 0, found[base] ?: 0)) { play(base) }
     }
@@ -261,7 +271,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
     }
     services.later { showVodEpisode(meta, ref, e, it, found, focusedRow() ?: targetFocus) }
     // The stream add-ons asked whether they have it (how many streams each), all at once; the page again once they've said.
-    if (found != null || sources.isEmpty()) return
+    if (found != null || sources.isEmpty() || manual) return
     netIo.execute {
         val counts = parallel(sources, 4, 30) { (base, name) -> base to runCatching { sourceStreams(prefs, filesDir, base, name, t.type, e.id).size }.getOrDefault(0) }.toMap()
         ui.post { if (pageShowing(title)) showVodEpisode(meta, ref, e, services.known, counts, focusedRow() ?: targetFocus) }
@@ -558,18 +568,24 @@ internal fun MainActivity.addonIcon(addon: Stremio.Addon): android.graphics.draw
  * stream add-ons that have it are asked for their streams (see PlayerActivity, MODE_VOD), or [only] the one at that
  * address. The player shows the series' name, and the episode's season, number and name under it.
  */
-internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, episode: Stremio.Episode?, only: String? = null) {
+internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, episode: Stremio.Episode?, only: String? = null,
+                                    chosen: Stremio.Stream? = null) {
     val t = meta?.title
     val name = t?.name ?: ref.name
     val poster = ref.poster ?: t?.poster
     val bg = ref.background ?: t?.background
     val locandina = poster ?: bg
     val backdrop = bg ?: poster
-    // One item for a film; the episode and the ones after it for a series.
-    val items: List<Triple<String, String, Stremio.Episode?>> = if (episode == null || meta == null) listOf(Triple(t?.id ?: ref.id, name, null))
-        else meta.episodes.dropWhile { it.id != episode.id }.map { e -> Triple(e.id, name, e) }
+    // One item for a film; for a series its episodes, the one picked [start] among them, so CH- goes back as CH+ goes
+    // on: a window around it (a long series' every episode, with what each is about, is too much to hand the player).
+    val all = if (episode == null || meta == null) emptyList() else meta.episodes
+    val picked = all.indexOfFirst { it.id == episode?.id }.coerceAtLeast(0)
+    val from = (picked - EPISODES_BEFORE).coerceAtLeast(0)
+    val items: List<Triple<String, String, Stremio.Episode?>> = if (all.isEmpty()) listOf(Triple(t?.id ?: ref.id, name, null))
+        else all.subList(from, minOf(all.size, picked + EPISODES_AFTER)).map { e -> Triple(e.id, name, e) }
+    val start = if (all.isEmpty()) 0 else picked - from
     val type = t?.type ?: ref.type
-    val sources = streamSources(type, items.first().first).filter { only == null || it.first == only }
+    val sources = streamSources(type, items[start].first).filter { only == null || it.first == only }
     if (sources.isEmpty()) return Toast.makeText(this, getString(R.string.title_no_streams), Toast.LENGTH_LONG).show()
     val adultUrls = adultAddonUrls()
     val adultAddons = adultUrls.mapNotNull { Stremio.saved(filesDir, it)?.addon }
@@ -580,7 +596,8 @@ internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, epi
     try {
         startActivity(Intent(this, PlayerActivity::class.java)
             .putExtra(PlayerActivity.MODE, PlayerActivity.MODE_VOD)
-            .putExtra(PlayerActivity.INDEX, 0)
+            .putExtra(PlayerActivity.INDEX, start)
+            .apply { chosen?.let { putExtra(PlayerActivity.CHOSEN, PlayerActivity.streamJson(it).toString()) } }
             .putExtra(PlayerActivity.ADULT, isCatalogAdult || isOnlyAdult)
             .putStringArrayListExtra(PlayerActivity.ADULT_SOURCES, ArrayList(adultSourcesList))
             .putStringArrayListExtra(PlayerActivity.SOURCES, ArrayList(sources.map { it.first }))
@@ -603,7 +620,54 @@ internal fun MainActivity.playTitle(ref: TitleRef, meta: Stremio.TitleMeta?, epi
     }
 }
 
-/** OK on a Continue Playing card of a film or episode: it goes on (a series with the episodes after it). */
+/** Whether streams are picked by hand from all the sources' (Settings → Content → Stream choice), not tried in turn. */
+internal fun MainActivity.manualStreams() = prefs.getBoolean(K.STREAM_MANUAL, false)
+
+/**
+ * Manual stream choice: every add-on's and plugin's streams for the film, or the [episode], in one list, each with
+ * the source it's from. The sources are asked all at once; each one's streams come in under those already there (focus
+ * stays), and the last row says the search goes on until all have answered. A stream picked plays at once.
+ */
+internal fun MainActivity.pickStream(ref: TitleRef, meta: Stremio.TitleMeta, episode: Stremio.Episode?, back: () -> Unit) {
+    val t = meta.title
+    val id = episode?.id ?: t.id
+    val title = getString(R.string.stream_pick_title)
+    val sources = streamSources(t.type, id)
+    val found = java.util.Collections.synchronizedList(ArrayList<Stremio.Stream>())
+    var left = sources.size
+    var shown = false
+    fun show() {
+        val rows = found.toList().distinctBy { it.url }.map { s ->
+            page(s.title.ifBlank { s.url.substringAfterLast('/').take(60) }, s.source.orEmpty()) {
+                pageReturn = back
+                closeLauncherSettings()
+                playTitle(ref, meta, episode, chosen = s)
+            }
+        } + when {
+            left > 0 -> listOf(page(getString(R.string.title_finding_streams)) { })
+            found.isEmpty() -> listOf(page(getString(R.string.title_no_streams)) { })
+            else -> emptyList()
+        }
+        showPage(title, rows, if (shown) focusedRow() ?: 0 else 0, back = back)
+        shown = true
+    }
+    show()
+    for ((base, name) in sources) netIo.execute {
+        val got = runCatching { sourceStreams(prefs, filesDir, base, name, t.type, id) }.getOrDefault(emptyList())
+            .map { Stremio.Stream(it.url, it.title, it.headers, it.group, it.source ?: name) }
+        ui.post {
+            left--
+            found += got
+            if (pageShowing(title)) show()
+        }
+    }
+}
+
+/** The episodes before and after the one picked that the player gets (see playTitle). */
+private const val EPISODES_BEFORE = 100
+private const val EPISODES_AFTER = 300
+
+/** OK on a Continue Playing card of a film or episode: it goes on (a series with its episodes around it). */
 private fun MainActivity.resumeTitle(ref: TitleRef) {
     netIo.execute {
         val meta = titleMeta(ref)
