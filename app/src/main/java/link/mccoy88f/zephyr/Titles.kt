@@ -88,22 +88,30 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
         else -> return emptyList()
     }
     val missing = ArrayList<String>()
+    val artless = ArrayList<Stremio.Title>()
     val watched = VodWatched.all(vodDir())
+    val others = catalogSources().drop(1)
     return addons.flatMap { addon ->
         if (Stremio.vodDue(filesDir, addon.url) && addon.vod.any { it.listed }) refreshShelves(addon, pkg)
         // Under Films, the add-ons' own types too ("Porn", "Anime"): they play as films.
         Stremio.shelves(filesDir, addon).filter { type == null || (it.catalog.type == "series") == (type == "series") }.mapNotNull { shelf ->
             val kind = getString(if (shelf.catalog.type == "series") R.string.vod_series else R.string.vod_movies)
             val name = if (type != null || adult) "${addon.name} · ${shelf.catalog.name}" else "$kind · ${shelf.catalog.name}"
-            // In the TV's language when TMDB has the title (those it hasn't been asked about yet: once it's answered).
-            val cards = shelf.titles.map { t -> localize(t) ?: t.also { if (wantsLocal(it)) missing += it.id } }
+            // In the TV's language when TMDB has the title (those it hasn't been asked about yet: once it's answered);
+            // else, in another catalog source's row, with the main catalog's art (see withMainArt).
+            val cards = shelf.titles.map { t ->
+                localize(t) ?: t.also { if (wantsLocal(it)) missing += it.id }.let { if (addon.url in others) withMainArt(it, artless) else it }
+            }
                 .filter { hideKey(null, it.name) !in hidden }.map { titleCard(it, addon.url, pkg, it.id in watched) }
             if (cards.isEmpty()) null else Section("vod:${addon.id}:${shelf.catalog.type}:${shelf.catalog.id}", name, name, cards)
         }
     }.plus(
         // Last, the films and series watched: under Films and Series, or Cinemeta's own tile.
         if (!adult && (mode == VodPlace.TILES || addons.any { it.url == cinemetaUrl() })) watchedSections(type, pkg, hidden, missing) else emptyList()
-    ).also { if (missing.isNotEmpty()) localizeLater(missing.distinct(), pkg) }
+    ).also {
+        if (missing.isNotEmpty()) localizeLater(missing.distinct(), pkg)
+        if (artless.isNotEmpty()) mainArtLater(artless, pkg)
+    }
 }
 
 /**

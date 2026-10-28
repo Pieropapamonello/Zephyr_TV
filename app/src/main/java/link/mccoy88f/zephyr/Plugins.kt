@@ -3,6 +3,8 @@ package link.mccoy88f.zephyr
 import android.content.SharedPreferences
 import android.widget.Toast
 import java.io.File
+import org.json.JSONObject
+import link.mccoy88f.zephyr.MainActivity.Companion.CHOSEN
 import link.mccoy88f.zephyr.MainActivity.Companion.SUBMENU
 
 // Nuvio's plugins in Zephyr TV: the repositories added, which of their plugins are on, which repositories are 18+,
@@ -26,6 +28,40 @@ internal fun pluginOn(p: SharedPreferences, repo: String, s: Nuvio.Scraper): Boo
     return key in p.getStringSet(K.NUVIO_ON, emptySet())!! || (s.enabled && key !in p.getStringSet(K.NUVIO_OFF, emptySet())!!)
 }
 
+/** [repo]'s [plugins] in the order the user put them; those never moved (new ones too) after, as the manifest has them. */
+internal fun orderedPlugins(p: SharedPreferences, repo: String, plugins: List<Nuvio.Scraper>): List<Nuvio.Scraper> {
+    val order = p.getString(K.NUVIO_ORDER, "")!!.lines().filter { it.startsWith("$repo#") }.map { it.removePrefix("$repo#") }
+    return plugins.sortedBy { s -> order.indexOf(s.id).let { if (it < 0) Int.MAX_VALUE else it } }
+}
+
+/** Saves [plugins] as [repo]'s order ([plugins] empty: forgets it, the repository was removed). */
+private fun savePluginOrder(p: SharedPreferences, repo: String, plugins: List<Nuvio.Scraper>) {
+    val others = p.getString(K.NUVIO_ORDER, "")!!.lines().filter { it.isNotBlank() && !it.startsWith("$repo#") }
+    p.edit().putString(K.NUVIO_ORDER, (others + plugins.map { pluginKey(repo, it) }).joinToString("\n")).apply()
+}
+
+/** The values of [s]'s options the user chose, by key; null when none was. */
+internal fun pluginOptions(p: SharedPreferences, repo: String, s: Nuvio.Scraper): JSONObject? =
+    runCatching { JSONObject(p.getString(K.NUVIO_OPTIONS, null) ?: "{}") }.getOrNull()?.optJSONObject(pluginKey(repo, s))
+
+/**
+ * Sets [s]'s option [key] to [value] (null: back to the plugin's own). The first one chosen saves the others' defaults
+ * with it ([fields]): a plugin that has any option set then has them all.
+ */
+private fun setPluginOption(p: SharedPreferences, repo: String, s: Nuvio.Scraper, fields: List<Nuvio.Field>, key: String, value: Any?) {
+    val all = runCatching { JSONObject(p.getString(K.NUVIO_OPTIONS, null) ?: "{}") }.getOrDefault(JSONObject())
+    val mine = all.optJSONObject(pluginKey(repo, s)) ?: JSONObject().apply { fields.forEach { f -> f.default?.let { put(f.key, it) } } }
+    if (value == null) mine.remove(key) else mine.put(key, value)
+    p.edit().putString(K.NUVIO_OPTIONS, all.put(pluginKey(repo, s), mine).toString()).apply()
+}
+
+/** Forgets the options of [repo]'s plugins: the repository was removed. */
+private fun forgetPluginOptions(p: SharedPreferences, repo: String) {
+    val all = runCatching { JSONObject(p.getString(K.NUVIO_OPTIONS, null) ?: "{}") }.getOrNull() ?: return
+    all.keys().asSequence().toList().filter { it.startsWith("$repo#") }.forEach { all.remove(it) }
+    p.edit().putString(K.NUVIO_OPTIONS, all.toString()).apply()
+}
+
 /**
  * The plugins on that can find streams for an item of [type] with this [id], as stream sources (source, name): the
  * 18+ repositories' only when [adult]. For the title pages, and the player for a channel.
@@ -34,7 +70,7 @@ internal fun pluginSources(p: SharedPreferences, dir: File, type: String, id: St
     val hidden = (if (adult) emptySet() else nuvioAdultRepos(p)) + p.getStringSet(K.NUVIO_REPOS_OFF, emptySet())!!
     val lang = streamLanguage(p)
     return nuvioRepoUrls(p).filter { it !in hidden }.flatMap { repo ->
-        Nuvio.saved(dir, repo)?.scrapers.orEmpty().filter { pluginOn(p, repo, it) && Nuvio.provides(it, type, id) }
+        orderedPlugins(p, repo, Nuvio.saved(dir, repo)?.scrapers.orEmpty()).filter { pluginOn(p, repo, it) && Nuvio.provides(it, type, id) }
             // A plugin for other languages only (its manifest's contentLanguage) isn't asked, with the language on.
             .filter { s -> lang == null || s.languages.isEmpty() || s.languages.any { it.lowercase().startsWith(lang) } }
             .map { "$PLUGIN$repo#${it.id}" to it.name }
@@ -57,7 +93,8 @@ internal fun sourceStreams(p: SharedPreferences, dir: File, base: String, name: 
         val repo = base.removePrefix(PLUGIN).substringBeforeLast('#')
         val s = Nuvio.saved(dir, repo)?.scrapers?.firstOrNull { it.id == base.substringAfterLast('#') } ?: return emptyList()
         declared = s.languages.map { it.lowercase().take(2) }.toSet()
-        Nuvio.streams(dir, repo, s, name, type, id, p.getString(K.TMDB_API_KEY, null)?.takeIf { it.isNotBlank() })
+        Nuvio.streams(dir, repo, s, name, type, id, p.getString(K.TMDB_API_KEY, null)?.takeIf { it.isNotBlank() },
+            pluginOptions(p, repo, s))
     }
     if (lang == null) return all
     // Each marked with its language against the TV's: the player and the streams' page put ours first, then those
@@ -200,12 +237,18 @@ internal fun MainActivity.nuvioPage(focus: Int = 0) {
 }
 
 /**
- * A repository's page: on or off (off, its plugins aren't asked), each plugin with its switch, 18+, up or down the
- * list (its plugins' Watch on rows come in this order), Update, Remove.
+ * A repository's page: on or off (off, its plugins aren't asked), each plugin with its switch (and its options, for a
+ * plugin that has some), their order, 18+, up or down the list (its plugins' Watch on rows come in this order),
+ * Update, Remove.
  */
 private fun MainActivity.repoPage(url: String, focus: Int = 0) {
     val r = Nuvio.saved(filesDir, url)
-    val scrapers = r?.scrapers.orEmpty()
+    val scrapers = orderedPlugins(prefs, url, r?.scrapers.orEmpty())
+    // Each plugin's row, then its options' for one that has some, then their order (two or more): the rows after
+    // them come after [plugins].
+    val rowOf = scrapers.runningFold(1) { row, s -> row + if (s.options) 2 else 1 }
+    val sortable = scrapers.size > 1
+    val plugins = rowOf.last() - 1 + if (sortable) 1 else 0
     val at = nuvioRepoUrls(prefs).indexOf(url)
     val about = listOfNotNull(r?.description?.takeIf { it.isNotBlank() },
         listOfNotNull(r?.version?.takeIf { it.isNotBlank() }?.let { "v$it" }, r?.author?.takeIf { it.isNotBlank() }).joinToString(" · ").ifEmpty { null })
@@ -229,26 +272,28 @@ private fun MainActivity.repoPage(url: String, focus: Int = 0) {
         prefs.edit().putString(K.NUVIO_REPOS, list.joinToString("\n")).apply()
     }
     val moves = listOfNotNull(
-        if (at > 0) page(getString(R.string.addon_move_up)) { move(-1); repoPage(url, scrapers.size + 2) } else null,
-        if (at < urls.size - 1) page(getString(R.string.addon_move_down)) { move(+1); repoPage(url, scrapers.size + 2) } else null,
+        if (at > 0) page(getString(R.string.addon_move_up)) { move(-1); repoPage(url, plugins + 2) } else null,
+        if (at < urls.size - 1) page(getString(R.string.addon_move_down)) { move(+1); repoPage(url, plugins + 2) } else null,
     )
     showPage(r?.name ?: url, listOf(
         page(getString(R.string.addon_on), toggle(repoOn)) {
             switch(K.NUVIO_REPOS_OFF, url, repoOn)
             repoPage(url, 0)
         },
-    ) + scrapers.mapIndexed { i, s ->
-        page(s.name, toggle(pluginOn(prefs, url, s))) {
+    ) + scrapers.flatMapIndexed { i, s ->
+        listOf(page(s.name, toggle(pluginOn(prefs, url, s))) {
             val key = pluginKey(url, s)
             val on = !pluginOn(prefs, url, s)
             switch(K.NUVIO_ON, key, on && !s.enabled)
             switch(K.NUVIO_OFF, key, !on && s.enabled)
-            repoPage(url, 1 + i)
-        }
-    } + listOf(
+            repoPage(url, rowOf[i])
+        }) + if (s.options) listOf(page(getString(R.string.nuvio_options, s.name), SUBMENU) { optionsPage(url, s) { repoPage(url, rowOf[i] + 1) } }) else emptyList()
+    } + listOfNotNull(
+        if (sortable) page(getString(R.string.nuvio_order), SUBMENU) { orderPage(url) { repoPage(url, plugins) } } else null,
+    ) + listOf(
         page(getString(R.string.addon_adult), toggle(adult)) {
             switch(K.NUVIO_ADULT, url, !adult)
-            repoPage(url, scrapers.size + 1)
+            repoPage(url, plugins + 1)
         },
     ) + moves + listOf(
         page(getString(R.string.addon_update)) {
@@ -258,7 +303,7 @@ private fun MainActivity.repoPage(url: String, focus: Int = 0) {
                 ui.post {
                     Toast.makeText(this, if (again == null) getString(R.string.toast_addon_failed)
                         else getString(R.string.nuvio_added, again.name, again.scrapers.size), Toast.LENGTH_LONG).show()
-                    if (pageShowing(again?.name ?: "")) repoPage(url, scrapers.size + 2 + moves.size)
+                    if (pageShowing(again?.name ?: "")) repoPage(url, plugins + 2 + moves.size)
                 }
             }
         },
@@ -266,10 +311,119 @@ private fun MainActivity.repoPage(url: String, focus: Int = 0) {
             prefs.edit().putString(K.NUVIO_REPOS, (nuvioRepoUrls(prefs) - url).joinToString("\n")).apply()
             switch(K.NUVIO_ADULT, url, false)
             switch(K.NUVIO_REPOS_OFF, url, false)
+            forgetPluginOptions(prefs, url)
+            savePluginOrder(prefs, url, emptyList())
             Nuvio.forget(filesDir, url)
             nuvioPage()
         },
     ), focus, top = if (about.isEmpty()) null else top) { nuvioPage(at.coerceAtLeast(0)) }
+}
+
+/**
+ * The order of a repository's plugins (their Watch on rows come in it): OK on one picks it up ([held]), OK on another
+ * puts it in that one's place, OK on it again puts it back.
+ */
+private fun MainActivity.orderPage(url: String, held: String? = null, focus: Int = 0, back: () -> Unit) {
+    val plugins = orderedPlugins(prefs, url, Nuvio.saved(filesDir, url)?.scrapers.orEmpty())
+    val moving = plugins.firstOrNull { it.id == held }
+    val intro = label(if (moving == null) getString(R.string.nuvio_order_intro) else getString(R.string.nuvio_order_moving, moving.name), 13f).apply {
+        alpha = 0.7f
+        maxLines = 4
+        setPadding(dp(14), 0, dp(14), dp(12))
+    }
+    showPage(getString(R.string.nuvio_order), plugins.mapIndexed { i, s ->
+        page(s.name, if (s.id == held) "↕" else "") {
+            when {
+                moving == null -> orderPage(url, s.id, i, back)
+                s.id == held -> orderPage(url, null, i, back)
+                else -> {
+                    savePluginOrder(prefs, url, plugins.toMutableList().apply { remove(moving); add(i, moving) })
+                    orderPage(url, null, i, back)
+                }
+            }
+        }
+    }, focus, top = intro) { if (moving != null) orderPage(url, null, plugins.indexOf(moving), back) else back() }
+}
+
+/**
+ * A plugin's options, as it lists them: a switch for yes or no, a list to pick from, a text (typed, or pasted on a
+ * phone: a cookie is long). Read by running the plugin, so the page waits for it the first time.
+ */
+private fun MainActivity.optionsPage(url: String, s: Nuvio.Scraper, focus: Int = 0, back: () -> Unit) {
+    val title = s.name
+    netIo.execute {
+        val fields = Nuvio.fields(filesDir, url, s).filter { it.type in setOf("toggle", "select", "text") }
+        ui.post { if (pageShowing(title)) optionsRows(url, s, fields, focus, back) }
+    }
+    showPage(title, listOf(page(getString(R.string.player_loading)) {}), back = back)
+}
+
+private fun MainActivity.optionsRows(url: String, s: Nuvio.Scraper, fields: List<Nuvio.Field>, focus: Int, back: () -> Unit) {
+    if (fields.isEmpty()) return showPage(s.name, listOf(page(getString(R.string.nuvio_options_none)) { back() }), back = back)
+    fun value(f: Nuvio.Field) = pluginOptions(prefs, url, s)?.opt(f.key) ?: f.default
+    fun set(f: Nuvio.Field, v: Any?) = setPluginOption(prefs, url, s, fields, f.key, v)
+    val again = { i: Int -> optionsRows(url, s, fields, i, back) }
+    val top = s.description.takeIf { it.isNotBlank() }?.let {
+        label(it, 13f).apply { alpha = 0.7f; maxLines = 4; setPadding(dp(14), 0, dp(14), dp(12)) }
+    }
+    showPage(s.name, fields.mapIndexed { i, f ->
+        when (f.type) {
+            "toggle" -> {
+                val on = value(f) == true || value(f)?.toString() == "true"
+                page(f.label, toggle(on)) { set(f, !on); again(i) }
+            }
+            "select" -> {
+                val now = value(f)?.toString()
+                page(f.label, f.choices.firstOrNull { it.second.toString() == now }?.first ?: SUBMENU) {
+                    pickOption(f, now, { v -> set(f, v); again(i) }) { again(i) }
+                }
+            }
+            else -> {
+                val text = value(f)?.toString().orEmpty()
+                page(f.label, if (text.isEmpty()) SUBMENU else if (f.secret) "••••••" else text) {
+                    typeOption(f, text, { v -> set(f, v.ifEmpty { null }) }) { again(i) }
+                }
+            }
+        }
+    }, focus, top = top, back = back)
+}
+
+/** One of [f]'s choices, the current ([now]) marked; [chosen] gets the value of the one picked. */
+private fun MainActivity.pickOption(f: Nuvio.Field, now: String?, chosen: (Any) -> Unit, back: () -> Unit) {
+    val top = f.description.takeIf { it.isNotBlank() }?.let {
+        label(it, 13f).apply { alpha = 0.7f; maxLines = 4; setPadding(dp(14), 0, dp(14), dp(12)) }
+    }
+    val at = f.choices.indexOfFirst { it.second.toString() == now }
+    showPage(f.label, f.choices.map { (name, v) -> page(name, if (v.toString() == now) CHOSEN else "") { chosen(v) } },
+        at.coerceAtLeast(0), top = top, back = back)
+}
+
+/** [f]'s text typed with the remote or pasted on a phone; [save] gets it ("" clears it), then [back]. */
+private fun MainActivity.typeOption(f: Nuvio.Field, text: String, save: (String) -> Unit, back: () -> Unit) {
+    val intro = f.description.ifBlank { null }
+    textPage(f.label, text, f.placeholder.ifBlank { f.label }, intro, Typing.KEY, back = back) { typed ->
+        listOf(
+            page(getString(R.string.setting_tmdb_key_phone)) { optionFromPhone(f, save, back) },
+            page(getString(R.string.dialog_save)) { save(typed()); back() },
+            page(getString(R.string.dialog_clear)) { save(""); back() },
+        )
+    }
+}
+
+/** [f]'s text pasted on a phone (a cookie, a token): saved as it arrives. */
+private fun MainActivity.optionFromPhone(f: Nuvio.Field, save: (String) -> Unit, back: () -> Unit) {
+    val status = label(getString(R.string.nuvio_option_waiting), 14f)
+    val texts = PhoneTexts(f.label, f.description.ifBlank { getString(R.string.nuvio_option_phone_intro) }, getString(R.string.phone_send),
+        getString(R.string.phone_sending), getString(R.string.phone_unreachable), phoneFooter())
+    showPhoneLink(f.label, PhoneTask(PhonePages.text(texts, f.placeholder.ifBlank { f.label }), 16384) { file ->
+        val text = file.readText().trim()
+        if (text.isEmpty()) return@PhoneTask 400 to getString(R.string.nuvio_option_empty)
+        ui.post {
+            save(text)
+            status.text = getString(R.string.nuvio_option_saved)
+        }
+        200 to getString(R.string.nuvio_option_saved)
+    }, status, back = back)
 }
 
 /** Adds the repository at [input] once its manifest answers with plugins, telling how it went. */

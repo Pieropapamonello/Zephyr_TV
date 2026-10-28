@@ -72,6 +72,34 @@ class NuvioPluginsTest {
         assertEquals("https://h/x/repo.json", Nuvio.manifestUrl(" https://h/x/repo.json "))
     }
 
+    @Test fun aPluginsOptionsAndTheValuesItIsGiven() {
+        val script = """
+            async function onSettings() {
+              return [{ type: "header", label: "Options" },
+                { type: "select", key: "site", label: "Site", options: [{ label: "One", value: "https://one.example" },
+                  { label: "Two", value: "https://two.example" }], defaultValue: "https://one.example" },
+                { type: "toggle", key: "hd", label: "HD", defaultValue: true },
+                { type: "text", key: "token", label: "Token", isPassword: true, placeholder: "ui=..." },
+                { type: "text", label: "no key" }];
+            }
+            async function getStreams() {
+              var o = globalThis.SCRAPER_SETTINGS || {};
+              return [{ name: "A", title: (o.site || "none") + " " + o.hd + " " + o.token, url: "https://cdn.example/a.m3u8" }];
+            }
+            module.exports = { getStreams, onSettings };
+        """
+        val fields = Nuvio.fields(Nuvio.run(script, "module.exports.onSettings()")!!)
+        assertEquals(listOf("header", "select", "toggle", "text"), fields.map { it.type })
+        assertEquals(listOf("One" to "https://one.example", "Two" to "https://two.example"), fields[1].choices)
+        assertEquals(true, fields[2].default)
+        assertTrue(fields[3].secret)
+        val options = JSONObject().put("site", "https://two.example").put("hd", false).put("token", "ui=\"x\"")
+        val out = Nuvio.run(script, "module.exports.getStreams()", "globalThis.SCRAPER_SETTINGS = $options;")!!
+        assertEquals("https://two.example false ui=\"x\"", out.getJSONObject(0).getString("title"))
+        val repo = Nuvio.repo("https://h/manifest.json", JSONObject("""{"scrapers":[{"id":"a","filename":"a.js","hasSettings":true},{"id":"b","filename":"b.js"}]}"""))
+        assertEquals(listOf(true, false), repo.scrapers.map { it.options })
+    }
+
     init {
         // The modules as the app has them (assets/nuvio), read from the source tree.
         Nuvio.modules = { file -> java.io.File("src/main/assets/nuvio/$file").takeIf { it.exists() }?.readText() }

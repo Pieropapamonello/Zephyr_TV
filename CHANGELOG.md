@@ -14,6 +14,13 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 2.2.0
+
+- New: **Options available**, under each Nuvio plugin that has options of its own. Set its switches, choices and texts there. Type a text with the remote, or paste it from your phone.
+- New: **Order of the plugins**, on the page of a Nuvio repository. Select a plugin with OK, then select the place for it with OK. Zephyr TV asks the plugins for streams in this order.
+- In the rows of the other catalogs in **Content catalog**, the cards show the pictures of the main catalog. A title looks the same in every row.
+- The page of Nuvio plugins tells that sources that need WebSocket do not work.
+
 ## 2.1.3
 
 - In the player, **Stream** groups the streams by quality, the highest first.

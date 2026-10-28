@@ -71,6 +71,8 @@ internal object K {
     const val NUVIO_ON = "nuvio_on" // plugins switched on that their manifest has off ("<manifest>#<id>")
     const val NUVIO_OFF = "nuvio_off" // plugins switched off that their manifest has on
     const val NUVIO_ADULT = "nuvio_adult" // repositories marked 18+
+    const val NUVIO_ORDER = "nuvio_order" // plugins in the order the user put them, "<manifest>#<id>" one per line
+    const val NUVIO_OPTIONS = "nuvio_options" // plugins' options chosen, JSON: {"<manifest>#<id>": {key: value}}
     const val ADULT_PLACE = "adult_place" // where the adult add-ons show: virtual, apps, mixed (see AdultPlace)
     const val ADULT_APP = "adult_app" // the adult add-ons in an app of their own, Adult content (see AdultLock)
 

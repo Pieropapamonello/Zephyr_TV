@@ -389,7 +389,7 @@
     <string name="settings_section_addons_plugins">Add-on e Plugin</string>
     <string name="addons_stremio">Add-on Stremio</string>
     <string name="nuvio_plugins">Plugin Nuvio</string>
-    <string name="nuvio_intro">I plugin Nuvio trovano da soli gli stream di film, serie e canali, dai siti che conoscono. Sono programmi scritti da altre persone: Zephyr TV li esegue separati da tutto il resto, con accesso solo a internet. Aggiungi solo repository di cui ti fidi.</string>
+    <string name="nuvio_intro">I plugin Nuvio trovano da soli gli stream di film, serie e canali, dai siti che conoscono. Sono programmi scritti da altre persone: Zephyr TV li esegue separati da tutto il resto, con accesso solo a internet. Aggiungi solo repository di cui ti fidi. Le fonti che richiedono WebSocket non sono supportate.</string>
     <string name="nuvio_plugins_on">%1$d di %2$d attivi</string>
     <string name="nuvio_add">Aggiungi un repository</string>
     <string name="nuvio_hint">Indirizzo del manifest.json del repository</string>
@@ -397,6 +397,15 @@
     <string name="nuvio_phone_title">Repository Nuvio</string>
     <string name="nuvio_added">%1$s: %2$d plugin</string>
     <string name="nuvio_empty">Questo repository non ha plugin.</string>
+    <string name="nuvio_options">%1$s: opzioni disponibili</string>
+    <string name="nuvio_options_none">Non è stato possibile leggere le opzioni di questo plugin.</string>
+    <string name="nuvio_option_waiting">In attesa del testo dal telefono…</string>
+    <string name="nuvio_option_phone_intro">Scrivi o incolla il testo di questa opzione.</string>
+    <string name="nuvio_option_empty">Niente da salvare: la casella è vuota.</string>
+    <string name="nuvio_option_saved">Salvato sulla TV.</string>
+    <string name="nuvio_order">Ordine dei plugin</string>
+    <string name="nuvio_order_intro">OK su un plugin per prenderlo, poi OK sul posto dove metterlo. I loro stream vengono chiesti in quest\'ordine.</string>
+    <string name="nuvio_order_moving">Stai spostando %1$s: OK sul posto dove metterlo, oppure di nuovo su di lui per lasciarlo dov\'era.</string>
     <string name="setting_addons_tv">Canali TV</string>
     <string name="setting_addon_add">Aggiungi un addon</string>
     <string name="addon_adult">Contenuti V.M. - Adulti</string>

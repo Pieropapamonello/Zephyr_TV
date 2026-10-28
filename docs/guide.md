@@ -153,7 +153,7 @@ How **quality** and **language** are recognised:
 **Settings → Content → Content catalog** is an ordered list of catalogs.
 
 - **The first is the main one.** It gives the titles' details, descriptions, pictures and search. When it doesn't know a title, Zephyr TV asks the next catalogs.
-- **The others** add their rows to Films and TV Series, in the list's order.
+- **The others** add their rows to Films and TV Series, in the list's order. The cards of titles the main one knows have its pictures, so a title looks the same in every row.
 - **Select a catalog** to move it up or down, or to remove it. One always stays.
 - **Add a catalog** offers Cinemeta, Nuvio Catalog, catalogs you used before, or a **New address** (the manifest of an add-on with catalogs).
 
@@ -191,7 +191,11 @@ Nuvio plugins are small programs that find the streams of films, series and (whe
 - **Each repository** has a page with:
   - **On**: the whole repository, on or off.
   - **A switch for each plugin**.
+  - **Order of the plugins** (with two or more): OK on a plugin to pick it up, then OK on the place it goes. Their streams are asked for in this order.
+  - **Options available**, under the plugins that have options of their own: switches, choices from a list, texts (a token or a cookie, for example, typed with the remote or pasted from your phone).
   - **Adult content (18+)**, **Move up / Move down**, **Update now**, **Remove**.
+
+Sources that need WebSocket aren't supported: a plugin that uses one still gives the streams of its other sources.
 
 Repositories update by themselves once a day. Plugins that declare only languages other than the TV's aren't asked (with **Streams in the TV's language first** on).
 

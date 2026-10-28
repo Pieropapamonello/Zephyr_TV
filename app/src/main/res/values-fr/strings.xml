@@ -389,7 +389,7 @@
     <string name="settings_section_addons_plugins">Extensions et Plugins</string>
     <string name="addons_stremio">Extensions Stremio</string>
     <string name="nuvio_plugins">Plugins Nuvio</string>
-    <string name="nuvio_intro">Les plugins Nuvio trouvent eux-mêmes les flux des films, séries et chaînes, sur les sites qu\'ils connaissent. Ce sont des programmes écrits par d\'autres personnes : Zephyr TV les exécute à part du reste, avec accès à internet seulement. N\'ajoutez que des dépôts de confiance.</string>
+    <string name="nuvio_intro">Les plugins Nuvio trouvent eux-mêmes les flux des films, séries et chaînes, sur les sites qu\'ils connaissent. Ce sont des programmes écrits par d\'autres personnes : Zephyr TV les exécute à part du reste, avec accès à internet seulement. N\'ajoutez que des dépôts de confiance. Les sources qui demandent WebSocket ne sont pas prises en charge.</string>
     <string name="nuvio_plugins_on">%1$d sur %2$d actifs</string>
     <string name="nuvio_add">Ajouter un dépôt</string>
     <string name="nuvio_hint">Adresse du manifest.json du dépôt</string>
@@ -397,6 +397,15 @@
     <string name="nuvio_phone_title">Dépôt Nuvio</string>
     <string name="nuvio_added">%1$s : %2$d plugins</string>
     <string name="nuvio_empty">Ce dépôt n\'a pas de plugins.</string>
+    <string name="nuvio_options">%1$s : options disponibles</string>
+    <string name="nuvio_options_none">Impossible de lire les options de ce plugin.</string>
+    <string name="nuvio_option_waiting">En attente du texte depuis le téléphone…</string>
+    <string name="nuvio_option_phone_intro">Saisissez ou collez le texte de cette option.</string>
+    <string name="nuvio_option_empty">Rien à enregistrer : la case est vide.</string>
+    <string name="nuvio_option_saved">Enregistré sur la TV.</string>
+    <string name="nuvio_order">Ordre des plugins</string>
+    <string name="nuvio_order_intro">OK sur un plugin pour le prendre, puis OK à l\'endroit où il va. Leurs flux sont demandés dans cet ordre.</string>
+    <string name="nuvio_order_moving">Déplacement de %1$s : OK à l\'endroit où il va, ou de nouveau sur lui pour le laisser à sa place.</string>
     <string name="setting_addons_tv">Chaînes TV</string>
     <string name="setting_addon_add">Ajouter une extension</string>
     <string name="addon_adult">Contenu pour adultes (18+)</string>

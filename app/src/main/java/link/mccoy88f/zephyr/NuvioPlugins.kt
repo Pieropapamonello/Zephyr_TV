@@ -21,13 +21,24 @@ import org.json.JSONObject
  * Nuvio's plugins: a repository is a manifest.json listing its scrapers, each a JavaScript file with one function,
  * getStreams(tmdbId, mediaType, season, episode), that finds a film's or episode's streams by itself (asking the
  * sites with fetch) and hands them back as Stremio does. Unlike an add-on there's no server to ask: the script runs
- * here, in QuickJS, a context of its own each time, with only the network (no files, no settings), a memory limit and
- * a time limit. Its fetch is ours (Http), so cookies and redirects are seen as a browser wouldn't let a page see them.
+ * here, in QuickJS, a context of its own each time, with only the network (no files) and its options (see fields), a
+ * memory limit and a time limit. Its fetch is ours (Http), so cookies and redirects are seen as a browser wouldn't let a page see them.
  */
 internal object Nuvio {
-    /** One of a repository's plugins, as its manifest describes it. [types]: "movie", "series", "tv" (Nuvio's word for series, a TV channel's too), "anime". */
+    /**
+     * One of a repository's plugins, as its manifest describes it. [types]: "movie", "series", "tv" (Nuvio's word for
+     * series, a TV channel's too), "anime". [options]: it has options of its own (see fields).
+     */
     internal class Scraper(val id: String, val name: String, val description: String, val version: String, val file: String,
-                           val types: List<String>, val prefixes: List<String>?, val enabled: Boolean, val languages: List<String>)
+                           val types: List<String>, val prefixes: List<String>?, val enabled: Boolean, val languages: List<String>,
+                           val options: Boolean = false)
+
+    /**
+     * One of a plugin's options, as its onSettings() describes it: [type] "toggle" (yes or no), "select" (one of
+     * [choices], label to value), "text" ([secret]: a password, a cookie), or "header" (a title, no value).
+     */
+    internal class Field(val type: String, val key: String, val label: String, val description: String, val placeholder: String,
+                         val secret: Boolean, val choices: List<Pair<String, Any>>, val default: Any?)
 
     /** A repository: its manifest's address, name, version and author, and its plugins. */
     internal class Repo(val url: String, val name: String, val version: String, val author: String, val description: String,
@@ -103,7 +114,7 @@ internal object Nuvio {
             Scraper(id, s.optString("name").ifBlank { id }, s.optString("description"), s.optString("version"), file,
                 strings(s.optJSONArray("supportedTypes")).orEmpty().map { it.lowercase() },
                 strings(s.optJSONArray("idPrefixes"))?.takeIf { it.isNotEmpty() }, s.optBoolean("enabled", true),
-                strings(s.optJSONArray("contentLanguage")).orEmpty())
+                strings(s.optJSONArray("contentLanguage")).orEmpty(), s.optBoolean("hasSettings"))
         }
         return Repo(url, m.optString("name").ifBlank { host(url) }, m.optString("version"), m.optString("author"),
             m.optString("description"), scrapers)
@@ -177,12 +188,44 @@ internal object Nuvio {
     /** The ids films and series go by (IMDb's, TMDB's, the anime databases'), as plugins' prefixes write them. */
     private val TITLE_IDS = listOf("tt", "tmdb", "kitsu", "mal", "anilist", "anidb", "imdb", "tvdb")
 
+    /** Each plugin's options as last read ("<manifest>#<id>@<version>"): their script runs once for them. */
+    private val fieldsRead = ConcurrentHashMap<String, List<Field>>()
+
+    /**
+     * [s]'s options, as its onSettings() lists them; empty when it has none or it fails. The values chosen reach the
+     * plugin as globalThis.SCRAPER_SETTINGS (see streams). Runs the script: off the UI thread.
+     */
+    fun fields(dir: File, url: String, s: Scraper): List<Field> {
+        val key = "$url#${s.id}@${s.version}"
+        fieldsRead[key]?.let { return it }
+        val script = runCatching { scriptFile(dir, url, s).readText() }.getOrNull() ?: return emptyList()
+        val call = "(typeof onSettings === \"function\" ? onSettings : module.exports.onSettings)()"
+        val list = runCatching { run(script, call) }.onFailure { warn("Nuvio plugin options failed: ${s.name} ($it)") }.getOrNull()
+            ?: return emptyList()
+        return fields(list).also { if (it.isNotEmpty()) fieldsRead[key] = it }
+    }
+
+    internal fun fields(list: JSONArray): List<Field> = (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { f ->
+        val type = f.optString("type").lowercase()
+        val key = f.optString("key")
+        if (type != "header" && key.isBlank()) return@mapNotNull null
+        val options = f.optJSONArray("options") ?: JSONArray()
+        val choices = (0 until options.length()).mapNotNull { i ->
+            options.optJSONObject(i)?.let { o -> o.opt("value")?.let { v -> o.optString("label").ifBlank { v.toString() } to v } }
+                ?: options.opt(i)?.takeIf { it !is JSONObject && it != JSONObject.NULL }?.let { it.toString() to it }
+        }
+        Field(type, key, f.optString("label").ifBlank { key }, f.optString("description"), f.optString("placeholder"),
+            f.optBoolean("isPassword"), choices, f.opt("defaultValue")?.takeIf { it != JSONObject.NULL })
+    }
+
     /**
      * [s]'s streams for the film or episode [id] of Stremio's [type] (an episode's id ends ":season:episode"), named
-     * [name] in the lists. [tmdbKey]: the user's, for the plugins that ask TMDB (they have their own otherwise).
+     * [name] in the lists. [tmdbKey]: the user's, for the plugins that ask TMDB (they have their own otherwise); [options]:
+     * the values of its options the user chose, by key.
      * Empty when it finds none, fails or runs out of time. Network: off the UI thread.
      */
-    fun streams(dir: File, url: String, s: Scraper, name: String, type: String, id: String, tmdbKey: String?): List<Stremio.Stream> {
+    fun streams(dir: File, url: String, s: Scraper, name: String, type: String, id: String, tmdbKey: String?,
+                options: JSONObject? = null): List<Stremio.Stream> {
         val script = runCatching { scriptFile(dir, url, s).readText() }.getOrNull() ?: return emptyList()
         val parts = id.split(':')
         val episodic = type == "series" && parts.size >= 3 && parts.takeLast(2).all { p -> p.isNotEmpty() && p.all(Char::isDigit) }
@@ -194,7 +237,7 @@ internal object Nuvio {
         val media = if (type == "movie") "movie" else "tv"
         val call = "(typeof getStreams === \"function\" ? getStreams : module.exports.getStreams)(" +
             "${JSONObject.quote(base)}, ${JSONObject.quote(media)}, $season, $episode)"
-        val globals = "globalThis.TMDB_API_KEY = ${tmdbKey?.let { JSONObject.quote(it) } ?: "undefined"}; globalThis.SCRAPER_SETTINGS = {};"
+        val globals = "globalThis.TMDB_API_KEY = ${tmdbKey?.let { JSONObject.quote(it) } ?: "undefined"}; globalThis.SCRAPER_SETTINGS = ${options ?: "{}"};"
         val found = runCatching { run(script, call, globals) }.onFailure { warn("Nuvio plugin failed: ${s.name} ($it)") }.getOrNull()
             ?: return emptyList()
         return Stremio.streams(asStremio(found), vod = true).map { Stremio.Stream(it.url, it.title, it.headers, it.group, name) }
@@ -403,6 +446,7 @@ internal object Nuvio {
           g.__modules = {};
           g.require = function (n) {
             if (g.__modules[n]) return g.__modules[n];
+            if (n === "ws") throw new Error("WebSocket (ws) is not supported");
             throw new Error("Cannot find module '" + n + "'");
           };
           function dec(s) { try { return decodeURIComponent(String(s).replace(/\+/g, " ")); } catch (e) { return String(s); } }
