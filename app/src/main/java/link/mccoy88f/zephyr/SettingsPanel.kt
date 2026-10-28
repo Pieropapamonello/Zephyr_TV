@@ -286,7 +286,7 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                 else allowListener { renderSettings(WATCH_SECTION * SECTION) }
             },
             // Where films and series come from (Cinemeta, Nuvio, an added catalog), and TMDB completing them.
-            page(getString(R.string.setting_cinemeta), catalogName(cinemetaUrl())) { configureCinemeta() },
+            page(getString(R.string.setting_cinemeta), sourcesValue()) { configureCinemeta() },
         )
     }
     // The TV's own side: its inputs (HDMI and the like) and its channels, with their logos and guide.

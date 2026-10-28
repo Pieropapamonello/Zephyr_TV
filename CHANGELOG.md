@@ -13,6 +13,12 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 1.5.0
+
+- **Content catalog** can have more than one catalog. Select **Add a catalog** to add Cinemeta, Nuvio Catalog, a catalog added before, or a new address.
+- The first catalog is the main catalog. It gives the details, the search and the pictures of the titles. When it does not have a title, Zephyr TV asks the other catalogs in their order.
+- The other catalogs add their rows to **Films** and **Series**, in their order. Select a catalog to move it up or down, or to remove it.
+
 ## 1.4.0
 
 - A film page shows **Watch on** for each add-on that has the film, with its icon and the number of streams. Before, only episodes had this.

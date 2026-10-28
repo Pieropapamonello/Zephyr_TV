@@ -41,7 +41,10 @@ internal fun MainActivity.openTitle(ref: TitleRef) {
  * it (see localizeMeta). Network: off the UI thread.
  */
 private fun MainActivity.titleMeta(ref: TitleRef): Stremio.TitleMeta? {
-    val addons = vodAddons().filter { it.provides("meta", ref.type, ref.id) }.sortedByDescending { it.url == ref.source }
+    // The catalog sources first, the main one first (see catalogSources); then the add-on it came from; then the rest.
+    val sources = catalogSources()
+    val addons = vodAddons().filter { it.provides("meta", ref.type, ref.id) }
+        .sortedBy { a -> sources.indexOf(a.url).takeIf { it >= 0 } ?: if (a.url == ref.source) sources.size else sources.size + 1 }
     for (a in addons) runCatching { Stremio.titleMeta(a.base, ref.type, ref.id) }.getOrNull()?.let { return localizeMeta(it) }
     return null
 }

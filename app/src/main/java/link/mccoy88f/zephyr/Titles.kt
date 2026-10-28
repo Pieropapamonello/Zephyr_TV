@@ -21,9 +21,19 @@ private const val VOD_PKG = STREMIO + "vod"
 internal class TitleRef(val type: String, val id: String, val name: String, val poster: String?, val background: String?,
                         val source: String? = null, val video: String? = null, val logo: String? = null, val rating: String? = null)
 
-/** Cinemeta's manifest: Stremio's catalog of films and series, always the library's first; its address can be changed. */
-internal fun MainActivity.cinemetaUrl(): String = prefs.getString(K.CINEMETA_URL, null)?.let { Stremio.manifestUrl(it) }
-    ?.let { if (it.startsWith(Stremio.NUVIO_BASE)) nuvioUrl() else it } ?: Stremio.CINEMETA
+/**
+ * The catalog sources, in the user's order (Content catalog): the first, the main one, gives titles' details, search
+ * and art (the others after it, for what it hasn't); the others add their rows to Films and Series, in this order.
+ * Cinemeta alone by default; one set before there was a list (the catalog source) is the main one.
+ */
+internal fun MainActivity.catalogSources(): List<String> {
+    val saved = prefs.getString(K.CATALOG_SOURCES, null)?.lines()?.mapNotNull { Stremio.manifestUrl(it) }
+        ?: listOfNotNull(prefs.getString(K.CINEMETA_URL, null)?.let { Stremio.manifestUrl(it) })
+    return saved.map { if (it.startsWith(Stremio.NUVIO_BASE)) nuvioUrl() else it }.distinct().ifEmpty { listOf(Stremio.CINEMETA) }
+}
+
+/** The main catalog source (see catalogSources): Cinemeta by default. */
+internal fun MainActivity.cinemetaUrl(): String = catalogSources().first()
 
 /** Nuvio's catalog in the TMDB language and the TV's country: it follows them when they change. */
 internal fun MainActivity.nuvioUrl() = Stremio.nuvio(tmdbLang(), TmdbClient.region(tmdbLang()))
@@ -31,8 +41,8 @@ internal fun MainActivity.nuvioUrl() = Stremio.nuvio(tmdbLang(), TmdbClient.regi
 /** Where films and series show: a Films tile and a Series tile, each add-on's own tile, or nowhere. */
 internal fun MainActivity.addonsVod(): VodPlace = prefs.getString(K.ADDONS_VOD, null).let { k -> VodPlace.entries.firstOrNull { it.key == k } } ?: VodPlace.TILES
 
-/** The add-ons films and series are listed from (Cinemeta first), as manifest addresses. */
-internal fun MainActivity.libraryUrls(): List<String> = (listOf(cinemetaUrl()) + shownAddonUrls()).distinct()
+/** The add-ons films and series are listed from (the catalog sources first, in their order), as manifest addresses. */
+internal fun MainActivity.libraryUrls(): List<String> = (catalogSources() + shownAddonUrls()).distinct()
 
 /** The add-ons as read, those with film or series catalogs or streams. Reads them when they're missing (in the background). */
 internal fun MainActivity.vodAddons(): List<Stremio.Addon> = libraryUrls().mapNotNull { url ->

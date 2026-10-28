@@ -419,65 +419,74 @@ internal fun MainActivity.catalogName(url: String) =
     if (url == Stremio.CINEMETA) "Cinemeta" else if (url.startsWith(Stremio.NUVIO_BASE)) getString(R.string.catalog_nuvio) else Stremio.saved(filesDir, url)?.addon?.name ?: android.net.Uri.parse(url).host.orEmpty()
 
 /**
- * The catalog source: where films and series come from. Cinemeta, Stremio's own, by default; Nuvio's (TMDB); or one
- * of the catalogs added here, chosen in its place. [focus]: the row to focus.
+ * Content catalog: the catalog sources in order (the main one first: see catalogSources), each with its page (up,
+ * down, remove); Add a catalog; then TMDB's rows (see tmdbContentRows). [focus]: the row to focus.
  */
 internal fun MainActivity.configureCinemeta(focus: Int = 0) {
-    val current = cinemetaUrl()
-    val inUse = getString(R.string.catalog_in_use)
-    val rows = listOf(page(getString(R.string.cinemeta_default), if (current == Stremio.CINEMETA) inUse else "") { useCatalog(null, 0) },
-        page(getString(R.string.catalog_nuvio), if (current.startsWith(Stremio.NUVIO_BASE)) inUse else "") { useCatalog(nuvioUrl(), 1) }) +
-        catalogUrls().map { url -> page(catalogName(url), if (url == current) inUse else SUBMENU) { catalogPage(url) } } +
-        page(getString(R.string.catalog_add), SUBMENU) { addCatalog() } +
-        tmdbContentRows()
+    val sources = catalogSources()
+    val rows = sources.mapIndexed { i, url ->
+        page(catalogName(url), if (i == 0) getString(R.string.catalog_primary) else "${i + 1}") { sourcePage(url) }
+    } + page(getString(R.string.catalog_add), SUBMENU) { addSourcePage() } + tmdbContentRows()
     val intro = label(getString(R.string.cinemeta_intro), 13f).apply {
         alpha = 0.7f
-        maxLines = 7
+        maxLines = 8
         setLineSpacing(0f, 1.15f)
         setPadding(dp(14), 0, dp(14), dp(12))
     }
     showPage(getString(R.string.setting_cinemeta), rows, focus, top = intro) { renderSettings(CINEMETA_ROW) }
 }
 
-/** Row [i] of the TMDB rows on the content catalog's page (see tmdbContentRows): after Cinemeta, Nuvio, the added catalogs and Add. */
-internal fun MainActivity.tmdbRow(i: Int) = 3 + catalogUrls().size + i
+/** Row [i] of the TMDB rows on the content catalog's page (see tmdbContentRows): after the sources and Add. */
+internal fun MainActivity.tmdbRow(i: Int) = catalogSources().size + 1 + i
 
-/** Makes [url] the catalog source (null: Cinemeta) and reads it at once; then the list again, [focus] on its row. */
-private fun MainActivity.useCatalog(url: String?, focus: Int) {
-    saveCatalogUrls(catalogUrls()) // an address set before there was a list stays in it
-    setCatalog(url)
-    configureCinemeta(focus)
+/** What Content catalog says under Content: the main source, and how many more. */
+internal fun MainActivity.sourcesValue() = catalogSources().let { s -> catalogName(s.first()) + if (s.size > 1) " +${s.size - 1}" else "" }
+
+/**
+ * The catalog sources from now on, in this order: read at once when new. A new main one sets Complete with TMDB: off
+ * for Nuvio (in the TV's language already, TMDB's, without a key), on for the others.
+ */
+private fun MainActivity.saveSources(urls: List<String>) {
+    val before = catalogSources()
+    val list = urls.distinct().ifEmpty { listOf(Stremio.CINEMETA) }
+    prefs.edit().putString(K.CATALOG_SOURCES, list.joinToString("\n")).remove(K.CINEMETA_URL).apply()
+    if (list.first() != before.first()) prefs.edit().putBoolean(K.TMDB_ENRICH, !list.first().startsWith(Stremio.NUVIO_BASE)).apply()
+    list.filter { Stremio.saved(filesDir, it) == null }.forEach { updateAddon(it, null) { addonsChanged() } }
+    addonsChanged()
 }
 
-internal fun MainActivity.setCatalog(url: String?) {
-    if (url == null || url == Stremio.CINEMETA) prefs.edit().remove(K.CINEMETA_URL).apply() else prefs.edit().putString(K.CINEMETA_URL, url).apply()
-    // Nuvio is in the TV's language already (TMDB's, without a key): Complete with TMDB off; on with the others.
-    prefs.edit().putBoolean(K.TMDB_ENRICH, url?.startsWith(Stremio.NUVIO_BASE) != true).apply()
-    Toast.makeText(this, getString(R.string.addon_checking), Toast.LENGTH_SHORT).show()
-    updateAddon(cinemetaUrl(), null) { listing ->
-        if (listing?.addon == null) Toast.makeText(this, getString(R.string.toast_addon_failed), Toast.LENGTH_LONG).show()
-        addonsChanged()
+/** The first start's choice (see catalogPopup): [url] the one catalog source (null: Cinemeta). */
+internal fun MainActivity.setCatalog(url: String?) = saveSources(listOf(url ?: Stremio.CINEMETA))
+
+/** A catalog source's page: up or down the list (the first is the main one), or out of it (one always stays). */
+private fun MainActivity.sourcePage(url: String) {
+    val sources = catalogSources()
+    val at = sources.indexOf(url)
+    fun move(by: Int) {
+        val list = sources.toMutableList()
+        list.add(at + by, list.removeAt(at))
+        saveSources(list)
+        configureCinemeta(at + by)
     }
+    showPage(catalogName(url), listOfNotNull(
+        if (at > 0) page(getString(R.string.addon_move_up)) { move(-1) } else null,
+        if (at < sources.size - 1) page(getString(R.string.addon_move_down)) { move(+1) } else null,
+        if (sources.size > 1) page(getString(R.string.addon_remove)) { saveSources(sources - url); configureCinemeta() } else null,
+    )) { configureCinemeta(at) }
 }
 
-/** An added catalog: use it in Cinemeta's place, or remove it (the one in use gives way to Cinemeta). */
-private fun MainActivity.catalogPage(url: String) {
-    val at = 2 + catalogUrls().indexOf(url)
-    showPage(catalogName(url), listOfNotNull(
-        if (url != cinemetaUrl()) page(getString(R.string.catalog_use)) { useCatalog(url, at) } else null,
-        page(getString(R.string.addon_remove)) {
-            val rest = catalogUrls() - url
-            if (url == cinemetaUrl()) setCatalog(null)
-            saveCatalogUrls(rest)
-            if (url !in addonUrls()) Stremio.forget(filesDir, url)
-            configureCinemeta()
-        },
-    )) { configureCinemeta(at) }
+/** Add a catalog: Cinemeta, Nuvio and the catalogs added before, those not in use; or a new address. Added last. */
+private fun MainActivity.addSourcePage() {
+    val sources = catalogSources()
+    val known = (listOf(Stremio.CINEMETA, nuvioUrl()) + catalogUrls()).filter { it !in sources }
+    showPage(getString(R.string.catalog_add), known.map { url ->
+        page(catalogName(url)) { saveSources(sources + url); configureCinemeta(sources.size) }
+    } + page(getString(R.string.catalog_new_address), SUBMENU) { addCatalog() }) { configureCinemeta(sources.size) }
 }
 
 /** A catalog's address typed with the remote: added once it answers with catalogs of films or series. */
 private fun MainActivity.addCatalog() {
-    textPage(getString(R.string.catalog_add), "", getString(R.string.addon_hint), getString(R.string.catalog_add_intro), back = { configureCinemeta() }) { typed ->
+    textPage(getString(R.string.catalog_new_address), "", getString(R.string.addon_hint), getString(R.string.catalog_add_intro), back = { addSourcePage() }) { typed ->
         listOf(page(getString(R.string.dialog_save)) {
             val url = Stremio.manifestUrl(typed()) ?: return@page Toast.makeText(this, getString(R.string.phone_epg_bad), Toast.LENGTH_LONG).show()
             if (url == Stremio.CINEMETA) return@page configureCinemeta()
@@ -492,7 +501,8 @@ private fun MainActivity.addCatalog() {
                     }
                     else -> {
                         saveCatalogUrls(catalogUrls() + url)
-                        configureCinemeta(2 + catalogUrls().indexOf(url))
+                        saveSources(catalogSources() + url)
+                        configureCinemeta(catalogSources().indexOf(url).coerceAtLeast(0))
                     }
                 }
             }
