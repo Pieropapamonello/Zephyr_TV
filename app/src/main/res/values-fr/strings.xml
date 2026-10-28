@@ -280,6 +280,9 @@
     <string name="city_hint">Saisissez une ville, puis Rechercher</string>
     <string name="searching">Recherche…</string>
     <string name="search_loading_for">Recherche de « %1$s »…</string>
+    <string name="search_adult_show">Afficher</string>
+    <string name="search_adult_hide">Ne pas afficher</string>
+    <string name="search_adult_only">Seulement le contenu pour adultes</string>
     <string name="search_failed">Recherche impossible. Vérifiez la connexion et réessayez.</string>
     <string name="no_places">Aucun lieu nommé \"%1$s\".</string>
     <string name="row_position">Position des Favoris</string>
@@ -518,7 +521,9 @@
     <!-- Search filters, and Cinemeta's genres -->
     <string name="search_go">Rechercher</string>
     <string name="search_filters">Filtres</string>
-    <string name="search_filter_type">Films ou séries</string>
+    <string name="search_filter_type">Type de contenu</string>
+    <string name="search_type_channels">Chaînes TV</string>
+    <string name="search_type_all">Tous</string>
     <string name="search_filter_year">Année</string>
     <string name="search_filter_genre">Genre</string>
     <string name="search_filter_any">Tous</string>

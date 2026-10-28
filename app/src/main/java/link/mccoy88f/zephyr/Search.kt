@@ -72,30 +72,37 @@ internal fun MainActivity.openSearch(text: String = "", focus: Int? = null) {
     }
     val f = searchFilter
     val summary = if (!f.any) getString(R.string.search_filter_any)
-        else listOfNotNull(if (f.type != "all") typeName(f.type) else null, f.year, f.genre?.let { genreName(it) }).joinToString(" · ")
+        else listOfNotNull(if (f.type != "all") typeName(f.type) else null, f.year, f.genre?.let { genreName(it) },
+            f.adult.takeIf { it != SearchFilter.ADULT_SHOW && adultSearchOffered() }?.let { adultFilterName(it) }).joinToString(" · ")
     fun typed() = input.text?.toString().orEmpty()
     val filterRows = if (!searchFiltersExpanded) emptyList() else listOfNotNull(
         page(getString(R.string.search_filter_type), typeName(f.type)) {
-            val types = listOf("all", "movie", "series")
-            searchFilter = SearchFilter(types[(types.indexOf(f.type) + 1) % types.size], f.year, f.genre)
-            openSearch(typed(), 2)
+            val types = listOf("all", "movie", "series", "tv")
+            searchFilter = SearchFilter(types[(types.indexOf(f.type) + 1) % types.size], f.year, f.genre, f.adult)
+            openSearch(typed(), 3)
         },
         page(getString(R.string.search_filter_year), f.year ?: getString(R.string.search_filter_any)) { pickYear(typed()) },
         page(getString(R.string.search_filter_genre), f.genre?.let { genreName(it) } ?: getString(R.string.search_filter_any)) { pickGenre(typed()) },
+        // Adult content: only while 18+ shows (unlocked, or no lock) and there's an adult add-on.
+        if (!adultSearchOffered()) null else page(getString(R.string.adult_app), adultFilterName(f.adult)) {
+            val modes = listOf(SearchFilter.ADULT_SHOW, SearchFilter.ADULT_HIDE, SearchFilter.ADULT_ONLY)
+            searchFilter = SearchFilter(f.type, f.year, f.genre, modes[(modes.indexOf(f.adult) + 1) % modes.size])
+            openSearch(typed(), 6)
+        },
         if (!f.any) null else page(getString(R.string.search_filter_clear)) {
             searchFilter = SearchFilter()
-            openSearch(typed(), 1)
+            openSearch(typed(), 2)
         },
     )
     val rows = listOf(
         // Search: with words, or with the filters alone (all of Cinemeta's popular ones, without either).
         page(getString(R.string.search_go)) { go(typed(), always = true) },
+        page(getString(R.string.search_dictate)) { listen(input, ::go) },
         page(getString(R.string.search_filters), if (searchFiltersExpanded) "▲ $summary" else "▼ $summary") {
             searchFiltersExpanded = !searchFiltersExpanded
-            openSearch(typed(), 1)
+            openSearch(typed(), 2)
         },
     ) + filterRows + listOf(
-        page(getString(R.string.search_dictate)) { listen(input, ::go) },
         page(getString(R.string.search_assistant)) { closeLauncherSettings(); assistant() },
     )
     showPage(getString(R.string.search_title), rows, focus ?: 0, top = top) { closeLauncherSettings() }
@@ -242,27 +249,33 @@ internal fun MainActivity.searchTmdb(query: String) {
     renderApps()
     (0 until appRow.childCount).map { appRow.getChildAt(it) }.firstOrNull { it.tag == SEARCH_PKG }?.requestFocus()
     spotlightIo.execute {
-        // TV channels only for words, and not when films or series alone are asked for.
-        val channels = if (query.isBlank() || filter.type != "all") emptyList() else runCatching { findChannels(query) }.getOrDefault(emptyList())
+        // TV channels only for words, and not when films or series alone are asked for; TV channels alone: no titles.
+        val channels = if (query.isBlank() || filter.type !in setOf("all", "tv")) emptyList() else runCatching { findChannels(query) }.getOrDefault(emptyList())
         val titles = runCatching {
-            if (query.isBlank()) browseLibrary(filter)
+            if (filter.type == "tv") emptyList()
+            else if (query.isBlank() && adultSearch() == SearchFilter.ADULT_ONLY) browseAdult(filter)
+            else if (query.isBlank()) browseLibrary(filter)
             else searchLibrary(query).filter { (t, _) -> filter.accepts(t) { g -> genreName(g) } }
         }.getOrDefault(emptyList())
+        // Adult content kept, left out, or alone (by the add-on each came from: Stremio's catalogs don't tell a title's age).
+        fun keep(adult: Boolean) = when (adultSearch()) { SearchFilter.ADULT_HIDE -> !adult; SearchFilter.ADULT_ONLY -> adult; else -> true }
+        val shownChannels = channels.filter { keep(it.addon?.let { c -> isAdultAddon(c.addon) } == true) }
+        val shownTitles = titles.filter { (_, source) -> keep(isAdultAddon(source)) }
         ui.post {
             if (searchLoading != n) return@post // closed, or another search started meanwhile
             searchLoading = 0
-            if (channels.isEmpty() && titles.isEmpty()) {
+            if (shownChannels.isEmpty() && shownTitles.isEmpty()) {
                 endSearch()
                 return@post Toast.makeText(this, getString(R.string.toast_no_results, label), Toast.LENGTH_SHORT).show()
             }
-            searchChannels = channels
-            searchTitles = titles
+            searchChannels = shownChannels
+            searchTitles = shownTitles
             // Its cards in place of the loading ones, where the tile (or a card under it) still has focus.
             if (watchApp == SEARCH_PKG || currentFocus?.tag == SEARCH_PKG) {
                 watchApp = null
                 showSearchResults()
             }
-            val found = channels.size + titles.size
+            val found = shownChannels.size + shownTitles.size
             Toast.makeText(this, resources.getQuantityString(R.plurals.toast_search_results, found, found, label), Toast.LENGTH_LONG).show()
         }
     }
@@ -448,15 +461,38 @@ internal fun MainActivity.endSearch(): Boolean {
 // ---------- filters ----------
 
 /** Films and series, films, series. */
+/** The search's kind of content: all, films, TV series, or TV channels. */
 private fun MainActivity.typeName(type: String) = getString(when (type) {
-    "movie" -> R.string.tmdb_type_movie
-    "series" -> R.string.tmdb_type_tv
-    else -> R.string.tmdb_type_all
+    "movie" -> R.string.vod_movies
+    "series" -> R.string.vod_series
+    "tv" -> R.string.search_type_channels
+    else -> R.string.search_type_all
 })
 
 /** What a search with [f] and no words is for: "Films · 2020 · Drama", or Cinemeta's popular titles. */
-private fun MainActivity.filterLabel(f: SearchFilter) = listOfNotNull(f.type.takeIf { it != "all" }?.let { typeName(it) }, f.year, f.genre?.let { genreName(it) })
+private fun MainActivity.filterLabel(f: SearchFilter) = listOfNotNull(f.type.takeIf { it != "all" }?.let { typeName(it) }, f.year, f.genre?.let { genreName(it) },
+    f.adult.takeIf { it != SearchFilter.ADULT_SHOW && adultSearchOffered() }?.let { adultFilterName(it) })
     .joinToString(" · ").ifEmpty { getString(R.string.tmdb_source_cinemeta) }
+
+/** Adult content alone, without words: the adult add-ons' rows as last read, those [filter] lets through. Off the UI thread. */
+private fun MainActivity.browseAdult(filter: SearchFilter): List<Pair<Stremio.Title, String>> =
+    vodAddons().filter { isAdultAddon(it.url) }.flatMap { a -> Stremio.shelves(filesDir, a).flatMap { s -> s.titles.map { it to a.url } } }
+        .filter { (t, _) -> filter.accepts(t) { g -> genreName(g) } }.distinctBy { it.first.type + it.first.id }.take(100)
+
+/** Whether the search offers its Adult content filter: 18+ shows (unlocked, or no lock) and an adult add-on is there. */
+private fun MainActivity.adultSearchOffered() = adultUnlocked() && shownAddonUrls().any { isAdultAddon(it) }
+
+private fun MainActivity.adultFilterName(mode: String) = getString(when (mode) {
+    SearchFilter.ADULT_HIDE -> R.string.search_adult_hide
+    SearchFilter.ADULT_ONLY -> R.string.search_adult_only
+    else -> R.string.search_adult_show
+})
+
+/**
+ * The adult content the search keeps, by its filter: with the rest, none, or that alone. While 18+ is locked, none
+ * whatever the filter says (the adult add-ons aren't asked then either: see shownAddonUrls).
+ */
+internal fun MainActivity.adultSearch(): String = if (!adultUnlocked()) SearchFilter.ADULT_HIDE else searchFilter.adult
 
 /** The search's year: any, or one from this year back to 1920. */
 private fun MainActivity.pickYear(text: String) {
@@ -465,10 +501,10 @@ private fun MainActivity.pickYear(text: String) {
     val f = searchFilter
     showPage(getString(R.string.search_filter_year), years.map { y ->
         page(y ?: getString(R.string.search_filter_any), if (y == f.year) CHOSEN else "") {
-            searchFilter = SearchFilter(f.type, y, f.genre)
-            openSearch(text, 3)
+            searchFilter = SearchFilter(f.type, y, f.genre, f.adult)
+            openSearch(text, 4)
         }
-    }, years.indexOf(f.year).coerceAtLeast(0)) { openSearch(text, 3) }
+    }, years.indexOf(f.year).coerceAtLeast(0)) { openSearch(text, 4) }
     // Left/Right: ten years on or back, not a hundred rows one by one.
     pageSides = { step -> focusRow(((focusedRow() ?: 0) + step * 10).coerceIn(0, years.size - 1)) }
 }
@@ -479,10 +515,10 @@ private fun MainActivity.pickGenre(text: String) {
     val f = searchFilter
     showPage(getString(R.string.search_filter_genre), genres.map { g ->
         page(g?.let { genreName(it) } ?: getString(R.string.search_filter_any), if (g == f.genre) CHOSEN else "") {
-            searchFilter = SearchFilter(f.type, f.year, g)
-            openSearch(text, 4)
+            searchFilter = SearchFilter(f.type, f.year, g, f.adult)
+            openSearch(text, 5)
         }
-    }, genres.indexOf(f.genre).coerceAtLeast(0)) { openSearch(text, 4) }
+    }, genres.indexOf(f.genre).coerceAtLeast(0)) { openSearch(text, 5) }
 }
 
 /** Cinemeta's genres (IMDb's, in English) in the TV's language; one Zephyr TV doesn't know as it is. */

@@ -13,6 +13,12 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 1.5.2
+
+- In **Search**, **Say it** comes before **Filters**.
+- The search filter **Films or series** is now **Type of content**: **All**, **Films**, **Series** or **TV channels**.
+- The search filters have **Adult Content**: **Show**, **Do not show** or **Only adult content**. It shows only when 18+ content is unlocked. When 18+ is locked, adult content never shows in the search.
+
 ## 1.5.1
 
 - When you dictate a search, the words show in the search box before the search starts.

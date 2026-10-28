@@ -45,8 +45,16 @@ private fun MainActivity.localizeAll(all: List<Pair<Stremio.Title, String>>): Li
  * Search filters: films, series or both ([type] "movie", "series", "all"), a [year] and a [genre] (Cinemeta's
  * names, English: "Sci-Fi"), each null for any.
  */
-internal class SearchFilter(val type: String = "all", val year: String? = null, val genre: String? = null) {
-    val any get() = type != "all" || year != null || genre != null
+internal class SearchFilter(val type: String = "all", val year: String? = null, val genre: String? = null,
+                            val adult: String = ADULT_SHOW) {
+    val any get() = type != "all" || year != null || genre != null || adult != ADULT_SHOW
+
+    companion object {
+        // Adult content in the results (offered only while 18+ shows: see adultSearch): with the rest, left out, or alone.
+        const val ADULT_SHOW = "show"
+        const val ADULT_HIDE = "hide"
+        const val ADULT_ONLY = "only"
+    }
 
     /** Whether [t] passes, its year and genres as Cinemeta has them (a series' years "2008–2013" span), or [local] names. */
     fun accepts(t: Stremio.Title, local: (String) -> String = { it }): Boolean {
