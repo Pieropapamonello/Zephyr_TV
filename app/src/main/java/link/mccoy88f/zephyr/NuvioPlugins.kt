@@ -397,6 +397,7 @@ internal object Nuvio {
             }
             return out;
           }
+          g.global = g; // Node's name for it, which some plugins use
           g.module = { exports: {} };
           g.exports = g.module.exports;
           g.__modules = {};

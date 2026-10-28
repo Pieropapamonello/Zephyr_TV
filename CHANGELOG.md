@@ -13,6 +13,14 @@ Write every entry in ASD-STE100 Simplified Technical English:
 
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
+## 2.0.0-beta.5
+
+- The player checks all the streams of a film or episode at the same time, and tries first those that answer with a video. Dead links and web pages no longer make you wait.
+- The player no longer misses the streams of slow plugins. It starts with the first streams, and adds the others when they come. If all the streams so far fail, it waits for the others and shows "Looking for more streams…".
+- Web pages that some plugins give as streams are skipped.
+- More Nuvio plugins work, for example DVDPlay and MalluMV.
+- When a stream fails, Settings → System → Problems shows its source, its server and what the server sent.
+
 ## 2.0.0-beta.4
 
 - In the player, the lines of the stream, the audio and the subtitles under the progress bar scroll when they are too long.

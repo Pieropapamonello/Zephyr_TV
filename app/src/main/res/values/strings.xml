@@ -423,6 +423,7 @@
     <string name="phone_addon_saved">Address received. The TV is adding the add-on.</string>
     <string name="player_loading">Loading…</string>
     <string name="player_no_streams">No stream available</string>
+    <string name="player_finding_more">Looking for more streams…</string>
     <string name="player_stream_n">Loading stream %1$d of %2$d…</string>
     <string name="player_channel_n">%1$d / %2$d</string>
     <string name="player_stream">Stream %1$d of %2$d · %3$s</string>

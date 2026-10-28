@@ -84,6 +84,8 @@ class PlayerActivity : Activity() {
     private var streams: List<Stremio.Stream> = emptyList()
     private var tried = -1 // the stream playing, or being tried
     private var attempts = 0 // streams tried since the channel was tuned, or one was picked: all of them, and it's none
+    private var lateLeft = 0 // a film's sources still looking after the first streams came (slow Nuvio plugins)
+    private var waitingLate = false // all the streams so far failed: waiting for theirs rather than saying none works
     private var expanded = false // the banner shows all of what's on, not just its first line
     private var tune = 0 // counts tunings, so an answer for a channel left meanwhile is dropped
     private var typed = "" // number keys pressed so far
@@ -96,7 +98,10 @@ class PlayerActivity : Activity() {
     private var group: String? = null // the bingeGroup of the stream playing: the next episode's like it first
     private var seeking = false // the banner came up for a seek: Left/Right go on seeking, not to its buttons
     private var ticks = 0
-    private val pool by lazy { Executors.newFixedThreadPool(4) } // a film's streams, every add-on at once
+    private val pool by lazy { Executors.newFixedThreadPool(6) } // a film's streams, every add-on and plugin at once
+    private val lateWaits by lazy { Executors.newCachedThreadPool() } // waiting for the sources that answer late
+    private val checks by lazy { Executors.newFixedThreadPool(12) } // a film's streams checked all at once (see checked)
+    private val probes = ConcurrentHashMap<String, Stremio.Probe>() // what each stream turned out to be, by address
     private val fetched = ConcurrentHashMap<String, Pair<Long, List<Stremio.Stream>>>() // channel id to its streams, and when
     private val pages = ConcurrentHashMap<String, Stremio.Meta>()
     private val done = HashSet<String>() // the films and episodes marked watched while the player is open
@@ -1182,8 +1187,10 @@ class PlayerActivity : Activity() {
         pendingSeek = if (vod && !isAdult()) VodProgress.position(userDir, c.id) ?: -1L else -1L
         say(getString(R.string.player_loading))
         if (banner.visibility == View.VISIBLE) showBanner(i) // zapping: the banner keeps up with it; else the middle says it all
+        lateLeft = 0
+        waitingLate = false
         net.execute {
-            val list = streamsOf(c)
+            val list = checked(streamsOf(c) { more -> val ok = more?.let { checked(it) }; ui.post { late(tuning, ok) } })
             ui.post {
                 if (isFinishing || tuning != tune) return@post
                 streams = list
@@ -1193,9 +1200,9 @@ class PlayerActivity : Activity() {
         }
     }
 
-    private fun streamsOf(c: Channel): List<Stremio.Stream> {
+    private fun streamsOf(c: Channel, late: ((List<Stremio.Stream>?) -> Unit)? = null): List<Stremio.Stream> {
         fetched[c.id]?.takeIf { System.currentTimeMillis() - it.first < FRESH_MS }?.let { return it.second }
-        if (vod) return titleStreams(c)
+        if (vod) return titleStreams(c, late)
         // The channel's add-on, then the Nuvio plugins that can play it (those for TV channels, by its id).
         val own = runCatching { Stremio.streams(base, c.type, c.id) }.onFailure { warn("streams failed: $it") }.getOrDefault(emptyList())
         val plugins = pluginSources(prefs, filesDir, c.type, c.id, adultShows(prefs)).flatMap { (b, name) ->
@@ -1209,20 +1216,68 @@ class PlayerActivity : Activity() {
      * waiting for the slow ones up to VOD_SOME_MS, or VOD_WAIT_MS while none has any; the same kind as the one playing
      * (its bingeGroup) first.
      */
-    private fun titleStreams(c: Channel): List<Stremio.Stream> {
+    private fun titleStreams(c: Channel, late: ((List<Stremio.Stream>?) -> Unit)? = null): List<Stremio.Stream> {
         val asked = sources.map { (b, name) ->
             pool.submit(Callable { runCatching { sourceStreams(prefs, filesDir, b, name, c.type, c.id) }.onFailure { warn("streams failed: ${b.substringAfter("://").substringBefore('/')} ($it)") }.getOrDefault(emptyList()) })
         }
         val start = System.currentTimeMillis()
         val got = arrayOfNulls<List<Stremio.Stream>>(asked.size)
+        val slow = ArrayList<java.util.concurrent.Future<List<Stremio.Stream>>>()
         for ((i, f) in asked.withIndex()) {
             val limit = start + if (got.any { !it.isNullOrEmpty() }) VOD_SOME_MS else VOD_WAIT_MS
-            got[i] = runCatching { f.get((limit - System.currentTimeMillis()).coerceAtLeast(0), TimeUnit.MILLISECONDS) }.getOrElse { f.cancel(true); emptyList() }
+            got[i] = runCatching { f.get((limit - System.currentTimeMillis()).coerceAtLeast(0), TimeUnit.MILLISECONDS) }.getOrElse {
+                // Too slow to wait for before playing: played as it comes (see late), or dropped when no one waits.
+                if (late != null) slow += f else f.cancel(true)
+                null
+            }
+        }
+        if (late != null && slow.isNotEmpty()) {
+            ui.post { lateLeft += slow.size }
+            for (f in slow) lateWaits.execute { late(runCatching { f.get(VOD_LATE_MS, TimeUnit.MILLISECONDS) }.getOrNull()) }
         }
         val all = got.flatMap { it.orEmpty() }.distinctBy { it.url }
         val list = group?.let { g -> all.sortedByDescending { it.group == g } } ?: all
         if (list.isNotEmpty()) fetched[c.id] = System.currentTimeMillis() to list
         return list
+    }
+
+    /**
+     * A film's [list], those that answer with a video first: each checked at once (see Stremio.probe), so a run of dead
+     * links and web pages (some plugins hand many) is skipped without waiting on each; the rest after, as they were.
+     * Kept, so the player doesn't check one again. Off the UI thread.
+     */
+    private fun checked(list: List<Stremio.Stream>): List<Stremio.Stream> {
+        if (!vod || list.size < 2) return list
+        val todo = list.filter { !probes.containsKey(it.url) }
+        runCatching {
+            checks.invokeAll(todo.map { s -> Callable { probes[s.url] = Stremio.probe(s.url, s.headers) } }, CHECK_MS, TimeUnit.MILLISECONDS)
+        }
+        // Answering first, then not yet known (still being checked when time ran out), then those that failed.
+        return list.sortedBy { s -> when (probes[s.url]?.ok) { true -> 0; null -> 1; false -> 2 } }
+    }
+
+    /**
+     * A source that answered after the first streams came, with [more] (null: none): its streams go at the end of the
+     * list, and, when all so far failed and the player waits for them, the next of them plays.
+     */
+    private fun late(tuning: Int, more: List<Stremio.Stream>?) {
+        if (isFinishing || tuning != tune) return
+        lateLeft = (lateLeft - 1).coerceAtLeast(0)
+        val known = streams.map { it.url }.toSet()
+        val new = more.orEmpty().filter { it.url !in known }.distinctBy { it.url }
+        if (new.isNotEmpty()) {
+            streams = streams + new
+            channels.getOrNull(at)?.let { c -> fetched[c.id] = System.currentTimeMillis() to streams }
+        }
+        if (!waitingLate) return
+        if (new.isNotEmpty()) {
+            waitingLate = false
+            tried = attempts - 1 // the first of the new ones
+            next()
+        } else if (lateLeft == 0) {
+            waitingLate = false
+            say(getString(R.string.player_no_streams))
+        }
     }
 
     /** The streams of the channels either side, so CH+ and CH- don't wait for the add-on (OMG checks each: ~1.5 s). */
@@ -1245,6 +1300,12 @@ class PlayerActivity : Activity() {
         if (vod) player?.let { if (it.currentPosition > 5000) pendingSeek = it.currentPosition }
         if (streams.isEmpty() || ++attempts > streams.size) {
             release()
+            attempts = streams.size // the next one to come is the next to try
+            // Sources still looking (slow plugins): their streams are waited for before saying none works.
+            if (lateLeft > 0) {
+                waitingLate = true
+                return say(getString(R.string.player_finding_more))
+            }
             return say(getString(R.string.player_no_streams))
         }
         tried = Math.floorMod(tried + 1, streams.size)
@@ -1253,7 +1314,7 @@ class PlayerActivity : Activity() {
         val tuning = tune
         val n = tried
         net.execute {
-            val probe = Stremio.probe(s.url, s.headers)
+            val probe = probes[s.url] ?: Stremio.probe(s.url, s.headers).also { probes[s.url] = it }
             ui.post {
                 if (isFinishing || tuning != tune || n != tried) return@post
                 // The only stream (one picked by hand) is played even when the check failed: some servers turn the
@@ -1309,7 +1370,19 @@ class PlayerActivity : Activity() {
                     p.prepare()
                     return
                 }
-                warn("stream ${tried + 1} failed (${error.errorCodeName})")
+                // Which one, from where, taken as what; and, when it couldn't be read, what the server handed back.
+                val n = tried + 1
+                warn("stream $n failed (${error.errorCodeName}): ${s.source ?: "?"} ${s.url.substringAfter("://").substringBefore('/').take(40)} as ${format ?: "file"}")
+                if (error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED && !s.url.startsWith("data:")) net.execute {
+                    runCatching {
+                        val c = Http.connect(s.url, s.headers)
+                        val head = ByteArray(80)
+                        val got = (if (c.responseCode >= 400) c.errorStream else c.inputStream)?.use { it.read(head) } ?: 0
+                        warn("stream $n answer: ${c.responseCode} ${c.contentType} at ${c.url.host}: " +
+                            String(head, 0, got.coerceAtLeast(0), Charsets.ISO_8859_1).map { if (it in ' '..'~') it else '.' }.joinToString(""))
+                        c.disconnect()
+                    }
+                }
                 next()
             }
 
@@ -1427,6 +1500,8 @@ class PlayerActivity : Activity() {
         const val ADULT = "adult" // whether this content is from an adult add-on (no history, no continue watching)
         const val ADULT_SOURCES = "adult_sources" // names and addresses of adult stream add-ons
         private const val VOD_WAIT_MS = 20_000L // a film's slower add-ons (an aggregator, AIOStreams) are waited for this long
+        private const val CHECK_MS = 15_000L // a film's streams checked all at once, at most this long
+        private const val VOD_LATE_MS = 40_000L // ...and those that didn't, waited for this long while it plays
         private const val VOD_SOME_MS = 12_000L // ...or this long, once one has given streams
         private const val VOD_STUCK_MS = 30_000L // a film's stream buffering longer than this: the next
         private const val CHOICES_FILE = "player" // not K.FILE: the home screen's process writes that one whole

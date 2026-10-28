@@ -501,6 +501,8 @@ internal object Stremio {
                     continue
                 }
                 if (code !in 200..299) return Probe(false, null)
+                // A web page, not a video: a site's "please wait" or a link's landing page (some plugins hand those).
+                if (c.contentType?.lowercase()?.startsWith("text/html") == true) return Probe(false, null)
                 val head = ByteArray(2048)
                 var n = 0
                 c.inputStream.use { input -> while (n < head.size) { val r = input.read(head, n, head.size - n); if (r < 0) break; n += r } }
