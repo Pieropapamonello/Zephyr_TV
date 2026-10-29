@@ -20,7 +20,8 @@ private const val VOD_PKG = STREMIO + "vod"
  */
 internal class TitleRef(val type: String, val id: String, val name: String, val poster: String?, val background: String?,
                         val source: String? = null, val video: String? = null, val logo: String? = null, val rating: String? = null,
-                        val about: String? = null) // what it's about, as its card knows it: on its page at once
+                        val about: String? = null, // what it's about, as its card knows it: on its page at once
+                        val fallback: Triple<String?, String?, String?>? = null) // art to fall back on (see Stremio.Title.fallback)
 
 /**
  * The catalog sources, in the user's order (Content catalog): the first, the main one, gives titles' details, search
@@ -90,7 +91,7 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
     val missing = ArrayList<String>()
     val artless = ArrayList<Stremio.Title>()
     val watched = VodWatched.all(vodDir())
-    val others = catalogSources().drop(1)
+    val main = cinemetaUrl()
     return addons.flatMap { addon ->
         if (Stremio.vodDue(filesDir, addon.url) && addon.vod.any { it.listed }) refreshShelves(addon, pkg)
         // Under Films, the add-ons' own types too ("Porn", "Anime"): they play as films.
@@ -98,9 +99,9 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
             val kind = getString(if (shelf.catalog.type == "series") R.string.vod_series else R.string.vod_movies)
             val name = if (type != null || adult) "${addon.name} · ${shelf.catalog.name}" else "$kind · ${shelf.catalog.name}"
             // In the TV's language when TMDB has the title (those it hasn't been asked about yet: once it's answered);
-            // else, in another catalog source's row, with the main catalog's art (see withMainArt).
+            // else, in another add-on's row (another catalog source's too), with the main catalog's art (see withMainArt).
             val cards = shelf.titles.map { t ->
-                localize(t) ?: t.also { if (wantsLocal(it)) missing += it.id }.let { if (addon.url in others) withMainArt(it, artless) else it }
+                localize(t) ?: t.also { if (wantsLocal(it)) missing += it.id }.let { if (addon.url != main) withMainArt(it, artless) else it }
             }
                 .filter { hideKey(null, it.name) !in hidden }.map { titleCard(it, addon.url, pkg, it.id in watched) }
             if (cards.isEmpty()) null else Section("vod:${addon.id}:${shelf.catalog.type}:${shelf.catalog.id}", name, name, cards)
@@ -174,7 +175,8 @@ private fun MainActivity.refreshShelves(addon: Stremio.Addon, pkg: String) {
 internal fun titleCard(t: Stremio.Title, source: String?, icon: String?, watched: Boolean = false, sub: String? = null) =
     Prog(t.name, sub ?: listOfNotNull("✓".takeIf { watched }, t.year, t.genres.firstOrNull(), t.rating?.let { "★ $it" }).joinToString(" · "), 0, t.background, null, null,
         logo = t.logo, poster = t.poster, icon = icon,
-        vod = TitleRef(t.type, t.id, t.name, t.poster, t.background, source, logo = t.logo, rating = t.rating, about = t.description))
+        vod = TitleRef(t.type, t.id, t.name, t.poster, t.background, source, logo = t.logo, rating = t.rating, about = t.description,
+            fallback = t.fallback))
 
 /** The tile a title of [type] from the add-on at [source] is under: Films or Series, or the add-on's own (null: none). */
 internal fun MainActivity.titleTile(type: String, source: String?): String? = if (source != null && inAdultApp(source)) ADULT_PKG

@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 2.2.2
+
+- The cards of the add-ons and the search results show the pictures of the main catalog, as the other catalogs do. A title looks the same everywhere.
+- When the main catalog has no picture for a title, the card and the title page show the picture of its add-on or plugin.
+
 ## 2.2.1
 
 - Nuvio plugins can keep data from one run to the next, for example a token that expires. Zephyr TV removes this data when you remove the repository.

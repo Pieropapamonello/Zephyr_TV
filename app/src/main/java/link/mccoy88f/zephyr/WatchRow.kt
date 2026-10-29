@@ -756,7 +756,7 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     if (p.badge != null) channelArt(frame, w, cardHeight, p.badge, p.title) {
         listOfNotNull(p.image, p.channelId?.let { id -> logo(id) }, ChannelLogos.match(channelLogoTable(), p.title)).distinct()
     }
-    if (p.vod != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title)
+    if (p.vod != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title, p.vod.fallback)
     frame.setOnClickListener { p.channelPage?.let { showChannel(it) } ?: p.vod?.let { openTitle(it) } ?: p.addon?.let {
         // The row's channels, for CH+ and CH- in the player, when it's a row of them (not Continue Playing).
         val row = ((col.parent as? ViewGroup)?.getTag(R.id.watchScroll) as? RowCards)?.items
@@ -852,26 +852,43 @@ internal fun MainActivity.channelArt(frame: FrameLayout, w: Int, h: Int, number:
 /**
  * A search result's picture, always filling [frame] ([w] by [h]), from the best art there is: the [backdrop]
  * (with the [logo] over it when the title isn't written on it); else the [poster] whole in the middle, on a blur
- * of itself; else a tile of colour (its hue from the [title]) with the logo, or the title, in the middle.
+ * of itself; else a tile of colour (its hue from the [title]) with the logo, or the title, in the middle. Each
+ * picture that won't load gives way to [fallback]'s (background, logo, poster), then to the next kind of art.
  */
-internal fun MainActivity.fillArt(frame: FrameLayout, w: Int, h: Int, backdrop: String?, logo: String?, poster: String?, title: String) {
-    fun load(v: ImageView, uri: String, blur: Boolean = false) = posterIo.execute {
-        val bmp = runCatching { decode(uri, alpha = uri == logo) }.getOrNull() ?: return@execute
+internal fun MainActivity.fillArt(frame: FrameLayout, w: Int, h: Int, backdrop: String?, logo: String?, poster: String?, title: String,
+                                  fallback: Triple<String?, String?, String?>? = null) {
+    // Drawn in a frame of its own: art that won't load is drawn again in it, the rest of [frame] left as it is.
+    val art = FrameLayout(this)
+    frame.addView(art, MATCH_PARENT, MATCH_PARENT)
+    drawArt(art, w, h, listOfNotNull(backdrop, fallback?.first).distinct(), listOfNotNull(logo, fallback?.second).distinct(),
+        listOfNotNull(poster, fallback?.third).distinct(), title)
+}
+
+private fun MainActivity.drawArt(frame: FrameLayout, w: Int, h: Int, backdrops: List<String>, logos: List<String>, posters: List<String>, title: String) {
+    // The first of [uris] that loads; [failed] when none does.
+    fun load(v: ImageView, uris: List<String>, blur: Boolean = false, failed: () -> Unit = {}) = posterIo.execute {
+        val bmp = uris.firstNotNullOfOrNull { uri -> runCatching { decode(uri, alpha = uri in logos) }.getOrNull() }
+            ?: return@execute run { ui.post(failed) }
         val shown = if (blur) softBlur(bmp) else bmp
         ui.post { v.setImageBitmap(shown) }
     }
+    fun again(backdrops: List<String>, posters: List<String>) {
+        frame.removeAllViews()
+        drawArt(frame, w, h, backdrops, logos, posters, title)
+    }
     when {
-        backdrop != null -> {
-            frame.addView(ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; load(this, backdrop) }, MATCH_PARENT, MATCH_PARENT)
-            logo?.let { addTitleLogo(frame, it, w, h) }
+        backdrops.isNotEmpty() -> {
+            frame.addView(ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; load(this, backdrops) { again(emptyList(), posters) } },
+                MATCH_PARENT, MATCH_PARENT)
+            if (logos.isNotEmpty()) addTitleLogo(frame, logos, w, h)
         }
-        poster != null -> {
-            frame.addView(ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; load(this, poster, blur = true) }, MATCH_PARENT, MATCH_PARENT)
+        posters.isNotEmpty() -> {
+            frame.addView(ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; load(this, posters, blur = true) }, MATCH_PARENT, MATCH_PARENT)
             frame.addView(View(this).apply { setBackgroundColor(0x40000000) }, MATCH_PARENT, MATCH_PARENT)
             frame.addView(ImageView(this).apply {
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 setPadding(0, dp(6), 0, dp(6))
-                load(this, poster)
+                load(this, posters) { again(emptyList(), emptyList()) }
             }, MATCH_PARENT, MATCH_PARENT)
         }
         else -> {
@@ -880,7 +897,7 @@ internal fun MainActivity.fillArt(frame: FrameLayout, w: Int, h: Int, backdrop: 
                 background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(
                     Color.HSVToColor(floatArrayOf(hue, 0.45f, 0.42f)), Color.HSVToColor(floatArrayOf((hue + 40) % 360, 0.55f, 0.18f))))
             }, MATCH_PARENT, MATCH_PARENT)
-            if (logo != null) frame.addView(ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER; load(this, logo) },
+            if (logos.isNotEmpty()) frame.addView(ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER; load(this, logos) },
                 FrameLayout.LayoutParams(w * 3 / 4, h / 2, Gravity.CENTER))
             else frame.addView(TextView(this).apply {
                 text = title
@@ -926,14 +943,14 @@ internal fun softBlur(src: Bitmap): Bitmap {
     return small
 }
 
-/** A search result on plain art: the title's logo over it, bottom left, on a shade so a light logo still reads. */
-internal fun MainActivity.addTitleLogo(frame: FrameLayout, uri: String, w: Int, h: Int) {
+/** A search result on plain art: the title's logo (the first of [uris] that loads) over it, bottom left, on a shade so a light logo still reads. */
+internal fun MainActivity.addTitleLogo(frame: FrameLayout, uris: List<String>, w: Int, h: Int) {
     frame.addView(View(this).apply {
         background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0x99000000.toInt(), 0))
     }, FrameLayout.LayoutParams(MATCH_PARENT, h / 2, Gravity.BOTTOM))
     val logo = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_START }
     frame.addView(logo, FrameLayout.LayoutParams(w / 2, h / 3, Gravity.BOTTOM or Gravity.START).apply { setMargins(dp(10), 0, 0, dp(10)) })
-    posterIo.execute { runCatching { decode(uri, alpha = true) }.getOrNull()?.let { ui.post { logo.setImageBitmap(it) } } }
+    posterIo.execute { uris.firstNotNullOfOrNull { runCatching { decode(it, alpha = true) }.getOrNull() }?.let { ui.post { logo.setImageBitmap(it) } } }
 }
 
 internal fun MainActivity.progressBarDrawable(): Drawable {

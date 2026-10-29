@@ -30,7 +30,11 @@ internal fun MainActivity.searchLibrary(query: String): List<Pair<Stremio.Title,
     return localizeAll((viaTmdb + findTitles(query)).distinctBy { it.first.type + it.first.id })
 }
 
-/** [all] in the TV's language, as the Films and Series rows are (TMDB asked about those it wasn't yet). Off the UI thread. */
+/**
+ * [all] in the TV's language, as the Films and Series rows are (TMDB asked about those it wasn't yet); those TMDB
+ * doesn't have, from an add-on other than the main catalog, with the main catalog's art (asked for, a few seconds at
+ * most). Off the UI thread.
+ */
 private fun MainActivity.localizeAll(all: List<Pair<Stremio.Title, String>>): List<Pair<Stremio.Title, String>> {
     val key = tmdbKey()
     if (key != null) {
@@ -38,7 +42,11 @@ private fun MainActivity.localizeAll(all: List<Pair<Stremio.Title, String>>): Li
         val todo = all.map { it.first }.filter { wantsLocal(it) }.map { it.id }.filter { Local.asking.add(it) }
         if (todo.isNotEmpty()) askLocal(todo, key, tmdbLang())
     }
-    return all.map { (t, source) -> (localize(t) ?: t) to source }
+    val main = cinemetaUrl()
+    val artless = ArrayList<Stremio.Title>()
+    all.forEach { (t, source) -> if (source != main && localize(t) == null) withMainArt(t, artless) }
+    if (artless.isNotEmpty()) mainArtNow(artless, 8)
+    return all.map { (t, source) -> (localize(t) ?: if (source != main) withMainArt(t, ArrayList()) else t) to source }
 }
 
 /**

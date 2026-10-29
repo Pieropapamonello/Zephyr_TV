@@ -14,8 +14,8 @@ android {
         applicationId = "link.mccoy88f.zephyr"
         minSdk = 26
         targetSdk = 36
-        versionCode = 30
-        versionName = "2.2.1"
+        versionCode = 31
+        versionName = "2.2.2"
         // What's new: only this version's section of CHANGELOG.md ships, one entry per line, without ** marks.
         val notes = rootProject.file("CHANGELOG.md").readText().replace("\r", "")
             .substringAfter("\n## $versionName\n", "").substringBefore("\n## ")

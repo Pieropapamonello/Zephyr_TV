@@ -153,7 +153,7 @@ Come vengono riconosciute **qualità** e **lingua**:
 **Impostazioni → Contenuti → Catalogo contenuti** è una lista ordinata di cataloghi.
 
 - **Il primo è il principale.** Dà dettagli, descrizioni, immagini e ricerca dei titoli. Se non conosce un titolo, Zephyr TV chiede ai cataloghi successivi.
-- **Gli altri** aggiungono le loro righe a Film e Serie TV, nell'ordine della lista. Le copertine dei titoli che il principale conosce sono le sue, così un titolo appare uguale in ogni riga.
+- **Gli altri** aggiungono le loro righe a Film e Serie TV, nell'ordine della lista. Le copertine dei titoli che il principale conosce sono le sue, anche nelle righe degli add-on e nei risultati della ricerca: un titolo appare uguale ovunque.
 - **Selezionando un catalogo** puoi spostarlo su o giù, o rimuoverlo. Ne resta sempre almeno uno.
 - **Aggiungi un catalogo** propone Cinemeta, Nuvio Catalog, i cataloghi usati in passato, oppure un **Nuovo indirizzo** (il manifest di un add-on con cataloghi).
 

@@ -80,7 +80,8 @@ internal object Stremio {
      */
     internal data class Title(val type: String, val id: String, val name: String, val poster: String?, val background: String?,
                          val logo: String?, val year: String?, val genres: List<String> = emptyList(), val rating: String? = null,
-                         val description: String? = null, val tmdbId: Long? = null)
+                         val description: String? = null, val tmdbId: Long? = null,
+                         val fallback: Triple<String?, String?, String?>? = null) // its add-on's own art (background, logo, poster) under the main catalog's: see withMainArt
 
     /** A catalog of films or series, its first pages: what's under the Films or Series tile, or the add-on's own. */
     internal class Shelf(val catalog: Catalog, val titles: List<Title>)

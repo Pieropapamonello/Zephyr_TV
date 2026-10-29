@@ -23,7 +23,7 @@ internal fun MainActivity.openTitle(ref: TitleRef) {
     // as it answers (in the TV's language as far as it's known already); then all of it in the TV's language (a
     // series' episodes too, asked season by season), focus where it is. Each only while the page is still open.
     val (top, _) = titleTop("", null, ref.about)
-    titlePage(ref.name, Triple(ref.background, ref.logo, ref.poster), ref.name, top,
+    titlePage(ref.name, Triple(ref.background, ref.logo, ref.poster), ref.fallback, ref.name, top,
         listOf(page(getString(R.string.player_loading)) { }), 0, emptyMap()) { closeLauncherSettings() }
     netIo.execute {
         val raw = addonMeta(ref)
@@ -153,7 +153,7 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
 
     val focus = focusRow ?: if (descView != null) -1 else 0
     val art = if (ref.background != null) Triple(ref.background, ref.logo, ref.poster ?: t.poster) else Triple(t.background, t.logo, ref.poster ?: t.poster)
-    titlePage(t.name, art, t.name, top, rows, focus, icons, holds, descView) { closeLauncherSettings() }
+    titlePage(t.name, art, ref.fallback, t.name, top, rows, focus, icons, holds, descView) { closeLauncherSettings() }
     services.later { showVodTitle(meta, ref, it, focusRow, found) }
     // No source is asked from here: the player asks them all when Watch starts it (or the streams' page, picked by hand).
 }
@@ -212,7 +212,7 @@ internal fun MainActivity.showVodSeason(meta: Stremio.TitleMeta, ref: TitleRef, 
     focusRow?.let { focus = it }
     val art = if (ref.background != null) Triple(ref.background, ref.logo, ref.poster ?: t.poster) else Triple(t.background, t.logo, ref.poster ?: t.poster)
     val pageTitle = "${t.name} · ${seasonName(shown)}"
-    titlePage(pageTitle, art, t.name, top, rows, focus, icons, holds) {
+    titlePage(pageTitle, art, ref.fallback, t.name, top, rows, focus, icons, holds) {
         showVodTitle(meta, ref, services.known)
     }
     pageSides = sides
@@ -281,7 +281,7 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
         else -> Triple(t.background, t.logo, ref.poster ?: t.poster)
     }
     val targetFocus = if (focus < 0 && descView != null) -1 else if (focus < 0) 0 else focus
-    titlePage(title, art, t.name, top, rows, targetFocus, icons, descView = descView) {
+    titlePage(title, art, ref.fallback, t.name, top, rows, targetFocus, icons, descView = descView) {
         showVodSeason(meta, ref, e.season, services.known, e.id)
     }
     services.later { showVodEpisode(meta, ref, e, it, found, focusedRow() ?: targetFocus) }
@@ -376,7 +376,7 @@ private fun MainActivity.titleTop(info: String, name: String?, about: String?, s
  * A title's page in the panel: [art] (backdrop, logo, poster) across the top, over the panel's padding so it reaches
  * its edges and the top of the screen; [top] under it, then [rows], each with its icon from [icons] by its index.
  */
-private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, String?>, name: String, top: View,
+private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, String?>, fallback: Triple<String?, String?, String?>?, name: String, top: View,
                                    rows: List<Triple<String, String, () -> Unit>>, focus: Int,
                                    icons: Map<Int, android.graphics.drawable.Drawable>, holds: Map<Int, () -> Unit> = emptyMap(),
                                    descView: View? = null,
@@ -385,7 +385,7 @@ private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, 
     val panel = findViewById<LinearLayout>(R.id.settingsPanel)
     val panelWidth = dp(380) // the panel's width (activity_main.xml)
     val picture = FrameLayout(this).apply { setBackgroundColor(artGround()) }
-    fillArt(picture, panelWidth, panelWidth * 9 / 16, art.first, art.second, art.third, name)
+    fillArt(picture, panelWidth, panelWidth * 9 / 16, art.first, art.second, art.third, name, fallback)
     showPage(title, rows, focus, top = top, back = back, panes = glass)
     panel.addView(picture, 0, LinearLayout.LayoutParams(panelWidth, panelWidth * 9 / 16).apply {
         setMargins(-panel.paddingStart, -panel.paddingTop, -panel.paddingEnd, dp(20))

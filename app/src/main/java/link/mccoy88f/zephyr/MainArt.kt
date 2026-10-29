@@ -1,10 +1,11 @@
 package link.mccoy88f.zephyr
 
-// The main catalog's art on the cards of the other catalog sources' rows: a title looks the same in every row, as
-// its page has it. Functions of MainActivity; see Titles for the rows, Localize for TMDB's art in the TV's language.
+// The main catalog's art on the cards from everywhere else (the other catalog sources' rows, the add-ons' rows, the
+// search's results): a title looks the same wherever it shows, as its page has it. Functions of MainActivity; see
+// Titles for the rows, Library for the search, Localize for TMDB's art in the TV's language.
 
 /**
- * The main catalog's art (poster, background, logo) for titles the other catalog sources list, by "type|id". Cinemeta's
+ * The main catalog's art (poster, background, logo) for titles other add-ons list, by "type|id". Cinemeta's
  * is an address made from the IMDb id, never kept; another main catalog's is asked for, title by title, and kept on
  * disk a couple of weeks for that catalog.
  */
@@ -56,39 +57,57 @@ internal object MainArt {
 private fun MainActivity.mainIsCinemeta() = cinemetaUrl().let { it == Stremio.CINEMETA || "cinemeta" in it }
 
 /**
- * [t], from another catalog source, with the main catalog's art where it has some (what it lacks stays [t]'s own);
- * [missing] gets it when the main catalog wasn't asked about it yet. No network.
+ * [t], from an add-on other than the main catalog, with the main catalog's art where it has some, and [t]'s own as
+ * its fallback: the card shows its add-on's picture when the main catalog's won't load (Cinemeta's addresses are made,
+ * not told: one may not be there). [missing] gets it when the main catalog wasn't asked about it yet. No network.
  */
 internal fun MainActivity.withMainArt(t: Stremio.Title, missing: MutableList<Stremio.Title>): Stremio.Title {
+    val own = Triple(t.background, t.logo, t.poster)
     if (mainIsCinemeta()) return if (!t.id.startsWith("tt")) t
-        else t.copy(poster = Stremio.art(t.id, "poster/small"), background = Stremio.art(t.id, "background/medium"), logo = Stremio.art(t.id, "logo/medium"))
+        else t.copy(poster = Stremio.art(t.id, "poster/small"), background = Stremio.art(t.id, "background/medium"),
+            logo = Stremio.art(t.id, "logo/medium"), fallback = own)
     MainArt.use(filesDir, cinemetaUrl())
     val key = "${t.type}|${t.id}"
     val art = MainArt.get(key) ?: return t.also { if (!MainArt.asked(key)) missing += it }
-    return t.copy(poster = art.first ?: t.poster, background = art.second ?: t.background, logo = art.third ?: t.logo)
+    return t.copy(poster = art.first ?: t.poster, background = art.second ?: t.background, logo = art.third ?: t.logo, fallback = own)
 }
 
-/** Asks the main catalog for [titles]' art, a few at a time; once in, the rows under [pkg] again if it's still in focus. */
+/** Asks the main catalog for [titles]' art in the background; once in, the rows under [pkg] again if it's still in focus. */
 internal fun MainActivity.mainArtLater(titles: List<Stremio.Title>, pkg: String) {
-    val url = cinemetaUrl()
-    val addon = Stremio.saved(filesDir, url)?.addon ?: return
-    // Those the main catalog can't have (not its kind of id) are known to have none, without asking.
+    val todo = mainArtTodo(titles) ?: return
+    netIo.execute { if (askMainArt(todo, 60)) ui.post { rowsAgain(pkg) } }
+}
+
+/** Asks the main catalog for [titles]' art and waits for it, [seconds] at most: for the search's results. Off the UI thread. */
+internal fun MainActivity.mainArtNow(titles: List<Stremio.Title>, seconds: Long) {
+    mainArtTodo(titles)?.let { askMainArt(it, seconds) }
+}
+
+/**
+ * Of [titles], those to ask the main catalog about (marked as being asked), or null for none. Those it can't have (not
+ * its kind of id) are known to have none, without asking.
+ */
+private fun MainActivity.mainArtTodo(titles: List<Stremio.Title>): Pair<Stremio.Addon, List<Stremio.Title>>? {
+    val addon = Stremio.saved(filesDir, cinemetaUrl())?.addon ?: return null
     val (todo, never) = titles.distinctBy { it.type + "|" + it.id }.filter { MainArt.asking.add("${it.type}|${it.id}") }
         .partition { addon.provides("meta", it.type, it.id) }
     never.forEach { MainArt.put("${it.type}|${it.id}", null); MainArt.asking.remove("${it.type}|${it.id}") }
-    if (todo.isEmpty()) return
-    netIo.execute {
-        try {
-            // A failure is asked again next time; a title the catalog doesn't know is kept as unknown.
-            parallel(todo, 6, 60) { t ->
-                val key = "${t.type}|${t.id}"
-                runCatching { Stremio.titleMeta(addon.base, t.type, t.id) }.getOrElse { return@parallel null }
-                    ?.title.let { m -> MainArt.put(key, m?.let { Triple(it.poster, it.background, it.logo) }) }
-            }
-        } finally {
-            todo.forEach { MainArt.asking.remove("${it.type}|${it.id}") }
+    return if (todo.isEmpty()) null else addon to todo
+}
+
+/** Asks [todo]'s add-on for its titles' art, a few at a time, and keeps what it says; whether any came in. Network. */
+private fun MainActivity.askMainArt(todo: Pair<Stremio.Addon, List<Stremio.Title>>, seconds: Long): Boolean {
+    val (addon, titles) = todo
+    val got = try {
+        // A failure is asked again next time; a title the catalog doesn't know is kept as unknown.
+        parallel(titles, 6, seconds) { t ->
+            val key = "${t.type}|${t.id}"
+            runCatching { Stremio.titleMeta(addon.base, t.type, t.id) }.getOrElse { return@parallel null }
+                ?.title.let { m -> MainArt.put(key, m?.let { Triple(it.poster, it.background, it.logo) }) }
         }
-        runCatching { MainArt.save(filesDir) }
-        ui.post { rowsAgain(pkg) }
+    } finally {
+        titles.forEach { MainArt.asking.remove("${it.type}|${it.id}") }
     }
+    runCatching { MainArt.save(filesDir) }
+    return got.isNotEmpty()
 }
