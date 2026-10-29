@@ -478,7 +478,7 @@ internal fun MainActivity.channelCountry() = TmdbClient.region(tmdbLang())
 internal fun MainActivity.updateChannelLogos(pkg: String?, done: ((Int?) -> Unit)? = null) = longIo.execute { // 14 MB to read
     val n = ChannelLogos.update(filesDir, channelCountry())
     // A new table each month (or by hand): the logos themselves are fetched again with it, in case they changed.
-    if (n != null) channelLogoFiles.clear()
+    if (n != null) Images.clear(Images.Kind.LOGO)
     ui.post {
         done?.invoke(n)
         if (n != null) rowsAgain(pkg)
@@ -822,10 +822,10 @@ internal fun MainActivity.channelArt(frame: FrameLayout, w: Int, h: Int, number:
     frame.addView(text, MATCH_PARENT, MATCH_PARENT)
     posterIo.execute {
         // Looked up here, off the UI thread, and tried in turn: the first that loads is the one.
-        // Kept on disk (see channelLogoFiles) and in memory: a logo is downloaded once, not each time its card is.
+        // Kept on disk (see Images) and in memory: a logo is downloaded once, not each time its card is.
         val bmp = logo().firstNotNullOfOrNull { uri ->
             posters.get(uri) ?: try {
-                val file = channelLogoFiles.get(uri) { openStream(it) }
+                val file = Images.file(uri, Images.Kind.LOGO)
                 decode(android.net.Uri.fromFile(file).toString(), alpha = true)?.also { posters.put(uri, it) }
             } catch (e: Exception) {
                 warn("channel logo failed: $uri ($e)")
@@ -1060,7 +1060,7 @@ internal fun MainActivity.retryPosters() {
 internal val missingArt: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
 /**
- * [uri]'s image, decoded: from memory (posters), else from disk (a web image is downloaded once, see artFiles), else
+ * [uri]'s image, decoded: from memory (posters), else from disk (a web image is downloaded once, see Images), else
  * read where it is (a TV app's). Null when it isn't there, remembered for the session; throws on other failures (the
  * network), to be asked again. Network: off the UI thread.
  */
@@ -1069,7 +1069,7 @@ internal fun MainActivity.art(uri: String, alpha: Boolean = false): Bitmap? {
     posters.get(key)?.let { return it }
     if (uri in missingArt) return null
     val bmp = try {
-        if (uri.startsWith("http")) decode(android.net.Uri.fromFile(artFiles.get(uri) { openStream(it) }).toString(), alpha) else decode(uri, alpha)
+        if (uri.startsWith("http")) decode(android.net.Uri.fromFile(Images.file(uri)).toString(), alpha) else decode(uri, alpha)
     } catch (e: java.io.FileNotFoundException) { // what a 404 is, as HttpURLConnection says it
         missingArt += uri
         null

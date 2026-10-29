@@ -332,10 +332,10 @@ internal fun MainActivity.prefetchBackdrops() {
     val list = tmdbTrending
     if (list.size < 2) return
     val urls = listOf(1, -1).mapNotNull { TmdbClient.backdropUrl(list[(tmdbIndex + it).mod(list.size)].backdropPath) }
-        .filterNot { backdrops.has(it) }
+        .filterNot { Images.has(it, Images.Kind.BACKDROP) }
     if (urls.isNotEmpty()) spotlightIo.execute {
         for (url in urls) try {
-            backdrops.get(url) { openStream(it) }
+            Images.file(url, Images.Kind.BACKDROP)
         } catch (e: Exception) {
             warn("backdrop prefetch failed ($e)") // shown later from the network instead
         }
@@ -366,10 +366,10 @@ internal fun MainActivity.saveBackdropTitles(list: List<TmdbItem>) {
 
 /** Downloads every trending title's backdrop ahead, for the TMDB screensaver. */
 internal fun MainActivity.prefetchAllBackdrops() {
-    val urls = tmdbTrending.mapNotNull { TmdbClient.backdropUrl(it.backdropPath) }.filterNot { backdrops.has(it) }
+    val urls = tmdbTrending.mapNotNull { TmdbClient.backdropUrl(it.backdropPath) }.filterNot { Images.has(it, Images.Kind.BACKDROP) }
     if (urls.isNotEmpty()) spotlightIo.execute {
         for (url in urls) try {
-            backdrops.get(url) { openStream(it) }
+            Images.file(url, Images.Kind.BACKDROP)
         } catch (e: Exception) {
             warn("backdrop prefetch failed ($e)")
         }

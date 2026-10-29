@@ -131,12 +131,6 @@ class MainActivity : Activity() {
     internal val longIo = Executors.newSingleThreadExecutor()
     // Spotlight's own thread: downloading the next backdrop ahead mustn't hold up the rows' data on io.
     internal val spotlightIo = Executors.newSingleThreadExecutor()
-    internal val backdrops by lazy { BackdropCache(File(cacheDir, BACKDROP_DIR)) }
-    // Channel logos, kept with the app's files (not its cache, which Android empties): cleared when their table is
-    // fetched again, each month or by hand. Named by the whole address: many are called just "logo.png".
-    internal val channelLogoFiles by lazy { BackdropCache(File(filesDir, LOGO_DIR), maxFiles = 2000, BackdropCache::logoName) }
-    // Films' and series' art (cards, title pages, search), downloaded once: in the cache, which Android may empty.
-    internal val artFiles by lazy { BackdropCache(File(cacheDir, ART_DIR), ART_FILES, BackdropCache::artName) }
     internal var lastInput = SystemClock.elapsedRealtime() // last key press, for pausing Spotlight when nobody watches
     internal var spotlightIdle = false
     internal var nightShown = false // night mode's dimming is showing
@@ -227,6 +221,7 @@ class MainActivity : Activity() {
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         Problems.init(File(filesDir, "problems.log"))
+        Images.use(this) // images on disk (see Images): every part of Zephyr TV goes through it
         Js.useAssets(applicationContext) // the modules plugins and extensions require()
         Nuvio.process = ScriptProcess.plugins(this) // plugins run in a process of their own
         ExtensionCalls.use(this) // extensions answer as add-ons, from their own process
@@ -627,7 +622,7 @@ class MainActivity : Activity() {
             }
             val item = spotlightItem() ?: return null
             val url = TmdbClient.backdropUrl(item.backdropPath) ?: return null
-            val file = backdrops.get(url) { openStream(it) }
+            val file = Images.file(url, Images.Kind.BACKDROP)
             val bmp = fitWallpaper { file.inputStream() } ?: return null
             val h = bmp.height.toFloat()
             // Only the fade under the apps row, from halfway down: the backdrop shows clear everywhere else. The

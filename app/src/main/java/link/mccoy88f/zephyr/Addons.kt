@@ -136,8 +136,8 @@ internal fun MainActivity.addonApps(): List<MainActivity.App> {
     fun tile(addon: Stremio.Addon, res: Int): MainActivity.App {
         // An extension's: a file of its package, read as it is.
         val logo = addon.logo?.takeIf { it.startsWith("file://") }?.let { BitmapFactory.decodeFile(it.removePrefix("file://")) }
-            ?: addon.logo?.takeIf { channelLogoFiles.has(it) }?.let { uri ->
-                runCatching { BitmapFactory.decodeFile(channelLogoFiles.get(uri) { openStream(it) }.path) }.getOrNull()
+            ?: addon.logo?.takeIf { Images.has(it, Images.Kind.LOGO) }?.let { uri ->
+                runCatching { BitmapFactory.decodeFile(Images.file(uri, Images.Kind.LOGO).path) }.getOrNull()
             }
         return MainActivity.App(STREMIO + addon.id, addon.name, Intent(), logo?.let { BitmapDrawable(resources, it) } ?: icon(res))
     }
@@ -239,8 +239,8 @@ internal fun MainActivity.updateAddon(url: String, pkg: String?, done: ((Stremio
     val listing = Stremio.update(filesDir, url)
     // Its logo, for its tile and its icon on its settings row and Watch on rows: downloaded here, not while they show.
     val tiles = addonsTv() == TvPlace.APPS || ownApp(url) // a tile of its own: on the apps row once read
-    val logo = listing?.addon?.logo?.takeIf { !channelLogoFiles.has(it) }
-        ?.let { runCatching { channelLogoFiles.get(it) { u -> openStream(u) } }.isSuccess } == true
+    val logo = listing?.addon?.logo?.takeIf { !Images.has(it, Images.Kind.LOGO) }
+        ?.let { runCatching { Images.file(it, Images.Kind.LOGO) }.isSuccess } == true
     ui.post {
         done?.invoke(listing)
         if (tiles && listing != null && (logo || first)) refreshApps()

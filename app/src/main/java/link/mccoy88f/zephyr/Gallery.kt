@@ -99,7 +99,8 @@ private class GalleryShow(private val context: Context) : SurfaceHolder.Callback
         val prefs = context.getSharedPreferences(K.FILE, Context.MODE_PRIVATE)
         val tmdb = prefs.getString(K.SS_FOLDER, null) == SS_TMDB
         if (tmdb) {
-            val dir = File(context.cacheDir, BACKDROP_DIR)
+            Images.use(context)
+            val dir = Images.folder(Images.Kind.BACKDROP)
             val trending = try {
                 File(context.cacheDir, BACKDROP_TITLES).readLines().mapNotNull { line ->
                     val (name, title, about) = (line.split('\t') + listOf("", "")).take(3)

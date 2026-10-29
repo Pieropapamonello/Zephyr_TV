@@ -14,8 +14,17 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
-## Unreleased
+## 3.0.0
 
+- New: **Extensions**, in **Settings → Extra features → Extensions**. Extensions add films, series, TV channels, radio stations and videos. They run on the TV, apart from everything else.
+- Add an extension from the address of its manifest-zephyrtv.json, or send its .zip file from your phone. **OMG Premium TV** is suggested in the list: select it to install it.
+- An extension with content of its own has its own app on the apps row. **Where it shows** can put its content in the collectors instead: Films, TV Series, TV Channels, Radio, Videos, Courses, Podcasts, Audiobooks and Events.
+- Each extension has **Options**, with lists of items such as playlists and accounts. Type the fields of an item on your phone in one step.
+- **Add-ons and Plugins** is now **Extra features**. **Virtual apps and integrations** holds where TV channels, films, TV series, radio stations and adult content show. Films and TV Series are two settings.
+- Radio stations show apart from TV channels and play at once. While one plays, its logo, its name and the song on air show on the screen.
+- The player plays more channels: channels with their sound out of step with their picture, channels with their sound in a stream of its own, and rtsp://, rtmp:// and udp:// streams. A stream that stops loading starts again by itself. When the TV cannot play the sound, the picture plays alone.
+- When no stream works, the player tells why.
+- Extensions and Nuvio plugins run in separate processes. When one stops responding, Zephyr TV stops it and starts it again.
 - The posters, backdrops and logos of films and series are kept on the TV after the first download. Rows, search results and title pages show them at once, also after Zephyr TV restarts, and Zephyr TV does not download them again.
 - The player uses the channel logos that the home screen already keeps, so the logo shows at once while a channel loads.
 

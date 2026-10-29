@@ -13,7 +13,7 @@ internal const val BACKDROP_TITLES = "spotlight-titles.tsv"
 internal const val ART_DIR = "art_images"
 internal const val ART_FILES = 500 // the most used kept, the rest let go
 
-/** Channel logos' folder, in filesDir (see MainActivity.channelLogoFiles): the player reads them there too. */
+/** Channel logos' folder, in filesDir (see Images): the player reads them there too. */
 internal const val LOGO_DIR = "channel_logo_images"
 
 /** The screensaver choice that shows the Spotlight backdrops. */

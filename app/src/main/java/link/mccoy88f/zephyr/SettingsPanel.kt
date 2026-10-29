@@ -146,10 +146,10 @@ private val askedLogos = java.util.Collections.synchronizedSet(HashSet<String>()
 
 /** The add-ons' logos not on disk yet (added before every logo was kept): downloaded, then their rows again. */
 private fun MainActivity.fetchAddonLogos() {
-    val missing = addonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon?.logo }.filter { !channelLogoFiles.has(it) && askedLogos.add(it) }
+    val missing = addonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon?.logo }.filter { !Images.has(it, Images.Kind.LOGO) && askedLogos.add(it) }
     if (missing.isEmpty()) return
     netIo.execute {
-        val got = missing.count { uri -> runCatching { channelLogoFiles.get(uri) { u -> openStream(u) } }.isSuccess }
+        val got = missing.count { uri -> runCatching { Images.file(uri, Images.Kind.LOGO) }.isSuccess }
         if (got > 0) ui.post { refreshSettings(ADDON_ROWS) }
     }
 }
@@ -574,7 +574,7 @@ internal fun MainActivity.configureTmdbApiKey() =
             page(getString(R.string.dialog_clear)) {
                 prefs.edit().remove(K.TMDB_API_KEY).apply()
                 tmdbTrending = emptyList()
-                spotlightIo.execute { backdrops.clear() } // TMDB's backdrops: Spotlight goes on with Cinemeta's
+                spotlightIo.execute { Images.clear(Images.Kind.BACKDROP) } // TMDB's backdrops: Spotlight goes on with Cinemeta's
                 if (currentWallpaper() == "tmdb:trending") loadWallpaper()
                 configureCinemeta(tmdbRow(1))
             },

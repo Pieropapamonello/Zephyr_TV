@@ -567,8 +567,8 @@ internal fun MainActivity.sourceIcon(base: String, name: String): android.graphi
 /** [addon]'s icon: its tile's (when it has a tile of its own), else its logo once on disk (see updateAddon); else none. */
 internal fun MainActivity.addonIcon(addon: Stremio.Addon): android.graphics.drawable.Drawable? {
     apps.firstOrNull { it.pkg == STREMIO + addon.id }?.icon?.constantState?.newDrawable(resources)?.mutate()?.let { return it }
-    return addon.logo?.takeIf { channelLogoFiles.has(it) }?.let { uri ->
-        runCatching { android.graphics.BitmapFactory.decodeFile(channelLogoFiles.get(uri) { u -> openStream(u) }.path) }.getOrNull()
+    return addon.logo?.takeIf { Images.has(it, Images.Kind.LOGO) }?.let { uri ->
+        runCatching { android.graphics.BitmapFactory.decodeFile(Images.file(uri, Images.Kind.LOGO).path) }.getOrNull()
             ?.let { android.graphics.drawable.BitmapDrawable(resources, it) }
     }
 }
