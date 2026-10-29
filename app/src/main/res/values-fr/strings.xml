@@ -475,6 +475,13 @@
     <string name="phone_addon_saved">Adresse reçue. La TV ajoute l\'extension.</string>
     <string name="player_loading">Chargement…</string>
     <string name="player_no_streams">Aucun flux disponible</string>
+    <string name="player_no_audio">La TV ne peut pas lire le son de cette chaîne : image seule</string>
+    <string name="player_why_certificate">Le certificat du serveur n\'est pas valide</string>
+    <string name="player_why_denied">Le serveur refuse l\'accès (peut-être pas disponible dans votre pays)</string>
+    <string name="player_why_missing">Le flux n\'existe plus</string>
+    <string name="player_why_unreachable">Le serveur ne répond pas</string>
+    <string name="player_why_format">La TV ne peut pas lire ce format</string>
+    <string name="player_why_stuck">Le flux ne démarre pas</string>
     <string name="player_finding_more">Recherche d\'autres flux…</string>
     <string name="player_finding_language">Recherche de flux dans la langue du téléviseur…</string>
     <string name="player_finding_streams">Chargement des flux disponibles…</string>

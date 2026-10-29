@@ -163,7 +163,7 @@ internal object M3u {
                 extinf != null -> {
                     entry = finishOptions()
                     extinf = null
-                    if (line.startsWith("http") || line.startsWith("rtmp") || line.startsWith("rtsp") || line.equals("null", true)) add(line)
+                    if (line.startsWith("http") || Stremio.OTHER_SCHEMES.any { line.startsWith(it, true) } || line.equals("null", true)) add(line)
                 }
             }
         }

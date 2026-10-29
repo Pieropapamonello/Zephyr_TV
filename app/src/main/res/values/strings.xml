@@ -474,6 +474,13 @@
     <string name="phone_addon_saved">Address received. The TV is adding the add-on.</string>
     <string name="player_loading">Loading…</string>
     <string name="player_no_streams">No stream available</string>
+    <string name="player_no_audio">The TV can\'t play this channel\'s sound: picture only</string>
+    <string name="player_why_certificate">The server\'s certificate is not valid</string>
+    <string name="player_why_denied">The server refuses access (it may not be available in your country)</string>
+    <string name="player_why_missing">The stream no longer exists</string>
+    <string name="player_why_unreachable">The server does not answer</string>
+    <string name="player_why_format">The TV can\'t play this format</string>
+    <string name="player_why_stuck">The stream does not start</string>
     <string name="player_finding_more">Looking for more streams…</string>
     <string name="player_finding_language">Looking for streams in the TV\'s language…</string>
     <string name="player_finding_streams">Loading the available streams…</string>

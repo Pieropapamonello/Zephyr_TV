@@ -83,6 +83,8 @@ class PlayerActivity : Activity() {
     private var previous = -1 // for Last channel
     private var streams: List<Stremio.Stream> = emptyList()
     private var tried = -1 // the stream playing, or being tried
+    private var playing: Attempt? = null // how the stream being tried is played (see start), to start it again so
+    private var why: Stremio.Why? = null // why the last stream tried didn't play: told when none does
     private var attempts = 0 // streams tried since the channel was tuned, or one was picked: all of them, and it's none
     private var lateLeft = 0 // a film's sources still looking after the first streams came (slow Nuvio plugins)
     private var waitingLate = false // all the streams so far failed: waiting for theirs rather than saying none works
@@ -186,8 +188,26 @@ class PlayerActivity : Activity() {
     }
     private val stuck = Runnable {
         if (player?.playWhenReady == false) return@Runnable // paused: waiting is what it's asked to do
+        // One that played and stalls (the network, a server slow for a while, a jump in its times): the same again,
+        // from now, a couple of times; one that never started, or keeps stalling: the next.
+        if (again("stalled")) return@Runnable
         warn("stream ${tried + 1} stuck, trying the next")
+        why = Stremio.Why.STUCK
         next()
+    }
+
+    /** How a stream is played: [noAudio] without its sound (the TV can't decode it), [agent] with VLC's User-Agent. */
+    private class Attempt(val s: Stremio.Stream, val format: String?, val noAudio: Boolean = false, val agent: String? = null,
+                          var played: Boolean = false, var restarts: Int = 0)
+
+    /** The stream being tried started again, as it is (see Attempt): when it had played and not too often. */
+    private fun again(what: String): Boolean {
+        val a = playing ?: return false
+        if (!a.played || a.restarts >= RESTARTS) return false
+        warn("stream ${tried + 1} $what: started again")
+        if (vod) player?.let { if (it.currentPosition > 5000) pendingSeek = it.currentPosition }
+        start(a.s, a.format, a.noAudio, a.agent, a.restarts + 1)
+        return true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1193,6 +1213,7 @@ class PlayerActivity : Activity() {
         if (streams.size < 2 || shown != this.at) return showBanner(shown)
         tried = Math.floorMod(tried + step, streams.size) - 1
         attempts = 0
+        why = null
         next()
     }
 
@@ -1209,6 +1230,7 @@ class PlayerActivity : Activity() {
         streams = emptyList()
         tried = -1
         attempts = 0
+        why = null
         release()
         pendingSeek = if (vod && !isAdult()) VodProgress.position(userDir, c.id) ?: -1L else -1L
         // A film's or episode's: its streams looked for, then checked, then each tried ("stream 1 of 5").
@@ -1371,6 +1393,7 @@ class PlayerActivity : Activity() {
             streams = streams.sortedWith(streamOrder())
             tried = -1
             attempts = 0
+            why = null
             return next()
         }
         if (!waitingLate) return
@@ -1380,7 +1403,7 @@ class PlayerActivity : Activity() {
             next()
         } else if (lateLeft == 0) {
             waitingLate = false
-            say(getString(R.string.player_no_streams))
+            say(noStreams())
         }
     }
 
@@ -1416,7 +1439,7 @@ class PlayerActivity : Activity() {
                 waitingLate = true
                 return say(getString(R.string.player_finding_more))
             }
-            return say(getString(R.string.player_no_streams))
+            return say(noStreams())
         }
         tried = Math.floorMod(tried + 1, streams.size)
         val s = streams[tried]
@@ -1429,12 +1452,13 @@ class PlayerActivity : Activity() {
                 if (isFinishing || tuning != tune || n != tried) return@post
                 // The only stream (one picked by hand) is played even when the check failed: some servers turn the
                 // check away (too many requests) and not the player.
-                if (!probe.ok && streams.size > 1) next() else start(s, probe.format)
+                if (!probe.ok && streams.size > 1) { why = probe.why ?: why; next() } else start(s, probe.format)
             }
         }
     }
 
-    private fun start(s: Stremio.Stream, format: String?) {
+    private fun start(s: Stremio.Stream, format: String?, noAudio: Boolean = false, agent: String? = null, restarts: Int = 0) {
+        playing = Attempt(s, format, noAudio, agent, restarts = restarts)
         // Another app's (externalUrl, ytId): it plays there, with the app the extension names first; Back comes here.
         if (s.app != null) {
             val view = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(s.url))
@@ -1448,7 +1472,7 @@ class PlayerActivity : Activity() {
             .setAllowCrossProtocolRedirects(true) // some add-ons' addresses go from https to a proxy's http, and back
             // Not what the connection sets itself: a plugin's Accept-Encoding: gzip would hand the player packed bytes.
             .setDefaultRequestProperties(s.headers.filterKeys { k -> SKIPPED_HEADERS.none { it.equals(k, ignoreCase = true) } })
-        s.headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.let { http.setUserAgent(it.value) }
+        (agent ?: s.headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.value)?.let { http.setUserAgent(it) }
         // Sound as a film's, through the output the TV has chosen (its speakers, a soundbar or receiver on HDMI ARC or
         // optical, Bluetooth): taking the audio focus, so the TV routes it there and other sound stops; pausing when
         // headphones or a Bluetooth speaker go away. The sink follows the output's changes and what it can decode
@@ -1472,12 +1496,15 @@ class PlayerActivity : Activity() {
             .build()
         player = p
         applyChoices(p)
+        // Sound the TV can't decode: the picture alone, rather than nothing.
+        if (noAudio) p.trackSelectionParameters = p.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build()
         p.setVideoSurfaceView(surface)
         p.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 when (state) {
                     Player.STATE_READY -> {
                         ui.removeCallbacks(stuck)
+                        playing?.played = true
                         // Sound only (a radio station): its logo and name stay, on the blur of its logo, not a black screen.
                         soundOnly = p.currentTracks.groups.none { it.type == C.TRACK_TYPE_VIDEO }
                         say(if (soundOnly) onAir.orEmpty() else null)
@@ -1502,6 +1529,24 @@ class PlayerActivity : Activity() {
                     p.prepare()
                     return
                 }
+                // One that played and lost the network for a moment: the same again (see again).
+                if (error.errorCode in NETWORK_ERRORS && again("lost the network")) return
+                val a = playing
+                // Sound the TV can't decode (MP2, AC3… on a device without them): the same with the picture alone.
+                val renderer = (error as? androidx.media3.exoplayer.ExoPlaybackException)?.takeIf { it.type == androidx.media3.exoplayer.ExoPlaybackException.TYPE_RENDERER }
+                if (a != null && !a.noAudio && renderer?.rendererFormat?.sampleMimeType?.startsWith("audio/") == true) {
+                    warn("stream ${tried + 1}: sound ${renderer.rendererFormat?.sampleMimeType} not decoded here, picture alone")
+                    android.widget.Toast.makeText(this@PlayerActivity, getString(R.string.player_no_audio), android.widget.Toast.LENGTH_LONG).show()
+                    return start(a.s, a.format, noAudio = true, agent = a.agent)
+                }
+                // Turned away (401, 403) with no User-Agent of its own: some servers take only players' (VLC's).
+                val status = (error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode
+                if (a != null && a.agent == null && status in listOf(401, 403) && s.headers.keys.none { it.equals("User-Agent", true) }) {
+                    warn("stream ${tried + 1}: $status, again as VLC")
+                    return start(a.s, a.format, a.noAudio, agent = VLC_AGENT)
+                }
+                why = status?.let { Stremio.whyOf(it) } ?: Stremio.whyOf(error.cause)
+                    ?: if (renderer != null || error.errorCode in FORMAT_ERRORS) Stremio.Why.FORMAT else null
                 // Which one, from where, taken as what; and, when it couldn't be read, what the server handed back.
                 val n = tried + 1
                 warn("stream $n failed (${error.errorCodeName}): ${s.source ?: "?"} ${s.url.substringAfter("://").substringBefore('/').take(40)} as ${format ?: "file"}")
@@ -1557,6 +1602,20 @@ class PlayerActivity : Activity() {
         p.playWhenReady = true
         p.prepare()
         ui.postDelayed(stuck, if (vod) VOD_STUCK_MS else STUCK_MS)
+    }
+
+    /** That no stream plays, and why the last one tried didn't, when that's known (a certificate, the server…). */
+    private fun noStreams(): String {
+        val reason = when (why) {
+            Stremio.Why.CERTIFICATE -> R.string.player_why_certificate
+            Stremio.Why.DENIED -> R.string.player_why_denied
+            Stremio.Why.MISSING -> R.string.player_why_missing
+            Stremio.Why.UNREACHABLE -> R.string.player_why_unreachable
+            Stremio.Why.FORMAT -> R.string.player_why_format
+            Stremio.Why.STUCK -> R.string.player_why_stuck
+            null -> null
+        }
+        return getString(R.string.player_no_streams) + (reason?.let { "\n" + getString(it) } ?: "")
     }
 
     private fun release() {
@@ -1661,6 +1720,13 @@ class PlayerActivity : Activity() {
         private const val BUTTONS_MS = 10_000L // the banner stays up this long after a key on its buttons
         private const val ZAP_MS = 700L // the keys rest this long before the channel is tuned
         private const val STUCK_MS = 15_000L // buffering longer than this: the next stream
+        private const val RESTARTS = 2 // a stream that played and stalls, started again at most this many times
+        private const val VLC_AGENT = "VLC/3.0.20 LibVLC/3.0.20" // what servers that take only players' User-Agent take
+        private val NETWORK_ERRORS = listOf(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT, PlaybackException.ERROR_CODE_IO_UNSPECIFIED)
+        private val FORMAT_ERRORS = listOf(PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED, PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+            PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED, PlaybackException.ERROR_CODE_DECODER_INIT_FAILED)
         private val SKIPPED_HEADERS = listOf("User-Agent", "Accept-Encoding", "Content-Length", "Host", "Connection")
         private const val FRESH_MS = 90_000L // fetched streams are used this long (their addresses can expire)
     }

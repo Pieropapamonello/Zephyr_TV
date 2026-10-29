@@ -14,6 +14,14 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## Unreleased
+
+- A stream that played and then stops loading, for example after a network drop, starts again by itself, up to two times. Before, the player went to the next stream or said that no stream works.
+- Streams at rtsp://, rtmp:// and udp:// addresses play. Before, they were left out of the list.
+- When the TV cannot play a channel's sound, the channel plays with the picture only, and a message tells it.
+- A server that refuses the player now gets a second try as VLC, when the playlist gives no User-Agent of its own.
+- When no stream works, the player tells why: the server's certificate is not valid, the server refuses access, the stream no longer exists, the server does not answer, the format is not supported, or the stream does not start.
+
 ## 3.0.0-beta.7
 
 - Channels with their sound in a stream of its own, such as Radio 105 TV and Virgin Radio TV, stopped after a few seconds since 3.0.0-beta.4. Now they play.

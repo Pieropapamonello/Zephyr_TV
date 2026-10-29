@@ -488,7 +488,8 @@ internal object Stremio {
             // Another app's: a link it opens (externalUrl), a YouTube video (ytId).
             val external = if (!external) null else text(s, "externalUrl") ?: text(s, "ytId")?.let { "vnd.youtube:$it" }
             // A web address, or the playlist itself written in it (data:, as some Nuvio plugins hand an HLS one).
-            val url = text(s, "url")?.takeIf { it.startsWith("http://") || it.startsWith("https://") || it.startsWith("data:") }
+            val url = text(s, "url")?.takeIf { it.startsWith("http://") || it.startsWith("https://") || it.startsWith("data:") ||
+                OTHER_SCHEMES.any { p -> it.startsWith(p, ignoreCase = true) } }
                 ?.let { if (it.startsWith("data://")) "data:" + it.removePrefix("data://") else it } // "data://": a plugin's slip
                 ?: external ?: return@mapNotNull null
             val keys = s.optJSONObject("drm")?.optJSONObject("clearkey")?.let { k -> k.keys().asSequence().associateWith { k.optString(it) } }
@@ -505,7 +506,32 @@ internal object Stremio {
     }
 
     /** What a stream's address turned out to be when asked: whether it answers at all, and its format if known. */
-    internal class Probe(val ok: Boolean, val format: String?)
+    /** What a stream's check found: whether it answers, as what ([format]); when it doesn't, [why] (see Why). */
+    internal class Probe(val ok: Boolean, val format: String?, val why: Why? = null)
+
+    /** Why a stream doesn't play, as the player tells it when none does. */
+    internal enum class Why { CERTIFICATE, DENIED, MISSING, UNREACHABLE, FORMAT, STUCK }
+
+    /** The streams' addresses the player takes besides the web's: RTSP, RTMP, UDP and RTP (an operator's multicast). */
+    internal val OTHER_SCHEMES = listOf("rtsp://", "rtmp://", "rtmps://", "udp://", "rtp://")
+
+    /** Why [e], an error reading a stream, happened: a certificate, the network, or something else (null). */
+    internal fun whyOf(e: Throwable?): Why? {
+        var c = e
+        while (c != null) {
+            when (c) {
+                is javax.net.ssl.SSLHandshakeException, is java.security.cert.CertificateException,
+                is java.security.cert.CertPathValidatorException -> return Why.CERTIFICATE
+                is java.net.UnknownHostException, is java.net.ConnectException, is java.net.SocketTimeoutException,
+                is java.net.NoRouteToHostException -> return Why.UNREACHABLE
+            }
+            c = c.cause
+        }
+        return null
+    }
+
+    /** Why an HTTP answer [code] turns a stream away. */
+    internal fun whyOf(code: Int): Why = when (code) { 401, 403, 451 -> Why.DENIED; 404, 410 -> Why.MISSING; else -> Why.UNREACHABLE }
 
     /**
      * Asks [url] what it is before the player gets it: some addresses (a proxy's /s/<token>) have no extension to tell HLS
@@ -513,6 +539,8 @@ internal object Stremio {
      * answer's type, the final address's extension, and the first bytes. Network: off the UI thread.
      */
     fun probe(url: String, headers: Map<String, String>): Probe {
+        // Not the web's (RTSP, RTMP, UDP): nothing to ask first; the player reads it as its address says.
+        if (OTHER_SCHEMES.any { url.startsWith(it, ignoreCase = true) }) return Probe(true, if (url.startsWith("rtsp", true)) "rtsp" else null)
         // The playlist written in its address: nothing to ask, its type says what it is.
         if (url.startsWith("data:")) {
             // By its type, else by its first bytes ("#EXTM3U"): some plugins write a type of their own ("application/m3u8/").
@@ -530,19 +558,19 @@ internal object Stremio {
             try {
                 val code = c.responseCode
                 if (code in 300..399) {
-                    at = URL(URL(at), c.getHeaderField("Location") ?: return Probe(false, null)).toString()
+                    at = URL(URL(at), c.getHeaderField("Location") ?: return Probe(false, null, Why.UNREACHABLE)).toString()
                     continue
                 }
-                if (code !in 200..299) return Probe(false, null)
+                if (code !in 200..299) return Probe(false, null, whyOf(code))
                 // A web page, not a video: a site's "please wait" or a link's landing page (some plugins hand those).
-                if (c.contentType?.lowercase()?.startsWith("text/html") == true) return Probe(false, null)
+                if (c.contentType?.lowercase()?.startsWith("text/html") == true) return Probe(false, null, Why.FORMAT)
                 val head = ByteArray(2048)
                 var n = 0
                 c.inputStream.use { input -> while (n < head.size) { val r = input.read(head, n, head.size - n); if (r < 0) break; n += r } }
                 return Probe(true, format(c.contentType, at, head.copyOf(n)))
             } catch (e: Exception) {
                 warn("stream check failed: ${Uri.host(at)} ($e)")
-                return Probe(false, null)
+                return Probe(false, null, whyOf(e) ?: Why.UNREACHABLE)
             } finally {
                 c.disconnect()
             }

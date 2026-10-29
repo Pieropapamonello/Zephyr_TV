@@ -88,6 +88,8 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:$media3")
     implementation("androidx.media3:media3-exoplayer-hls:$media3")
     implementation("androidx.media3:media3-exoplayer-dash:$media3")
+    implementation("androidx.media3:media3-exoplayer-rtsp:$media3") // rtsp:// streams (IP cameras, some IPTV)
+    implementation("androidx.media3:media3-datasource-rtmp:$media3") // rtmp:// streams
     // The second exception: QuickJS, the JavaScript engine Nuvio's plugins run in (see NuvioPlugins).
     implementation("io.github.dokar3:quickjs-kt:$QUICKJS")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2") // what it runs on; used directly too

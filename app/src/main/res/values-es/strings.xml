@@ -475,6 +475,13 @@
     <string name="phone_addon_saved">Dirección recibida. La TV está añadiendo el complemento.</string>
     <string name="player_loading">Cargando…</string>
     <string name="player_no_streams">Ningún stream disponible</string>
+    <string name="player_no_audio">La TV no puede reproducir el audio de este canal: solo vídeo</string>
+    <string name="player_why_certificate">El certificado del servidor no es válido</string>
+    <string name="player_why_denied">El servidor rechaza el acceso (puede que no esté disponible en tu país)</string>
+    <string name="player_why_missing">El stream ya no existe</string>
+    <string name="player_why_unreachable">El servidor no responde</string>
+    <string name="player_why_format">La TV no puede reproducir este formato</string>
+    <string name="player_why_stuck">El stream no arranca</string>
     <string name="player_finding_more">Buscando más streams…</string>
     <string name="player_finding_language">Buscando streams en el idioma del televisor…</string>
     <string name="player_finding_streams">Cargando los streams disponibles…</string>
