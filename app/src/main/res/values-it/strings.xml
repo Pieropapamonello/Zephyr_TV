@@ -492,6 +492,8 @@
     <string name="setting_fast_start">Avvio rapido dei contenuti</string>
     <string name="fast_start_not_highest">Non con Massima</string>
     <string name="fast_start_pick_quality">L\'avvio rapido richiede una qualità preferita: con Massima si aspettano tutte le fonti.</string>
+    <string name="badge_cinema">Al cinema</string>
+    <string name="setting_hide_unreleased">Nascondi film non ancora usciti</string>
     <string name="setting_subtitles_on">Sottotitoli sempre attivi</string>
     <string name="setting_hide_unknown_language">Nascondi stream senza lingua</string>
     <string name="player_stream_n">Carico stream %1$d di %2$d…</string>

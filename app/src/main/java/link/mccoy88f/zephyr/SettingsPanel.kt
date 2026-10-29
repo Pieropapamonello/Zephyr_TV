@@ -328,6 +328,14 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                 prefs.edit().putBoolean(K.SUBTITLES_ON, !prefs.getBoolean(K.SUBTITLES_ON, false)).apply()
                 renderSettings(WATCH_SECTION * SECTION + 9)
             },
+            // Films not out at home yet (in cinemas, or to come, as TMDB says for sure): left out of Spotlight and
+            // the apps' rows. Needs TMDB's key.
+            page(getString(R.string.setting_hide_unreleased), toggle(hideUnreleased())) {
+                prefs.edit().putBoolean(K.HIDE_UNRELEASED, !hideUnreleased()).apply()
+                tmdbTrending = emptyList()
+                watchKey = null
+                renderSettings(WATCH_SECTION * SECTION + 10)
+            },
         )
     }
     // The TV's own side: its inputs (HDMI and the like) and its channels, with their logos and guide.

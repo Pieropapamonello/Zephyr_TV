@@ -16,6 +16,8 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- A film that is still only in cinemas in your country has a small **In cinemas** tag in the bottom-right corner of its card. The information comes from TMDB (the key is necessary).
+- New setting: **Content → Hide films not yet released** (off by default). It hides from Spotlight and the apps' rows the films that are not out at home yet: still only in cinemas, or still to come. A film is hidden only when TMDB says so for sure.
 - A film or episode with Dolby or DTS sound no longer stops after a skip forward or back. On some TVs, such sound didn't start again after a skip, so the picture stayed still. Now the player starts the stream again at the new position.
 
 ## 3.2.0

@@ -491,6 +491,8 @@
     <string name="setting_fast_start">Quick start</string>
     <string name="fast_start_not_highest">Not with Highest</string>
     <string name="fast_start_pick_quality">Quick start needs a preferred quality: with Highest, every source is waited for.</string>
+    <string name="badge_cinema">In cinemas</string>
+    <string name="setting_hide_unreleased">Hide films not yet released</string>
     <string name="setting_subtitles_on">Subtitles always on</string>
     <string name="setting_hide_unknown_language">Hide streams without a language</string>
     <string name="player_stream_n">Loading stream %1$d of %2$d…</string>

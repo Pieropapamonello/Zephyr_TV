@@ -492,6 +492,8 @@
     <string name="setting_fast_start">Démarrage rapide des contenus</string>
     <string name="fast_start_not_highest">Pas avec Maximale</string>
     <string name="fast_start_pick_quality">Le démarrage rapide demande une qualité préférée : avec Maximale, toutes les sources sont attendues.</string>
+    <string name="badge_cinema">Au cinéma</string>
+    <string name="setting_hide_unreleased">Masquer les films pas encore sortis</string>
     <string name="setting_subtitles_on">Sous-titres toujours activés</string>
     <string name="setting_hide_unknown_language">Masquer les flux sans langue</string>
     <string name="player_stream_n">Chargement du flux %1$d sur %2$d…</string>

@@ -112,6 +112,9 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
     }
     val missing = ArrayList<String>()
     val artless = ArrayList<Stremio.Title>()
+    val unasked = ArrayList<String>() // films whose release TMDB hasn't been asked about (see Releases)
+    val hideSoon = hideUnreleased()
+    if (tmdbKey() != null) Releases.use(filesDir)
     val watched = VodWatched.all(vodDir())
     val main = cinemetaUrl()
     return addons.flatMap { addon ->
@@ -126,7 +129,10 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
             val cards = shelf.titles.map { t ->
                 localize(t) ?: t.also { if (wantsLocal(it)) missing += it.id }.let { if (addon.url != main) withMainArt(it, artless) else it }
             }
-                .filter { hideKey(null, it.name) !in hidden }.map { titleCard(it, addon.url, pkg, it.id in watched) }
+                .filter { hideKey(null, it.name) !in hidden }
+                .onEach { if (it.type == "movie" && Releases.askable(it.id) && Releases.known(it.id) == null) unasked += it.id }
+                .filter { !(hideSoon && it.type == "movie" && Releases.unreleased(it.id)) }
+                .map { titleCard(it, addon.url, pkg, it.id in watched) }
             if (cards.isEmpty()) null else Section("vod:${addon.id}:${shelf.catalog.type}:${shelf.catalog.id}", name, name, cards)
         }
     }.plus(
@@ -136,8 +142,40 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
     ).also {
         if (missing.isNotEmpty()) localizeLater(missing.distinct(), pkg)
         if (artless.isNotEmpty()) mainArtLater(artless, pkg)
+        if (unasked.isNotEmpty()) releasesLater(unasked.distinct(), pkg)
     }
 }
+
+/** Whether films not out at home yet are hidden from Spotlight and the apps' rows (Content). */
+internal fun MainActivity.hideUnreleased() = prefs.getBoolean(K.HIDE_UNRELEASED, false)
+
+/** A round of [ids] (films) asked of TMDB whether they're out at home (see Releases); then the rows under [pkg] again. */
+private fun MainActivity.releasesLater(ids: List<String>, pkg: String) {
+    val key = tmdbKey() ?: return
+    val region = TmdbClient.region(tmdbLang())
+    val todo = ids.filter { Releases.asking.add(it) }.take(RELEASES_ROUND)
+    if (todo.isEmpty()) return
+    netIo.execute {
+        runCatching { Releases.ask(key, todo, region) }.onFailure { warn("TMDB releases failed (${TmdbClient.redact(it)})") }
+        Releases.asking.removeAll(todo.toSet())
+        ui.post { rowsAgain(pkg) }
+    }
+}
+
+/**
+ * Spotlight's [titles] without the films not out at home yet, when they're hidden: those not asked about yet asked
+ * first (TMDB's key needed; without it, all stay). Network: off the UI thread.
+ */
+internal fun MainActivity.withoutUnreleased(titles: List<TmdbItem>, key: String?): List<TmdbItem> {
+    if (!hideUnreleased() || key == null) return titles
+    Releases.use(filesDir)
+    fun id(t: TmdbItem) = t.imdbId ?: "tmdb:${t.id}"
+    val films = titles.filter { it.mediaType == "movie" }.map { id(it) }
+    runCatching { Releases.ask(key, films.filter { Releases.known(it) == null }, TmdbClient.region(tmdbLang())) }
+    return titles.filter { !(it.mediaType == "movie" && Releases.unreleased(id(it))) }
+}
+
+private const val RELEASES_ROUND = 80 // films asked about at a time: the rest at the next round
 
 /**
  * The Films watched and Series watched rows (films only for [type] "movie", series only for "series"), newest
@@ -198,7 +236,7 @@ private fun MainActivity.refreshShelves(addon: Stremio.Addon, pkg: String) {
  */
 internal fun titleCard(t: Stremio.Title, source: String?, icon: String?, watched: Boolean = false, sub: String? = null) =
     Prog(t.name, sub ?: listOfNotNull("✓".takeIf { watched }, t.year, t.genres.firstOrNull(), t.rating?.let { "★ $it" }).joinToString(" · "), 0, t.background, null, null,
-        logo = t.logo, poster = t.poster, icon = icon,
+        logo = t.logo, poster = t.poster, icon = icon, cinema = t.type == "movie" && Releases.known(t.id) == Releases.State.CINEMA,
         vod = TitleRef(t.type, t.id, t.name, t.poster, t.background, source, logo = t.logo, rating = t.rating, about = t.description,
             fallback = t.fallback))
 

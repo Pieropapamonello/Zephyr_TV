@@ -142,6 +142,7 @@ The banner has the **Previous episode**, **Play/Pause**, **Next episode**, **Aud
 | **Quick start** | On | Starts at once with the first working stream in the preferred quality and in the language of the TV, while the other sources keep looking. When no source has that quality, it waits for every source (up to 30 seconds) and starts the best one a step below. Not with **Highest**: then the player waits for every source and picks the best |
 | **Streams in the TV's language first** | On | Tries the streams in the language of the TV first, then those that say no language, then those in other languages. With none in the language of the TV, it waits for every source before it plays one in another language |
 | **Hide streams without a language** | Off | Hides the streams that don't say their language |
+| **Hide films not yet released** | Off | Hides from Spotlight and the apps' rows the films that are not out at home yet in your country: still only in cinemas, or still to come. It uses TMDB (the key is necessary). A film is hidden only when TMDB says so for sure |
 | **Subtitles always on** | Off | Off: each stream starts without subtitles, but those it forces (for example a line in another language). On: the subtitles in the language you picked last, else in the TV's language. A choice made in the player stays until you close it |
 
 How **quality** and **language** are recognised:

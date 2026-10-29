@@ -117,7 +117,7 @@ class MainActivity : Activity() {
     // icon stays the small mark on cards.
     internal class App(val pkg: String, val label: String, val launch: Intent, val icon: Drawable, val offline: Boolean = false,
                        val picture: Drawable? = null)
-    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val logo: String? = null, val poster: String? = null, val channelPage: ChannelDetail? = null, val channelId: Long? = null, val playing: Boolean = false, val addon: AddonChannel? = null, val icon: String? = null, val vod: TitleRef? = null) // icon: the tile whose icon marks the card, when not pkg's; vod: a film or series (see Titles)
+    internal class Prog(val title: String, val sub: String, val progress: Int, val image: String?, val intent: String?, val pkg: String?, val weight: Long = 0, val badge: String? = null, val logo: String? = null, val poster: String? = null, val channelPage: ChannelDetail? = null, val channelId: Long? = null, val playing: Boolean = false, val addon: AddonChannel? = null, val icon: String? = null, val vod: TitleRef? = null, val cinema: Boolean = false) // icon: the tile whose icon marks the card, when not pkg's; vod: a film or series (see Titles); cinema: a film still only in cinemas
 
     internal val prefs by lazy { getSharedPreferences(K.FILE, MODE_PRIVATE) }
     internal val io = Executors.newSingleThreadExecutor()
@@ -612,7 +612,10 @@ class MainActivity : Activity() {
                     source == "list" && listId != null -> TmdbClient.fetchList(key, listId, tmdbLang(), type)
                     else -> TmdbClient.fetchCategory(key, source, tmdbLang(), type, TmdbClient.region(tmdbLang()))
                 }
-                if (fresh.isNotEmpty()) {
+                // Films not out at home yet (in cinemas, or to come) left out, when they're hidden (see Releases).
+                val shown = withoutUnreleased(fresh, key)
+                if (shown.isNotEmpty()) {
+                    val fresh = shown
                     // A different order each time, so the same top titles don't always open the round.
                     tmdbTrending = fresh.shuffled()
                     tmdbIndex = 0

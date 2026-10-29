@@ -760,6 +760,17 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
         listOfNotNull(p.image, p.channelId?.let { id -> logo(id) }, ChannelLogos.match(channelLogoTable(), p.title)).distinct()
     }
     if (p.vod != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title, p.vod.fallback)
+    // A film still only in cinemas (see Releases): a small rounded tag in the bottom right corner.
+    if (p.cinema) frame.addView(TextView(this).apply {
+        text = getString(R.string.badge_cinema)
+        textSize = 10f
+        setTextColor(Color.WHITE)
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+        setPadding(dp(6), dp(2), dp(6), dp(2))
+        background = GradientDrawable().apply { cornerRadius = dp(4).toFloat(); setColor(0xCC000000.toInt()) }
+    }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.END).apply {
+        setMargins(0, 0, dp(6), dp(6))
+    })
     frame.setOnClickListener { p.channelPage?.let { showChannel(it) } ?: p.vod?.let { openTitle(it) } ?: p.addon?.let {
         // The row's channels, for CH+ and CH- in the player, when it's a row of them (not Continue Playing).
         val row = ((col.parent as? ViewGroup)?.getTag(R.id.watchScroll) as? RowCards)?.items

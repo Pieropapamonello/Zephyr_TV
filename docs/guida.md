@@ -142,6 +142,7 @@ Nel banner ci sono i pulsanti **Episodio precedente**, **Play/Pausa**, **Episodi
 | **Avvio rapido dei contenuti** | Attivo | Parte subito con il primo stream che funziona nella qualità preferita e nella lingua del TV, mentre le altre fonti continuano a cercare. Se nessuna fonte ha quella qualità, aspetta tutte le fonti (fino a 30 secondi) e parte con il migliore del gradino inferiore. Non vale con **Massima**: in quel caso il player aspetta tutte le fonti e sceglie il migliore |
 | **Prima gli stream nella lingua del TV** | Attivo | Prova prima gli stream nella lingua del TV, poi quelli senza lingua, per ultimi quelli in altre lingue. Se non ne trova nessuno nella lingua del TV, aspetta tutte le fonti prima di avviarne uno in un'altra lingua |
 | **Nascondi stream senza lingua** | Spento | Nasconde gli stream che non dicono in che lingua sono |
+| **Nascondi film non ancora usciti** | Spento | Nasconde dallo Spotlight e dalle righe delle app i film non ancora usciti a casa nel tuo paese: ancora solo al cinema, o non ancora usciti. Usa TMDB (serve la chiave). Un film viene nascosto solo quando TMDB lo dice con certezza |
 | **Sottotitoli sempre attivi** | Spento | Spento: ogni stream parte senza sottotitoli, tranne quelli che lo stream impone (per esempio una frase in un'altra lingua). Acceso: i sottotitoli nella lingua scelta per ultima, altrimenti in quella del TV. Una scelta fatta nel player vale finché non lo chiudi |
 
 Come vengono riconosciute **qualità** e **lingua**:
