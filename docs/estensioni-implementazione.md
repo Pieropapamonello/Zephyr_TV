@@ -163,18 +163,18 @@ Oggi `Epg.kt` ha un solo indirizzo XMLTV, abbinato per nome.
 - ☐ Spazio su disco: solo le ore che servono (come oggi), più i giorni del catch-up; limite totale e pulizia delle
   fonti non più usate.
 
-## Fase 7 — `zephyr.m3u`, le playlist lette da Zephyr TV
+## Fase 7 — `zephyr.m3u`, le playlist lette da Zephyr TV ☑
 
-- ☐ **Lettore M3U a flusso** (senza caricare tutto in memoria): `#EXTM3U` con `url-tvg`/`x-tvg-url`, `#EXTINF` con
+- ☑ **Lettore M3U a flusso** (senza caricare tutto in memoria): `#EXTM3U` con `url-tvg`/`x-tvg-url`, `#EXTINF` con
   `tvg-id`, `tvg-name`, `tvg-logo`, `group-title`, `catchup*`; `#EXTVLCOPT`, `#EXTHTTP` (header); `#KODIPROP`
   `inputstream.adaptive.license_key` (ClearKey).
-- ☐ **Doppioni**: stesso `tvg-id`, o stesso nome a parte la qualità → un canale con più stream (regole di
+- ☑ **Doppioni**: stesso `tvg-id`, o stesso nome a parte la qualità → un canale con più stream (regole di
   `m3u-parser.ts` di OMG Premium TV).
-- ☐ **Indice su disco** per pagine e ricerca veloci con decine di migliaia di canali: SQLite di Android (nessuna
-  libreria in più), una tabella per playlist.
-- ☐ API: `load(nome, { url, headers, maxAge })`, `channels(nome, { group, search, skip, limit })`,
+- ◐ **Indice su disco**: oggi un file con un canale per riga, caricato in memoria nel processo `:extensions` (le ultime 3
+  playlist) per pagine e ricerca. SQLite se le liste molto grandi pesano troppo.
+- ☑ API: `load(nome, { url, headers, maxAge })`, `channels(nome, { group, search, skip, limit })`,
   `channel(nome, id)`, `forget(nome)`; id dei canali stabili.
-- ☐ Le playlist appartengono all'estensione: si cancellano con lei.
+- ☑ Le playlist appartengono all'estensione: si cancellano con lei.
 
 ## Fase 8 — Le impostazioni delle estensioni ☑
 

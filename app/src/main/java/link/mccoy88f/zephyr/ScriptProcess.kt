@@ -96,9 +96,23 @@ internal class PluginService : ScriptService()
 internal class ExtensionService : ScriptService() {
     override fun services(dir: String?): Map<String, suspend (org.json.JSONObject) -> Any?> {
         val root = dir?.let { File(it) } ?: return emptyMap()
+        // Its data folder: files/extension-data/<id>, next to files/extensions/<id> (its package).
+        val data = Extensions.dataDir(root.parentFile!!.parentFile!!, root.name)
+        fun headers(o: org.json.JSONObject?) = o?.keys()?.asSequence()?.associateWith { o.optString(it) }.orEmpty()
         return mapOf(
             // zephyr.asset(path): a file of the extension's package, as text.
             "asset" to { args -> Extensions.safe(root, args.optString("path"))?.takeIf { it.isFile }?.readText() ?: throw IOException("no file ${args.optString("path")}") },
+            // zephyr.m3u: playlists read here, kept in its data folder (see M3u).
+            "m3u.load" to { args ->
+                val url = args.optString("url").takeIf { it.startsWith("http") } ?: throw IOException("no playlist address")
+                M3u.load(data, args.optString("name"), url, headers(args.optJSONObject("headers")), args.optLong("maxAge", 86_400))
+            },
+            "m3u.channels" to { args ->
+                M3u.channels(data, args.optString("name"), args.optString("group").ifEmpty { null }, args.optString("search").ifEmpty { null },
+                    args.optInt("skip", 0), args.optInt("limit", 100))
+            },
+            "m3u.channel" to { args -> M3u.channel(data, args.optString("name"), args.optString("id")) },
+            "m3u.forget" to { args -> M3u.forget(data, args.optString("name")); null },
         )
     }
 }

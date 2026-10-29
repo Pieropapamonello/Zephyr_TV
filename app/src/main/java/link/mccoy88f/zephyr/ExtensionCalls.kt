@@ -114,6 +114,12 @@ internal object ExtensionCalls {
             globalThis.zephyr = $zephyr;
             zephyr.has = function (name) { return ${JSONArray(Extensions.FEATURES.toList())}.indexOf(name) >= 0; };
             zephyr.asset = function (path) { return __zephyr("asset", { path: path }); };
+            zephyr.m3u = {
+              load: function (name, o) { o = o || {}; return __zephyr("m3u.load", { name: name, url: o.url, headers: o.headers || {}, maxAge: o.maxAge || 86400 }); },
+              channels: function (name, o) { o = o || {}; return __zephyr("m3u.channels", { name: name, group: o.group || "", search: o.search || "", skip: o.skip || 0, limit: o.limit || 100 }); },
+              channel: function (name, id) { return __zephyr("m3u.channel", { name: name, id: id }); },
+              forget: function (name) { return __zephyr("m3u.forget", { name: name }); }
+            };
         """.trimIndent()
         val answer = ScriptProcess.extensions(context).run(script(e), expr, globals, timeoutMs, wantsStore = true, dir = e.dir)
         answer.store?.let { s ->
