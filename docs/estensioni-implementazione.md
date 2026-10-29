@@ -37,32 +37,36 @@ e un crash nativo porta giù il suo processo. Per questo plugin ed estensioni gi
 - ☐ **Prova su un dispositivo**: plugin che trovano stream, un plugin che non risponde (processo ucciso e ripartito),
   memoria dei processi. Da fare con la prima beta firmata (sul TV c'è la release firmata) o su un emulatore.
 
-## Fase 1 — Pacchetto, installazione, aggiornamenti
+## Fase 1 — Pacchetto, installazione, aggiornamenti ◐
 
 Nuovo file `Extensions.kt` (modello e disco) e `ExtensionPages.kt` (pagine delle impostazioni).
 
-- ☐ **Modello**: `Extension(id, version, zephyr, name, description, author, icon, main, types, resources,
+- ☑ **Modello**: `Extension(id, version, zephyr, name, description, author, icon, main, types, resources,
   idPrefixes, catalogs, settings, updateUrl, adult, configurationRequired, requires)`, letto da `manifest.json`.
-- ☐ **Validazione** del manifest: `zephyr` conosciuto, `id` e `version` (semver), `main` presente nel pacchetto,
+- ☑ **Validazione** del manifest: `zephyr` conosciuto, `id` e `version` (semver), `main` presente nel pacchetto,
   `requires` tutti noti (altrimenti: "Aggiorna Zephyr TV"), campi obbligatori.
-- ☐ **Pacchetto**: decompressione sicura (`java.util.zip`) in `files/extensions/<id>/`, con 10 MB compresso, 20 MB
+- ☑ **Pacchetto**: decompressione sicura (`java.util.zip`) in `files/extensions/<id>/`, con 10 MB compresso, 20 MB
   decompresso, niente `..` né percorsi assoluti, sostituzione atomica (cartella temporanea, poi rinomina).
-- ☐ **`manifest-zephyrtv.json`**: lettura da un indirizzo che finisce con quel nome o da una cartella; `package`
+- ☑ **`manifest-zephyrtv.json`**: lettura da un indirizzo che finisce con quel nome o da una cartella; `package`
   assoluto o relativo; verifica di `sha256`; `id`, `version` e `zephyr` uguali a quelli del `manifest.json` interno.
-- ☐ **Anteprima** prima di installare: nome, autore, icona, descrizione, cosa fornisce (tipi e risorse), avviso
+- ☑ **Anteprima** prima di installare: nome, autore, icona, descrizione, cosa fornisce (tipi e risorse), avviso
   "codice scritto da altri", casella 18+ (precompilata da `adult`), Installa.
-- ☐ **Installazione dal telefono**: lo `.zip` con `PhonePages.file` (come gli sfondi), oppure l'indirizzo con
+- ☑ **Installazione dal telefono**: lo `.zip` con `PhonePages.file` (come gli sfondi), oppure l'indirizzo con
   `PhonePages.text`; con il telecomando, l'indirizzo.
-- ☐ **Aggiornamenti**: una volta al giorno (come `refreshPlugins`), dall'indirizzo di installazione o da `updateUrl`;
+- ☑ **Aggiornamenti**: una volta al giorno (come `refreshPlugins`), dall'indirizzo di installazione o da `updateUrl`;
   versione più nuova → scarica, verifica, sostituisce, mantiene impostazioni e dati. "Aggiorna ora" a mano.
-- ☐ **Preinstallate**: lo zip in `assets/extensions/`, installato al primo avvio e quando l'APK ne porta una versione
+- ☑ **Preinstallate**: lo zip in `assets/extensions/`, installato al primo avvio e quando l'APK ne porta una versione
   più nuova; non rimovibile (solo spenta).
-- ☐ **Rimozione**: cancella cartella, impostazioni, `localStorage`, playlist di `zephyr.m3u`, cache.
-- ☐ **Preferenze** in `Prefs.kt`: ordine, spente, 18+, impostazioni (JSON), "Dove compare", indirizzo di
+- ☑ **Rimozione**: cancella cartella, impostazioni, `localStorage`, playlist di `zephyr.m3u`, cache.
+- ☑ **Preferenze** in `Prefs.kt`: ordine, spente, 18+, impostazioni (JSON), "Dove compare", indirizzo di
   installazione. Tutte nel backup (`Backup.kt`), tranne i file scaricati.
 - ☐ **Testi tradotti**: `locales/<lingua>.json` per nome, descrizione ed etichette delle impostazioni.
-- ☐ Pagina **Impostazioni → Add-on, plugin ed estensioni → Estensioni**: elenco (Attiva, Opzioni, 18+, Dove compare,
-  Sposta su/giù, Aggiorna ora, Rimuovi), Aggiungi un'estensione. Il nome della sezione cambia in tutte le lingue.
+- ☑ Pagina **Impostazioni → Funzioni aggiuntive → Estensioni**: elenco (Attiva, Opzioni, 18+, Dove compare,
+  Sposta su/giù, Aggiorna ora, Rimuovi), Aggiungi un'estensione. La sezione si chiama **Funzioni aggiuntive** (fatto).
+
+- ☑ Provato sul TV (test strumentato `ExtensionInstallTest`): installazione dall'indirizzo servito in rete locale,
+  verifica `sha256`, esecuzione di un handler nel processo `:extensions`.
+- ☐ Opzioni e Dove compare nella pagina dell'estensione: fasi 3 e 8.
 
 ## Fase 2 — Le estensioni come sorgenti, al posto degli add-on
 

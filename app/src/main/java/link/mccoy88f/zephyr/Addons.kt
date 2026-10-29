@@ -378,7 +378,7 @@ internal fun MainActivity.readsListings() = checkSelfPermission(MainActivity.TV_
 
 /** Where the add-ons' channels show, then Add an add-on, then each add-on (its page: update, remove). */
 /**
- * Where the add-ons' and plugins' content shows (on Add-ons and plugins, see addonsAndPlugins): TV channels, films
+ * Where the add-ons' and plugins' content shows (on Virtual apps and integrations, see addonsAndPlugins): TV channels, films
  * and series, the adult ones. Each changed, that page again with [back] (focus on the row).
  */
 internal fun MainActivity.placementRows(back: (Int) -> Unit): List<Triple<String, String, () -> Unit>> {

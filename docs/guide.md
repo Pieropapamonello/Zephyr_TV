@@ -169,7 +169,7 @@ Under the list, the TMDB settings:
 
 ## 11. Stremio add-ons
 
-**Settings → Add-ons and Plugins → Stremio add-ons**.
+**Settings → Extra features → Stremio add-ons**.
 
 - **Add an add-on**: scan the QR code and paste the manifest address on your phone, or type it with the remote. You can mark it **Adult content (18+)** at once.
 - **Each add-on** (with its icon) has a page with:
@@ -185,7 +185,7 @@ An add-on can have TV channels, film and series catalogs, streams, or only some 
 
 Nuvio plugins are small programs that find the streams of films, series and (when they say so) channels by themselves. Zephyr TV runs them apart from everything else, with access to the internet only. **Add only repositories you trust.**
 
-**Settings → Add-ons and Plugins → Nuvio plugins**:
+**Settings → Extra features → Nuvio plugins**:
 
 - **Add a repository**: from your phone (with the Adult content box) or with the remote. The address usually ends in `manifest.json`.
 - **Each repository** has a page with:
@@ -199,9 +199,24 @@ Sources that need WebSocket aren't supported: a plugin that uses one still gives
 
 Repositories update by themselves once a day. Plugins that declare only languages other than the TV's aren't asked (with **Streams in the TV's language first** on).
 
+### Extensions
+
+Extensions are Zephyr TV's own format to add films, series, TV channels, radio, videos and more. As Nuvio plugins
+do, they run on the TV, apart from everything else and with access to the internet only. **Add only extensions you
+trust.** In this beta they can be installed, but their content doesn't show yet.
+
+**Settings → Extra features → Extensions**:
+
+- **Add an extension**: the address of its `manifest-zephyrtv.json` (or of the folder it's in), pasted from your
+  phone or typed with the remote; or its `.zip` file sent from your phone. Before installing it, Zephyr TV shows what
+  it is, who wrote it and what it provides.
+- **Each extension** has a page with **On**, **Adult content (18+)**, **Move up / Move down**, **Update now** and
+  **Remove**. Those that come with Zephyr TV can be switched off, not removed.
+- **Check for updates**: Zephyr TV also does it by itself, once a day.
+
 ## 13. Where channels, films and adult content show
 
-**Settings → Add-ons and Plugins**, the first three rows (OK changes the choice):
+**Settings → Extra features → Virtual apps and integrations** (OK changes the choice):
 
 | Row | Choices |
 |---|---|

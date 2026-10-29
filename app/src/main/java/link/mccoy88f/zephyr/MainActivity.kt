@@ -327,6 +327,7 @@ class MainActivity : Activity() {
             if (settingsScrim.visibility == View.VISIBLE) again()
         }
         watchSessions() // once allowed (see NowPlaying): the Play queue follows what's playing
+        refreshExtensions() // the preinstalled ones, and a newer version of each, once a day
         ui.post(playingTick)
         refreshWatchNext()
         showWeather()

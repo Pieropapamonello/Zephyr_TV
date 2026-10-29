@@ -1,0 +1,93 @@
+package link.mccoy88f.zephyr
+
+import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+
+class ExtensionsTest {
+    @get:Rule val tmp = TemporaryFolder()
+
+    private val manifest = """{"zephyr":1,"id":"org.example.hello","version":"1.0.0","name":"Hello","main":"main.js",
+        "types":["tv"],"resources":["catalog",{"name":"stream","types":["tv"]}],"idPrefixes":["hello:"],
+        "collectors":["tv","nonsense"],"behaviorHints":{"adult":true}}"""
+
+    private fun zip(vararg files: Pair<String, String>): File {
+        val f = tmp.newFile()
+        ZipOutputStream(f.outputStream()).use { z -> files.forEach { (name, text) -> z.putNextEntry(ZipEntry(name)); z.write(text.toByteArray()); z.closeEntry() } }
+        return f
+    }
+
+    private fun refused(why: Extensions.Why, block: () -> Unit) {
+        try { block(); fail("expected $why") } catch (e: Extensions.Refused) { assertEquals(why, e.why) }
+    }
+
+    @Test fun installsReadsUpdatesAndRemoves() {
+        val files = tmp.newFolder()
+        val e = Extensions.install(files, zip("manifest.json" to manifest, "main.js" to "module.exports = {};"))
+        assertEquals("org.example.hello", e.id)
+        assertEquals(listOf("catalog", "stream"), e.resources)
+        assertEquals(listOf("tv"), e.collectors)
+        assertTrue(e.adult)
+        File(Extensions.dataDir(files, e.id), "storage.json").writeText("{}")
+
+        val newer = manifest.replace("1.0.0", "1.1.0")
+        val updated = Extensions.install(files, zip("hello/manifest.json" to newer, "hello/main.js" to "//")) // zipped with its folder
+        assertEquals("1.1.0", updated.version)
+        assertEquals(listOf("org.example.hello"), Extensions.installed(files).map { it.id })
+        assertTrue("its data survives an update", File(files, "extension-data/org.example.hello/storage.json").exists())
+
+        Extensions.remove(files, e.id)
+        assertTrue(Extensions.installed(files).isEmpty())
+        assertFalse(File(files, "extension-data/org.example.hello").exists())
+    }
+
+    @Test fun refusesWhatIsntOrCantBe() {
+        val files = tmp.newFolder()
+        refused(Extensions.Why.DAMAGED) { Extensions.install(files, zip("../evil.js" to "x", "manifest.json" to manifest)) }
+        refused(Extensions.Why.NOT_AN_EXTENSION) { Extensions.install(files, zip("manifest.json" to manifest)) } // no main.js
+        refused(Extensions.Why.NEWER_STANDARD) { Extensions.install(files, zip("manifest.json" to manifest.replace("\"zephyr\":1", "\"zephyr\":2"), "main.js" to "")) }
+        refused(Extensions.Why.NEEDS_FEATURES) {
+            Extensions.install(files, zip("manifest.json" to manifest.replace("\"zephyr\":1", "\"zephyr\":1,\"requires\":[\"subtitles\"]"), "main.js" to ""))
+        }
+        refused(Extensions.Why.NOT_AN_EXTENSION) { Extensions.install(files, zip("manifest.json" to manifest.replace("org.example.hello", "../x"), "main.js" to "")) }
+        val published = Extensions.published("https://example.org/x/manifest-zephyrtv.json", JSONObject(
+            """{"zephyr":1,"id":"org.example.hello","version":"2.0.0","name":"Hello","package":"hello.zip","sha256":"${"a".repeat(64)}"}"""))
+        refused(Extensions.Why.DIFFERENT) { Extensions.install(files, zip("manifest.json" to manifest, "main.js" to ""), published) }
+        assertTrue("nothing left behind", File(files, "extensions").listFiles().orEmpty().isEmpty())
+    }
+
+    @Test fun publishedAddressesAndPackage() {
+        assertEquals("https://example.org/ext/manifest-zephyrtv.json", Extensions.publishedUrl("https://example.org/ext/"))
+        assertEquals("https://example.org/ext/manifest-zephyrtv.json", Extensions.publishedUrl(" https://example.org/ext/manifest-zephyrtv.json "))
+        assertEquals(null, Extensions.publishedUrl("example.org/ext"))
+        val p = Extensions.published("https://example.org/ext/manifest-zephyrtv.json", JSONObject(
+            """{"zephyr":1,"id":"a.b","version":"1.0.0","name":"A","package":"a-1.0.0.zip","icon":"icon.png","sha256":"${"F".repeat(64)}"}"""))
+        assertEquals("https://example.org/ext/a-1.0.0.zip", p.packageUrl)
+        assertEquals("https://example.org/ext/icon.png", p.icon)
+        assertEquals("f".repeat(64), p.sha256)
+        refused(Extensions.Why.NOT_AN_EXTENSION) {
+            Extensions.published("https://example.org/m.json", JSONObject("""{"zephyr":1,"id":"a","version":"1","name":"A","package":"a.zip","sha256":"no"}"""))
+        }
+    }
+
+    @Test fun versions() {
+        assertTrue(Extensions.newer("1.10.0", "1.9.2"))
+        assertTrue(Extensions.newer("2.0.0", "2.0.0-beta.3"))
+        assertTrue(Extensions.newer("2.0.0-beta.10", "2.0.0-beta.9"))
+        assertFalse(Extensions.newer("1.0", "1.0.0"))
+        assertFalse(Extensions.newer("1.0.0-beta.1", "1.0.0"))
+    }
+
+    @Test fun shaOfAFile() {
+        val f = tmp.newFile().apply { writeText("abc") }
+        assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", Extensions.sha256(f))
+    }
+}

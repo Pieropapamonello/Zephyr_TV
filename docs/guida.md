@@ -169,7 +169,7 @@ Sotto la lista, le impostazioni TMDB:
 
 ## 11. Add-on Stremio
 
-**Impostazioni → Add-on e Plugin → Add-on Stremio**.
+**Impostazioni → Funzioni aggiuntive → Add-on Stremio**.
 
 - **Aggiungi un add-on**: inquadra il codice QR e incolla l'indirizzo del manifest sul telefono, oppure scrivilo con il telecomando. Si può segnarlo subito come **Contenuti V.M. - Adulti**.
 - **Ogni add-on** (con la sua icona) ha una pagina con:
@@ -185,7 +185,7 @@ Un add-on può avere canali TV, cataloghi di film e serie, stream, o solo alcune
 
 I plugin Nuvio sono piccoli programmi che trovano da soli gli stream di film, serie e (se lo dichiarano) canali. Zephyr TV li esegue separati da tutto il resto, con accesso solo a internet. **Aggiungi solo repository di cui ti fidi.**
 
-**Impostazioni → Add-on e Plugin → Plugin Nuvio**:
+**Impostazioni → Funzioni aggiuntive → Plugin Nuvio**:
 
 - **Aggiungi un repository**: dal telefono (con la casella Contenuti V.M. - Adulti) o con il telecomando. L'indirizzo di solito finisce con `manifest.json`.
 - **Ogni repository** ha una pagina con:
@@ -199,9 +199,24 @@ Le fonti che richiedono WebSocket non sono supportate: un plugin che ne usa una 
 
 I repository si aggiornano da soli una volta al giorno. I plugin che dichiarano solo lingue diverse da quella del TV non vengono interrogati (con **Prima gli stream nella lingua del TV** attivo).
 
+### Estensioni
+
+Le estensioni sono il formato di Zephyr TV per aggiungere film, serie, canali TV, radio, video e altro. Come i plugin
+Nuvio, girano sul TV, separate dal resto e con accesso solo a internet. **Aggiungi solo estensioni di cui ti fidi.**
+In questa beta si possono installare, ma i loro contenuti non compaiono ancora.
+
+**Impostazioni → Funzioni aggiuntive → Estensioni**:
+
+- **Aggiungi un'estensione**: l'indirizzo del suo `manifest-zephyrtv.json` (o della cartella che lo contiene),
+  incollato dal telefono o scritto con il telecomando; oppure il suo file `.zip` inviato dal telefono. Prima di
+  installarla Zephyr TV mostra cos'è, chi l'ha scritta e cosa fornisce.
+- **Ogni estensione** ha una pagina con **Attivo**, **Contenuti V.M. - Adulti**, **Sposta su / giù**,
+  **Aggiorna ora** e **Rimuovi**. Quelle incluse in Zephyr TV si possono spegnere ma non rimuovere.
+- **Controlla aggiornamenti**: Zephyr TV lo fa anche da solo, una volta al giorno.
+
 ## 13. Dove compaiono canali, film e contenuti per adulti
 
-**Impostazioni → Add-on e Plugin**, le prime tre voci (OK cambia l'opzione):
+**Impostazioni → Funzioni aggiuntive → Virtual App e Integrazioni** (OK cambia l'opzione):
 
 | Voce | Opzioni |
 |---|---|

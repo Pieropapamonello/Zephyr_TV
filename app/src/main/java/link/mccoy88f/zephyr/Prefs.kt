@@ -71,6 +71,11 @@ internal object K {
     const val NUVIO_ON = "nuvio_on" // plugins switched on that their manifest has off ("<manifest>#<id>")
     const val NUVIO_OFF = "nuvio_off" // plugins switched off that their manifest has on
     const val NUVIO_ADULT = "nuvio_adult" // repositories marked 18+
+    const val EXT_ORDER = "ext_order" // extensions installed, by id, in the user's order, one per line
+    const val EXT_OFF = "ext_off" // extensions switched off, by id
+    const val EXT_ADULT = "ext_adult" // extensions marked 18+ by the user, by id (one saying so itself is 18+ anyway)
+    const val EXT_SOURCES = "ext_sources" // where each was added from, JSON {id: its manifest-zephyrtv.json address}
+    const val EXT_BUILTIN = "ext_builtin" // the preinstalled ones, by id: they can be switched off, not removed
     const val NUVIO_ORDER = "nuvio_order" // plugins in the order the user put them, "<manifest>#<id>" one per line
     const val NUVIO_OPTIONS = "nuvio_options" // plugins' options chosen, JSON: {"<manifest>#<id>": {key: value}}
     const val ADULT_PLACE = "adult_place" // where the adult add-ons show: virtual, apps, mixed (see AdultPlace)

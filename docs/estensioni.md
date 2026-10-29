@@ -377,7 +377,7 @@ massimo 1 MB. Resta tra le chiamate e si cancella con l'estensione.
 
 ## 8. Installare, aggiornare, rimuovere
 
-**Impostazioni → Add-on, plugin ed estensioni → Estensioni**:
+**Impostazioni → Funzioni aggiuntive → Estensioni**:
 
 - **Aggiungi un'estensione**: l'indirizzo del suo **`manifest-zephyrtv.json`** (qui sotto), scritto o incollato dal
   telefono, oppure il suo `.zip` inviato dal telefono (codice QR). Zephyr TV ne mostra nome, autore, cosa offre e che

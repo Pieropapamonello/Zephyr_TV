@@ -205,14 +205,23 @@ internal fun MainActivity.refreshPlugins() {
 
 // ---------- settings ----------
 
-/** Add-ons and plugins: Stremio's add-ons (their section) and Nuvio's plugins, each a page of its own. */
+/**
+ * Extra features: where their content shows (Virtual apps and integrations), then Stremio's add-ons (their section),
+ * Nuvio's plugins and the extensions, each a page of its own.
+ */
 internal fun MainActivity.addonsAndPlugins(focus: Int = 0) {
     val repos = nuvioRepoUrls(prefs)
-    // Where their content shows (TV channels, films and series, adult ones), then Stremio's add-ons and Nuvio's plugins.
-    showPage(getString(R.string.settings_section_addons_plugins), placementRows { addonsAndPlugins(it) } + listOf(
+    showPage(getString(R.string.settings_section_addons_plugins), listOf(
+        page(getString(R.string.virtual_apps_integrations), SUBMENU) { integrationsPage() },
         page(getString(R.string.addons_stremio), "${addonUrls().size}") { renderSettings(MainActivity.ADDON_ADD_ROW) },
         page(getString(R.string.nuvio_plugins), "${repos.size}") { nuvioPage() },
+        page(getString(R.string.ext_title), "${extensions(prefs, filesDir).size}") { extensionsPage() },
     ), focus) { renderSettingsHome(HOME_SECTIONS.indexOf(MainActivity.ADDONS_SECTION)) }
+}
+
+/** Virtual apps and integrations: where the add-ons', plugins' and extensions' content shows (see placementRows). */
+private fun MainActivity.integrationsPage(focus: Int = 0) {
+    showPage(getString(R.string.virtual_apps_integrations), placementRows { integrationsPage(it) }, focus) { addonsAndPlugins(0) }
 }
 
 /** Nuvio's page: what plugins are (and that they run code from elsewhere), each repository, and Add a repository. */
@@ -233,7 +242,7 @@ internal fun MainActivity.nuvioPage(focus: Int = 0) {
             else -> getString(R.string.nuvio_plugins_on, on, r.scrapers.size)
         }
         page(r?.name ?: url, value) { repoPage(url) }
-    } + page(getString(R.string.nuvio_add), SUBMENU) { nuvioFromPhone() }, focus, top = intro) { addonsAndPlugins(4) }
+    } + page(getString(R.string.nuvio_add), SUBMENU) { nuvioFromPhone() }, focus, top = intro) { addonsAndPlugins(2) }
 }
 
 /**

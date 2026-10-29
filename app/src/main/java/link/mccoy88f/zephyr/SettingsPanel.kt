@@ -130,7 +130,7 @@ internal fun MainActivity.renderSettingsHome(focus: Int = 0) {
 internal fun MainActivity.renderSettings(row: Int) {
     val section = row / SECTION
     showPage(sectionTitle(section), sectionRows(section), row % SECTION) {
-        if (section == ADDONS_SECTION) addonsAndPlugins(3) else renderSettingsHome(HOME_SECTIONS.indexOf(section))
+        if (section == ADDONS_SECTION) addonsAndPlugins(1) else renderSettingsHome(HOME_SECTIONS.indexOf(section))
     }
     shownSection = section
     // Each add-on's row starts with its icon, as its Watch on rows on a title's page do.

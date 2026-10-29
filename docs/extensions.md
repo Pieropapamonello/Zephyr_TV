@@ -367,7 +367,7 @@ const channel = await zephyr.m3u.channel("main", id);
 
 ## 8. Install, update, remove
 
-**Settings → Add-ons, plugins and extensions → Extensions**:
+**Settings → Extra features → Extensions**:
 
 - **Add an extension**: the address of its **`manifest-zephyrtv.json`** (below), typed or pasted from a phone, or its
   `.zip` sent from a phone (QR code). Zephyr TV shows its name, author, what it provides and that it runs code by
