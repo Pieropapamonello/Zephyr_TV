@@ -867,7 +867,7 @@ internal fun MainActivity.fillArt(frame: FrameLayout, w: Int, h: Int, backdrop: 
 private fun MainActivity.drawArt(frame: FrameLayout, w: Int, h: Int, backdrops: List<String>, logos: List<String>, posters: List<String>, title: String) {
     // The first of [uris] that loads; [failed] when none does.
     fun load(v: ImageView, uris: List<String>, blur: Boolean = false, failed: () -> Unit = {}) = posterIo.execute {
-        val bmp = uris.firstNotNullOfOrNull { uri -> runCatching { decode(uri, alpha = uri in logos) }.getOrNull() }
+        val bmp = uris.firstNotNullOfOrNull { uri -> runCatching { art(uri, alpha = uri in logos) }.getOrNull() }
             ?: return@execute run { ui.post(failed) }
         val shown = if (blur) softBlur(bmp) else bmp
         ui.post { v.setImageBitmap(shown) }
@@ -950,7 +950,7 @@ internal fun MainActivity.addTitleLogo(frame: FrameLayout, uris: List<String>, w
     }, FrameLayout.LayoutParams(MATCH_PARENT, h / 2, Gravity.BOTTOM))
     val logo = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_START }
     frame.addView(logo, FrameLayout.LayoutParams(w / 2, h / 3, Gravity.BOTTOM or Gravity.START).apply { setMargins(dp(10), 0, 0, dp(10)) })
-    posterIo.execute { uris.firstNotNullOfOrNull { runCatching { decode(it, alpha = true) }.getOrNull() }?.let { ui.post { logo.setImageBitmap(it) } } }
+    posterIo.execute { uris.firstNotNullOfOrNull { runCatching { art(it, alpha = true) }.getOrNull() }?.let { ui.post { logo.setImageBitmap(it) } } }
 }
 
 internal fun MainActivity.progressBarDrawable(): Drawable {
@@ -997,7 +997,7 @@ internal fun MainActivity.loadPoster(v: ImageView, uri: String?) {
     if (!loading.add(uri)) return // already on its way
     posterIo.execute {
         val bmp = try {
-            decode(uri)
+            art(uri)
         } catch (e: Exception) {
             warn("poster failed: $uri ($e)") // retried by retryPosters()
             null
@@ -1056,6 +1056,28 @@ internal fun MainActivity.retryPosters() {
 
 /** Downsample to card size in RGB_565 so a dozen posters stay around 1-2 MB. */
 /** [uri]'s picture at about card size; [alpha] keeps its transparency (a logo), at twice the memory. */
+/** Images that answered "not there" (404) this session: not asked for again at each row drawn (see art). */
+internal val missingArt: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+/**
+ * [uri]'s image, decoded: from memory (posters), else from disk (a web image is downloaded once, see artFiles), else
+ * read where it is (a TV app's). Null when it isn't there, remembered for the session; throws on other failures (the
+ * network), to be asked again. Network: off the UI thread.
+ */
+internal fun MainActivity.art(uri: String, alpha: Boolean = false): Bitmap? {
+    val key = if (alpha) "$uri#alpha" else uri
+    posters.get(key)?.let { return it }
+    if (uri in missingArt) return null
+    val bmp = try {
+        if (uri.startsWith("http")) decode(android.net.Uri.fromFile(artFiles.get(uri) { openStream(it) }).toString(), alpha) else decode(uri, alpha)
+    } catch (e: java.io.FileNotFoundException) { // what a 404 is, as HttpURLConnection says it
+        missingArt += uri
+        null
+    } ?: return null
+    posters.put(key, bmp)
+    return bmp
+}
+
 internal fun MainActivity.decode(uri: String, alpha: Boolean = false): Bitmap? {
     val bytes = openStream(uri).use { it.readCapped(Http.MAX_IMAGE) }
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

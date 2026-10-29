@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## Unreleased
+
+- The posters, backdrops and logos of films and series are kept on the TV after the first download. Rows, search results and title pages show them at once, also after Zephyr TV restarts, and Zephyr TV does not download them again.
+- The player uses the channel logos that the home screen already keeps, so the logo shows at once while a channel loads.
+
 ## 3.0.0-beta.8
 
 - A stream that played and then stops loading, for example after a network drop, starts again by itself, up to two times. Before, the player went to the next stream or said that no stream works.

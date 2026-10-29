@@ -134,13 +134,15 @@ class MainActivity : Activity() {
     internal val backdrops by lazy { BackdropCache(File(cacheDir, BACKDROP_DIR)) }
     // Channel logos, kept with the app's files (not its cache, which Android empties): cleared when their table is
     // fetched again, each month or by hand. Named by the whole address: many are called just "logo.png".
-    internal val channelLogoFiles by lazy { BackdropCache(File(filesDir, "channel_logo_images"), maxFiles = 2000) { "l${it.hashCode().toUInt()}" } }
+    internal val channelLogoFiles by lazy { BackdropCache(File(filesDir, LOGO_DIR), maxFiles = 2000, BackdropCache::logoName) }
+    // Films' and series' art (cards, title pages, search), downloaded once: in the cache, which Android may empty.
+    internal val artFiles by lazy { BackdropCache(File(cacheDir, ART_DIR), ART_FILES, BackdropCache::artName) }
     internal var lastInput = SystemClock.elapsedRealtime() // last key press, for pausing Spotlight when nobody watches
     internal var spotlightIdle = false
     internal var nightShown = false // night mode's dimming is showing
     internal val loading = java.util.Collections.synchronizedSet(HashSet<String>())
     internal val ui = Handler(Looper.getMainLooper())
-    internal val posters = object : LruCache<String, Bitmap>(6 * 1024 * 1024) {
+    internal val posters = object : LruCache<String, Bitmap>(24 * 1024 * 1024) { // decoded: rows scrolled back show at once
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
     }
 

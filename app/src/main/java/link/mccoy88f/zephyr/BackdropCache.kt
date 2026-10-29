@@ -9,6 +9,13 @@ internal const val BACKDROP_DIR = "spotlight"
 /** What each cached backdrop shows (file, title, year and genre), for the TMDB screensaver; in cacheDir. */
 internal const val BACKDROP_TITLES = "spotlight-titles.tsv"
 
+/** Films' and series' art (posters, backdrops, logos) in cacheDir: the home screen's and the player's, one folder. */
+internal const val ART_DIR = "art_images"
+internal const val ART_FILES = 500 // the most used kept, the rest let go
+
+/** Channel logos' folder, in filesDir (see MainActivity.channelLogoFiles): the player reads them there too. */
+internal const val LOGO_DIR = "channel_logo_images"
+
 /** The screensaver choice that shows the Spotlight backdrops. */
 internal const val SS_TMDB = "tmdb:trending"
 
@@ -61,6 +68,13 @@ internal class BackdropCache(private val dir: File, private val maxFiles: Int = 
 
     companion object {
         private const val PART = ".part"
+
+        /** A channel logo's file name: by its whole address, many are called just "logo.png". */
+        fun logoName(url: String) = "l${url.hashCode().toUInt()}"
+
+        /** An art image's file name: by a hash of its whole address ("…/poster.jpg", "…/img" are many titles'). */
+        fun artName(url: String) = "a" + java.security.MessageDigest.getInstance("SHA-1").digest(url.toByteArray())
+            .joinToString("") { "%02x".format(it) }.take(24)
 
         /** The file name an image is kept under. TMDB names images by a unique hash ("/abc123.jpg"). */
         fun nameFor(url: String): String {

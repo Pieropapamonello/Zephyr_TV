@@ -691,6 +691,19 @@ class PlayerActivity : Activity() {
     private fun showLogo(c: Channel) = logoInto(logoBox, c) { title.text == c.name }
 
     /** [c]'s logo in [box]: the add-on's, then Zephyr TV's own; downloaded once, set if [still] holds when it arrives. */
+    /** The home screen's folders of images, this process reading and adding to them as the home screen does. */
+    private val artFiles by lazy { BackdropCache(java.io.File(cacheDir, ART_DIR), ART_FILES, BackdropCache::artName) }
+
+    /**
+     * [uri]'s image: a channel logo the home screen has kept, else from the art folder (downloaded into it the first
+     * time). Network: off the UI thread.
+     */
+    private fun imageBytes(uri: String): ByteArray {
+        if (!uri.startsWith("http")) return Http.open(uri).use { it.readCapped(Http.MAX_IMAGE) }
+        java.io.File(java.io.File(filesDir, LOGO_DIR), BackdropCache.logoName(uri)).takeIf { it.length() > 0 }?.let { return it.readBytes() }
+        return artFiles.get(uri) { Http.open(it) }.readBytes()
+    }
+
     private fun logoInto(box: LogoBox, c: Channel, isFullScreenBackdrop: Boolean = false, still: () -> Boolean) {
         val knownUri = c.logos.firstOrNull { logos[it] != null }
         val known = knownUri?.let { logos[it] }
@@ -710,7 +723,7 @@ class PlayerActivity : Activity() {
             var foundUri: String? = null
             val bmp = c.logos.firstNotNullOfOrNull { uri ->
                 runCatching {
-                    val bytes = Http.open(uri).use { it.readCapped(Http.MAX_IMAGE) }
+                    val bytes = imageBytes(uri)
                     // A film's art is a backdrop, up to 4K: decoded at about the size it shows (320 dp wide at most).
                     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
