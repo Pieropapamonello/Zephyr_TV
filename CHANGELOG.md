@@ -14,7 +14,7 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
-## Unreleased
+## 3.3.0
 
 - In **Extra features**, the **Extensions** entry is now **Zephyr Extensions**.
 - A film that is still only in cinemas in your country has a small **In cinemas** tag in the bottom-right corner of its card. The information comes from TMDB (the key is necessary).
