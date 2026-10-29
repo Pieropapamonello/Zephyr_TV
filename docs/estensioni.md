@@ -157,7 +157,7 @@ Il manifest dice dove i suoi contenuti **possono** andare, oltre alla sua app:
 - **Le radio** seguono la voce **Radio** di Zephyr TV (Virtual App e Integrazioni): nel raccoglitore Radio da tutte le
   estensioni (predefinito), ognuna nell'app della sua estensione, o da nessuna parte, qualunque cosa dica **Dove
   compare**.
-- In un raccoglitore, le righe di ogni estensione arrivano nell'ordine delle estensioni (Impostazioni → Estensioni),
+- In un raccoglitore, le righe di ogni estensione arrivano nell'ordine delle estensioni (Impostazioni → Funzioni aggiuntive → Estensioni Zephyr),
   dopo quelle degli add-on e delle fonti di catalogo.
 
 ### Tipi di contenuto
@@ -385,7 +385,7 @@ massimo 1 MB. Resta tra le chiamate e si cancella con l'estensione.
 
 ## 8. Installare, aggiornare, rimuovere
 
-**Impostazioni → Funzioni aggiuntive → Estensioni**:
+**Impostazioni → Funzioni aggiuntive → Estensioni Zephyr**:
 
 - **Aggiungi un'estensione**: l'indirizzo del suo **`manifest-zephyrtv.json`** (qui sotto), scritto o incollato dal
   telefono, oppure il suo `.zip` inviato dal telefono (codice QR). Zephyr TV ne mostra nome, autore, cosa offre e che

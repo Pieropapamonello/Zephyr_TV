@@ -407,7 +407,7 @@
     <string name="nuvio_order">Ordine dei plugin</string>
     <string name="nuvio_order_intro">OK su un plugin per prenderlo, poi OK sul posto dove metterlo. I loro stream vengono chiesti in quest\'ordine.</string>
     <string name="nuvio_order_moving">Stai spostando %1$s: OK sul posto dove metterlo, oppure di nuovo su di lui per lasciarlo dov\'era.</string>
-    <string name="ext_title">Estensioni</string>
+    <string name="ext_title">Estensioni Zephyr</string>
     <string name="ext_intro">Le estensioni aggiungono a Zephyr TV film, serie, canali TV, radio, video e altro. Sono programmi scritti da altre persone: Zephyr TV li esegue separati da tutto il resto, con accesso solo a internet. Aggiungi solo estensioni di cui ti fidi.</string>
     <string name="ext_add">Aggiungi un\'estensione</string>
     <string name="ext_add_intro">L\'indirizzo del manifest-zephyrtv.json dell\'estensione, o della cartella che lo contiene.</string>

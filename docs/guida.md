@@ -208,7 +208,7 @@ Nuvio, girano sul TV, separate dal resto e con accesso solo a internet. **Aggiun
 **OMG Premium TV** è proposta nell'elenco: OK la installa. Nelle sue **Opzioni** aggiungi le tue playlist M3U o i tuoi
 account Xtream, e i canali, i film e le serie compaiono nella sua app.
 
-**Impostazioni → Funzioni aggiuntive → Estensioni**:
+**Impostazioni → Funzioni aggiuntive → Estensioni Zephyr**:
 
 - **Aggiungi un'estensione**: l'indirizzo del suo `manifest-zephyrtv.json` (o della cartella che lo contiene),
   incollato dal telefono o scritto con il telecomando; oppure il suo file `.zip` inviato dal telefono. Prima di

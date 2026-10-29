@@ -152,7 +152,7 @@ The manifest says where its content **may** go, besides its own app:
 - **A catalog** (see above) has no app and needs no `collectors`: its rows go to Films and TV Series.
 - **Radio stations** go by Zephyr TV's own **Radio** setting (Virtual apps and integrations): to the Radio collector
   from every extension (the default), each in its extension's app, or nowhere — whatever **Where it shows** says.
-- In a collector, the rows of each extension come in the order of the extensions (Settings → Extensions), after the
+- In a collector, the rows of each extension come in the order of the extensions (Settings → Extra features → Zephyr Extensions), after the
   add-ons' and the catalog sources'.
 
 ### Types of content
@@ -374,7 +374,7 @@ const channel = await zephyr.m3u.channel("main", id);
 
 ## 8. Install, update, remove
 
-**Settings → Extra features → Extensions**:
+**Settings → Extra features → Zephyr Extensions**:
 
 - **Add an extension**: the address of its **`manifest-zephyrtv.json`** (below), typed or pasted from a phone, or its
   `.zip` sent from a phone (QR code). Zephyr TV shows its name, author, what it provides and that it runs code by

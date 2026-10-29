@@ -208,7 +208,7 @@ do, they run on the TV, apart from everything else and with access to the intern
 trust.** **OMG Premium TV** is suggested in the list: OK installs it. Add your M3U playlists or Xtream accounts in its
 **Options**, and the channels, films and series show in its app.
 
-**Settings → Extra features → Extensions**:
+**Settings → Extra features → Zephyr Extensions**:
 
 - **Add an extension**: the address of its `manifest-zephyrtv.json` (or of the folder it's in), pasted from your
   phone or typed with the remote; or its `.zip` file sent from your phone. Before installing it, Zephyr TV shows what

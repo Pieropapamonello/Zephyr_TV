@@ -62,7 +62,7 @@ Nuovo file `Extensions.kt` (modello e disco) e `ExtensionPages.kt` (pagine delle
 - ☑ **Preferenze** in `Prefs.kt`: ordine, spente, 18+, impostazioni (JSON), "Dove compare", indirizzo di
   installazione. Tutte nel backup (`Backup.kt`), tranne i file scaricati.
 - ☐ **Testi tradotti**: `locales/<lingua>.json` per nome, descrizione ed etichette delle impostazioni.
-- ☑ Pagina **Impostazioni → Funzioni aggiuntive → Estensioni**: elenco (Attiva, Opzioni, 18+, Dove compare,
+- ☑ Pagina **Impostazioni → Funzioni aggiuntive → Estensioni Zephyr**: elenco (Attiva, Opzioni, 18+, Dove compare,
   Sposta su/giù, Aggiorna ora, Rimuovi), Aggiungi un'estensione. La sezione si chiama **Funzioni aggiuntive** (fatto).
 
 - ☑ Provato sul TV (test strumentato `ExtensionInstallTest`): installazione dall'indirizzo servito in rete locale,
