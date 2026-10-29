@@ -128,7 +128,9 @@ internal fun MainActivity.addonsTv(): TvPlace {
  * Titles). An add-on with both has one tile, with both. Runs on the io thread.
  */
 internal fun MainActivity.addonApps(): List<MainActivity.App> {
-    val urls = shownAddonUrls().filter { !adultApart(it) } // adult ones apart: under their own tiles alone
+    // Those apart (adult ones, extensions with an app of their own) under their own tiles; an extension's rows
+    // given to the collectors (see extensionRoutes) with everyone's.
+    val urls = shownAddonUrls().filter { !apart(it) || extensionRoutes(it, "tv") }
     fun icon(res: Int) = getDrawable(res)!!
     // Its logo once it's on disk (downloaded with its channels, see updateAddon), else the [res] mark.
     fun tile(addon: Stremio.Addon, res: Int): MainActivity.App {
@@ -147,15 +149,17 @@ internal fun MainActivity.addonApps(): List<MainActivity.App> {
         TvPlace.TV -> emptyList()
     }
     // An adult add-on with an app of its own: one tile, its channels, films and series in it.
-    val adultOwn = shownAddonUrls().filter { adultOwnApp(it) }.mapNotNull { url -> Stremio.saved(filesDir, url)?.addon?.let { tile(it, R.drawable.ic_adult) } }
-    return (tv + vodApps() + vodTileAddons().map { tile(it, R.drawable.ic_movie) } + adultTile() + adultOwn).distinctBy { it.pkg }
+    val adultOwn = shownAddonUrls().filter { ownApp(it) }.mapNotNull { url ->
+        Stremio.saved(filesDir, url)?.addon?.let { tile(it, if (adultOwnApp(url)) R.drawable.ic_adult else R.drawable.ic_apps) }
+    }
+    return (tv + vodApps() + vodTileAddons().map { tile(it, R.drawable.ic_movie) } + adultTile() + adultOwn + collectorApps()).distinctBy { it.pkg }
 }
 
 /** The add-ons whose channels show under the tile [pkg]: all of them under the TV app or the IPTV app, one under its own. */
 internal fun MainActivity.addonsUnder(pkg: String): List<String> {
     if (pkg == ADULT_PKG) return if (adultApp()) shownAddonUrls().filter { isAdultAddon(it) } else emptyList()
-    adultOwnUrl(pkg)?.let { return listOf(it) } // an adult add-on's own app: its channels, whatever the others do
-    val urls = shownAddonUrls().filter { !adultApart(it) }
+    ownAppUrl(pkg)?.let { return listOf(it) } // an add-on's own app: its channels, whatever the others do
+    val urls = shownAddonUrls().filter { !apart(it) || extensionRoutes(it, "tv") }
     val mode = addonsTv()
     return when {
         pkg == IPTV_PKG -> if (mode == TvPlace.IPTV) urls else emptyList()
@@ -187,7 +191,9 @@ internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<
     val from = listOf(pkg, addonsTv(), listings.joinToString { (u, l) -> "$u@${l.at}" }, System.identityHashCode(guide),
         hidden.hashCode(), System.currentTimeMillis() / GUIDE_MS).joinToString("|")
     built[pkg]?.takeIf { it.from == from }?.let { return it.sections }
-    return listings.flatMap { (url, listing) ->
+    // In an extension's own app, its channels given to the collectors (see extensionRoutes) aren't.
+    return listings.filter { (url, _) -> !(own && extensionRoutes(url, "tv") && pkg == ownAppPkg(url)) }
+        .flatMap { (url, listing) ->
         val catalogs = listing.addon.catalogs.size
         listing.rows.mapNotNull { row ->
             val name = when {
@@ -328,7 +334,7 @@ internal fun MainActivity.lastChannelCard(hidden: Set<String>): Pair<Long, Prog>
 /** The tile [c]'s channels show under, as addonsTv puts them: the add-on's own app, the IPTV app, or the TV app. */
 internal fun MainActivity.addonTile(c: AddonChannel): MainActivity.App? {
     if (inAdultApp(c.addon)) return apps.firstOrNull { it.pkg == ADULT_PKG }
-    if (adultOwnApp(c.addon)) return Stremio.saved(filesDir, c.addon)?.addon?.let { a -> apps.firstOrNull { it.pkg == STREMIO + a.id } }
+    if (ownApp(c.addon) && !extensionRoutes(c.addon, "tv")) return Stremio.saved(filesDir, c.addon)?.addon?.let { a -> apps.firstOrNull { it.pkg == STREMIO + a.id } }
     val pkg = when (addonsTv()) {
         TvPlace.APPS -> Stremio.saved(filesDir, c.addon)?.addon?.let { STREMIO + it.id }
         TvPlace.IPTV -> IPTV_PKG

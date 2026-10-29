@@ -44,6 +44,7 @@ internal fun forgetExtension(p: SharedPreferences, id: String) {
     p.edit().putString(K.EXT_ORDER, p.getString(K.EXT_ORDER, "")!!.lines().filter { it.isNotBlank() && it != id }.joinToString("\n"))
         .putStringSet(K.EXT_OFF, p.getStringSet(K.EXT_OFF, emptySet())!! - id)
         .putStringSet(K.EXT_ADULT, p.getStringSet(K.EXT_ADULT, emptySet())!! - id)
+        .putStringSet(K.EXT_COLLECT, p.getStringSet(K.EXT_COLLECT, emptySet())!! - id)
         .putString(K.EXT_SOURCES, sources.toString()).apply()
 }
 
@@ -215,6 +216,16 @@ private fun MainActivity.extensionPage(id: String, focus: Int = 0) {
             extensionPage(id, row)
         }
     }
+    // Where it shows: in its own app, or in the collectors its manifest allows.
+    if (e.collectors.isNotEmpty()) {
+        val collect = id in prefs.getStringSet(K.EXT_COLLECT, emptySet())!!
+        val row = rows.size
+        rows += page(getString(R.string.ext_place), getString(if (collect) R.string.ext_place_collectors else R.string.ext_place_own)) {
+            prefs.edit().putStringSet(K.EXT_COLLECT, prefs.getStringSet(K.EXT_COLLECT, emptySet())!!.let { if (collect) it - id else it + id }).apply()
+            addonsChanged()
+            extensionPage(id, row)
+        }
+    }
     val moves = rows.size
     if (at > 0) rows += page(getString(R.string.addon_move_up)) { move(-1); extensionPage(id, moves) }
     if (at in 0 until ids.size - 1) rows += page(getString(R.string.addon_move_down)) { move(+1); extensionPage(id, moves) }
@@ -347,4 +358,81 @@ internal fun MainActivity.extensionAddonUrls(): List<String> =
 internal fun MainActivity.extensionChanged(id: String) {
     Stremio.forget(filesDir, ExtensionCalls.url(id))
     addonsChanged()
+}
+
+// ---------- where their content shows ----------
+
+/** The collectors of the generic content (docs/extensions.md, Collectors), by their tile; Films, Series, TV are Zephyr TV's own. */
+internal val COLLECTOR_PKGS = mapOf(
+    STREMIO + "c_radio" to "radio", STREMIO + "c_videos" to "videos", STREMIO + "c_courses" to "courses",
+    STREMIO + "c_podcasts" to "podcasts", STREMIO + "c_audiobooks" to "audiobooks", STREMIO + "c_events" to "events",
+)
+
+/** The collector a content [type] goes to ("movie" → "movies", "channel" → "videos"); an extension's own type is a film's. */
+internal fun collectorOf(type: String) = when (type) {
+    "movie" -> "movies"
+    "series" -> "series"
+    "tv" -> "tv"
+    "radio" -> "radio"
+    "video", "channel" -> "videos"
+    "course" -> "courses"
+    "podcast" -> "podcasts"
+    "audiobook" -> "audiobooks"
+    "event" -> "events"
+    else -> "movies"
+}
+
+/** What a row of [type] is called: Films, Series, Radio, Videos… */
+internal fun MainActivity.kindName(type: String): String = getString(when (collectorOf(type)) {
+    "series" -> R.string.vod_series
+    "tv" -> R.string.setting_addons_tv
+    "radio" -> R.string.ext_kind_radio
+    "videos" -> R.string.ext_kind_videos
+    "courses" -> R.string.ext_kind_courses
+    "podcasts" -> R.string.ext_kind_podcasts
+    "audiobooks" -> R.string.ext_kind_audiobooks
+    "events" -> R.string.ext_kind_events
+    else -> R.string.vod_movies
+})
+
+/** Whether the extension [id] puts its content in the collectors (Where it shows), not in its own app. */
+private fun MainActivity.inCollectors(id: String) = id in prefs.getStringSet(K.EXT_COLLECT, emptySet())!!
+
+/**
+ * Whether the extension at the add-on address [url] gives its rows of [type] to their collector: it's set to show in
+ * the collectors, and its manifest allows that collector. Not for an add-on.
+ */
+internal fun MainActivity.extensionRoutes(url: String, type: String): Boolean {
+    val id = ExtensionCalls.idOf(url) ?: return false
+    if (!inCollectors(id)) return false
+    return collectorOf(type) in (Extensions.installed(filesDir, id)?.collectors ?: return false)
+}
+
+/**
+ * Whether the extension at [url] has an app of its own: it has content of its own (catalogs and streams: not a
+ * catalog of titles others play, nor streams or a guide alone), isn't in Adult content, and has rows not given to
+ * the collectors.
+ */
+internal fun MainActivity.extensionOwnApp(url: String): Boolean {
+    val id = ExtensionCalls.idOf(url) ?: return false
+    val e = Extensions.installed(filesDir, id) ?: return false
+    if ("catalog" !in e.resources || "stream" !in e.resources || inAdultApp(url)) return false
+    if (!inCollectors(id)) return true
+    val catalogs = Extensions.list(e, "catalogs")
+    return (0 until catalogs.length()).mapNotNull { catalogs.optJSONObject(it)?.optString("type") }.any { !extensionRoutes(url, it) }
+}
+
+/** The tile of the add-on at [url]'s own app. */
+internal fun MainActivity.ownAppPkg(url: String): String? = Stremio.saved(filesDir, url)?.addon?.let { STREMIO + it.id }
+
+/** The collectors' tiles that have rows: Radio, Videos, Courses, Podcasts, Audiobooks, Events. Runs on the io thread. */
+internal fun MainActivity.collectorApps(): List<MainActivity.App> {
+    val given = shownAddonUrls().filter { ExtensionCalls.idOf(it) != null && !inAdultApp(it) }.flatMap { url ->
+        Stremio.saved(filesDir, url)?.addon?.vod.orEmpty().filter { extensionRoutes(url, it.type) }.map { collectorOf(it.type) }
+    }.toSet()
+    return COLLECTOR_PKGS.filterValues { it in given }.map { (pkg, kind) ->
+        val icon = when (kind) { "radio", "podcasts", "audiobooks" -> R.drawable.ic_audio; "events" -> R.drawable.ic_live_tv; else -> R.drawable.ic_movie }
+        MainActivity.App(pkg, kindName(when (kind) { "videos" -> "video"; "courses" -> "course"; "podcasts" -> "podcast"; "audiobooks" -> "audiobook"; "events" -> "event"; else -> kind }),
+            android.content.Intent(), getDrawable(icon)!!)
+    }
 }

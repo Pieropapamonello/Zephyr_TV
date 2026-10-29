@@ -444,6 +444,9 @@
     <string name="ext_kind_events">Eventi</string>
     <string name="ext_kind_streams">Stream</string>
     <string name="ext_kind_guide">Guida TV</string>
+    <string name="ext_place">Dove compare</string>
+    <string name="ext_place_own">Nella sua app</string>
+    <string name="ext_place_collectors">Nei raccoglitori</string>
     <string name="setting_addons_tv">Canali TV</string>
     <string name="setting_addon_add">Aggiungi un addon</string>
     <string name="addon_adult">Contenuti V.M. - Adulti</string>

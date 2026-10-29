@@ -89,19 +89,19 @@ HTTP. Così righe, pagine, ricerca e player le usano senza codice nuovo.
   `region`, `has`, `asset`), `SCRAPER_SETTINGS`, `SCRAPER_ID` e il `localStorage` dell'estensione.
 - ☑ Provato sul TV (`ExtensionInstallTest`): manifest, catalogo e scheda dell'estensione chiesti come a un add-on.
 
-## Fase 3 — Dove compaiono: l'app dell'estensione e i tipi
+## Fase 3 — Dove compaiono: l'app dell'estensione e i tipi ◐
 
-- ☐ **App virtuale** per ogni estensione con contenuti propri: tile nella riga delle app con la sua `icon` (o il
+- ☑ **App virtuale** per ogni estensione con contenuti propri: tile nella riga delle app con la sua `icon` (o il
   nome), le sue righe sotto, nell'ordine dei cataloghi (`Addons.kt`, `Titles.kt`, `WatchRow.kt`).
-- ☐ **Riconoscere un catalogo**: cataloghi di soli id altrui (`tt…`) e nessuno `stream` per loro → nessuna app, righe
+- ☑ **Riconoscere un catalogo**: cataloghi di soli id altrui (`tt…`) e nessuno `stream` per loro → nessuna app, righe
   sotto Film e Serie TV come le fonti di catalogo. Nessuna app anche per le estensioni di soli stream o sola guida.
-- ☐ **Raccoglitori**: app virtuali di Zephyr per tipo di contenuto — Film, Serie TV, Canali TV (quelli che ci sono già),
+- ☑ **Raccoglitori**: app virtuali di Zephyr per tipo di contenuto — Film, Serie TV, Canali TV (quelli che ci sono già),
   e nuovi Radio, Video, Corsi, Podcast, Audiolibri, Eventi, con icone e immagini delle tile. Ognuno compare solo
   finché contiene righe.
-- ☐ **`collectors`** nel manifest e `"collector": false` sui cataloghi; **Dove compare** per estensione: Nella sua
+- ☑ **`collectors`** nel manifest e `"collector": false` sui cataloghi; **Dove compare** per estensione: Nella sua
   app (predefinito) o Nei raccoglitori; le righe che non vanno in un raccoglitore restano nella sua app.
 - ☐ Ordine delle righe in un raccoglitore: add-on e fonti di catalogo, poi le estensioni nel loro ordine.
-- ☐ **18+**: app e righe solo con 18+ sbloccato, o nel posto scelto in Contenuti per adulti (`AdultLock.kt`).
+- ☑ **18+**: app e righe solo con 18+ sbloccato, o nel posto scelto in Contenuti per adulti (`AdultLock.kt`).
 - ☐ **Tipi nuovi** (oggi Zephyr scarta `channel` e mette i tipi propri sotto Film — `Stremio.isVodType`):
   - ☐ `channel`: pagina con i video, dai più recenti; il successivo parte da solo.
   - ☐ `video`: pagina con dettagli e Guarda.
@@ -118,6 +118,13 @@ HTTP. Così righe, pagine, ricerca e player le usano senza codice nuovo.
   (`MainArt.kt`, già fatto per gli add-on).
 - ☐ **`featured`**: fino a 20 titoli con immagine larga; in cima all'app dell'estensione e come sorgente dello
   Spotlight (`Spotlight.kt`, Impostazioni → Spotlight → Sorgente: "In evidenza dalle estensioni").
+- ☑ Fatto generalizzando l'app propria degli add-on per adulti (`ownApp`): l'app dell'estensione ha i suoi canali, film e
+  serie; in modalità raccoglitori ogni riga va nel raccoglitore del suo tipo (`extensionRoutes`), le altre restano
+  nella sua app. Tile Radio, Video, Corsi, Podcast, Audiolibri, Eventi solo quando hanno righe.
+- ☑ Tipo `channel` accettato per le estensioni (per gli add-on Stremio resta escluso, come prima).
+- ☐ Ancora da fare: `"collector": false` sul singolo catalogo; i comportamenti propri dei tipi generici (ordine e
+  avvio automatico di podcast, corsi, audiolibri; radio che parte subito; conto alla rovescia degli eventi);
+  `featured` nello Spotlight. Oggi i tipi generici si mostrano nelle loro righe e si riproducono come un film.
 
 ## Fase 4 — Il player
 

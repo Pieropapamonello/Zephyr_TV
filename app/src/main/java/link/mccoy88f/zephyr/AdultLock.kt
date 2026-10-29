@@ -74,12 +74,18 @@ internal fun MainActivity.inAdultApp(url: String) = adultApp() && isAdultAddon(u
 /** Whether the add-on at [url] is an adult one with an app of its own (its channels, films and series in it). */
 internal fun MainActivity.adultOwnApp(url: String) = adultPlace() == AdultPlace.APPS && isAdultAddon(url)
 
-/** Whether the add-on at [url] shows apart from the others: in Adult content, or in an app of its own. */
-internal fun MainActivity.adultApart(url: String) = inAdultApp(url) || adultOwnApp(url)
+/**
+ * Whether the add-on at [url] has an app of its own, its channels, films and series in it whatever the others do:
+ * an adult one set so (adultOwnApp), or an extension with content of its own (extensionOwnApp).
+ */
+internal fun MainActivity.ownApp(url: String) = adultOwnApp(url) || extensionOwnApp(url)
 
-/** The adult add-on with an app of its own that [pkg] is, if it is one. */
-internal fun MainActivity.adultOwnUrl(pkg: String): String? =
-    shownAddonUrls().firstOrNull { adultOwnApp(it) && Stremio.saved(filesDir, it)?.addon?.let { a -> STREMIO + a.id } == pkg }
+/** Whether the add-on at [url] shows apart from the others: in Adult content, or in an app of its own. */
+internal fun MainActivity.apart(url: String) = inAdultApp(url) || ownApp(url)
+
+/** The add-on with an app of its own that [pkg] is, if it is one (see ownApp). */
+internal fun MainActivity.ownAppUrl(pkg: String): String? =
+    shownAddonUrls().firstOrNull { ownApp(it) && Stremio.saved(filesDir, it)?.addon?.let { a -> STREMIO + a.id } == pkg }
 
 /** Adult content's tile, when it has an app and an adult add-on shows (unlocked, or no 18+ lock). */
 internal fun MainActivity.adultTile(): List<MainActivity.App> =

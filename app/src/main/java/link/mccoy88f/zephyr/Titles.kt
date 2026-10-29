@@ -69,7 +69,7 @@ internal fun MainActivity.vodApps(): List<MainActivity.App> {
 
 /** The add-ons with film or series catalogs that get a tile of their own (films and series "apps"). */
 internal fun MainActivity.vodTileAddons(): List<Stremio.Addon> =
-    if (addonsVod() != VodPlace.APPS) emptyList() else vodAddons().filter { a -> a.vod.any { it.listed } && !adultApart(a.url) }
+    if (addonsVod() != VodPlace.APPS) emptyList() else vodAddons().filter { a -> a.vod.any { it.listed } && !apart(a.url) }
 
 /**
  * The rows of films or series under the tile [pkg]: under Films or Series, every add-on's catalogs of that type
@@ -79,14 +79,24 @@ internal fun MainActivity.vodTileAddons(): List<Stremio.Addon> =
 internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<Section> {
     val mode = addonsVod()
     val type = when (pkg) { MOVIES_PKG -> "movie"; SERIES_PKG -> "series"; else -> null }
-    val ownAdult = adultOwnUrl(pkg)
-    val adult = pkg == ADULT_PKG || ownAdult != null
+    val collector = COLLECTOR_PKGS[pkg] // Radio, Videos, Courses…: the extensions' rows of that kind
+    val ownUrl = ownAppUrl(pkg)
+    val adult = pkg == ADULT_PKG || (ownUrl != null && isAdultAddon(ownUrl))
     val addons = when {
-        ownAdult != null -> vodAddons().filter { it.url == ownAdult } // an adult add-on's own app: its films and series
+        collector != null -> vodAddons().filter { a -> a.vod.any { extensionRoutes(a.url, it.type) && collectorOf(it.type) == collector } }
+        ownUrl != null -> vodAddons().filter { it.url == ownUrl } // an add-on's own app: its films and series
         adult -> if (adultApp()) vodAddons().filter { isAdultAddon(it.url) } else return emptyList()
-        mode == VodPlace.TILES && type != null -> vodAddons().filter { !adultApart(it.url) }
+        mode == VodPlace.TILES && type != null -> vodAddons().filter { !apart(it.url) || extensionRoutes(it.url, type) }
         mode == VodPlace.APPS && pkg.startsWith(STREMIO) -> vodAddons().filter { STREMIO + it.id == pkg }
         else -> return emptyList()
+    }
+    // Which of an add-on's shelves of [shelfType] show here: in a collector, those given to it; in an extension's own
+    // app, those not given away; under Films and Series, an extension's given to them (films: its own types too).
+    fun shows(url: String, shelfType: String): Boolean = when {
+        collector != null -> extensionRoutes(url, shelfType) && collectorOf(shelfType) == collector
+        ownUrl != null -> !extensionRoutes(url, shelfType)
+        ExtensionCalls.idOf(url) != null && type != null -> !apart(url) || extensionRoutes(url, shelfType)
+        else -> true
     }
     val missing = ArrayList<String>()
     val artless = ArrayList<Stremio.Title>()
@@ -95,8 +105,9 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
     return addons.flatMap { addon ->
         if (Stremio.vodDue(filesDir, addon.url) && addon.vod.any { it.listed }) refreshShelves(addon, pkg)
         // Under Films, the add-ons' own types too ("Porn", "Anime"): they play as films.
-        Stremio.shelves(filesDir, addon).filter { type == null || (it.catalog.type == "series") == (type == "series") }.mapNotNull { shelf ->
-            val kind = getString(if (shelf.catalog.type == "series") R.string.vod_series else R.string.vod_movies)
+        Stremio.shelves(filesDir, addon).filter { type == null || (it.catalog.type == "series") == (type == "series") }
+            .filter { shows(addon.url, it.catalog.type) }.mapNotNull { shelf ->
+            val kind = kindName(shelf.catalog.type)
             val name = if (type != null || adult) "${addon.name} · ${shelf.catalog.name}" else "$kind · ${shelf.catalog.name}"
             // In the TV's language when TMDB has the title (those it hasn't been asked about yet: once it's answered);
             // else, in another add-on's row (another catalog source's too), with the main catalog's art (see withMainArt).
@@ -108,7 +119,8 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
         }
     }.plus(
         // Last, the films and series watched: under Films and Series, or Cinemeta's own tile.
-        if (!adult && (mode == VodPlace.TILES || addons.any { it.url == cinemetaUrl() })) watchedSections(type, pkg, hidden, missing) else emptyList()
+        if (!adult && collector == null && ownUrl == null && (mode == VodPlace.TILES || addons.any { it.url == cinemetaUrl() }))
+            watchedSections(type, pkg, hidden, missing) else emptyList()
     ).also {
         if (missing.isNotEmpty()) localizeLater(missing.distinct(), pkg)
         if (artless.isNotEmpty()) mainArtLater(artless, pkg)
@@ -180,7 +192,8 @@ internal fun titleCard(t: Stremio.Title, source: String?, icon: String?, watched
 
 /** The tile a title of [type] from the add-on at [source] is under: Films or Series, or the add-on's own (null: none). */
 internal fun MainActivity.titleTile(type: String, source: String?): String? = if (source != null && inAdultApp(source)) ADULT_PKG
-    else if (source != null && adultOwnApp(source)) Stremio.saved(filesDir, source)?.addon?.let { STREMIO + it.id } else when (addonsVod()) {
+    else if (source != null && extensionRoutes(source, type)) collectorOf(type).let { c -> if (c == "series") SERIES_PKG else COLLECTOR_PKGS.entries.firstOrNull { it.value == c }?.key ?: MOVIES_PKG }
+    else if (source != null && ownApp(source)) Stremio.saved(filesDir, source)?.addon?.let { STREMIO + it.id } else when (addonsVod()) {
     VodPlace.TILES -> if (type == "series") SERIES_PKG else MOVIES_PKG
     VodPlace.APPS -> source?.let { Stremio.saved(filesDir, it)?.addon }?.let { STREMIO + it.id }
     VodPlace.OFF -> null

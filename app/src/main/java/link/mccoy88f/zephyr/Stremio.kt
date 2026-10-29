@@ -219,7 +219,8 @@ internal object Stremio {
         for (i in 0 until list.length()) {
             val c = list.optJSONObject(i) ?: continue
             val type = c.optString("type")
-            if (type != "tv" && !isVodType(type)) continue
+            // An extension's "channel" is a collection of videos it plays (a YouTube channel's, an add-on's, isn't).
+            if (type != "tv" && !isVodType(type) && !(url.startsWith(EXT) && type == "channel")) continue
             val id = c.optString("id").takeIf { it.isNotEmpty() } ?: continue
             val extras = c.optJSONArray("extra")?.let { e -> (0 until e.length()).mapNotNull { e.optJSONObject(it) } }.orEmpty()
             val search = extras.any { it.optString("name") == "search" }
@@ -335,7 +336,7 @@ internal object Stremio {
         val list = saved.optJSONArray("shelves") ?: JSONArray()
         val out = (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { o ->
             val catalog = addon.vod.firstOrNull { it.type == o.optString("type") && it.id == o.optString("catalog") } ?: return@mapNotNull null
-            Shelf(catalog, titles(o))
+            Shelf(catalog, titles(o, channels = addon.url.startsWith(EXT)))
         }
         shelves = shelves + (addon.url to (f.lastModified() to out))
         return out
@@ -347,7 +348,7 @@ internal object Stremio {
             val titles = LinkedHashMap<String, Title>()
             for (page in 0 until VOD_PAGES) {
                 val extra = if (titles.isEmpty()) "" else "/skip=${titles.size}"
-                val metas = runCatching { titles(get("${addon.base}/catalog/${enc(c.type)}/${enc(c.id)}$extra.json")) }.getOrNull() ?: break
+                val metas = runCatching { titles(get("${addon.base}/catalog/${enc(c.type)}/${enc(c.id)}$extra.json"), channels = addon.url.startsWith(EXT)) }.getOrNull() ?: break
                 val before = titles.size
                 for (t in metas) titles.putIfAbsent(t.id, t)
                 if (metas.size < 50 || titles.size == before) break
@@ -376,17 +377,20 @@ internal object Stremio {
      */
     internal fun isVodType(type: String) = type.isNotBlank() && type != "tv" && type != "channel"
 
-    /** The films or series in a catalog page (or a saved shelf): those with an id, a name and a type of theirs. */
-    internal fun titles(page: JSONObject): List<Title> {
+    /**
+     * The films or series in a catalog page (or a saved shelf): those with an id, a name and a type of theirs; with
+     * [channels], an extension's collections of videos ("channel") too.
+     */
+    internal fun titles(page: JSONObject, channels: Boolean = false): List<Title> {
         val metas = page.optJSONArray("metas") ?: return emptyList()
-        return (0 until metas.length()).mapNotNull { metas.optJSONObject(it) }.mapNotNull { m -> title(m) }
+        return (0 until metas.length()).mapNotNull { metas.optJSONObject(it) }.mapNotNull { m -> title(m, channels = channels) }
     }
 
-    private fun title(m: JSONObject, fallbackType: String? = null): Title? {
+    private fun title(m: JSONObject, fallbackType: String? = null, channels: Boolean = false): Title? {
         val id = m.optString("id").takeIf { it.isNotEmpty() } ?: return null
         val name = m.optString("name").trim().takeIf { it.isNotEmpty() } ?: return null
         val type = m.optString("type").ifBlank { fallbackType ?: return null }
-        if (!isVodType(type)) return null
+        if (!isVodType(type) && !(channels && type == "channel")) return null
         val year = (text(m, "releaseInfo") ?: text(m, "year"))?.take(9)
         val genres = (m.optJSONArray("genres") ?: m.optJSONArray("genre"))?.let { g -> (0 until g.length()).map { g.optString(it) } }.orEmpty()
             .filter { it.isNotBlank() }

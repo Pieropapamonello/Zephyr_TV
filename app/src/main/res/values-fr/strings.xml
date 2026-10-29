@@ -444,6 +444,9 @@
     <string name="ext_kind_events">Événements</string>
     <string name="ext_kind_streams">Flux</string>
     <string name="ext_kind_guide">Guide TV</string>
+    <string name="ext_place">Où elle apparaît</string>
+    <string name="ext_place_own">Dans son app</string>
+    <string name="ext_place_collectors">Dans les collecteurs</string>
     <string name="setting_addons_tv">Chaînes TV</string>
     <string name="setting_addon_add">Ajouter une extension</string>
     <string name="addon_adult">Contenu pour adultes (18+)</string>
