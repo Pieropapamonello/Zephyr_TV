@@ -14,7 +14,7 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
-## Unreleased
+## 3.0.0-beta.7
 
 - Channels with their sound in a stream of its own, such as Radio 105 TV and Virgin Radio TV, stopped after a few seconds since 3.0.0-beta.4. Now they play.
 - **Virtual apps and integrations** has **Films** and **TV Series** as two settings: each can show in its own virtual app, in an app for each add-on, or nowhere. A setting made before applies to both.
