@@ -14,7 +14,7 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
-## Unreleased
+## 3.0.0-beta.5
 
 - Radio stations in M3U playlists (radio="true") show apart from the TV channels, in rows of their own. Select one to play it at once. Its logo and name stay on the screen while it plays.
 - With **Where it shows** set to the collectors, an extension's radio stations go to **Radio**.
