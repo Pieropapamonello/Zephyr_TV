@@ -352,19 +352,23 @@ private fun MainActivity.orderPage(url: String, held: String? = null, focus: Int
 private fun MainActivity.optionsPage(url: String, s: Nuvio.Scraper, focus: Int = 0, back: () -> Unit) {
     val title = s.name
     netIo.execute {
-        val fields = Nuvio.fields(filesDir, url, s).filter { it.type in setOf("toggle", "select", "text") }
+        val fields = Nuvio.fields(filesDir, url, s, pluginOptions(prefs, url, s)).filter { it.type in setOf("toggle", "select", "text", "info") }
         ui.post { if (pageShowing(title)) optionsRows(url, s, fields, focus, back) }
     }
     showPage(title, listOf(page(getString(R.string.player_loading)) {}), back = back)
 }
 
-private fun MainActivity.optionsRows(url: String, s: Nuvio.Scraper, fields: List<Nuvio.Field>, focus: Int, back: () -> Unit) {
+private fun MainActivity.optionsRows(url: String, s: Nuvio.Scraper, all: List<Nuvio.Field>, focus: Int, back: () -> Unit) {
+    // Its notes ("info") above the rows, under what the plugin is; a row for each of the others.
+    val (notes, fields) = all.partition { it.type == "info" }
     if (fields.isEmpty()) return showPage(s.name, listOf(page(getString(R.string.nuvio_options_none)) { back() }), back = back)
     fun value(f: Nuvio.Field) = pluginOptions(prefs, url, s)?.opt(f.key) ?: f.default
     fun set(f: Nuvio.Field, v: Any?) = setPluginOption(prefs, url, s, fields, f.key, v)
-    val again = { i: Int -> optionsRows(url, s, fields, i, back) }
-    val top = s.description.takeIf { it.isNotBlank() }?.let {
-        label(it, 13f).apply { alpha = 0.7f; maxLines = 4; setPadding(dp(14), 0, dp(14), dp(12)) }
+    val again = { i: Int -> optionsRows(url, s, all, i, back) }
+    val about = (listOf(s.description) + notes.map { n -> listOf(n.label, n.description).filter { it.isNotBlank() }.joinToString(": ") })
+        .filter { it.isNotBlank() }.joinToString("\n")
+    val top = about.takeIf { it.isNotEmpty() }?.let {
+        label(it, 13f).apply { alpha = 0.7f; maxLines = 10; setLineSpacing(0f, 1.15f); setPadding(dp(14), 0, dp(14), dp(12)) }
     }
     showPage(s.name, fields.mapIndexed { i, f ->
         when (f.type) {

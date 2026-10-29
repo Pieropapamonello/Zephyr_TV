@@ -80,6 +80,7 @@ class NuvioPluginsTest {
                   { label: "Two", value: "https://two.example" }], defaultValue: "https://one.example" },
                 { type: "toggle", key: "hd", label: "HD", defaultValue: true },
                 { type: "text", key: "token", label: "Token", isPassword: true, placeholder: "ui=..." },
+                { type: "info", label: "Note", description: "Read me" },
                 { type: "text", label: "no key" }];
             }
             async function getStreams() {
@@ -89,7 +90,7 @@ class NuvioPluginsTest {
             module.exports = { getStreams, onSettings };
         """
         val fields = Nuvio.fields(Nuvio.run(script, "module.exports.onSettings()")!!)
-        assertEquals(listOf("header", "select", "toggle", "text"), fields.map { it.type })
+        assertEquals(listOf("header", "select", "toggle", "text", "info"), fields.map { it.type })
         assertEquals(listOf("One" to "https://one.example", "Two" to "https://two.example"), fields[1].choices)
         assertEquals(true, fields[2].default)
         assertTrue(fields[3].secret)
@@ -98,6 +99,28 @@ class NuvioPluginsTest {
         assertEquals("https://two.example false ui=\"x\"", out.getJSONObject(0).getString("title"))
         val repo = Nuvio.repo("https://h/manifest.json", JSONObject("""{"scrapers":[{"id":"a","filename":"a.js","hasSettings":true},{"id":"b","filename":"b.js"}]}"""))
         assertEquals(listOf(true, false), repo.scrapers.map { it.options })
+    }
+
+    @Test fun aPluginKeepsItsLocalStorageAndKnowsItsId() {
+        val script = """
+            async function getStreams() {
+              var before = localStorage.getItem("token") + "|" + localStorage.length + "|" + Object.keys(localStorage).join(",");
+              localStorage.setItem("token", "new");
+              localStorage.seen = 1;
+              localStorage.removeItem("old");
+              return [{ name: "A", title: before + "|" + SCRAPER_ID + "|" + (window === globalThis) + "|" + localStorage.key(5),
+                        url: "https://cdn.example/a.m3u8" }];
+            }
+            module.exports = { getStreams };
+        """
+        var kept: String? = null
+        val out = Nuvio.run(script, "module.exports.getStreams()",
+            "globalThis.SCRAPER_ID = \"p1\"; globalThis.__store = {\"token\":\"old-t\",\"old\":\"x\"};") { kept = it }!!
+        assertEquals("old-t|2|token,old|p1|true|null", out.getJSONObject(0).getString("title"))
+        val store = JSONObject(kept!!)
+        assertEquals("new", store.getString("token"))
+        assertEquals("1", store.getString("seen"))
+        assertTrue(!store.has("old"))
     }
 
     init {

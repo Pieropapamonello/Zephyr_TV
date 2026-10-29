@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 2.2.1
+
+- Nuvio plugins can keep data from one run to the next, for example a token that expires. Zephyr TV removes this data when you remove the repository.
+- **Options available** shows the notes of the plugin at the top of the page.
+
 ## 2.2.0
 
 - New: **Options available**, under each Nuvio plugin that has options of its own. Set its switches, choices and texts there. Type a text with the remote, or paste it from your phone.

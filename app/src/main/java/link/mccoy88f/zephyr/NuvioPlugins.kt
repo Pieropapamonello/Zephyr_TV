@@ -21,8 +21,8 @@ import org.json.JSONObject
  * Nuvio's plugins: a repository is a manifest.json listing its scrapers, each a JavaScript file with one function,
  * getStreams(tmdbId, mediaType, season, episode), that finds a film's or episode's streams by itself (asking the
  * sites with fetch) and hands them back as Stremio does. Unlike an add-on there's no server to ask: the script runs
- * here, in QuickJS, a context of its own each time, with only the network (no files) and its options (see fields), a
- * memory limit and a time limit. Its fetch is ours (Http), so cookies and redirects are seen as a browser wouldn't let a page see them.
+ * here, in QuickJS, a context of its own each time, with only the network (no files), its options (see fields) and
+ * a localStorage of its own (kept on disk, see storageFile), a memory limit and a time limit. Its fetch is ours (Http), so cookies and redirects are seen as a browser wouldn't let a page see them.
  */
 internal object Nuvio {
     /**
@@ -35,7 +35,8 @@ internal object Nuvio {
 
     /**
      * One of a plugin's options, as its onSettings() describes it: [type] "toggle" (yes or no), "select" (one of
-     * [choices], label to value), "text" ([secret]: a password, a cookie), or "header" (a title, no value).
+     * [choices], label to value), "text" ([secret]: a password, a cookie), "header" (a title) or "info" (a note), these
+     * two with no value.
      */
     internal class Field(val type: String, val key: String, val label: String, val description: String, val placeholder: String,
                          val secret: Boolean, val choices: List<Pair<String, Any>>, val default: Any?)
@@ -104,6 +105,31 @@ internal object Nuvio {
     private fun key(url: String) = MessageDigest.getInstance("SHA-1").digest(url.toByteArray()).joinToString("") { "%02x".format(it) }.take(16)
     private fun folder(dir: File, url: String) = File(dir, "nuvio/${key(url)}")
     private fun scriptFile(dir: File, url: String, s: Scraper) = File(folder(dir, url), s.id.replace(Regex("[^A-Za-z0-9_.-]"), "_") + ".js")
+
+    /** [s]'s localStorage, what it keeps from one run to the next (a token that expires): gone with its repository. */
+    private fun storageFile(dir: File, url: String, s: Scraper) = File(folder(dir, url), s.id.replace(Regex("[^A-Za-z0-9_.-]"), "_") + ".storage.json")
+
+    /**
+     * What every run of [s] is given: its id, its [options] (SCRAPER_SETTINGS) and its localStorage as last kept, with
+     * [tmdbKey] for the plugins that ask TMDB.
+     */
+    private fun globals(dir: File, url: String, s: Scraper, options: JSONObject?, tmdbKey: String? = null): String {
+        val stored = runCatching { JSONObject(storageFile(dir, url, s).readText()) }.getOrNull() ?: JSONObject()
+        return "globalThis.SCRAPER_ID = ${JSONObject.quote(s.id)}; globalThis.TMDB_API_KEY = ${tmdbKey?.let { JSONObject.quote(it) } ?: "undefined"}; " +
+            "globalThis.SCRAPER_SETTINGS = ${options ?: "{}"}; globalThis.__store = $stored;"
+    }
+
+    /** Keeps [s]'s localStorage as a run left it ([json]), when it changed. */
+    private fun keep(dir: File, url: String, s: Scraper, json: String) {
+        val f = storageFile(dir, url, s)
+        val now = runCatching { JSONObject(json) }.getOrNull() ?: return
+        if (if (f.exists()) runCatching { f.readText() }.getOrNull() == now.toString() else now.length() == 0) return
+        runCatching {
+            val part = File(f.path + ".part")
+            part.writeText(now.toString())
+            part.renameTo(f)
+        }
+    }
 
     internal fun repo(url: String, m: JSONObject): Repo {
         fun strings(a: JSONArray?) = a?.let { (0 until it.length()).map { i -> it.optString(i) }.filter { s -> s.isNotBlank() } }
@@ -192,15 +218,16 @@ internal object Nuvio {
     private val fieldsRead = ConcurrentHashMap<String, List<Field>>()
 
     /**
-     * [s]'s options, as its onSettings() lists them; empty when it has none or it fails. The values chosen reach the
-     * plugin as globalThis.SCRAPER_SETTINGS (see streams). Runs the script: off the UI thread.
+     * [s]'s options, as its onSettings() lists them (given the values chosen, [options]); empty when it has none or it
+     * fails. The values chosen reach the plugin as globalThis.SCRAPER_SETTINGS (see streams). Runs the script: off the
+     * UI thread.
      */
-    fun fields(dir: File, url: String, s: Scraper): List<Field> {
+    fun fields(dir: File, url: String, s: Scraper, options: JSONObject? = null): List<Field> {
         val key = "$url#${s.id}@${s.version}"
         fieldsRead[key]?.let { return it }
         val script = runCatching { scriptFile(dir, url, s).readText() }.getOrNull() ?: return emptyList()
         val call = "(typeof onSettings === \"function\" ? onSettings : module.exports.onSettings)()"
-        val list = runCatching { run(script, call) }.onFailure { warn("Nuvio plugin options failed: ${s.name} ($it)") }.getOrNull()
+        val list = runCatching { run(script, call, globals(dir, url, s, options)) { keep(dir, url, s, it) } }.onFailure { warn("Nuvio plugin options failed: ${s.name} ($it)") }.getOrNull()
             ?: return emptyList()
         return fields(list).also { if (it.isNotEmpty()) fieldsRead[key] = it }
     }
@@ -208,7 +235,7 @@ internal object Nuvio {
     internal fun fields(list: JSONArray): List<Field> = (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { f ->
         val type = f.optString("type").lowercase()
         val key = f.optString("key")
-        if (type != "header" && key.isBlank()) return@mapNotNull null
+        if (type != "header" && type != "info" && key.isBlank()) return@mapNotNull null
         val options = f.optJSONArray("options") ?: JSONArray()
         val choices = (0 until options.length()).mapNotNull { i ->
             options.optJSONObject(i)?.let { o -> o.opt("value")?.let { v -> o.optString("label").ifBlank { v.toString() } to v } }
@@ -237,8 +264,7 @@ internal object Nuvio {
         val media = if (type == "movie") "movie" else "tv"
         val call = "(typeof getStreams === \"function\" ? getStreams : module.exports.getStreams)(" +
             "${JSONObject.quote(base)}, ${JSONObject.quote(media)}, $season, $episode)"
-        val globals = "globalThis.TMDB_API_KEY = ${tmdbKey?.let { JSONObject.quote(it) } ?: "undefined"}; globalThis.SCRAPER_SETTINGS = ${options ?: "{}"};"
-        val found = runCatching { run(script, call, globals) }.onFailure { warn("Nuvio plugin failed: ${s.name} ($it)") }.getOrNull()
+        val found = runCatching { run(script, call, globals(dir, url, s, options, tmdbKey)) { keep(dir, url, s, it) } }.onFailure { warn("Nuvio plugin failed: ${s.name} ($it)") }.getOrNull()
             ?: return emptyList()
         return Stremio.streams(asStremio(found), vod = true).map { Stremio.Stream(it.url, it.title, it.headers, it.group, name) }
     }
@@ -316,9 +342,10 @@ internal object Nuvio {
     /**
      * Runs [script] in a QuickJS context of its own, with [globals] and our fetch ([fetch], Http by default), then
      * [call], a promise of the streams; their list, or null when it ran out of time. Throws when the script fails.
+     * [stored] gets its localStorage (globalThis.__store, as JSON) once [call] is done.
      */
     internal fun run(script: String, call: String, globals: String = "", timeoutMs: Long = RUN_MS,
-                     fetch: (JSONObject) -> Fetched = ::httpFetch): JSONArray? = runBlocking {
+                     fetch: (JSONObject) -> Fetched = ::httpFetch, stored: ((String) -> Unit)? = null): JSONArray? = runBlocking {
         withTimeoutOrNull(timeoutMs) {
             withContext(Dispatchers.IO) {
                 quickJs {
@@ -352,6 +379,7 @@ internal object Nuvio {
                     }
                     evaluate<Any?>(script + END, "plugin.js", false)
                     val out = evaluate<String?>("__ascii(JSON.stringify((await $call) || []))", "call.js", false)
+                    if (stored != null) evaluate<String?>("__ascii(JSON.stringify(globalThis.__store))", "store.js", false)?.let(stored)
                     out?.let { JSONArray(it) }
                 }
             }
@@ -441,6 +469,34 @@ internal object Nuvio {
             return out;
           }
           g.global = g; // Node's name for it, which some plugins use
+          g.window = g; // and the browser's
+          g.self = g;
+          // localStorage, a browser's, the plugin's own: strings by key in __store (set by the run, read back after it).
+          g.__store = {};
+          (function () {
+            var own = function (k) { return Object.prototype.hasOwnProperty.call(g.__store, k); };
+            var api = {
+              getItem: function (k) { k = String(k); return own(k) ? g.__store[k] : null; },
+              setItem: function (k, v) { g.__store[String(k)] = String(v); },
+              removeItem: function (k) { delete g.__store[String(k)]; },
+              clear: function () { g.__store = {}; },
+              key: function (i) { var ks = Object.keys(g.__store); return i >= 0 && i < ks.length ? ks[i] : null; }
+            };
+            g.localStorage = new Proxy(api, {
+              get: function (t, p) {
+                if (p === "length") return Object.keys(g.__store).length;
+                if (Object.prototype.hasOwnProperty.call(api, p)) return api[p];
+                return typeof p === "string" && own(p) ? g.__store[p] : undefined;
+              },
+              set: function (t, p, v) { g.__store[String(p)] = String(v); return true; },
+              deleteProperty: function (t, p) { delete g.__store[String(p)]; return true; },
+              has: function (t, p) { return p === "length" || Object.prototype.hasOwnProperty.call(api, p) || own(p); },
+              ownKeys: function () { return Object.keys(g.__store); },
+              getOwnPropertyDescriptor: function (t, p) {
+                return own(p) ? { value: g.__store[p], writable: true, enumerable: true, configurable: true } : undefined;
+              }
+            });
+          })();
           g.module = { exports: {} };
           g.exports = g.module.exports;
           g.__modules = {};
