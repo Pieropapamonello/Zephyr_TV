@@ -225,7 +225,7 @@ class MainActivity : Activity() {
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         Problems.init(File(filesDir, "problems.log"))
-        Nuvio.useAssets(applicationContext) // the modules Nuvio's plugins require()
+        Js.useAssets(applicationContext) // the modules plugins and extensions require()
         setContentView(R.layout.activity_main)
         appRow = findViewById(R.id.appRow)
         watchRow = findViewById(R.id.watchRow)

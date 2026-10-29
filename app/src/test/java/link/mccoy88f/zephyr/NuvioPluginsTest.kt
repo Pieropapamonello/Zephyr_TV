@@ -8,11 +8,11 @@ import org.junit.Test
 
 class NuvioPluginsTest {
     /** A fetch that answers from a table, by address: what the plugins under test ask, without the network. */
-    private fun fake(pages: Map<String, String>, seen: MutableList<JSONObject> = ArrayList()): (JSONObject) -> Nuvio.Fetched = { req ->
+    private fun fake(pages: Map<String, String>, seen: MutableList<JSONObject> = ArrayList()): (JSONObject) -> Js.Fetched = { req ->
         seen += req
         val body = pages[req.getString("url")]
-        if (body == null) Nuvio.Fetched(404, "Not Found", req.getString("url"), emptyList(), ByteArray(0), null)
-        else Nuvio.Fetched(200, "OK", req.getString("url"), listOf("set-cookie" to "a=1", "set-cookie" to "b=2"), body.toByteArray(), null)
+        if (body == null) Js.Fetched(404, "Not Found", req.getString("url"), emptyList(), ByteArray(0), null)
+        else Js.Fetched(200, "OK", req.getString("url"), listOf("set-cookie" to "a=1", "set-cookie" to "b=2"), body.toByteArray(), null)
     }
 
     @Test fun runsAPluginWithFetchTimersAndBase64() {
@@ -125,7 +125,7 @@ class NuvioPluginsTest {
 
     init {
         // The modules as the app has them (assets/nuvio), read from the source tree.
-        Nuvio.modules = { file -> java.io.File("src/main/assets/nuvio/$file").takeIf { it.exists() }?.readText() }
+        Js.modules = { file -> java.io.File("src/main/assets/nuvio/$file").takeIf { it.exists() }?.readText() }
     }
 
     @Test fun urlsModulesAndExports() {
@@ -162,7 +162,7 @@ class NuvioPluginsTest {
         val dir = java.nio.file.Files.createTempDirectory("nuvio").toFile()
         val repo = Nuvio.update(dir, url)!!
         val only = System.getenv("NUVIO_ONLY")?.split(',')?.toSet()
-        if (only != null) Nuvio.console = { println("  js: $it") }
+        if (only != null) Js.console = { println("  js: $it") }
         val pool = java.util.concurrent.Executors.newFixedThreadPool(8)
         val jobs = repo.scrapers.filter { only == null || it.id in only }.map { s ->
             s to pool.submit(java.util.concurrent.Callable {

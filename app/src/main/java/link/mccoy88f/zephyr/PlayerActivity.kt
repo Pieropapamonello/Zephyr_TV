@@ -190,7 +190,7 @@ class PlayerActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Nuvio.useAssets(applicationContext) // the modules Nuvio's plugins require(), in this process too
+        Js.useAssets(applicationContext) // the modules plugins and extensions require(), in this process too
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         vod = intent.getStringExtra(MODE) == MODE_VOD
         base = intent.getStringExtra(BASE) ?: if (vod) "" else return finish()

@@ -8,16 +8,16 @@ Legenda: ☐ da fare · ◐ in parte già in Zephyr TV · ☑ fatto
 
 ---
 
-## Fase 0 — Il motore condiviso
+## Fase 0 — Il motore condiviso ☑
 
 Le estensioni girano nello stesso QuickJS dei plugin Nuvio. Oggi il motore è dentro `NuvioPlugins.kt`.
 
-- ☐ Spostare il motore in un file suo (`JsRuntime.kt`): prelude, `fetch`, moduli (`cheerio`, `crypto-js`),
+- ☑ Spostare il motore in un file suo (`JsRuntime.kt`): prelude, `fetch`, moduli (`cheerio`, `crypto-js`),
   `localStorage`, timer, `console`, conversione ASCII delle stringhe. I plugin Nuvio lo usano come oggi.
-- ☐ Limiti per chiamata configurabili: tempo (25 s per `stream`, 60 s per `catalog` e `guide`), memoria (64 MB),
+- ☑ Limiti per chiamata configurabili: tempo (25 s per `stream`, 60 s per `catalog` e `guide`), memoria (64 MB),
   tempo per richiesta (15 s).
-- ☐ Ponte per i servizi asincroni di `zephyr.*` (funzioni Kotlin chiamate da JS, con risultato JSON).
-- ☐ `localStorage` per estensione con limite di 1 MB (oggi senza limite).
+- ☑ Ponte per i servizi asincroni di `zephyr.*` (funzioni Kotlin chiamate da JS, con risultato JSON).
+- ☑ `localStorage` con limite di 1 MB (`QuotaExceededError` oltre).
 - ◐ Già presenti: `fetch`, `Headers`, `URL`, `URLSearchParams`, `TextEncoder/Decoder`, `Buffer`, `atob/btoa`, timer,
   `localStorage`, `window`/`self`, `require` di cheerio e crypto-js.
 
