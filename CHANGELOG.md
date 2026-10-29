@@ -14,6 +14,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## Unreleased
+
+- A film or episode with Dolby or DTS sound no longer stops after a skip forward or back. On some TVs, such sound didn't start again after a skip, so the picture stayed still. Now the player starts the stream again at the new position.
+
 ## 3.2.0
 
 - The page of a film or an episode looks for the streams when it opens. **Watch** shows how many streams there are, and the player starts with them. When no source has streams, the page says so before the player opens.

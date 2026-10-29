@@ -490,10 +490,26 @@ class PlayerActivity : Activity() {
      * A film's or episode's line in the banner: its name (an episode's), the time it's at and how long it is, with the
      * bar; OK there shows what it's about.
      */
+    /**
+     * Where a seek goes when the stream's sound is Dolby or DTS (see passthrough): -1 for none. Such a sound goes to
+     * the TV as it is, and on some TVs it never starts again after a seek's flush (its clock stays still, and so does
+     * the picture): the stream is started again there instead, once the keys stop.
+     */
+    private var hardSeekTo = -1L
+    private val hardSeek = Runnable {
+        val p = player ?: return@Runnable
+        val to = hardSeekTo.also { hardSeekTo = -1L }.takeIf { it >= 0 } ?: return@Runnable
+        p.stop()
+        p.seekTo(to)
+        p.prepare()
+    }
+
+    private fun passthrough(p: ExoPlayer) = p.audioFormat?.sampleMimeType in PASSTHROUGH
+
     private fun fillTime(c: Channel) {
         val p = player?.takeIf { channels.indexOf(c) == at }
         val duration = p?.duration?.takeIf { it > 0 && it != C.TIME_UNSET }
-        val pos = p?.currentPosition ?: 0
+        val pos = p?.let { if (hardSeekTo >= 0) hardSeekTo else it.currentPosition } ?: 0
         onNow.text = listOfNotNull(c.now, duration?.let { "${clock(pos)} / ${clock(it)}" }).joinToString("  ·  ")
         more.text = descs.getOrNull(channels.indexOf(c)).orEmpty()
         onNow.visibility = if (onNow.text.isNullOrEmpty()) View.GONE else View.VISIBLE
@@ -511,8 +527,13 @@ class PlayerActivity : Activity() {
         val p = player ?: return
         val by = when { repeat > 20 -> 60_000L; repeat > 5 -> 30_000L; else -> 10_000L }
         val duration = p.duration.takeIf { it > 0 && it != C.TIME_UNSET }
-        val to = (p.currentPosition + step * by).coerceIn(0, duration?.minus(1000) ?: Long.MAX_VALUE)
-        p.seekTo(to)
+        val from = if (hardSeekTo >= 0) hardSeekTo else p.currentPosition
+        val to = (from + step * by).coerceIn(0, duration?.minus(1000) ?: Long.MAX_VALUE)
+        if (passthrough(p)) {
+            hardSeekTo = to
+            ui.removeCallbacks(hardSeek)
+            ui.postDelayed(hardSeek, HARD_SEEK_MS)
+        } else p.seekTo(to)
         ui.removeCallbacks(stuck)
         if (banner.visibility != View.VISIBLE) seeking = true
         showBanner(at)
@@ -1645,6 +1666,8 @@ class PlayerActivity : Activity() {
 
     private fun release() {
         ui.removeCallbacks(stuck)
+        ui.removeCallbacks(hardSeek)
+        hardSeekTo = -1L
         player?.release()
         player = null
         soundOnly = false // the next stream (or channel) says its own
@@ -1742,6 +1765,9 @@ class PlayerActivity : Activity() {
         private const val CHOICES_FILE = "player" // not K.FILE: the home screen's process writes that one whole
         private const val TEXT_LANG = "text_lang" // "" for off; none for the stream's own choice
         private const val BANNER_MS = 5000L
+        private const val HARD_SEEK_MS = 400L // a Dolby or DTS stream's seek, once the keys stop (see hardSeek)
+        private val PASSTHROUGH = setOf(MimeTypes.AUDIO_AC3, MimeTypes.AUDIO_E_AC3, MimeTypes.AUDIO_E_AC3_JOC, MimeTypes.AUDIO_AC4,
+            MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_HD, MimeTypes.AUDIO_DTS_EXPRESS, MimeTypes.AUDIO_DTS_X, MimeTypes.AUDIO_TRUEHD)
         private const val BUTTONS_MS = 10_000L // the banner stays up this long after a key on its buttons
         private const val ZAP_MS = 700L // the keys rest this long before the channel is tuned
         private const val STUCK_MS = 15_000L // buffering longer than this: the next stream
