@@ -28,7 +28,8 @@ internal object Nuvio {
      * two with no value.
      */
     internal class Field(val type: String, val key: String, val label: String, val description: String, val placeholder: String,
-                         val secret: Boolean, val choices: List<Pair<String, Any>>, val default: Any?)
+                         val secret: Boolean, val choices: List<Pair<String, Any>>, val default: Any?,
+                         val item: List<Field> = emptyList(), val itemLabel: String = "") // a "list": one item's fields, the key naming it
 
     /** A repository: its manifest's address, name, version and author, and its plugins. */
     internal class Repo(val url: String, val name: String, val version: String, val author: String, val description: String,
@@ -220,13 +221,16 @@ internal object Nuvio {
         val type = f.optString("type").lowercase()
         val key = f.optString("key")
         if (type != "header" && type != "info" && key.isBlank()) return@mapNotNull null
+        // A "list" (Zephyr TV's extensions): its items' fields, no list among them.
+        val item = if (type == "list") fields(f.optJSONArray("item") ?: JSONArray()).filter { it.type != "list" } else emptyList()
+        if (type == "list" && item.none { it.type in setOf("text", "select", "toggle") }) return@mapNotNull null
         val options = f.optJSONArray("options") ?: JSONArray()
         val choices = (0 until options.length()).mapNotNull { i ->
             options.optJSONObject(i)?.let { o -> o.opt("value")?.let { v -> o.optString("label").ifBlank { v.toString() } to v } }
                 ?: options.opt(i)?.takeIf { it !is JSONObject && it != JSONObject.NULL }?.let { it.toString() to it }
         }
         Field(type, key, f.optString("label").ifBlank { key }, f.optString("description"), f.optString("placeholder"),
-            f.optBoolean("isPassword"), choices, f.opt("defaultValue")?.takeIf { it != JSONObject.NULL })
+            f.optBoolean("isPassword"), choices, f.opt("defaultValue")?.takeIf { it != JSONObject.NULL }, item, f.optString("itemLabel"))
     }
 
     /**

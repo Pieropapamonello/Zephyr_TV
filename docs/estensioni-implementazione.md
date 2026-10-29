@@ -176,16 +176,19 @@ Oggi `Epg.kt` ha un solo indirizzo XMLTV, abbinato per nome.
   `channel(nome, id)`, `forget(nome)`; id dei canali stabili.
 - ☐ Le playlist appartengono all'estensione: si cancellano con lei.
 
-## Fase 8 — Le impostazioni delle estensioni
+## Fase 8 — Le impostazioni delle estensioni ☑
 
-- ◐ Riusare le pagine delle opzioni dei plugin Nuvio (`Plugins.kt`: `toggle`, `select`, `text`, `info`, dal telefono).
-- ☐ **Tipo `list`**: elenco degli elementi (nominati con `itemLabel`), Aggiungi, e per ognuno Modifica (i campi di
+- ☑ Riusare le pagine delle opzioni dei plugin Nuvio (`Plugins.kt`: `toggle`, `select`, `text`, `info`, dal telefono).
+- ☑ **Tipo `list`**: elenco degli elementi (nominati con `itemLabel`), Aggiungi, e per ognuno Modifica (i campi di
   `item`), Sposta su/giù, Rimuovi; valori come array di oggetti.
-- ☐ **Dal telefono**: un modulo con tutti i campi di un elemento in una volta (per esempio server, utente e password
+- ☑ **Dal telefono**: un modulo con tutti i campi di un elemento in una volta (per esempio server, utente e password
   Xtream), non solo un testo alla volta.
-- ☐ `configurationRequired`: dopo l'installazione si aprono le opzioni.
-- ☐ Alla modifica: `manifest()`, `guide()`, righe ricaricate.
+- ☑ `configurationRequired`: dopo l'installazione si aprono le opzioni.
+- ☑ Alla modifica: `manifest()`, `guide()`, righe ricaricate.
 - ☐ Etichette da `locales/`.
+- ☑ Pagine comuni in `OptionPages.kt` (`formPage`), usate da plugin ed estensioni; valori in `ext_options` (nel
+  backup), passati come `args.settings` e `SCRAPER_SETTINGS`.
+- ☐ Etichette da `locales/` (oggi quelle di `settings()`), `guide()` riletta (fase 6).
 
 ## Fase 9 — Documentazione e test
 

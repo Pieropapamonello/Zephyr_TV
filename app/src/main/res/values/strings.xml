@@ -446,6 +446,9 @@
     <string name="ext_place">Where it shows</string>
     <string name="ext_place_own">In its app</string>
     <string name="ext_place_collectors">In the collectors</string>
+    <string name="list_add">Add</string>
+    <string name="list_from_phone">Enter from your phone…</string>
+    <string name="ext_options">Options</string>
     <string name="setting_addons_tv">TV Channels</string>
     <string name="setting_addon_add">Add an add-on</string>
     <string name="addon_adult">Adult content (18+)</string>

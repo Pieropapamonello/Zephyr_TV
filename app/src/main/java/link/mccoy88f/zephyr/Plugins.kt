@@ -4,7 +4,6 @@ import android.content.SharedPreferences
 import android.widget.Toast
 import java.io.File
 import org.json.JSONObject
-import link.mccoy88f.zephyr.MainActivity.Companion.CHOSEN
 import link.mccoy88f.zephyr.MainActivity.Companion.SUBMENU
 
 // Nuvio's plugins in Zephyr TV: the repositories added, which of their plugins are on, which repositories are 18+,
@@ -368,75 +367,10 @@ private fun MainActivity.optionsPage(url: String, s: Nuvio.Scraper, focus: Int =
 }
 
 private fun MainActivity.optionsRows(url: String, s: Nuvio.Scraper, all: List<Nuvio.Field>, focus: Int, back: () -> Unit) {
-    // Its notes ("info") above the rows, under what the plugin is; a row for each of the others.
-    val (notes, fields) = all.partition { it.type == "info" }
-    if (fields.isEmpty()) return showPage(s.name, listOf(page(getString(R.string.nuvio_options_none)) { back() }), back = back)
-    fun value(f: Nuvio.Field) = pluginOptions(prefs, url, s)?.opt(f.key) ?: f.default
-    fun set(f: Nuvio.Field, v: Any?) = setPluginOption(prefs, url, s, fields, f.key, v)
-    val again = { i: Int -> optionsRows(url, s, all, i, back) }
-    val about = (listOf(s.description) + notes.map { n -> listOf(n.label, n.description).filter { it.isNotBlank() }.joinToString(": ") })
-        .filter { it.isNotBlank() }.joinToString("\n")
-    val top = about.takeIf { it.isNotEmpty() }?.let {
-        label(it, 13f).apply { alpha = 0.7f; maxLines = 10; setLineSpacing(0f, 1.15f); setPadding(dp(14), 0, dp(14), dp(12)) }
-    }
-    showPage(s.name, fields.mapIndexed { i, f ->
-        when (f.type) {
-            "toggle" -> {
-                val on = value(f) == true || value(f)?.toString() == "true"
-                page(f.label, toggle(on)) { set(f, !on); again(i) }
-            }
-            "select" -> {
-                val now = value(f)?.toString()
-                page(f.label, f.choices.firstOrNull { it.second.toString() == now }?.first ?: SUBMENU) {
-                    pickOption(f, now, { v -> set(f, v); again(i) }) { again(i) }
-                }
-            }
-            else -> {
-                val text = value(f)?.toString().orEmpty()
-                page(f.label, if (text.isEmpty()) SUBMENU else if (f.secret) "••••••" else text) {
-                    typeOption(f, text, { v -> set(f, v.ifEmpty { null }) }) { again(i) }
-                }
-            }
-        }
-    }, focus, top = top, back = back)
-}
-
-/** One of [f]'s choices, the current ([now]) marked; [chosen] gets the value of the one picked. */
-private fun MainActivity.pickOption(f: Nuvio.Field, now: String?, chosen: (Any) -> Unit, back: () -> Unit) {
-    val top = f.description.takeIf { it.isNotBlank() }?.let {
-        label(it, 13f).apply { alpha = 0.7f; maxLines = 4; setPadding(dp(14), 0, dp(14), dp(12)) }
-    }
-    val at = f.choices.indexOfFirst { it.second.toString() == now }
-    showPage(f.label, f.choices.map { (name, v) -> page(name, if (v.toString() == now) CHOSEN else "") { chosen(v) } },
-        at.coerceAtLeast(0), top = top, back = back)
-}
-
-/** [f]'s text typed with the remote or pasted on a phone; [save] gets it ("" clears it), then [back]. */
-private fun MainActivity.typeOption(f: Nuvio.Field, text: String, save: (String) -> Unit, back: () -> Unit) {
-    val intro = f.description.ifBlank { null }
-    textPage(f.label, text, f.placeholder.ifBlank { f.label }, intro, Typing.KEY, back = back) { typed ->
-        listOf(
-            page(getString(R.string.setting_tmdb_key_phone)) { optionFromPhone(f, save, back) },
-            page(getString(R.string.dialog_save)) { save(typed()); back() },
-            page(getString(R.string.dialog_clear)) { save(""); back() },
-        )
-    }
-}
-
-/** [f]'s text pasted on a phone (a cookie, a token): saved as it arrives. */
-private fun MainActivity.optionFromPhone(f: Nuvio.Field, save: (String) -> Unit, back: () -> Unit) {
-    val status = label(getString(R.string.nuvio_option_waiting), 14f)
-    val texts = PhoneTexts(f.label, f.description.ifBlank { getString(R.string.nuvio_option_phone_intro) }, getString(R.string.phone_send),
-        getString(R.string.phone_sending), getString(R.string.phone_unreachable), phoneFooter())
-    showPhoneLink(f.label, PhoneTask(PhonePages.text(texts, f.placeholder.ifBlank { f.label }), 16384) { file ->
-        val text = file.readText().trim()
-        if (text.isEmpty()) return@PhoneTask 400 to getString(R.string.nuvio_option_empty)
-        ui.post {
-            save(text)
-            status.text = getString(R.string.nuvio_option_saved)
-        }
-        200 to getString(R.string.nuvio_option_saved)
-    }, status, back = back)
+    if (all.none { it.type in setOf("toggle", "select", "text") }) return showPage(s.name, listOf(page(getString(R.string.nuvio_options_none)) { back() }), back = back)
+    val fields = all.filter { it.type != "info" }
+    formPage(s.name, s.description, all, focus, { f -> pluginOptions(prefs, url, s)?.opt(f.key) ?: f.default },
+        { f, v -> setPluginOption(prefs, url, s, fields, f.key, v) }, { i -> optionsRows(url, s, all, i, back) }, back)
 }
 
 /** Adds the repository at [input] once its manifest answers with plugins, telling how it went. */

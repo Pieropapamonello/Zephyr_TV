@@ -38,7 +38,7 @@ internal object ExtensionCalls {
         val parts = path.removeSuffix(".json").split('/')
         val resource = parts.getOrNull(0).orEmpty()
         if (resource !in listOf("catalog", "meta", "stream") || resource !in e.resources || parts.size < 3) throw IOException("$id: no $resource")
-        val args = request(parts[1], parts[2], parts.getOrNull(3))
+        val args = request(parts[1], parts[2], parts.getOrNull(3)).put("settings", settings(context, e))
         val out = call(context, e, "module.exports.$resource($args)", if (resource == "catalog") LONG_MS else CALL_MS)
         return out?.let { runCatching { JSONObject(it) }.getOrNull() } ?: JSONObject()
     }
@@ -61,7 +61,7 @@ internal object ExtensionCalls {
     private fun manifest(context: Context, e: Extensions.Extension): JSONObject {
         val m = JSONObject(e.manifest.toString())
         val catalogs = runCatching {
-            call(context, e, "(typeof module.exports.manifest === \"function\" ? module.exports.manifest({}) : null)", LONG_MS)
+            call(context, e, "(typeof module.exports.manifest === \"function\" ? module.exports.manifest(${withSettings(context, e)}) : null)", LONG_MS)
         }.onFailure { warn("Extension manifest() failed: ${e.name} ($it)") }.getOrNull()
             ?.let { runCatching { JSONObject(it).optJSONArray("catalogs") }.getOrNull() }
         if (catalogs != null) m.put("catalogs", catalogs)
@@ -69,10 +69,24 @@ internal object ExtensionCalls {
         return m
     }
 
-    /** The settings chosen for [e] (its options page, see phase 8 of the plan): none yet. */
-    private fun settings(context: Context, e: Extensions.Extension): JSONObject = JSONObject()
+    /** The settings chosen for [e] on its options page (Prefs EXT_OPTIONS); none chosen yet: empty. */
+    internal fun settings(context: Context, e: Extensions.Extension): JSONObject {
+        val p = context.getSharedPreferences(K.FILE, Context.MODE_PRIVATE)
+        return runCatching { JSONObject(p.getString(K.EXT_OPTIONS, null) ?: "{}").optJSONObject(e.id) }.getOrNull() ?: JSONObject()
+    }
+
+    /** [e]'s settings fields, as its settings() lists them; empty when it has none or it fails. Off the UI thread. */
+    fun fields(context: Context, e: Extensions.Extension): List<Nuvio.Field> {
+        if (!e.settings) return emptyList()
+        val out = runCatching { call(context, e, "(typeof module.exports.settings === \"function\" ? module.exports.settings(${withSettings(context, e)}) : [])", CALL_MS) }
+            .onFailure { warn("Extension settings() failed: ${e.name} ($it)") }.getOrNull() ?: return emptyList()
+        return runCatching { Nuvio.fields(JSONArray(out)) }.getOrDefault(emptyList())
+    }
 
     private val scripts = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, String>>()
+
+    /** A handler's args with nothing but [e]'s settings: for manifest() and settings(). */
+    private fun withSettings(context: Context, e: Extensions.Extension) = JSONObject().put("settings", settings(context, e))
 
     /** [e]'s code, read once (again when its file changed: an update). */
     private fun script(e: Extensions.Extension): String {
@@ -100,13 +114,8 @@ internal object ExtensionCalls {
             globalThis.zephyr = $zephyr;
             zephyr.has = function (name) { return ${JSONArray(Extensions.FEATURES.toList())}.indexOf(name) >= 0; };
             zephyr.asset = function (path) { return __zephyr("asset", { path: path }); };
-            globalThis.__args = function (a) { a.settings = SCRAPER_SETTINGS; return a; };
         """.trimIndent()
-        // module.exports.catalog({…}) → its args get the settings too.
-        val withSettings = expr.replace(Regex("""^module\.exports\.(\w+)\((\{.*\})\)$""", RegexOption.DOT_MATCHES_ALL)) { m ->
-            "module.exports.${m.groupValues[1]}(__args(${m.groupValues[2]}))"
-        }
-        val answer = ScriptProcess.extensions(context).run(script(e), withSettings, globals, timeoutMs, wantsStore = true, dir = e.dir)
+        val answer = ScriptProcess.extensions(context).run(script(e), expr, globals, timeoutMs, wantsStore = true, dir = e.dir)
         answer.store?.let { s ->
             if (runCatching { storage.readText() }.getOrNull() != s) runCatching {
                 val part = File(storage.path + ".part")

@@ -45,6 +45,7 @@ internal fun forgetExtension(p: SharedPreferences, id: String) {
         .putStringSet(K.EXT_OFF, p.getStringSet(K.EXT_OFF, emptySet())!! - id)
         .putStringSet(K.EXT_ADULT, p.getStringSet(K.EXT_ADULT, emptySet())!! - id)
         .putStringSet(K.EXT_COLLECT, p.getStringSet(K.EXT_COLLECT, emptySet())!! - id)
+        .putString(K.EXT_OPTIONS, runCatching { JSONObject(p.getString(K.EXT_OPTIONS, null) ?: "{}").apply { remove(id) } }.getOrDefault(JSONObject()).toString())
         .putString(K.EXT_SOURCES, sources.toString()).apply()
 }
 
@@ -206,6 +207,10 @@ private fun MainActivity.extensionPage(id: String, focus: Int = 0) {
         extensionChanged(id)
         extensionPage(id, 0)
     }
+    if (e.settings) {
+        val row = rows.size
+        rows += page(getString(R.string.ext_options), SUBMENU) { extensionOptions(id) { extensionPage(id, row) } }
+    }
     // One that says it's 18+ is, whatever the switch: the switch is for those that don't say.
     if (!e.adult) {
         val marked = id in prefs.getStringSet(K.EXT_ADULT, emptySet())!!
@@ -280,7 +285,8 @@ private fun MainActivity.extensionPreview(name: String, author: String, descript
                     result.onSuccess { e ->
                         Toast.makeText(this, getString(R.string.ext_installed, e.name, e.version), Toast.LENGTH_LONG).show()
                         extensionChanged(e.id)
-                        extensionPage(e.id)
+                        // One that does nothing until set up: its options at once.
+                        if (e.configurationRequired && e.settings) extensionOptions(e.id) { extensionPage(e.id) } else extensionPage(e.id)
                     }.onFailure { Toast.makeText(this, refusal(it), Toast.LENGTH_LONG).show() }
                 }
             }
@@ -435,4 +441,38 @@ internal fun MainActivity.collectorApps(): List<MainActivity.App> {
         MainActivity.App(pkg, kindName(when (kind) { "videos" -> "video"; "courses" -> "course"; "podcasts" -> "podcast"; "audiobooks" -> "audiobook"; "events" -> "event"; else -> kind }),
             android.content.Intent(), getDrawable(icon)!!)
     }
+}
+
+// ---------- options ----------
+
+/** The values chosen for the extension [id], by key; none yet: null. */
+private fun MainActivity.extensionValues(id: String): JSONObject? =
+    runCatching { JSONObject(prefs.getString(K.EXT_OPTIONS, null) ?: "{}").optJSONObject(id) }.getOrNull()
+
+/** Sets the extension [id]'s [key] to [value] (null: its default); the first one set saves the others' defaults ([fields]). */
+private fun MainActivity.setExtensionValue(id: String, fields: List<Nuvio.Field>, key: String, value: Any?) {
+    val all = runCatching { JSONObject(prefs.getString(K.EXT_OPTIONS, null) ?: "{}") }.getOrDefault(JSONObject())
+    val mine = all.optJSONObject(id) ?: JSONObject().apply { fields.forEach { f -> f.default?.let { put(f.key, it) } } }
+    if (value == null) mine.remove(key) else mine.put(key, value)
+    prefs.edit().putString(K.EXT_OPTIONS, all.put(id, mine).toString()).apply()
+}
+
+/**
+ * An extension's options, as its settings() lists them (read in its process, so the page waits for it): each change
+ * kept, and what Zephyr TV kept of the extension (its catalogs, made from them) read anew.
+ */
+internal fun MainActivity.extensionOptions(id: String, focus: Int = 0, back: () -> Unit) {
+    val e = Extensions.installed(filesDir, id) ?: return back()
+    showPage(e.name, listOf(page(getString(R.string.player_loading)) {}), back = back)
+    netIo.execute {
+        val fields = ExtensionCalls.fields(this, e)
+        ui.post { if (pageShowing(e.name)) extensionForm(e, fields, focus, back) }
+    }
+}
+
+private fun MainActivity.extensionForm(e: Extensions.Extension, fields: List<Nuvio.Field>, focus: Int, back: () -> Unit) {
+    if (fields.none { it.type in setOf("toggle", "select", "text", "list") }) return showPage(e.name, listOf(page(getString(R.string.nuvio_options_none)) { back() }), back = back)
+    formPage(e.name, "", fields, focus, { f -> extensionValues(e.id)?.opt(f.key)?.takeIf { it != JSONObject.NULL } ?: f.default },
+        { f, v -> setExtensionValue(e.id, fields, f.key, v); extensionChanged(e.id) },
+        { i -> extensionForm(e, fields, i, back) }, back)
 }

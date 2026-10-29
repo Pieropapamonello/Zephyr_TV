@@ -447,6 +447,9 @@
     <string name="ext_place">Dove compare</string>
     <string name="ext_place_own">Nella sua app</string>
     <string name="ext_place_collectors">Nei raccoglitori</string>
+    <string name="list_add">Aggiungi</string>
+    <string name="list_from_phone">Inserisci dal telefono…</string>
+    <string name="ext_options">Opzioni</string>
     <string name="setting_addons_tv">Canali TV</string>
     <string name="setting_addon_add">Aggiungi un addon</string>
     <string name="addon_adult">Contenuti V.M. - Adulti</string>

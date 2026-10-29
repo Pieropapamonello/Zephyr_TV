@@ -192,6 +192,18 @@ internal object PhonePages {
         x.oninput=()=>{b.disabled=!x.value.trim();s.textContent=''};
         b.onclick=()=>send(x.value.trim());""")
 
+    /**
+     * Several fields at once ([fields]: key, label, placeholder, secret), sent as a JSON object: an account's server,
+     * user and password typed on a phone in one go.
+     */
+    fun form(t: PhoneTexts, fields: List<Triple<String, String, Pair<String, Boolean>>>) = frame(t,
+        fields.joinToString("") { (key, label, more) ->
+            """<p style="margin:0 0 6px;opacity:1">${esc(label)}</p><textarea data-k="${esc(key)}" rows="1" placeholder="${esc(more.first)}"
+            style="min-height:2.6em${if (more.second) ";-webkit-text-security:disc" else ""}" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>"""
+        } + """<button id="b">${esc(t.send)}</button>""",
+        """const xs=[...document.querySelectorAll('textarea')];
+        b.onclick=()=>{const o={};xs.forEach(x=>{if(x.value.trim())o[x.dataset.k]=x.value.trim()});send(JSON.stringify(o));};""")
+
     /** Add a Stremio add-on, with a checkbox for adult content (18+). */
     fun addon(t: PhoneTexts, hint: String, adultLabel: String) = frame(t,
         """<textarea id="t" placeholder="${esc(hint)}" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>
