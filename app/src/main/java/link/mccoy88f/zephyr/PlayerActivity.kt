@@ -259,7 +259,7 @@ class PlayerActivity : Activity() {
         // While a channel loads: its logo and name in the middle, and under them the stream being tried, or that
         // none works.
         loadLogoBox = createLogoBox(dp(6), dp(6), 12)
-        val loadSize = if (vod) LinearLayout.LayoutParams(dp(320), dp(180)) else LinearLayout.LayoutParams(dp(180), dp(240))
+        val loadSize = LinearLayout.LayoutParams(dp(320), dp(180)) // wide, as the channels' cards and logos are
         loadName = text(28f, bold = true).apply { gravity = Gravity.CENTER; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
         loadSub = text(20f).apply { gravity = Gravity.CENTER; isSingleLine = true; ellipsize = TextUtils.TruncateAt.END; setPadding(0, dp(6), 0, 0) }
         status = text(18f).apply { gravity = Gravity.CENTER; alpha = 0.8f; setPadding(0, dp(10), 0, 0) }
@@ -1538,7 +1538,10 @@ class PlayerActivity : Activity() {
             }
             if (drm != null) setDrmConfiguration(MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID).build())
         }.build()
-        p.setMediaItem(item)
+        // HLS read so that audio timed hours off its video is moved onto it (see HlsAlign): else the player waits for it.
+        if (format == "hls") p.setMediaSource(androidx.media3.exoplayer.hls.HlsMediaSource.Factory(DefaultDataSource.Factory(this, http))
+            .setExtractorFactory(HlsAlign()).apply { drm?.let { m -> setDrmSessionManagerProvider { m } } }.createMediaSource(item))
+        else p.setMediaItem(item)
         p.playWhenReady = true
         p.prepare()
         ui.postDelayed(stuck, if (vod) VOD_STUCK_MS else STUCK_MS)

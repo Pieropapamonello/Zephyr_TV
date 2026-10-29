@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## Unreleased
+
+- Some live channels have their sound hours away from their picture, for example RTL 102.5 TV in some playlists. The player stayed on loading and then showed that no stream works. Now the player moves the sound onto the picture, and the channel plays.
+- While a channel loads, its logo shows in a wide box, as on the channel cards.
+
 ## 3.0.0-beta.3
 
 - OMG Premium TV no longer comes inside Zephyr TV. **Extensions** suggests it: select it to install it from its address. Zephyr TV installs the latest version.
