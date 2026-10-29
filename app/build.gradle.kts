@@ -13,9 +13,10 @@ android {
     defaultConfig {
         applicationId = "link.mccoy88f.zephyr"
         minSdk = 26
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         targetSdk = 36
-        versionCode = 31
-        versionName = "2.2.2"
+        versionCode = 32
+        versionName = "3.0.0-beta.1"
         // What's new: only this version's section of CHANGELOG.md ships, one entry per line, without ** marks.
         val notes = rootProject.file("CHANGELOG.md").readText().replace("\r", "")
             .substringAfter("\n## $versionName\n", "").substringBefore("\n## ")
@@ -49,6 +50,10 @@ android {
     }
 
     buildTypes {
+        // Debug builds next to the installed release (another id), so a TV keeps its Zephyr TV and its settings.
+        debug {
+            applicationIdSuffix = ".debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -87,5 +92,7 @@ dependencies {
     implementation("io.github.dokar3:quickjs-kt:$QUICKJS")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2") // what it runs on; used directly too
     testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:runner:1.6.2") // tests on a TV: the scripts' processes
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
     testImplementation("org.json:json:20250517") // Android's own org.json is only stubs in unit tests
 }

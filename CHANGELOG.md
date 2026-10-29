@@ -14,6 +14,12 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.0.0-beta.1
+
+- First beta of Zephyr TV 3. Version 3 adds **Extensions**, a new kind of add-on made for Zephyr TV. This beta prepares them. You cannot install extensions yet.
+- Nuvio plugins run in a separate process. A plugin that stops responding or crashes no longer affects the home screen or the player. Zephyr TV stops it and starts it again.
+- The documentation for extension developers is in the Zephyr TV repository, in docs/extensions.md.
+
 ## 2.2.2
 
 - The cards of the add-ons and the search results show the pictures of the main catalog, as the other catalogs do. A title looks the same everywhere.
