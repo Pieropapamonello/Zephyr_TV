@@ -236,6 +236,8 @@ internal fun MainActivity.renderSpotlightActions() {
     val streamers = shownAddonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.filter { it.streamsVod }
     val watch = if (streamers.isEmpty()) emptyList() else listOf(MainActivity.App(WATCH_ACTION, getString(R.string.title_watch),
         android.content.Intent(), watchIcon(streamers.singleOrNull())))
+    // Watch's icon is Zephyr TV's play mark (no add-on's logo): coloured as the text, so it shows on the focused button too.
+    val markOnWatch = streamers.singleOrNull()?.let { addonIcon(it) } == null
 
     for (a in watch + targetApps) {
         val btn = LinearLayout(this).apply {
@@ -252,9 +254,11 @@ internal fun MainActivity.renderSpotlightActions() {
             isFocusable = true
             isClickable = true
             tag = a.pkg
+            val mark = a.pkg == WATCH_ACTION && markOnWatch
             val ic = ImageView(this@renderSpotlightActions).apply {
                 setImageDrawable(a.icon)
                 scaleType = ImageView.ScaleType.FIT_CENTER
+                if (mark) setColorFilter(fg)
             }
             val txt = TextView(this@renderSpotlightActions).apply {
                 text = if (TmdbClient.isYouTube(a.pkg)) getString(R.string.spotlight_trailer) else a.label
@@ -267,6 +271,7 @@ internal fun MainActivity.renderSpotlightActions() {
             setOnFocusChangeListener { _, focused ->
                 btnBg.setColor(if (focused) fg else rest)
                 txt.setTextColor(if (focused) onFg else fg)
+                if (mark) ic.setColorFilter(if (focused) onFg else fg)
                 scaleX = if (focused) 1.08f else 1f
                 scaleY = if (focused) 1.08f else 1f
             }

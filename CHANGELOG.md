@@ -14,6 +14,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## Unreleased
+
+- In Spotlight, the play mark of **Watch** shows when the button has the focus. Before, it was white on the white button.
+
 ## 3.1.0
 
 - The backup keeps more settings: the TV guide address, the channel logos from iptv-org, and how the HDMI inputs show.
