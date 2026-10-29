@@ -90,6 +90,11 @@
             android:configChanges="keyboard|keyboardHidden|navigation|screenSize|smallestScreenSize|screenLayout|orientation"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen" />
 
+        <!-- Scripts from elsewhere, each kind in a process of its own: one that loops forever or crashes takes only
+             its process with it, which is killed and started again (see ScriptProcess). -->
+        <service android:name=".PluginService" android:exported="false" android:process=":plugins" />
+        <service android:name=".ExtensionService" android:exported="false" android:process=":extensions" />
+
         <!-- The update installer reports here; not exported, so only Android (via Zephyr TV's PendingIntent) can. -->
         <receiver android:name=".InstallResult" android:exported="false" />
 

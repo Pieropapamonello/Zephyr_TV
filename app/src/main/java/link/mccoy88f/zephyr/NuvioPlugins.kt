@@ -36,7 +36,18 @@ internal object Nuvio {
 
     private const val RUN_MS = 25_000L // a plugin finding its streams, at most
 
-    /** Runs a plugin's [script] in the engine (see Js.run), then [call]: what it answers, as a list (empty for none). */
+    /** Where plugins run: their own process (ScriptProcess.plugins, set by the activities); here when unset (the tests). */
+    @Volatile var process: ScriptProcess? = null
+
+    /** Runs a plugin's [script] where plugins run (see process), then [call]: what it answers, as a list. */
+    private fun exec(script: String, call: String, globals: String, stored: (String) -> Unit): JSONArray? {
+        val p = process ?: return run(script, call, globals, stored = stored)
+        val answer = p.run(script, "((await $call) || [])", globals, RUN_MS, wantsStore = true)
+        answer.store?.let(stored)
+        return answer.out?.let { JSONArray(it) }
+    }
+
+    /** Runs a plugin's [script] in the engine here (see Js.run), then [call]: what it answers, as a list (empty for none). */
     internal fun run(script: String, call: String, globals: String = "", timeoutMs: Long = RUN_MS,
                      fetch: (JSONObject) -> Js.Fetched = Js::httpFetch, stored: ((String) -> Unit)? = null): JSONArray? =
         Js.run(script, "((await $call) || [])", globals, timeoutMs, fetch, stored)?.let { JSONArray(it) }
@@ -200,7 +211,7 @@ internal object Nuvio {
         fieldsRead[key]?.let { return it }
         val script = runCatching { scriptFile(dir, url, s).readText() }.getOrNull() ?: return emptyList()
         val call = "(typeof onSettings === \"function\" ? onSettings : module.exports.onSettings)()"
-        val list = runCatching { run(script, call, globals(dir, url, s, options)) { keep(dir, url, s, it) } }.onFailure { warn("Nuvio plugin options failed: ${s.name} ($it)") }.getOrNull()
+        val list = runCatching { exec(script, call, globals(dir, url, s, options)) { keep(dir, url, s, it) } }.onFailure { warn("Nuvio plugin options failed: ${s.name} ($it)") }.getOrNull()
             ?: return emptyList()
         return fields(list).also { if (it.isNotEmpty()) fieldsRead[key] = it }
     }
@@ -237,7 +248,7 @@ internal object Nuvio {
         val media = if (type == "movie") "movie" else "tv"
         val call = "(typeof getStreams === \"function\" ? getStreams : module.exports.getStreams)(" +
             "${JSONObject.quote(base)}, ${JSONObject.quote(media)}, $season, $episode)"
-        val found = runCatching { run(script, call, globals(dir, url, s, options, tmdbKey)) { keep(dir, url, s, it) } }.onFailure { warn("Nuvio plugin failed: ${s.name} ($it)") }.getOrNull()
+        val found = runCatching { exec(script, call, globals(dir, url, s, options, tmdbKey)) { keep(dir, url, s, it) } }.onFailure { warn("Nuvio plugin failed: ${s.name} ($it)") }.getOrNull()
             ?: return emptyList()
         return Stremio.streams(asStremio(found), vod = true).map { Stremio.Stream(it.url, it.title, it.headers, it.group, name) }
     }

@@ -191,6 +191,7 @@ class PlayerActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Js.useAssets(applicationContext) // the modules plugins and extensions require(), in this process too
+        Nuvio.process = ScriptProcess.plugins(this) // plugins run in a process of their own
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         vod = intent.getStringExtra(MODE) == MODE_VOD
         base = intent.getStringExtra(BASE) ?: if (vod) "" else return finish()

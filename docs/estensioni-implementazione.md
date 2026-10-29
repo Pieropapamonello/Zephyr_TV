@@ -21,6 +21,22 @@ Le estensioni girano nello stesso QuickJS dei plugin Nuvio. Oggi il motore è de
 - ◐ Già presenti: `fetch`, `Headers`, `URL`, `URLSearchParams`, `TextEncoder/Decoder`, `Buffer`, `atob/btoa`, timer,
   `localStorage`, `window`/`self`, `require` di cheerio e crypto-js.
 
+## Fase 0b — Processi separati ◐
+
+Uno script in un ciclo infinito non si ferma dentro QuickJS (la libreria non ha un modo per interromperlo: verificato),
+e un crash nativo porta giù il suo processo. Per questo plugin ed estensioni girano fuori dal launcher e dal player.
+
+- ☑ `ScriptService`: esegue gli script in un processo suo, chiamato con un `Messenger`; testi oltre 200.000 caratteri
+  passano da un file (limite di 1 MB di Binder).
+- ☑ Due processi: `:plugins` (plugin Nuvio) e `:extensions` (estensioni). Gli add-on restano nel launcher: il loro
+  codice gira sui loro server, il launcher fa solo HTTP e JSON.
+- ☑ `ScriptProcess`, il client: attende ogni risposta al massimo il tempo della chiamata più 5 s; oltre, **uccide il
+  processo**, la chiamata vale vuota e va in Problemi recenti; la successiva lo fa ripartire. Crash del processo →
+  le chiamate in corso falliscono, la successiva lo riavvia. Dopo 2 minuti senza chiamate si scollega.
+- ☑ I plugin Nuvio girano in `:plugins`, sia dalla home sia dal player; nei test, come prima, nel processo dei test.
+- ☐ **Prova su un dispositivo**: plugin che trovano stream, un plugin che non risponde (processo ucciso e ripartito),
+  memoria dei processi. Da fare con la prima beta firmata (sul TV c'è la release firmata) o su un emulatore.
+
 ## Fase 1 — Pacchetto, installazione, aggiornamenti
 
 Nuovo file `Extensions.kt` (modello e disco) e `ExtensionPages.kt` (pagine delle impostazioni).
