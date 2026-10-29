@@ -204,7 +204,7 @@ internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<
     val radio = COLLECTOR_PKGS[pkg] == "radio"
     fun shows(url: String, type: String) = when {
         radio -> type == "radio"
-        own && pkg == ownAppPkg(url) -> !extensionRoutes(url, type)
+        own && pkg == ownAppPkg(url) -> !extensionRoutes(url, type) && !(type == "radio" && radioPlace() == RadioPlace.OFF)
         else -> type != "radio" && (ExtensionCalls.idOf(url) == null || !apart(url) || extensionRoutes(url, type))
     }
     return listings
@@ -419,14 +419,17 @@ internal fun MainActivity.placementRows(back: (Int) -> Unit): List<Triple<String
             if (next == TvPlace.IPTV) toFavourites(IPTV_PKG)
             back(0)
         },
-        // Films and series: the Films and Series virtual apps, an app per add-on, or none (their catalog: under Content).
-        page(getString(R.string.setting_addons_vod), addonsVodName(addonsVod())) {
-            val modes = VodPlace.entries
-            val next = modes[(modes.indexOf(addonsVod()) + 1) % modes.size]
-            prefs.edit().putString(K.ADDONS_VOD, next.key).apply()
-            if (next == VodPlace.TILES) toFavourites(MOVIES_PKG, SERIES_PKG)
+        // Films, then series, each: its virtual app (Films, Series), an app per add-on, or none (their catalog: under Content).
+        vodPlaceRow("movie", R.string.vod_movies, K.ADDONS_MOVIES, MOVIES_PKG) { back(1) },
+        vodPlaceRow("series", R.string.vod_series, K.ADDONS_SERIES, SERIES_PKG) { back(2) },
+        // The extensions' radio stations: the Radio virtual app, each extension's own app, or none.
+        page(getString(R.string.ext_kind_radio), radioPlaceName(radioPlace())) {
+            val modes = RadioPlace.entries
+            val next = modes[(modes.indexOf(radioPlace()) + 1) % modes.size]
+            prefs.edit().putString(K.RADIO_PLACE, next.key).apply()
+            if (next == RadioPlace.VIRTUAL) toFavourites(*COLLECTOR_PKGS.filterValues { it == "radio" }.keys.toTypedArray())
             addonsChanged()
-            back(1)
+            back(3)
         },
         // The adult add-ons: in Adult content, an app each, or with the others (apart, hidden while the 18+ lock holds).
         page(getString(R.string.setting_adult_app), adultPlaceName(adultPlace())) {
@@ -435,7 +438,7 @@ internal fun MainActivity.placementRows(back: (Int) -> Unit): List<Triple<String
             prefs.edit().putString(K.ADULT_PLACE, next.key).apply()
             if (next == AdultPlace.VIRTUAL) toFavourites(ADULT_PKG)
             addonsChanged()
-            back(2)
+            back(4)
         },
     )
 }
@@ -553,6 +556,23 @@ private fun MainActivity.addCatalog() {
 }
 
 // The same words for each kind of content: the system's TV app, a virtual app, an app per add-on, with the others, off.
+/** The row of where films ([type] "movie") or series show, saved in [key]; [tile] its virtual app. */
+private fun MainActivity.vodPlaceRow(type: String, label: Int, key: String, tile: String, back: () -> Unit) =
+    page(getString(label), addonsVodName(addonsVod(type))) {
+        val modes = VodPlace.entries
+        val next = modes[(modes.indexOf(addonsVod(type)) + 1) % modes.size]
+        prefs.edit().putString(key, next.key).apply()
+        if (next == VodPlace.TILES) toFavourites(tile)
+        addonsChanged()
+        back()
+    }
+
+internal fun MainActivity.radioPlaceName(mode: RadioPlace) = getString(when (mode) {
+    RadioPlace.VIRTUAL -> R.string.place_virtual
+    RadioPlace.APPS -> R.string.place_per_extension
+    RadioPlace.OFF -> R.string.state_off
+})
+
 internal fun MainActivity.addonsVodName(mode: VodPlace) = getString(when (mode) {
     VodPlace.TILES -> R.string.place_virtual
     VodPlace.APPS -> R.string.place_per_addon

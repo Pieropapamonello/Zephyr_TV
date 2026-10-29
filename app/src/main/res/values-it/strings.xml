@@ -447,6 +447,7 @@
     <string name="ext_place">Dove compare</string>
     <string name="ext_place_own">Nella sua app</string>
     <string name="ext_place_collectors">Nei raccoglitori</string>
+    <string name="place_per_extension">Nell\'app di ogni estensione</string>
     <string name="list_add">Aggiungi</string>
     <string name="list_from_phone">Inserisci dal telefono…</string>
     <string name="ext_options">Opzioni</string>
@@ -509,7 +510,6 @@
     <string name="vod_series">Serie TV</string>
     <string name="vod_watched_movies">Film già visti</string>
     <string name="vod_watched_series">Serie TV già viste</string>
-    <string name="setting_addons_vod">Film e Serie TV</string>
     <string name="setting_cinemeta">Catalogo contenuti</string>
     <string name="setting_stream_choice">Scelta dello stream</string>
     <string name="stream_choice_auto">Automatica</string>

@@ -154,6 +154,9 @@ Il manifest dice dove i suoi contenuti **possono** andare, oltre alla sua app:
   `collectors`; le righe che restano (tipi non elencati, cataloghi con `"collector": false`) rimangono nella sua app,
   che compare solo finché ne ha.
 - **Un catalogo** (vedi sopra) non ha app e non ha bisogno di `collectors`: le sue righe vanno in Film e Serie TV.
+- **Le radio** seguono la voce **Radio** di Zephyr TV (Virtual App e Integrazioni): nel raccoglitore Radio da tutte le
+  estensioni (predefinito), ognuna nell'app della sua estensione, o da nessuna parte, qualunque cosa dica **Dove
+  compare**.
 - In un raccoglitore, le righe di ogni estensione arrivano nell'ordine delle estensioni (Impostazioni → Estensioni),
   dopo quelle degli add-on e delle fonti di catalogo.
 

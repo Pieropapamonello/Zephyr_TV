@@ -66,6 +66,9 @@ internal object K {
     const val STREAM_LANG_ONLY = "stream_lang_only" // films' and episodes' streams in the TV's language only (see streamLanguage)
     const val STREAM_MANUAL = "stream_manual" // films' and episodes' streams picked by hand from one list (see pickStream)
     const val ADDONS_OFF = "addons_off" // add-ons switched off: kept, with their settings, but not shown nor asked
+    const val ADDONS_MOVIES = "addons_movies" // where films show (VodPlace); none: as ADDONS_VOD, set before films and series were apart
+    const val ADDONS_SERIES = "addons_series" // where series show, the same way
+    const val RADIO_PLACE = "radio_place" // where the extensions' radio stations show (RadioPlace)
     const val NUVIO_REPOS_OFF = "nuvio_repos_off" // Nuvio repositories switched off, the same way
     const val NUVIO_REPOS = "nuvio_repos" // Nuvio plugin repositories, manifest addresses one per line (see Plugins)
     const val NUVIO_ON = "nuvio_on" // plugins switched on that their manifest has off ("<manifest>#<id>")

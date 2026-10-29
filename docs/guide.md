@@ -225,7 +225,9 @@ trust.** **OMG Premium TV** is suggested in the list: OK installs it. Add your M
 | Row | Choices |
 |---|---|
 | **TV Channels** | **System TV app** (in the TV's own TV app, if it has one) · **Virtual app** (a Zephyr TV app) · **One app per add-on** |
-| **Films and TV Series** | **Virtual app** (the Films and TV Series apps) · **One app per add-on** · **Off** |
+| **Films** | **Virtual app** (the Films app) · **One app per add-on** · **Off** |
+| **TV Series** | **Virtual app** (the TV Series app) · **One app per add-on** · **Off** |
+| **Radio** | **Virtual app** (the Radio app, with every extension's radio stations) · **In each extension's app** · **Off** |
 | **Adult Content** | **Virtual app** (the Adult Content app) · **One app per add-on** · **With the others** |
 
 When you choose **Virtual app**, its app goes back into Favourites if you had taken it out. You can take it out again any time.

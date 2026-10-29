@@ -150,6 +150,8 @@ The manifest says where its content **may** go, besides its own app:
   `collectors`; the rows left (types not listed, catalogs with `"collector": false`) stay in its app, which shows only
   while it has some.
 - **A catalog** (see above) has no app and needs no `collectors`: its rows go to Films and TV Series.
+- **Radio stations** go by Zephyr TV's own **Radio** setting (Virtual apps and integrations): to the Radio collector
+  from every extension (the default), each in its extension's app, or nowhere — whatever **Where it shows** says.
 - In a collector, the rows of each extension come in the order of the extensions (Settings → Extensions), after the
   add-ons' and the catalog sources'.
 

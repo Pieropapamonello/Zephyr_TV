@@ -225,7 +225,9 @@ account Xtream, e i canali, i film e le serie compaiono nella sua app.
 | Voce | Opzioni |
 |---|---|
 | **Canali TV** | **App TV di sistema** (nell'app TV del televisore, se c'è) · **App virtuale** (un'app TV di Zephyr) · **Un'app per add-on** |
-| **Film e Serie TV** | **App virtuale** (le app Film e Serie TV) · **Un'app per add-on** · **Disattivato** |
+| **Film** | **App virtuale** (l'app Film) · **Un'app per add-on** · **Disattivato** |
+| **Serie TV** | **App virtuale** (l'app Serie TV) · **Un'app per add-on** · **Disattivato** |
+| **Radio** | **App virtuale** (l'app Radio, con le radio di tutte le estensioni) · **Nell'app di ogni estensione** · **Disattivato** |
 | **Contenuti per Adulti** | **App virtuale** (l'app Contenuti per adulti) · **Un'app per add-on** · **Insieme agli altri** |
 
 Quando scegli **App virtuale**, la sua app torna nei Preferiti se l'avevi tolta. Puoi toglierla di nuovo quando vuoi.

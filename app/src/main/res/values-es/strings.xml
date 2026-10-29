@@ -447,6 +447,7 @@
     <string name="ext_place">Dónde aparece</string>
     <string name="ext_place_own">En su app</string>
     <string name="ext_place_collectors">En los recopiladores</string>
+    <string name="place_per_extension">En la app de cada extensión</string>
     <string name="list_add">Añadir</string>
     <string name="list_from_phone">Introducir desde el teléfono…</string>
     <string name="ext_options">Opciones</string>
@@ -509,7 +510,6 @@
     <string name="vod_series">Series</string>
     <string name="vod_watched_movies">Películas vistas</string>
     <string name="vod_watched_series">Series vistas</string>
-    <string name="setting_addons_vod">Películas y Series de TV</string>
     <string name="setting_cinemeta">Catálogo de contenidos</string>
     <string name="setting_stream_choice">Elección del stream</string>
     <string name="stream_choice_auto">Automática</string>

@@ -393,31 +393,42 @@ internal fun MainActivity.kindName(type: String): String = getString(when (colle
     else -> R.string.vod_movies
 })
 
+/** Where the extensions' radio stations show: the Radio tile, each extension's own app, or nowhere; kept by [key]. */
+internal enum class RadioPlace(val key: String) { VIRTUAL("virtual"), APPS("apps"), OFF("off") }
+
+/** Where the extensions' radio stations show (Virtual apps and integrations → Radio): the Radio tile by default. */
+internal fun MainActivity.radioPlace(): RadioPlace =
+    prefs.getString(K.RADIO_PLACE, null).let { k -> RadioPlace.entries.firstOrNull { it.key == k } } ?: RadioPlace.VIRTUAL
+
 /** Whether the extension [id] puts its content in the collectors (Where it shows), not in its own app. */
 private fun MainActivity.inCollectors(id: String) = id in prefs.getStringSet(K.EXT_COLLECT, emptySet())!!
 
 /**
  * Whether the extension at the add-on address [url] gives its rows of [type] to their collector: it's set to show in
- * the collectors, and its manifest allows that collector. Not for an add-on.
+ * the collectors, and its manifest allows that collector. Radio stations go by Radio's own setting: to the Radio tile
+ * from every extension, or none. Not for an add-on.
  */
 internal fun MainActivity.extensionRoutes(url: String, type: String): Boolean {
     val id = ExtensionCalls.idOf(url) ?: return false
+    if (collectorOf(type) == "radio") return radioPlace() == RadioPlace.VIRTUAL
     if (!inCollectors(id)) return false
     return collectorOf(type) in (Extensions.installed(filesDir, id)?.collectors ?: return false)
 }
 
 /**
  * Whether the extension at [url] has an app of its own: it has content of its own (catalogs and streams: not a
- * catalog of titles others play, nor streams or a guide alone), isn't in Adult content, and has rows not given to
- * the collectors.
+ * catalog of titles others play, nor streams or a guide alone), isn't in Adult content, and has rows that show in it
+ * (not given to the collectors, not radio stations switched off). Its catalogs as last read (manifest() makes them
+ * from its settings), else its manifest's.
  */
 internal fun MainActivity.extensionOwnApp(url: String): Boolean {
     val id = ExtensionCalls.idOf(url) ?: return false
     val e = Extensions.installed(filesDir, id) ?: return false
     if ("catalog" !in e.resources || "stream" !in e.resources || inAdultApp(url)) return false
-    if (!inCollectors(id)) return true
-    val catalogs = Extensions.list(e, "catalogs")
-    return (0 until catalogs.length()).mapNotNull { catalogs.optJSONObject(it)?.optString("type") }.any { !extensionRoutes(url, it) }
+    val read = Stremio.saved(filesDir, url)?.addon?.let { a -> (a.catalogs + a.vod).map { it.type } }
+    val types = read ?: Extensions.list(e, "catalogs").let { c -> (0 until c.length()).mapNotNull { c.optJSONObject(it)?.optString("type") } }
+    if (types.isEmpty()) return true // not read yet, or not set up: its app, once it has something
+    return types.any { t -> !extensionRoutes(url, t) && !(collectorOf(t) == "radio" && radioPlace() == RadioPlace.OFF) }
 }
 
 /** The tile of the add-on at [url]'s own app. */
