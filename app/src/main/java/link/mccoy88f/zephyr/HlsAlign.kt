@@ -34,6 +34,10 @@ internal class HlsAlign(private val inner: HlsExtractorFactory = DefaultHlsExtra
                                  playerId: PlayerId): HlsMediaChunkExtractor =
         Chunk(inner.createExtractor(uri, format, muxedCaptionFormats, timestampAdjuster, responseHeaders, sniffingExtractorInput, playerId))
 
+    // Kotlin hands on only an interface's abstract members: the defaults are handed on here, by hand. Without this
+    // one, text/vtt reached the player unparsed (subtitled streams failed: "Legacy decoding is disabled").
+    override fun getOutputTextFormat(sourceFormat: Format): Format = inner.getOutputTextFormat(sourceFormat)
+
     // Its settings go to the factory it wraps, and it stays the one in use.
     override fun setSubtitleParserFactory(subtitleParserFactory: SubtitleParser.Factory): HlsExtractorFactory =
         also { inner.setSubtitleParserFactory(subtitleParserFactory) }
@@ -81,6 +85,8 @@ internal class HlsAlign(private val inner: HlsExtractorFactory = DefaultHlsExtra
             track.sampleData(input, length, allowEndOfInput, sampleDataPart)
 
         override fun sampleData(data: ParsableByteArray, length: Int, sampleDataPart: Int) = track.sampleData(data, length, sampleDataPart)
+
+        override fun durationUs(durationUs: Long) = track.durationUs(durationUs) // a default: handed on by hand too
     }
 
     companion object {
