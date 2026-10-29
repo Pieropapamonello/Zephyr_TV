@@ -16,6 +16,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- Channels with their sound in a stream of its own, such as Radio 105 TV and Virgin Radio TV, stopped after a few seconds since 3.0.0-beta.4. Now they play.
 - **Virtual apps and integrations** has **Films** and **TV Series** as two settings: each can show in its own virtual app, in an app for each add-on, or nowhere. A setting made before applies to both.
 - New: **Radio**, in **Virtual apps and integrations**. By default the radio stations of every extension show in the **Radio** virtual app. You can keep them in the app of each extension, or switch them off.
 - **Check for updates** in **Extensions** tells which extensions it could not check or update, instead of saying that there are no updates.
