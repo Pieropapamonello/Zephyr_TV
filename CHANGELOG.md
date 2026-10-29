@@ -14,6 +14,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## Unreleased
+
+- **Check for updates** in **Extensions** tells which extensions it could not check or update, instead of saying that there are no updates.
+
 ## 3.0.0-beta.6
 
 - While a radio station plays, the song on air shows under its name, when the station sends it. The song changes when the station sends a new one.

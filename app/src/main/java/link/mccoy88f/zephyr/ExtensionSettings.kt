@@ -66,12 +66,13 @@ private val extensionsChecking = java.util.concurrent.atomic.AtomicBoolean()
 /**
  * In the background: the extensions in the order but missing (a backup put back on another TV), installed again from
  * their address; and each extension's address read once a day, a newer version installed. [done] on the UI thread,
- * with how many were installed or updated.
+ * with how many were installed or updated, and the names of those that couldn't be checked or updated.
  */
-internal fun MainActivity.refreshExtensions(force: Boolean = false, done: ((Int) -> Unit)? = null) {
+internal fun MainActivity.refreshExtensions(force: Boolean = false, done: ((Int, List<String>) -> Unit)? = null) {
     if (!extensionsChecking.compareAndSet(false, true)) return
     netIo.execute {
         var changed = 0
+        val failed = ArrayList<String>()
         try {
             val installed = Extensions.installed(filesDir).associateBy { it.id }
             // Missing, with an address to have it from: installed again.
@@ -89,7 +90,7 @@ internal fun MainActivity.refreshExtensions(force: Boolean = false, done: ((Int)
                 runCatching {
                     val p = Extensions.published(url)
                     if (p.id == e.id && Extensions.newer(p.version, e.version)) { Extensions.download(filesDir, p); changed++ }
-                }.onFailure { warn("Extension update failed: ${e.name} ($it)") }
+                }.onFailure { failed += e.name; warn("Extension update failed: ${e.name} ($it)") }
             }
         } finally {
             extensionsChecking.set(false)
@@ -98,7 +99,7 @@ internal fun MainActivity.refreshExtensions(force: Boolean = false, done: ((Int)
                     Extensions.installed(filesDir).forEach { Stremio.forget(filesDir, ExtensionCalls.url(it.id)) }
                     addonsChanged()
                 }
-                done?.invoke(changed)
+                done?.invoke(changed, failed)
             }
         }
     }
@@ -161,8 +162,13 @@ internal fun MainActivity.extensionsPage(focus: Int = 0) {
         page(getString(R.string.ext_add), SUBMENU) { extensionFromPhone() },
         page(getString(R.string.ext_check)) {
             Toast.makeText(this, getString(R.string.ext_reading), Toast.LENGTH_SHORT).show()
-            refreshExtensions(force = true) { n ->
-                Toast.makeText(this, if (n == 0) getString(R.string.ext_none_updated) else getString(R.string.ext_some_updated, n), Toast.LENGTH_LONG).show()
+            refreshExtensions(force = true) { n, failed ->
+                // One that couldn't be checked says so: "no updates" would be wrong for it.
+                Toast.makeText(this, when {
+                    failed.isNotEmpty() -> getString(R.string.ext_update_failed, failed.joinToString(", "))
+                    n == 0 -> getString(R.string.ext_none_updated)
+                    else -> getString(R.string.ext_some_updated, n)
+                }, Toast.LENGTH_LONG).show()
                 if (pageShowing(getString(R.string.ext_title))) extensionsPage(all.size + suggested.size + 1)
             }
         },

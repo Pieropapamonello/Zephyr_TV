@@ -424,6 +424,7 @@
     <string name="ext_check">Check for updates</string>
     <string name="ext_none_updated">No updates</string>
     <string name="ext_some_updated">Extensions updated: %1$d</string>
+    <string name="ext_update_failed">Couldn\'t check for updates: %1$s. See Recent problems.</string>
     <string name="ext_provides">Provides: %1$s</string>
     <string name="ext_warning">It runs code written by %1$s. Install it only if you trust them.</string>
     <string name="ext_warning_anon">It runs code written by someone else. Install it only if you trust them.</string>

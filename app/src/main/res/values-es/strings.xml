@@ -425,6 +425,7 @@
     <string name="ext_check">Buscar actualizaciones</string>
     <string name="ext_none_updated">No hay actualizaciones</string>
     <string name="ext_some_updated">Extensiones actualizadas: %1$d</string>
+    <string name="ext_update_failed">No se ha podido comprobar: %1$s. Mira Problemas recientes.</string>
     <string name="ext_provides">Ofrece: %1$s</string>
     <string name="ext_warning">Ejecuta código escrito por %1$s. Instálala solo si confías.</string>
     <string name="ext_warning_anon">Ejecuta código escrito por otros. Instálala solo si confías.</string>
