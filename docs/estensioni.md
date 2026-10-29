@@ -171,7 +171,7 @@ Ogni contenuto è di uno di questi `types`:
 | `course` | **Zephyr TV.** Un corso: le sue lezioni come `videos`, in ordine; una `season` è un modulo | moduli e lezioni; Guarda riprende dalla prima lezione non vista |
 | `podcast` | **Zephyr TV.** Un podcast, audio o video: le sue puntate come `videos` | le puntate, dalle più recenti |
 | `audiobook` | **Zephyr TV.** Un audiolibro: i suoi capitoli come `videos`, in ordine | i capitoli; Ascolta riprende dove si era rimasti, un capitolo dopo l'altro |
-| `radio` | **Zephyr TV.** Una radio, in diretta, solo audio | — parte subito, con il suo logo e il brano in onda quando lo stream lo indica |
+| `radio` | **Zephyr TV.** Una radio, in diretta, solo audio: i suoi cataloghi si elencano come quelli dei canali TV | — parte subito, con logo e nome a schermo |
 | `event` | **Zephyr TV.** Un evento in diretta a un'ora precisa (una partita, un concerto): `startTime`, `endTime` | prima dell'inizio, il tempo che manca; durante, Guarda; dopo, di nuovo Guarda se ha ancora stream |
 
 - `video`, `channel`, `course`, `podcast`, `audiobook`, `radio` ed `event` sono i **contenuti generici**: compaiono
@@ -356,7 +356,7 @@ const lista = await zephyr.m3u.load("principale", { url, headers, maxAge: 86400 
 
 // Una pagina dei suoi canali, per gruppo o per parole del nome.
 const pagina = await zephyr.m3u.channels("principale", { group: "Sport", search: "", skip: 0, limit: 100 });
-// → [{ id, name, group, logo, epgId, catchup?, streams: [{ url, name, headers, clearkey }] }]
+// → [{ id, name, radio, group, logo, epgId, catchup?, streams: [{ url, name, headers, clearkey }] }]
 
 // Un canale, dall'id che ha nella playlist.
 const canale = await zephyr.m3u.channel("principale", id);
@@ -370,6 +370,9 @@ const canale = await zephyr.m3u.channel("principale", id);
 - Per ogni canale si leggono: `tvg-id`, `tvg-name`, `tvg-logo`, `group-title`, `#EXTVLCOPT` e `#EXTHTTP` (header),
   `#KODIPROP` `inputstream.adaptive.license_key` (ClearKey). Gli `url-tvg` / `x-tvg-url` della playlist sono le sue
   `guides`.
+- Un canale con `radio="true"` nel suo `#EXTINF` è una radio: `radio: true`. `channels` accetta `kind`, `"tv"` o
+  `"radio"`, per gli uni o le altre; il riepilogo di `load` li conta a parte (`channels` e `groups` per i canali TV,
+  `radios` e `radioGroups` per le radio), così un'estensione dà alle radio cataloghi propri (`type: "radio"`).
 - `zephyr.m3u.forget(nome)` cancella una playlist conservata.
 - `load` accetta `text` al posto di `url`: una playlist scritta dall'estensione stessa (per esempio dalle API di un
   account), letta e conservata allo stesso modo; viene riletta a ogni chiamata così.

@@ -1476,7 +1476,8 @@ class PlayerActivity : Activity() {
                 when (state) {
                     Player.STATE_READY -> {
                         ui.removeCallbacks(stuck)
-                        say(null)
+                        // Sound only (a radio station): its logo and name stay, on the blur of its logo, not a black screen.
+                        say(if (p.currentTracks.groups.none { it.type == C.TRACK_TYPE_VIDEO }) "" else null)
                         if (vod && p.playWhenReady && !scrobbling) ui.post { scrobble("start") } // once it has sought to where it resumes
                         if (pendingSeek > 0) p.seekTo(pendingSeek).also { pendingSeek = -1L }
                         if (vod) group = streams.getOrNull(tried)?.group else remember(channels[at])

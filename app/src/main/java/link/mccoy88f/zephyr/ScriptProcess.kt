@@ -110,7 +110,7 @@ internal class ExtensionService : ScriptService() {
             },
             "m3u.channels" to { args ->
                 M3u.channels(data, args.optString("name"), args.optString("group").ifEmpty { null }, args.optString("search").ifEmpty { null },
-                    args.optInt("skip", 0), args.optInt("limit", 100))
+                    args.optInt("skip", 0), args.optInt("limit", 100), args.optString("kind").ifEmpty { null })
             },
             "m3u.channel" to { args -> M3u.channel(data, args.optString("name"), args.optString("id")) },
             "m3u.forget" to { args -> M3u.forget(data, args.optString("name")); null },

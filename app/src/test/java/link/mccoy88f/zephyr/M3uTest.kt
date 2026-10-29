@@ -75,4 +75,23 @@ class M3uTest {
         M3u.forget(data, "main")
         data.deleteRecursively()
     }
+
+    @Test fun radioStationsApartFromTvChannels() {
+        val p = read("""
+            #EXTM3U
+            #EXTINF:-1 group-title="Rai",Rai 1
+            https://s/rai1.m3u8
+            #EXTINF:-1 radio="true" group-title="Radio Rai",Rai Radio 1
+            https://s/radio1.aac
+        """)
+        assertEquals(listOf(false, true), p.channels.map { it.radio })
+        val data = kotlin.io.path.createTempDirectory().toFile()
+        val f = java.io.File(data, "m3u/main.jsonl").apply { parentFile!!.mkdirs() }
+        f.writeText(p.channels.joinToString("\n") { it.json().toString() })
+        fun names(kind: String?) = M3u.channels(data, "main", null, null, 0, 10, kind).let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("name") } }
+        assertEquals(listOf("Rai Radio 1"), names("radio"))
+        assertEquals(listOf("Rai 1"), names("tv"))
+        assertEquals(2, names(null).size)
+        data.deleteRecursively()
+    }
 }

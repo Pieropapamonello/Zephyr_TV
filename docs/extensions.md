@@ -167,7 +167,7 @@ The content is one of these `types`:
 | `course` | **Zephyr TV.** A course: its lessons as `videos`, in order; a `season` is a module | its modules and lessons; Watch goes on from the first lesson not seen |
 | `podcast` | **Zephyr TV.** A podcast, audio or video: its episodes as `videos` | its episodes, newest first |
 | `audiobook` | **Zephyr TV.** An audiobook: its chapters as `videos`, in order | its chapters; Listen goes on where it was left, chapter after chapter |
-| `radio` | **Zephyr TV.** A radio station, live, audio only | — it plays at once, with its logo and the song on air when the stream says it |
+| `radio` | **Zephyr TV.** A radio station, live, audio only: its catalogs are listed as TV channels' are | — it plays at once, with its logo and name on screen |
 | `event` | **Zephyr TV.** A live event at a time (a match, a concert): `startTime`, `endTime` | before it starts, the time left; while it's on, Watch; after it, Watch again when it has streams still |
 
 - `video`, `channel`, `course`, `podcast`, `audiobook`, `radio` and `event` are the **generic content**: they show in
@@ -348,7 +348,7 @@ const list = await zephyr.m3u.load("main", { url, headers, maxAge: 86400 });
 
 // A page of its channels, by group or by words in the name.
 const page = await zephyr.m3u.channels("main", { group: "Sport", search: "", skip: 0, limit: 100 });
-// → [{ id, name, group, logo, epgId, catchup?, streams: [{ url, name, headers, clearkey }] }]
+// → [{ id, name, radio, group, logo, epgId, catchup?, streams: [{ url, name, headers, clearkey }] }]
 
 // One channel, by the id it has in the playlist.
 const channel = await zephyr.m3u.channel("main", id);
@@ -360,6 +360,9 @@ const channel = await zephyr.m3u.channel("main", id);
   quality) is one channel with several `streams`.
 - Read for each channel: `tvg-id`, `tvg-name`, `tvg-logo`, `group-title`, `#EXTVLCOPT` and `#EXTHTTP` (headers),
   `#KODIPROP` `inputstream.adaptive.license_key` (ClearKey). The playlist's `url-tvg` / `x-tvg-url` are its `guides`.
+- A channel with `radio="true"` in its `#EXTINF` is a radio station: `radio: true`. `channels` takes `kind`, `"tv"` or
+  `"radio"`, for one or the other; `load`'s summary counts them apart (`channels` and `groups` for TV channels,
+  `radios` and `radioGroups` for radio stations), so an extension gives them catalogs of their own (`type: "radio"`).
 - `zephyr.m3u.forget(name)` removes a playlist kept.
 - `load` takes `text` instead of `url`: a playlist the extension wrote itself (from an account's API, for example),
   read and kept the same way; it's read again at each such call.

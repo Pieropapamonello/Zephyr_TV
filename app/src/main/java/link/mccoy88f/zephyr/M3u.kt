@@ -14,8 +14,8 @@ import org.json.JSONObject
 internal object M3u {
     /** One channel: [id] stable while the playlist keeps its tvg-id (or its name). */
     class Channel(val id: String, var name: String, val groups: MutableList<String>, val logo: String?, val epgId: String,
-                  val catchup: JSONObject?, val streams: MutableList<JSONObject>) {
-        fun json(): JSONObject = JSONObject().put("id", id).put("name", name).put("group", groups.firstOrNull() ?: JSONObject.NULL)
+                  val catchup: JSONObject?, val streams: MutableList<JSONObject>, val radio: Boolean = false) { // radio: radio="true"
+        fun json(): JSONObject = JSONObject().put("id", id).put("name", name).put("radio", radio).put("group", groups.firstOrNull() ?: JSONObject.NULL)
             .put("groups", JSONArray(groups)).put("logo", logo ?: JSONObject.NULL).put("epgId", epgId)
             .put("catchup", catchup ?: JSONObject.NULL).put("streams", JSONArray(streams))
     }
@@ -138,7 +138,7 @@ internal object M3u {
                     JSONObject().put("type", type).put("days", e.tvg["catchup-days"]?.toIntOrNull() ?: 1)
                         .put("url", e.tvg["catchup-source"] ?: JSONObject.NULL)
                 }
-                channel = Channel(id, name, e.groups.toMutableList(), e.tvg["logo"], id, catchup, ArrayList())
+                channel = Channel(id, name, e.groups.toMutableList(), e.tvg["logo"], id, catchup, ArrayList(), e.tvg["radio"].equals("true", true))
                 channels[id] = channel
                 groups += e.groups
             }
@@ -203,8 +203,11 @@ internal object M3u {
         part.bufferedWriter().use { w -> playlist.channels.forEach { w.write(it.json().toString()); w.write("\n") } }
         part.renameTo(f)
         synchronized(loaded) { loaded.remove(f.path) }
-        val out = JSONObject().put("url", url).put("channels", playlist.channels.size).put("groups", JSONArray(playlist.groups))
-            .put("guides", JSONArray(playlist.guides))
+        // TV channels and radio stations apart: how many of each, and each one's groups.
+        val (radios, tv) = playlist.channels.partition { it.radio }
+        fun groupsOf(list: List<Channel>) = JSONArray(playlist.groups.filter { g -> list.any { g in it.groups } })
+        val out = JSONObject().put("url", url).put("channels", tv.size).put("groups", groupsOf(tv))
+            .put("radios", radios.size).put("radioGroups", groupsOf(radios)).put("guides", JSONArray(playlist.guides))
         summary.writeText(out.toString())
         return out
     }
@@ -220,10 +223,14 @@ internal object M3u {
         }
     }
 
-    /** A page of the playlist [name]'s channels: of [group], with [search]'s words in the name, from [skip], [limit] of them. */
-    fun channels(data: File, name: String, group: String?, search: String?, skip: Int, limit: Int): JSONArray {
+    /**
+     * A page of the playlist [name]'s channels: of [kind] ("tv", "radio"; null: both), of [group], with [search]'s words
+     * in the name, from [skip], [limit] of them.
+     */
+    fun channels(data: File, name: String, group: String?, search: String?, skip: Int, limit: Int, kind: String? = null): JSONArray {
         val words = search?.lowercase()?.split(Regex("""\s+"""))?.filter { it.isNotEmpty() }.orEmpty()
         val page = all(data, name).asSequence()
+            .filter { c -> kind.isNullOrEmpty() || c.optBoolean("radio") == (kind == "radio") }
             .filter { c -> group.isNullOrEmpty() || (c.optJSONArray("groups")?.let { g -> (0 until g.length()).any { g.optString(it) == group } } == true) }
             .filter { c -> words.isEmpty() || c.optString("name").lowercase().let { n -> words.all { it in n } } }
             .drop(skip.coerceAtLeast(0)).take(limit.coerceIn(1, 500)).toList()

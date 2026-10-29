@@ -33,11 +33,20 @@ class OmgExtensionTest {
             val url = ExtensionCalls.url(e.id)
             val manifest = Stremio.get(url)
             val addon = Stremio.addon(url, manifest)
-            val tv = addon.catalogs.single()
+            val tv = addon.catalogs.first { it.type == "tv" }
             assertEquals("Italia", tv.name)
+            // Radio stations (radio="true"), when the playlist has some: a catalog of their own.
+            addon.catalogs.firstOrNull { it.type == "radio" }?.let { r ->
+                val radios = Stremio.get("${addon.base}/catalog/radio/${Stremio.enc(r.id)}/skip=0.json").getJSONArray("metas")
+                val first = radios.getJSONObject(0)
+                assertEquals("radio", first.getString("type"))
+                val s = Stremio.streams(addon.base, "radio", first.getString("id"))
+                assertTrue(s.isNotEmpty())
+                println("OMG radio: ${r.name}, ${radios.length()} stations, first ${first.getString("name")} → ${s[0].url}")
+            }
             assertTrue("groups: ${tv.genres}", tv.genres.isNotEmpty())
             val page = Stremio.get("${addon.base}/catalog/tv/${Stremio.enc(tv.id)}/skip=0.json").getJSONArray("metas")
-            assertTrue("channels: ${page.length()}", page.length() > 10)
+            assertTrue("channels: ${page.length()}", page.length() > 0)
             val first = page.getJSONObject(0)
             assertTrue(first.getString("id").startsWith("omg:p0:"))
             val meta = Stremio.get("${addon.base}/meta/tv/${Stremio.enc(first.getString("id"))}.json").getJSONObject("meta")

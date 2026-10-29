@@ -420,7 +420,7 @@ internal fun MainActivity.ownAppPkg(url: String): String? = Stremio.saved(filesD
 /** The collectors' tiles that have rows: Radio, Videos, Courses, Podcasts, Audiobooks, Events. Runs on the io thread. */
 internal fun MainActivity.collectorApps(): List<MainActivity.App> {
     val given = shownAddonUrls().filter { ExtensionCalls.idOf(it) != null && !inAdultApp(it) }.flatMap { url ->
-        Stremio.saved(filesDir, url)?.addon?.vod.orEmpty().filter { extensionRoutes(url, it.type) }.map { collectorOf(it.type) }
+        Stremio.saved(filesDir, url)?.addon?.let { a -> a.vod + a.catalogs }.orEmpty().filter { extensionRoutes(url, it.type) }.map { collectorOf(it.type) }
     }.toSet()
     return COLLECTOR_PKGS.filterValues { it in given }.map { (pkg, kind) ->
         val icon = when (kind) { "radio", "podcasts", "audiobooks" -> R.drawable.ic_audio; "events" -> R.drawable.ic_live_tv; else -> R.drawable.ic_movie }

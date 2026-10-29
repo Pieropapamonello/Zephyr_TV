@@ -164,6 +164,8 @@ internal fun MainActivity.addonApps(): List<MainActivity.App> {
 internal fun MainActivity.addonsUnder(pkg: String): List<String> {
     if (pkg == ADULT_PKG) return if (adultApp()) shownAddonUrls().filter { isAdultAddon(it) } else emptyList()
     ownAppUrl(pkg)?.let { return listOf(it) } // an add-on's own app: its channels, whatever the others do
+    // The Radio collector: the extensions' radio stations given to it (see extensionRoutes).
+    if (COLLECTOR_PKGS[pkg] == "radio") return shownAddonUrls().filter { extensionRoutes(it, "radio") && !inAdultApp(it) }
     val urls = shownAddonUrls().filter { !apart(it) || extensionRoutes(it, "tv") }
     val mode = addonsTv()
     return when {
@@ -197,11 +199,18 @@ internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<
         hidden.hashCode(), System.currentTimeMillis() / GUIDE_MS).joinToString("|")
     built[pkg]?.takeIf { it.from == from }?.let { return it.sections }
     val extGuides = listings.associate { (url, _) -> url to extensionGuides(url, pkg) }
-    // In an extension's own app, its channels given to the collectors (see extensionRoutes) aren't.
-    return listings.filter { (url, _) -> !(own && extensionRoutes(url, "tv") && pkg == ownAppPkg(url)) }
+    // Which of an add-on's rows show here, by their catalog's type: in the Radio collector its radio stations given to
+    // it; in an extension's own app those not given to a collector; elsewhere TV channels (an extension's given to them).
+    val radio = COLLECTOR_PKGS[pkg] == "radio"
+    fun shows(url: String, type: String) = when {
+        radio -> type == "radio"
+        own && pkg == ownAppPkg(url) -> !extensionRoutes(url, type)
+        else -> type != "radio" && (ExtensionCalls.idOf(url) == null || !apart(url) || extensionRoutes(url, type))
+    }
+    return listings
         .flatMap { (url, listing) ->
         val catalogs = listing.addon.catalogs.size
-        listing.rows.mapNotNull { row ->
+        listing.rows.filter { shows(url, it.catalog.type) }.mapNotNull { row ->
             val name = when {
                 row.genre == null -> row.catalog.name
                 own && catalogs == 1 -> row.genre

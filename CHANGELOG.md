@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## Unreleased
+
+- Radio stations in M3U playlists (radio="true") show apart from the TV channels, in rows of their own. Select one to play it at once. Its logo and name stay on the screen while it plays.
+- With **Where it shows** set to the collectors, an extension's radio stations go to **Radio**.
+
 ## 3.0.0-beta.4
 
 - Some live channels have their sound hours away from their picture, for example RTL 102.5 TV in some playlists. The player stayed on loading and then showed that no stream works. Now the player moves the sound onto the picture, and the channel plays.

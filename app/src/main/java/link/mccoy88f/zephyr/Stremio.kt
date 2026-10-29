@@ -224,6 +224,8 @@ internal object Stremio {
             val type = c.optString("type")
             // An extension's "channel" is a collection of videos it plays (a YouTube channel's, an add-on's, isn't).
             if (type != "tv" && !isVodType(type) && !(url.startsWith(EXT) && type == "channel")) continue
+            // An extension's radio stations are channels: listed, and played at once, as TV channels are.
+            val channels = type == "tv" || (url.startsWith(EXT) && type == "radio")
             val id = c.optString("id").takeIf { it.isNotEmpty() } ?: continue
             val extras = c.optJSONArray("extra")?.let { e -> (0 until e.length()).mapNotNull { e.optJSONObject(it) } }.orEmpty()
             val search = extras.any { it.optString("name") == "search" }
@@ -234,14 +236,14 @@ internal object Stremio {
             val genres = extras.firstOrNull { it.optString("name") == "genre" }
                 ?.optJSONArray("options")?.let { o -> (0 until o.length()).map { o.optString(it) } }.orEmpty()
                 .filter { g -> g.any { it.isLetterOrDigit() } }
-            if (type != "tv") {
+            if (!channels) {
                 // A required genre is a list only once one is picked: searched, not listed. Its genres: the search filter's.
                 val open = extras.none { it.optBoolean("isRequired") }
                 if (open || search) vod += Catalog(type, id, name, genres, search, listed = open)
                 continue
             }
             if (!listable) continue
-            catalogs += Catalog("tv", id, name, genres, search)
+            catalogs += Catalog(type, id, name, genres, search)
         }
         return Addon(url, m.optString("id").ifBlank { url }, m.optString("name").ifBlank { Uri.host(url) }, text(m, "logo"), catalogs,
             resources(m), vod, adult = m.optJSONObject("behaviorHints")?.optBoolean("adult") == true)
