@@ -51,7 +51,7 @@ internal class AdultRelock : android.content.BroadcastReceiver() {
 internal fun MainActivity.adultUntilLocked() = prefs.getBoolean(K.ADULT_FOREVER, false)
 
 /** The add-ons that show now: the adult ones left out while the 18+ lock holds. For what's shown, never for saving. */
-internal fun MainActivity.shownAddonUrls(): List<String> = addonUrls().filter { addonOn(it) }.let { on ->
+internal fun MainActivity.shownAddonUrls(): List<String> = (addonUrls().filter { addonOn(it) } + extensionAddonUrls()).let { on ->
     if (adultUnlocked()) on else on.filter { !isAdultAddon(it) }
 }
 

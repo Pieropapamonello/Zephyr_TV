@@ -68,22 +68,26 @@ Nuovo file `Extensions.kt` (modello e disco) e `ExtensionPages.kt` (pagine delle
   verifica `sha256`, esecuzione di un handler nel processo `:extensions`.
 - ☐ Opzioni e Dove compare nella pagina dell'estensione: fasi 3 e 8.
 
-## Fase 2 — Le estensioni come sorgenti, al posto degli add-on
+## Fase 2 — Le estensioni come sorgenti, al posto degli add-on ☑
 
 Il punto chiave: per il resto di Zephyr TV un'estensione è un add-on Stremio che risponde da QuickJS invece che via
 HTTP. Così righe, pagine, ricerca e player le usano senza codice nuovo.
 
-- ☐ In `Stremio.kt`, separare **chi chiede** da **come si chiede**: oggi `Http.json("<base>/catalog/…json")`, domani
+- ☑ In `Stremio.kt`, separare **chi chiede** da **come si chiede**: oggi `Http.json("<base>/catalog/…json")`, domani
   un'interfaccia `ask(resource, type, id, extra)` con due realizzazioni, HTTP (add-on) e QuickJS (estensione).
-- ☐ L'estensione produce uno `Stremio.Addon` dal suo manifest (con il parser che c'è già), con un indirizzo interno
+- ☑ L'estensione produce uno `Stremio.Addon` dal suo manifest (con il parser che c'è già), con un indirizzo interno
   (`ext:<id>`) al posto di quello web.
-- ☐ Chiamate agli handler con `args` (`type`, `id`, `extra`, `settings`, per `stream` anche `catchup`).
-- ☐ **Cache** delle risposte: `cacheMaxAge` se c'è, altrimenti 6 ore i cataloghi, un giorno `meta`, nessuna `stream`.
-- ☐ **`manifest()`**: i cataloghi ricalcolati dalle impostazioni, all'installazione e a ogni modifica.
-- ☐ Errori e tempi scaduti → risposta vuota e riga in **Problemi recenti** (`Problems.kt`).
-- ☐ Le estensioni compaiono nelle liste delle sorgenti di stream (`streamSources`), con nome e icona, nell'ordine
+- ☑ Chiamate agli handler con `args` (`type`, `id`, `extra`, `settings`, per `stream` anche `catchup`).
+- ◐ **Cache** delle risposte: oggi quella degli add-on (cataloghi riletti dopo 6 ore, canali dopo 5 minuti); `cacheMaxAge` ancora da leggere.
+- ☑ **`manifest()`**: i cataloghi ricalcolati dalle impostazioni, all'installazione e a ogni modifica.
+- ☑ Errori e tempi scaduti → risposta vuota e riga in **Problemi recenti** (`Problems.kt`).
+- ☑ Le estensioni compaiono nelle liste delle sorgenti di stream (`streamSources`), con nome e icona, nell'ordine
   scelto: dopo gli add-on, prima dei plugin Nuvio.
-- ☐ `requires` e `zephyr.has(nome)`: elenco dei nomi noti a questo Zephyr TV (nella 1.0 è vuoto).
+- ☑ `requires` e `zephyr.has(nome)`: elenco dei nomi noti a questo Zephyr TV (nella 1.0 è vuoto).
+- ☑ Indirizzo interno `zext://<id>/…` risolto da `Stremio.get` (launcher e player) verso `ExtensionCalls`, che chiama
+  l'handler nel processo `:extensions` con `args` (settings inclusi), `zephyr` (`version`, `standard`, `language`,
+  `region`, `has`, `asset`), `SCRAPER_SETTINGS`, `SCRAPER_ID` e il `localStorage` dell'estensione.
+- ☑ Provato sul TV (`ExtensionInstallTest`): manifest, catalogo e scheda dell'estensione chiesti come a un add-on.
 
 ## Fase 3 — Dove compaiono: l'app dell'estensione e i tipi
 

@@ -77,13 +77,14 @@ internal fun MainActivity.addonOn(url: String) = url !in prefs.getStringSet(K.AD
 
 /** Manifest addresses of add-ons marked as adult by the user (Contenuti V.M. - Adulti). */
 private fun MainActivity.markedAdultUrls(): Set<String> =
-    prefs.getString(K.ADULT_ADDONS, "")!!.lines().filter { it.isNotBlank() }.toSet()
+    prefs.getString(K.ADULT_ADDONS, "")!!.lines().filter { it.isNotBlank() }.toSet() +
+        prefs.getStringSet(K.EXT_ADULT, emptySet())!!.map { ExtensionCalls.url(it) }
 
 /** Whether the add-on says it's adult itself, in its manifest (behaviorHints.adult): then it always is. */
 internal fun MainActivity.saysAdult(url: String) = Stremio.saved(filesDir, url)?.addon?.adult == true
 
 /** Manifest addresses of the adult add-ons: those marked by the user, and those that say so themselves. */
-internal fun MainActivity.adultAddonUrls(): Set<String> = markedAdultUrls() + addonUrls().filter { saysAdult(it) }
+internal fun MainActivity.adultAddonUrls(): Set<String> = markedAdultUrls() + (addonUrls() + extensionAddonUrls()).filter { saysAdult(it) }
 
 internal fun MainActivity.isAdultAddon(url: String?): Boolean =
     url != null && (url in markedAdultUrls() || saysAdult(url))

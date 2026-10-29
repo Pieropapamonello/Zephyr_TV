@@ -25,6 +25,16 @@ class ExtensionInstallTest {
         val script = java.io.File(e.dir, e.main).readText()
         val answer = ScriptProcess.extensions(context).run(script, "module.exports.catalog({ type: 'tv', id: 'ciao', extra: {} })", "", 10_000)
         assertEquals("Canale di prova", JSONObject(answer.out!!).getJSONArray("metas").getJSONObject(0).getString("name"))
+
+        // As an add-on: its manifest and its catalog through Stremio's addresses, as the rest of Zephyr TV asks them.
+        ExtensionCalls.use(context)
+        val address = ExtensionCalls.url(e.id)
+        val addon = Stremio.addon(address, Stremio.get(address))
+        assertEquals(e.id, addon.id)
+        val page = Stremio.get("${addon.base}/catalog/tv/ciao/skip=0.json")
+        assertEquals("ciao:1", page.getJSONArray("metas").getJSONObject(0).getString("id"))
+        val stored = Stremio.get("${addon.base}/meta/tv/ciao%3A1.json")
+        assertEquals("Canale di prova", stored.getJSONObject("meta").getString("name"))
         Extensions.remove(files, e.id)
     }
 }

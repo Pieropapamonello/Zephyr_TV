@@ -40,6 +40,9 @@ internal abstract class ScriptService : Service() {
 
     override fun onBind(intent: Intent): IBinder = messenger.binder
 
+    /** The services a script asks Zephyr TV for by name (see Js.run), for the call from [dir] (an extension's folder). */
+    open fun services(dir: String?): Map<String, suspend (org.json.JSONObject) -> Any?> = emptyMap()
+
     private fun answer(m: Message) {
         val reply = m.replyTo ?: return
         val id = m.arg1
@@ -50,7 +53,7 @@ internal abstract class ScriptService : Service() {
                 val script = data.getString(SCRIPT) ?: data.getString(SCRIPT_FILE)?.let { File(it).readText() } ?: ""
                 var store: String? = null
                 val result = Js.run(script, data.getString(CALL_JS).orEmpty(), data.getString(GLOBALS).orEmpty(), data.getLong(TIMEOUT),
-                    stored = if (data.getBoolean(WANTS_STORE)) { s -> store = s } else null)
+                    stored = if (data.getBoolean(WANTS_STORE)) { s -> store = s } else null, services = services(data.getString(DIR)))
                 putText(out, OUT, result)
                 out.putString(STORE, store)
             } catch (e: Throwable) {
@@ -77,6 +80,7 @@ internal abstract class ScriptService : Service() {
         const val GLOBALS = "globals"
         const val TIMEOUT = "timeout"
         const val WANTS_STORE = "wantsStore"
+        const val DIR = "dir"
         const val OUT = "out"
         const val STORE = "store"
         const val ERROR = "error"
@@ -88,8 +92,16 @@ internal abstract class ScriptService : Service() {
 /** Nuvio's plugins' process (":plugins"). */
 internal class PluginService : ScriptService()
 
-/** The extensions' process (":extensions"). */
-internal class ExtensionService : ScriptService()
+/** The extensions' process (":extensions"), with Zephyr TV's services for them (zephyr.* in the standard). */
+internal class ExtensionService : ScriptService() {
+    override fun services(dir: String?): Map<String, suspend (org.json.JSONObject) -> Any?> {
+        val root = dir?.let { File(it) } ?: return emptyMap()
+        return mapOf(
+            // zephyr.asset(path): a file of the extension's package, as text.
+            "asset" to { args -> Extensions.safe(root, args.optString("path"))?.takeIf { it.isFile }?.readText() ?: throw IOException("no file ${args.optString("path")}") },
+        )
+    }
+}
 
 /**
  * The way to a [ScriptService] in its own process ([process], its name after the colon): calls wait for its answer, at
@@ -118,7 +130,7 @@ internal class ScriptProcess(context: Context, private val service: Class<out Sc
      * Runs [script], then [call] (see Js.run) in the process. Throws when the script fails, the process can't be
      * reached, or it didn't answer in [timeoutMs] and a margin (it's then killed). Null when the script ran out of time.
      */
-    fun run(script: String, call: String, globals: String, timeoutMs: Long, wantsStore: Boolean = false): Answer {
+    fun run(script: String, call: String, globals: String, timeoutMs: Long, wantsStore: Boolean = false, dir: File? = null): Answer {
         check(Looper.myLooper() != Looper.getMainLooper()) { "scripts: not on the UI thread" }
         handler.removeCallbacks(release)
         val messenger = connect() ?: throw IOException("$process: can't be started")
@@ -136,6 +148,7 @@ internal class ScriptProcess(context: Context, private val service: Class<out Sc
             putString(ScriptService.GLOBALS, globals)
             putLong(ScriptService.TIMEOUT, timeoutMs)
             putBoolean(ScriptService.WANTS_STORE, wantsStore)
+            putString(ScriptService.DIR, dir?.path)
         }
         try {
             messenger.send(Message.obtain(null, ScriptService.CALL, id, 0).apply { this.data = data; replyTo = replies })

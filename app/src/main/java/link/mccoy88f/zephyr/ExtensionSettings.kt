@@ -86,7 +86,13 @@ internal fun MainActivity.refreshExtensions(force: Boolean = false, done: ((Int)
             }
         } finally {
             extensionsChecking.set(false)
-            ui.post { done?.invoke(changed) }
+            ui.post {
+                if (changed > 0) {
+                    Extensions.installed(filesDir).forEach { Stremio.forget(filesDir, ExtensionCalls.url(it.id)) }
+                    addonsChanged()
+                }
+                done?.invoke(changed)
+            }
         }
     }
 }
@@ -191,10 +197,12 @@ private fun MainActivity.extensionPage(id: String, focus: Int = 0) {
         val list = ids.toMutableList()
         list.add(at + by, list.removeAt(at))
         prefs.edit().putString(K.EXT_ORDER, list.joinToString("\n")).apply()
+        addonsChanged()
     }
     val rows = ArrayList<Triple<String, String, () -> Unit>>()
     rows += page(getString(R.string.addon_on), toggle(on)) {
         prefs.edit().putStringSet(K.EXT_OFF, prefs.getStringSet(K.EXT_OFF, emptySet())!!.let { if (on) it + id else it - id }).apply()
+        extensionChanged(id)
         extensionPage(id, 0)
     }
     // One that says it's 18+ is, whatever the switch: the switch is for those that don't say.
@@ -203,6 +211,7 @@ private fun MainActivity.extensionPage(id: String, focus: Int = 0) {
         val row = rows.size
         rows += page(getString(R.string.addon_adult), toggle(marked)) {
             prefs.edit().putStringSet(K.EXT_ADULT, prefs.getStringSet(K.EXT_ADULT, emptySet())!!.let { if (marked) it - id else it + id }).apply()
+            addonsChanged()
             extensionPage(id, row)
         }
     }
@@ -222,6 +231,7 @@ private fun MainActivity.extensionPage(id: String, focus: Int = 0) {
                     val text = result.fold({ got -> if (got == null) getString(R.string.ext_up_to_date, e.name) else getString(R.string.ext_updated, got.name, got.version) },
                         { refusal(it) })
                     Toast.makeText(this, text, Toast.LENGTH_LONG).show()
+                    if (result.getOrNull() != null) extensionChanged(id)
                     if (pageShowing(e.name)) extensionPage(id, row)
                 }
             }
@@ -230,6 +240,7 @@ private fun MainActivity.extensionPage(id: String, focus: Int = 0) {
     if (!builtIn) rows += page(getString(R.string.addon_remove)) {
         Extensions.remove(filesDir, id)
         forgetExtension(prefs, id)
+        extensionChanged(id)
         extensionsPage(at.coerceAtMost(ids.size - 2).coerceAtLeast(0))
     }
     showPage(e.name, rows, focus, top = intro(about)) { extensionsPage(at.coerceAtLeast(0)) }
@@ -257,6 +268,7 @@ private fun MainActivity.extensionPreview(name: String, author: String, descript
                 ui.post {
                     result.onSuccess { e ->
                         Toast.makeText(this, getString(R.string.ext_installed, e.name, e.version), Toast.LENGTH_LONG).show()
+                        extensionChanged(e.id)
                         extensionPage(e.id)
                     }.onFailure { Toast.makeText(this, refusal(it), Toast.LENGTH_LONG).show() }
                 }
@@ -325,4 +337,14 @@ private fun MainActivity.extensionZipFromPhone() {
         ui.post { extensionFromZip(zip) }
         200 to getString(R.string.ext_received)
     }, status) { extensionFromPhone() }
+}
+
+/** The extensions on, as add-ons' addresses (see ExtensionCalls), in their order: the rest of Zephyr TV asks them so. */
+internal fun MainActivity.extensionAddonUrls(): List<String> =
+    extensions(prefs, filesDir).filter { extensionOn(prefs, it.id) }.map { ExtensionCalls.url(it.id) }
+
+/** After an extension was installed, updated, removed or switched: what Zephyr TV kept of it as an add-on, read anew. */
+internal fun MainActivity.extensionChanged(id: String) {
+    Stremio.forget(filesDir, ExtensionCalls.url(id))
+    addonsChanged()
 }

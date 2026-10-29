@@ -192,6 +192,7 @@ class PlayerActivity : Activity() {
         super.onCreate(savedInstanceState)
         Js.useAssets(applicationContext) // the modules plugins and extensions require(), in this process too
         Nuvio.process = ScriptProcess.plugins(this) // plugins run in a process of their own
+        ExtensionCalls.use(this) // extensions answer as add-ons, from their own process
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         vod = intent.getStringExtra(MODE) == MODE_VOD
         base = intent.getStringExtra(BASE) ?: if (vod) "" else return finish()

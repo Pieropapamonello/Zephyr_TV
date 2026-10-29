@@ -227,6 +227,7 @@ class MainActivity : Activity() {
         Problems.init(File(filesDir, "problems.log"))
         Js.useAssets(applicationContext) // the modules plugins and extensions require()
         Nuvio.process = ScriptProcess.plugins(this) // plugins run in a process of their own
+        ExtensionCalls.use(this) // extensions answer as add-ons, from their own process
         setContentView(R.layout.activity_main)
         appRow = findViewById(R.id.appRow)
         watchRow = findViewById(R.id.watchRow)

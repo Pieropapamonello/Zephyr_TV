@@ -27,6 +27,17 @@ internal object Stremio {
     private const val VOD_AGE_MS = 6 * 3600_000L // films' and series' catalogs are read again after this long
     private const val VOD_PAGES = 2 // a film or series catalog's pages read (Cinemeta: 50 a page)
 
+    /** The address of an extension as an add-on: "zext://<id>/manifest.json", asked through [local], not HTTP. */
+    const val EXT = "zext://"
+
+    /** What answers an extension's address (see ExtensionCalls), set by the activities: the extensions' process. */
+    @Volatile var local: ((url: String, timeoutMs: Int) -> JSONObject)? = null
+
+    /** An add-on's answer at [url]: from the web, or from an extension (EXT). Network: off the UI thread. */
+    fun get(url: String, timeout: Int? = null): JSONObject =
+        if (url.startsWith(EXT)) (local ?: throw java.io.IOException("extensions not available here"))(url, timeout ?: 0)
+        else if (timeout == null) Http.json(url) else Http.json(url, timeout = timeout)
+
     /**
      * Cinemeta's art for the title with this IMDb [id], from its image server (metahub): [kind] "poster/small",
      * "background/medium", "logo/medium"… For titles known by their id alone (watched elsewhere, on Trakt).
@@ -167,7 +178,7 @@ internal object Stremio {
     fun update(dir: File, url: String): Listing? {
         if (!updating.add(url)) return null
         try {
-            val manifest = Http.json(url)
+            val manifest = get(url)
             val addon = addon(url, manifest)
             // A catalog that fails leaves the others (an add-on can have TV, films, series or only some): only
             // all of them failing is the add-on failing.
@@ -269,7 +280,7 @@ internal object Stremio {
         for (page in 0 until MAX_PAGES) {
             val extra = listOfNotNull(genre?.let { "genre=${enc(it)}" }, if (out.isEmpty()) null else "skip=${out.size}").joinToString("&")
             val path = "${addon.base}/catalog/${enc(c.type)}/${enc(c.id)}" + (if (extra.isEmpty()) "" else "/$extra") + ".json"
-            val metas = items(Http.json(path))
+            val metas = items(get(path))
             val before = out.size
             for (it in metas) out.putIfAbsent(it.id, it)
             // A short page is the last; one with nothing new means the add-on ignores "skip".
@@ -336,7 +347,7 @@ internal object Stremio {
             val titles = LinkedHashMap<String, Title>()
             for (page in 0 until VOD_PAGES) {
                 val extra = if (titles.isEmpty()) "" else "/skip=${titles.size}"
-                val metas = runCatching { titles(Http.json("${addon.base}/catalog/${enc(c.type)}/${enc(c.id)}$extra.json")) }.getOrNull() ?: break
+                val metas = runCatching { titles(get("${addon.base}/catalog/${enc(c.type)}/${enc(c.id)}$extra.json")) }.getOrNull() ?: break
                 val before = titles.size
                 for (t in metas) titles.putIfAbsent(t.id, t)
                 if (metas.size < 50 || titles.size == before) break
@@ -385,10 +396,10 @@ internal object Stremio {
 
     /** The titles of a searchable catalog for [query]. Throws when the add-on can't be asked. */
     fun search(addon: Addon, c: Catalog, query: String): List<Title> =
-        titles(Http.json("${addon.base}/catalog/${enc(c.type)}/${enc(c.id)}/search=${enc(query)}.json"))
+        titles(get("${addon.base}/catalog/${enc(c.type)}/${enc(c.id)}/search=${enc(query)}.json"))
 
     /** A title's page from an add-on that has it (Cinemeta, for IMDb ids). Throws when the add-on can't be asked. */
-    fun titleMeta(base: String, type: String, id: String): TitleMeta? = titleMeta(Http.json("$base/meta/${enc(type)}/${enc(id)}.json"), type)
+    fun titleMeta(base: String, type: String, id: String): TitleMeta? = titleMeta(get("$base/meta/${enc(type)}/${enc(id)}.json"), type)
 
     internal fun titleMeta(answer: JSONObject, type: String): TitleMeta? {
         val m = answer.optJSONObject("meta") ?: return null
@@ -411,7 +422,7 @@ internal object Stremio {
      * them: direct web addresses only (no torrents), each named by its quality line and its file ("1080p · Film.mkv").
      */
     fun titleStreams(base: String, name: String, type: String, id: String): List<Stream> =
-        streams(Http.json("$base/stream/${enc(type)}/${enc(id)}.json", timeout = Http.STREAMS_TIMEOUT_MS), vod = true).map {
+        streams(get("$base/stream/${enc(type)}/${enc(id)}.json", Http.STREAMS_TIMEOUT_MS), vod = true).map {
             Stream(it.url, it.title, it.headers, it.group, name)
         }
 
@@ -419,7 +430,7 @@ internal object Stremio {
     internal class Meta(val description: String?, val now: String?)
 
     /** Channel [id]'s page from the add-on. Throws when the add-on can't be asked. */
-    fun meta(base: String, type: String, id: String): Meta = meta(Http.json("$base/meta/${enc(type)}/${enc(id)}.json"))
+    fun meta(base: String, type: String, id: String): Meta = meta(get("$base/meta/${enc(type)}/${enc(id)}.json"))
 
     internal fun meta(answer: JSONObject): Meta {
         val m = answer.optJSONObject("meta") ?: return Meta(null, null)
@@ -448,7 +459,7 @@ internal object Stremio {
 
     /** The ways to play channel [id], in the add-on's order (best first); those without a web address are left out. */
     fun streams(base: String, type: String, id: String): List<Stream> =
-        streams(Http.json("$base/stream/${enc(type)}/${enc(id)}.json", timeout = Http.STREAMS_TIMEOUT_MS))
+        streams(get("$base/stream/${enc(type)}/${enc(id)}.json", Http.STREAMS_TIMEOUT_MS))
 
     /**
      * The streams in an add-on's answer that have a web address (torrents, YouTube ids and outside links are left

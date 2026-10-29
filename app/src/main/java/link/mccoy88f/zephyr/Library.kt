@@ -107,7 +107,7 @@ internal fun MainActivity.browseLibrary(filter: SearchFilter): List<Pair<Stremio
         for (page in 0 until pages) {
             val extra = listOfNotNull(option?.let { "genre=${Stremio.enc(it)}" }, if (page == 0) null else "skip=$read").joinToString("&")
             val got = runCatching {
-                Stremio.titles(Http.json("${addon.base}/catalog/${Stremio.enc(c.type)}/${Stremio.enc(c.id)}" + (if (extra.isEmpty()) "" else "/$extra") + ".json"))
+                Stremio.titles(Stremio.get("${addon.base}/catalog/${Stremio.enc(c.type)}/${Stremio.enc(c.id)}" + (if (extra.isEmpty()) "" else "/$extra") + ".json"))
             }.getOrDefault(emptyList())
             if (got.isEmpty()) break
             read += got.size
@@ -139,7 +139,7 @@ internal fun MainActivity.spotlightTitles(type: String): List<TmdbItem> {
     val kinds = when (type) { "movie" -> listOf("movie"); "tv" -> listOf("series"); else -> listOf("movie", "series") }
     val lists = kinds.map { k ->
         val catalog = addon?.vod?.firstOrNull { it.type == k && it.listed }?.id ?: "top"
-        runCatching { Stremio.titles(Http.json("${url.removeSuffix("/manifest.json")}/catalog/$k/${Stremio.enc(catalog)}.json")) }
+        runCatching { Stremio.titles(Stremio.get("${url.removeSuffix("/manifest.json")}/catalog/$k/${Stremio.enc(catalog)}.json")) }
             .onFailure { warn("Cinemeta for Spotlight failed ($it)") }.getOrDefault(emptyList())
     }
     val titles = (0 until (lists.maxOfOrNull { it.size } ?: 0)).flatMap { i -> lists.mapNotNull { it.getOrNull(i) } }
