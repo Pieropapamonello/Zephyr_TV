@@ -363,6 +363,7 @@ internal fun MainActivity.extensionAddonUrls(): List<String> =
 /** After an extension was installed, updated, removed or switched: what Zephyr TV kept of it as an add-on, read anew. */
 internal fun MainActivity.extensionChanged(id: String) {
     Stremio.forget(filesDir, ExtensionCalls.url(id))
+    ExtensionCalls.guidesFile(this, id).delete() // its guide() asked again: its settings may name other guides
     addonsChanged()
 }
 
@@ -475,4 +476,32 @@ private fun MainActivity.extensionForm(e: Extensions.Extension, fields: List<Nuv
     formPage(e.name, "", fields, focus, { f -> extensionValues(e.id)?.opt(f.key)?.takeIf { it != JSONObject.NULL } ?: f.default },
         { f, v -> setExtensionValue(e.id, fields, f.key, v); extensionChanged(e.id) },
         { i -> extensionForm(e, fields, i, back) }, back)
+}
+
+// ---------- guides ----------
+
+private const val GUIDES_MS = 24 * 3600_000L // an extension's guide() asked again after a day
+private val guidesAsked: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+/**
+ * The guides of the extension at the add-on address [url] (none for an add-on), as kept: its sources asked of its
+ * guide() and the guides read again in the background once a day, the rows under [pkg] built again once they're in.
+ */
+internal fun MainActivity.extensionGuides(url: String, pkg: String): List<Epg.Guide> {
+    val id = ExtensionCalls.idOf(url) ?: return emptyList()
+    val e = Extensions.installed(filesDir, id)?.takeIf { "guide" in it.resources } ?: return emptyList()
+    val kept = ExtensionCalls.guidesFile(this, id)
+    val sources = runCatching { org.json.JSONArray(kept.readText()) }.getOrNull()?.let { a -> (0 until a.length()).map { a.optString(it) } }
+    val stale = sources == null || System.currentTimeMillis() - kept.lastModified() > GUIDES_MS
+    val due = sources.orEmpty().filter { Epg.due(filesDir, it, own = false) }
+    if ((stale || due.isNotEmpty()) && guidesAsked.add(id)) longIo.execute {
+        try {
+            val now = if (stale) ExtensionCalls.refreshGuides(this, e) else sources.orEmpty()
+            val read = now.filter { Epg.due(filesDir, it, own = false) }.count { Epg.update(filesDir, it, own = false) != null }
+            if (stale || read > 0) ui.post { rowsAgain(pkg) }
+        } finally {
+            guidesAsked.remove(id)
+        }
+    }
+    return sources.orEmpty().mapNotNull { Epg.saved(filesDir, it, own = false) }
 }

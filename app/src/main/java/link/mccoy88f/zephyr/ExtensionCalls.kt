@@ -85,6 +85,21 @@ internal object ExtensionCalls {
 
     private val scripts = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, String>>()
 
+    /** Where [e]'s guide sources are kept, as its guide() last gave them. */
+    fun guidesFile(context: Context, id: String) = File(Extensions.dataDir(context.filesDir, id), "guides.json")
+
+    /** Asks [e]'s guide() for its sources (XMLTV addresses) and keeps them; none when it has no guide. Off the UI thread. */
+    fun refreshGuides(context: Context, e: Extensions.Extension): List<String> {
+        val out = if ("guide" !in e.resources) null else runCatching {
+            call(context, e, "(typeof module.exports.guide === \"function\" ? module.exports.guide(${withSettings(context, e)}) : { sources: [] })", LONG_MS)
+        }.onFailure { warn("Extension guide() failed: ${e.name} ($it)") }.getOrNull()
+        val sources = out?.let { runCatching { JSONObject(it).optJSONArray("sources") }.getOrNull() }?.let { a ->
+            (0 until a.length()).mapNotNull { i -> (a.opt(i) as? JSONObject)?.optString("url") ?: (a.opt(i) as? String) }.filter { it.startsWith("http") }
+        }.orEmpty().distinct()
+        guidesFile(context, e.id).writeText(JSONArray(sources).toString())
+        return sources
+    }
+
     /** A handler's args with nothing but [e]'s settings: for manifest() and settings(). */
     private fun withSettings(context: Context, e: Extensions.Extension) = JSONObject().put("settings", settings(context, e))
 

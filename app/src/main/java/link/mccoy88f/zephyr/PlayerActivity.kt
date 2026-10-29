@@ -1433,6 +1433,14 @@ class PlayerActivity : Activity() {
     }
 
     private fun start(s: Stremio.Stream, format: String?) {
+        // Another app's (externalUrl, ytId): it plays there, with the app the extension names first; Back comes here.
+        if (s.app != null) {
+            val view = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(s.url))
+            val withApp = s.app.takeIf { it.isNotEmpty() }?.let { android.content.Intent(view).setPackage(it) }?.takeIf { packageManager.queryIntentActivities(it, 0).isNotEmpty() }
+            if (runCatching { startActivity(withApp ?: view) }.isSuccess) return finish()
+            warn("stream ${tried + 1}: no app opens ${s.url.substringBefore(':')}")
+            return next()
+        }
         release()
         val http = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true) // some add-ons' addresses go from https to a proxy's http, and back
@@ -1444,7 +1452,19 @@ class PlayerActivity : Activity() {
         // headphones or a Bluetooth speaker go away. The sink follows the output's changes and what it can decode
         // (Dolby, DTS passed through to a receiver that can).
         // The web through [http]; a playlist written in its address (data:, from a Nuvio plugin) read as it is.
-        val p = ExoPlayer.Builder(this).setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this, http)))
+        // DASH protected by ClearKey (an extension's drm.clearkey): its keys, here, as the license.
+        val drm = s.clearkey.takeIf { it.isNotEmpty() }?.let { keys ->
+            fun b64(hex: String) = android.util.Base64.encodeToString(hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray(),
+                android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+            val license = JSONObject().put("type", "temporary").put("keys", org.json.JSONArray(keys.map { (kid, key) ->
+                JSONObject().put("kty", "oct").put("kid", b64(kid)).put("k", b64(key))
+            }))
+            androidx.media3.exoplayer.drm.DefaultDrmSessionManager.Builder()
+                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, androidx.media3.exoplayer.drm.FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .build(androidx.media3.exoplayer.drm.LocalMediaDrmCallback(license.toString().toByteArray()))
+        }
+        val sources = DefaultMediaSourceFactory(DefaultDataSource.Factory(this, http)).apply { drm?.let { m -> setDrmSessionManagerProvider { m } } }
+        val p = ExoPlayer.Builder(this).setMediaSourceFactory(sources)
             .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
             .setHandleAudioBecomingNoisy(true)
             .build()
@@ -1516,6 +1536,7 @@ class PlayerActivity : Activity() {
                 "dash" -> setMimeType(MimeTypes.APPLICATION_MPD)
                 "ts" -> setMimeType(MimeTypes.VIDEO_MP2T)
             }
+            if (drm != null) setDrmConfiguration(MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID).build())
         }.build()
         p.setMediaItem(item)
         p.playWhenReady = true
@@ -1580,14 +1601,17 @@ class PlayerActivity : Activity() {
         const val CHOSEN = "chosen" // a film's or episode's stream picked by hand, as streamJson writes it
         const val CHOSEN_ELSE_SEARCH = "chosen_else_search" // the chosen one is the one kept to resume with: if it fails, search
 
-        /** [s] for an Intent: its address, name, headers and source. */
+        /** [s] for an Intent: its address, name, headers, source, ClearKey keys and the app that opens it. */
         internal fun streamJson(s: Stremio.Stream): JSONObject = JSONObject().put("url", s.url).put("title", s.title)
             .put("headers", JSONObject(s.headers as Map<*, *>)).put("group", s.group ?: JSONObject.NULL).put("source", s.source ?: JSONObject.NULL)
+            .put("clearkey", JSONObject(s.clearkey as Map<*, *>)).put("app", s.app ?: JSONObject.NULL)
 
         private fun streamOf(j: JSONObject): Stremio.Stream {
             val h = j.optJSONObject("headers") ?: JSONObject()
+            val k = j.optJSONObject("clearkey") ?: JSONObject()
             return Stremio.Stream(j.getString("url"), j.optString("title"), h.keys().asSequence().associateWith { h.optString(it) },
-                j.optString("group").takeIf { !j.isNull("group") && it.isNotEmpty() }, j.optString("source").takeIf { !j.isNull("source") && it.isNotEmpty() })
+                j.optString("group").takeIf { !j.isNull("group") && it.isNotEmpty() }, j.optString("source").takeIf { !j.isNull("source") && it.isNotEmpty() },
+                clearkey = k.keys().asSequence().associateWith { k.optString(it) }, app = if (j.isNull("app")) null else j.optString("app"))
         }
         const val TYPES = "types"
         const val IDS = "ids"

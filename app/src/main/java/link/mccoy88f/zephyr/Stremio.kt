@@ -106,7 +106,8 @@ internal object Stremio {
                              val runtime: String?, val episodes: List<Episode>)
 
     /** A channel in a catalog: what to ask the streams for, its name and logo, what's on (if the add-on says), its categories. */
-    internal class Item(val type: String, val id: String, val name: String, val logo: String?, val now: String?, val genres: List<String> = emptyList())
+    internal class Item(val type: String, val id: String, val name: String, val logo: String?, val now: String?, val genres: List<String> = emptyList(),
+                        val epgId: String? = null) // its id in the TV guide, when its add-on (an extension) says it
 
     /** One row: a catalog, whole ([genre] null) or one of its categories. */
     internal class Row(val catalog: Catalog, val genre: String?, val items: List<Item>)
@@ -120,7 +121,9 @@ internal object Stremio {
      */
     internal class Stream(val url: String, val title: String, val headers: Map<String, String>, val group: String? = null,
                           val source: String? = null, // source: the add-on it came from, when streams of several are mixed
-                          val langRank: Int = LANG_OURS) // in the TV's language (0), saying none (1), in another (2)
+                          val langRank: Int = LANG_OURS, // in the TV's language (0), saying none (1), in another (2)
+                          val clearkey: Map<String, String> = emptyMap(), // DASH keys, key id to key (hex): an extension's drm.clearkey
+                          val app: String? = null) // [url] opened by another app (externalUrl, ytId), with this one first
 
     @Volatile private var listings: Map<String, Listing> = emptyMap() // manifest address to what's saved, once read
     private val updating = java.util.Collections.synchronizedSet(HashSet<String>())
@@ -299,7 +302,7 @@ internal object Stremio {
             // "LIVE" is what some add-ons say when they have no guide for the channel: nothing to show.
             val now = text(m, "releaseInfo")?.takeIf { !it.equals("LIVE", ignoreCase = true) }
             val genres = (m.optJSONArray("genre") ?: m.optJSONArray("genres"))?.let { g -> (0 until g.length()).map { g.optString(it) } }.orEmpty()
-            Item(m.optString("type").ifBlank { "tv" }, id, name, logo(text(m, "logo") ?: text(m, "poster")), now, genres)
+            Item(m.optString("type").ifBlank { "tv" }, id, name, logo(text(m, "logo") ?: text(m, "poster")), now, genres, text(m, "epgId"))
         }
     }
 
@@ -478,18 +481,23 @@ internal object Stremio {
     internal fun streams(answer: JSONObject, vod: Boolean = false): List<Stream> {
         val list = answer.optJSONArray("streams") ?: return emptyList()
         return (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { s ->
+            val hints = s.optJSONObject("behaviorHints")
+            // Another app's: a link it opens (externalUrl), a YouTube video (ytId).
+            val external = text(s, "externalUrl") ?: text(s, "ytId")?.let { "vnd.youtube:$it" }
             // A web address, or the playlist itself written in it (data:, as some Nuvio plugins hand an HLS one).
             val url = text(s, "url")?.takeIf { it.startsWith("http://") || it.startsWith("https://") || it.startsWith("data:") }
                 ?.let { if (it.startsWith("data://")) "data:" + it.removePrefix("data://") else it } // "data://": a plugin's slip
-                ?: return@mapNotNull null
-            val hints = s.optJSONObject("behaviorHints")
+                ?: external ?: return@mapNotNull null
+            val keys = s.optJSONObject("drm")?.optJSONObject("clearkey")?.let { k -> k.keys().asSequence().associateWith { k.optString(it) } }
+                ?.filter { (kid, key) -> Regex("[0-9a-fA-F]{32}").matches(kid) && Regex("[0-9a-fA-F]{32}").matches(key) }.orEmpty()
             val request = hints?.optJSONObject("proxyHeaders")?.optJSONObject("request")
             val headers = request?.keys()?.asSequence()?.associateWith { request.optString(it) }?.filterValues { it.isNotEmpty() }.orEmpty()
             val described = text(s, "description") ?: text(s, "title")
             val title = if (!vod) (text(s, "title") ?: text(s, "name") ?: "").lines().first().trim()
                 else listOfNotNull(text(s, "name")?.lines()?.map { it.trim() }?.filter { it.isNotEmpty() }?.joinToString(" "),
                     described?.lines()?.firstOrNull { it.isNotBlank() }?.trim()).distinct().joinToString(" · ")
-            Stream(url, title, headers, hints?.let { text(it, "bingeGroup") })
+            Stream(url, title, headers, hints?.let { text(it, "bingeGroup") }, clearkey = keys,
+                app = if (url == external) hints?.let { text(it, "androidPackage") } ?: "" else null)
         }
     }
 

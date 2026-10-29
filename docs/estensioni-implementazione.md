@@ -126,20 +126,23 @@ HTTP. Così righe, pagine, ricerca e player le usano senza codice nuovo.
   avvio automatico di podcast, corsi, audiolibri; radio che parte subito; conto alla rovescia degli eventi);
   `featured` nello Spotlight. Oggi i tipi generici si mostrano nelle loro righe e si riproducono come un film.
 
-## Fase 4 — Il player
+## Fase 4 — Il player ◐
 
 In `PlayerActivity.kt`.
 
 - ☐ **Solo audio** (`behaviorHints.audioOnly`, o estensione del file audio): `poster` o `thumbnail` su una sfocatura,
   tempo in basso, schermo sempre acceso, niente salvaschermo.
 - ☐ **Radio**: logo al centro, titolo in onda dai metadati ICY (Media3 li legge già), nessuna barra del tempo.
-- ☐ **`externalUrl`**: `Intent.ACTION_VIEW` con l'indirizzo, prima con `behaviorHints.androidPackage` se installata;
+- ☑ **`externalUrl`**: `Intent.ACTION_VIEW` con l'indirizzo, prima con `behaviorHints.androidPackage` se installata;
   **`ytId`**: app YouTube (`vnd.youtube:<id>`). Nella lista degli stream con l'icona dell'app che li apre; nascosti se
   nessuna app li gestisce. Serve `<queries>` nel manifest Android per vedere le app (visibilità dei pacchetti da
   Android 11).
-- ☐ **ClearKey** (`drm.clearkey`): `MediaItem.DrmConfiguration` con `C.CLEARKEY_UUID` e le chiavi in locale.
+- ☑ **ClearKey** (`drm.clearkey`): `MediaItem.DrmConfiguration` con `C.CLEARKEY_UUID` e le chiavi in locale.
 - ☐ **`bingeGroup`**: l'episodio successivo con uno stream dello stesso gruppo, se c'è.
 - ☐ **Prossimo elemento in automatico** per `channel`, `course`, `podcast`, `audiobook` (oggi c'è per le serie).
+- ☑ `externalUrl` / `ytId` aprono l'app (con `androidPackage` per prima, se c'è); ClearKey con le chiavi come licenza
+  locale (Media3, nessuna libreria in più). Nella lista non hanno ancora l'icona dell'app né vengono nascosti senza app.
+- ☐ Solo audio, radio, prossimo elemento automatico, `bingeGroup`.
 
 ## Fase 5 — Catch-up dei canali
 
@@ -151,17 +154,20 @@ In `PlayerActivity.kt`.
   del canale **Dall'inizio** per il programma in onda.
 - ☐ Lettura di `catchup`, `catchup-source`, `catchup-days` (e di `timeshift`) nelle playlist (fase 7).
 
-## Fase 6 — La guida delle estensioni
+## Fase 6 — La guida delle estensioni ◐
 
 Oggi `Epg.kt` ha un solo indirizzo XMLTV, abbinato per nome.
 
-- ☐ **Più fonti**: quella globale delle impostazioni più quelle di ogni estensione (`guide()`), ognuna con i suoi
+- ☑ **Più fonti**: quella globale delle impostazioni più quelle di ogni estensione (`guide()`), ognuna con i suoi
   file e il suo aggiornamento giornaliero.
-- ☐ **Priorità**: prima le fonti dell'estensione del canale, poi la globale.
+- ☑ **Priorità**: prima le fonti dell'estensione del canale, poi la globale.
 - ☐ **Abbinamento**: `epgId` esatto, poi nome normalizzato (maiuscole, accenti, parole di qualità HD/FHD/4K, suffissi
   come `.it`), come fa OMG Premium TV.
 - ☐ Spazio su disco: solo le ore che servono (come oggi), più i giorni del catch-up; limite totale e pulizia delle
   fonti non più usate.
+- ☑ Una guida per indirizzo (`Epg`), quelle di `guide()` lette una volta al giorno in background; nelle righe dei
+  canali di un'estensione prima le sue, poi quella globale; abbinamento per `epgId`, poi per nome.
+- ☐ Nel player (banner del canale) e nella Guida ancora solo quella globale.
 
 ## Fase 7 — `zephyr.m3u`, le playlist lette da Zephyr TV ☑
 

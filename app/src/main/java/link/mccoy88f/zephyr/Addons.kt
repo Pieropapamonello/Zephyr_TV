@@ -191,6 +191,7 @@ internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<
     val from = listOf(pkg, addonsTv(), listings.joinToString { (u, l) -> "$u@${l.at}" }, System.identityHashCode(guide),
         hidden.hashCode(), System.currentTimeMillis() / GUIDE_MS).joinToString("|")
     built[pkg]?.takeIf { it.from == from }?.let { return it.sections }
+    val extGuides = listings.associate { (url, _) -> url to extensionGuides(url, pkg) }
     // In an extension's own app, its channels given to the collectors (see extensionRoutes) aren't.
     return listings.filter { (url, _) -> !(own && extensionRoutes(url, "tv") && pkg == ownAppPkg(url)) }
         .flatMap { (url, listing) ->
@@ -202,8 +203,11 @@ internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<
                 else -> "${row.catalog.name} · ${row.genre}"
             }
             // Hidden as hideWatch keys it: the card has no app.
+            val own = extGuides[url].orEmpty()
             val items = row.items.filter { hideKey(null, it.name) !in hidden }.map { item ->
-                val now = if (item.now == null) guide?.let { Epg.now(it, item.name) } else null
+                // What's on: the extension's own guides first (by its epgId, then its name), then Zephyr TV's.
+                val now = if (item.now != null) null else own.firstNotNullOfOrNull { Epg.now(it, item.name, id = item.epgId) }
+                    ?: guide?.let { Epg.now(it, item.name, id = item.epgId) }
                 Prog(item.name, item.now ?: now?.first ?: "", now?.second ?: 0, item.logo, null, null, badge = "", addon = AddonChannel(url, item))
             }
             if (items.isEmpty()) null

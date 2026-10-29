@@ -666,7 +666,7 @@ internal fun MainActivity.pickStream(ref: TitleRef, meta: Stremio.TitleMeta, epi
     show()
     for ((base, name) in sources) netIo.execute {
         val got = runCatching { sourceStreams(prefs, filesDir, base, name, t.type, id) }.getOrDefault(emptyList())
-            .map { Stremio.Stream(it.url, it.title, it.headers, it.group, it.source ?: name) }
+            .map { Stremio.Stream(it.url, it.title, it.headers, it.group, it.source ?: name, it.langRank, it.clearkey, it.app) }
         ui.post {
             left--
             // Each source's, in the TV's language first then the preferred quality's order, under those already there.

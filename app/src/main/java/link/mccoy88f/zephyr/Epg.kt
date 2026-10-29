@@ -26,16 +26,18 @@ internal object Epg {
     /** The guide as read: XMLTV channel id to its programs in time order, and the names to find those ids by. */
     internal class Guide(val shows: Map<String, List<Show>>, val names: Map<String, String>)
 
-    @Volatile private var guide: Pair<String, Guide>? = null // the address it came from, and the guide
-    private val updating = java.util.concurrent.atomic.AtomicBoolean()
+    private val guides = java.util.concurrent.ConcurrentHashMap<String, Guide>() // by the file they're kept in
+    private val updating: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
-    private fun file(dir: File) = File(dir, "epg.tsv")
-    private fun failed(dir: File) = File(dir, "epg.failed")
+    /** Where the guide at [url] is kept: the one of Zephyr TV settings ([own]) in epg.tsv, an extension's in a file each. */
+    private fun file(dir: File, url: String, own: Boolean) = if (own) File(dir, "epg.tsv")
+        else File(dir, "epg_" + java.security.MessageDigest.getInstance("SHA-1").digest(url.toByteArray()).joinToString("") { "%02x".format(it) }.take(16) + ".tsv")
+    private fun failed(f: File) = File(f.path.removeSuffix(".tsv") + ".failed")
 
-    /** The saved guide for [url], or null when there's none yet (or it's from another address). */
-    fun saved(dir: File, url: String): Guide? {
-        guide?.takeIf { it.first == url }?.let { return it.second }
-        val f = file(dir)
+    /** The saved guide for [url], or null when there's none yet (or it's from another address). [own]: see file. */
+    fun saved(dir: File, url: String, own: Boolean = true): Guide? {
+        val f = file(dir, url, own)
+        guides[f.path]?.takeIf { f.exists() && f.useLines { it.firstOrNull() } == url }?.let { return it }
         if (!f.exists()) return null
         val lines = f.readLines()
         if (lines.firstOrNull() != url) return null
@@ -48,15 +50,15 @@ internal object Epg {
                 p.size >= 5 && p[0] == "P" -> shows.getOrPut(p[1]) { ArrayList() } += Show(p[2].toLong(), p[3].toLong(), p[4], p.getOrNull(5) ?: "")
             }
         }
-        return Guide(shows, ChannelLogos.table(names)).also { guide = url to it }
+        return Guide(shows, ChannelLogos.table(names)).also { guides[f.path] = it }
     }
 
     /** Whether the guide for [url] is missing or half a day old, and a failed try isn't too recent to try again. */
-    fun due(dir: File, url: String): Boolean {
+    fun due(dir: File, url: String, own: Boolean = true): Boolean {
         val now = System.currentTimeMillis()
-        val f = file(dir)
+        val f = file(dir, url, own)
         if (f.exists() && now - f.lastModified() < MAX_AGE_MS && f.useLines { it.firstOrNull() } == url) return false
-        val fail = failed(dir)
+        val fail = failed(f)
         return !(fail.exists() && now - fail.lastModified() < RETRY_MS && fail.readText() == url)
     }
 
@@ -64,12 +66,12 @@ internal object Epg {
      * Fetches and saves the guide at [url]: how many channels it has programs for in the next day (0: none, an
      * out-of-date guide), or null when it couldn't (or another update is running).
      */
-    fun update(dir: File, url: String): Int? {
-        if (!updating.compareAndSet(false, true)) return null
+    fun update(dir: File, url: String, own: Boolean = true): Int? {
+        val f = file(dir, url, own)
+        if (!updating.add(f.path)) return null
         try {
             val now = System.currentTimeMillis()
             val (names, shows) = Http.open(url).use { read(it, now - 3 * 3600_000L, now + KEEP_MS) }
-            val f = file(dir)
             val part = File(dir, f.name + ".part")
             part.bufferedWriter().use { w ->
                 w.write(url)
@@ -78,15 +80,15 @@ internal object Epg {
                 for ((id, list) in shows) for (s in list) w.write("P\t$id\t${s.start}\t${s.stop}\t${s.title}\t${s.desc}\n")
             }
             if (!part.renameTo(f)) throw java.io.IOException("can't save ${f.name}")
-            failed(dir).delete()
-            guide = url to Guide(shows, ChannelLogos.table(names.map { (id, all) -> all to id }))
+            failed(f).delete()
+            guides[f.path] = Guide(shows, ChannelLogos.table(names.map { (id, all) -> all to id }))
             return shows.size
         } catch (e: Exception) {
             warn("TV guide download failed ($e)")
-            failed(dir).apply { writeText(url); setLastModified(System.currentTimeMillis()) }
+            failed(f).apply { writeText(url); setLastModified(System.currentTimeMillis()) }
             return null
         } finally {
-            updating.set(false)
+            updating.remove(f.path)
         }
     }
 
@@ -161,14 +163,16 @@ internal object Epg {
     }
 
     /** What's on now on the channel called [name], and how far in it is (1 to 100), or null. */
-    fun now(guide: Guide, name: String, at: Long = System.currentTimeMillis()): Pair<String, Int>? {
-        val s = nowAndNext(guide, name, at)?.first ?: return null
+    fun now(guide: Guide, name: String, at: Long = System.currentTimeMillis(), id: String? = null): Pair<String, Int>? {
+        val s = nowAndNext(guide, name, at, id)?.first ?: return null
         return s.title to progress(s, at)
     }
 
     /** What's on now on the channel called [name] and what follows it, or null when the guide has nothing on now. */
-    fun nowAndNext(guide: Guide, name: String, at: Long = System.currentTimeMillis()): Pair<Show, Show?>? {
-        val id = ChannelLogos.match(guide.names, name) ?: return null
+    fun nowAndNext(guide: Guide, name: String, at: Long = System.currentTimeMillis(), id: String? = null): Pair<Show, Show?>? {
+        // The channel's own id in the guide first (an extension's epgId, a playlist's tvg-id), then its name.
+        val known = id?.let { i -> guide.shows.keys.firstOrNull { it.equals(i, ignoreCase = true) } }
+        val id = known ?: ChannelLogos.match(guide.names, name) ?: return null
         val list = guide.shows[id] ?: return null
         val i = list.indexOfFirst { it.start <= at && at < it.stop }.takeIf { it >= 0 } ?: return null
         return list[i] to list.getOrNull(i + 1)
