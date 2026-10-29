@@ -167,7 +167,7 @@ The content is one of these `types`:
 | `course` | **Zephyr TV.** A course: its lessons as `videos`, in order; a `season` is a module | its modules and lessons; Watch goes on from the first lesson not seen |
 | `podcast` | **Zephyr TV.** A podcast, audio or video: its episodes as `videos` | its episodes, newest first |
 | `audiobook` | **Zephyr TV.** An audiobook: its chapters as `videos`, in order | its chapters; Listen goes on where it was left, chapter after chapter |
-| `radio` | **Zephyr TV.** A radio station, live, audio only: its catalogs are listed as TV channels' are | — it plays at once, with its logo and name on screen |
+| `radio` | **Zephyr TV.** A radio station, live, audio only: its catalogs are listed as TV channels' are | — it plays at once, with its logo, its name and the song on air (ICY or ID3, when the stream says it) on screen |
 | `event` | **Zephyr TV.** A live event at a time (a match, a concert): `startTime`, `endTime` | before it starts, the time left; while it's on, Watch; after it, Watch again when it has streams still |
 
 - `video`, `channel`, `course`, `podcast`, `audiobook`, `radio` and `event` are the **generic content**: they show in

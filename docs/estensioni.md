@@ -171,7 +171,7 @@ Ogni contenuto è di uno di questi `types`:
 | `course` | **Zephyr TV.** Un corso: le sue lezioni come `videos`, in ordine; una `season` è un modulo | moduli e lezioni; Guarda riprende dalla prima lezione non vista |
 | `podcast` | **Zephyr TV.** Un podcast, audio o video: le sue puntate come `videos` | le puntate, dalle più recenti |
 | `audiobook` | **Zephyr TV.** Un audiolibro: i suoi capitoli come `videos`, in ordine | i capitoli; Ascolta riprende dove si era rimasti, un capitolo dopo l'altro |
-| `radio` | **Zephyr TV.** Una radio, in diretta, solo audio: i suoi cataloghi si elencano come quelli dei canali TV | — parte subito, con logo e nome a schermo |
+| `radio` | **Zephyr TV.** Una radio, in diretta, solo audio: i suoi cataloghi si elencano come quelli dei canali TV | — parte subito, con logo, nome e brano in onda (ICY o ID3, quando lo stream lo indica) a schermo |
 | `event` | **Zephyr TV.** Un evento in diretta a un'ora precisa (una partita, un concerto): `startTime`, `endTime` | prima dell'inizio, il tempo che manca; durante, Guarda; dopo, di nuovo Guarda se ha ancora stream |
 
 - `video`, `channel`, `course`, `podcast`, `audiobook`, `radio` ed `event` sono i **contenuti generici**: compaiono

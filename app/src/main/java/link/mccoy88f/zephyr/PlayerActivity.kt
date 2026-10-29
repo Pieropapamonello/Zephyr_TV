@@ -125,6 +125,8 @@ class PlayerActivity : Activity() {
     private lateinit var loadName: TextView
     private lateinit var loadSub: TextView // under the name, for an episode: its season, number and name
     private var loadFor = -1 // the channel (film, episode) the loading screen shows
+    private var soundOnly = false // what plays has no picture (a radio station): its screen stays, with the song on air
+    private var onAir: String? = null // the song on air, as the stream says it (ICY, ID3)
     private lateinit var banner: LinearLayout
     private lateinit var logoBox: LogoBox
     private var titleLogo: Bitmap? = null
@@ -1477,7 +1479,8 @@ class PlayerActivity : Activity() {
                     Player.STATE_READY -> {
                         ui.removeCallbacks(stuck)
                         // Sound only (a radio station): its logo and name stay, on the blur of its logo, not a black screen.
-                        say(if (p.currentTracks.groups.none { it.type == C.TRACK_TYPE_VIDEO }) "" else null)
+                        soundOnly = p.currentTracks.groups.none { it.type == C.TRACK_TYPE_VIDEO }
+                        say(if (soundOnly) onAir.orEmpty() else null)
                         if (vod && p.playWhenReady && !scrobbling) ui.post { scrobble("start") } // once it has sought to where it resumes
                         if (pendingSeek > 0) p.seekTo(pendingSeek).also { pendingSeek = -1L }
                         if (vod) group = streams.getOrNull(tried)?.group else remember(channels[at])
@@ -1530,6 +1533,14 @@ class PlayerActivity : Activity() {
             override fun onTracksChanged(tracks: Tracks) {
                 if (banner.visibility == View.VISIBLE && shown == at) { fillTrackLine(at); fillButtons(at) }
             }
+
+            // The song on air, as the stream tells it as it plays: under the station's name.
+            override fun onMetadata(metadata: androidx.media3.common.Metadata) {
+                val song = songOf(metadata) ?: return
+                if (song == onAir) return
+                onAir = song
+                if (soundOnly && p.playbackState == Player.STATE_READY) status.text = song
+            }
         })
         val item = MediaItem.Builder().setUri(s.url).apply {
             when (format) {
@@ -1552,6 +1563,8 @@ class PlayerActivity : Activity() {
         ui.removeCallbacks(stuck)
         player?.release()
         player = null
+        soundOnly = false // the next stream (or channel) says its own
+        onAir = null
         if (::subtitles.isInitialized) subtitles.removeAllViews()
     }
 
@@ -1651,4 +1664,26 @@ class PlayerActivity : Activity() {
         private val SKIPPED_HEADERS = listOf("User-Agent", "Accept-Encoding", "Content-Length", "Host", "Connection")
         private const val FRESH_MS = 90_000L // fetched streams are used this long (their addresses can expire)
     }
+}
+
+/**
+ * The song on air in [m]: an Icecast or Shoutcast station's title (ICY), or an HLS one's ID3 tags (title and
+ * artist, or the group some stations write "Artist - Song" in). Null when it says none.
+ */
+@OptIn(UnstableApi::class)
+internal fun songOf(m: androidx.media3.common.Metadata): String? {
+    var icy: String? = null
+    var title: String? = null
+    var artist: String? = null
+    var group: String? = null
+    for (i in 0 until m.length()) when (val e = m.get(i)) {
+        is androidx.media3.extractor.metadata.icy.IcyInfo -> icy = e.title
+        is androidx.media3.extractor.metadata.id3.TextInformationFrame -> when (e.id) {
+            "TIT2" -> title = e.values.firstOrNull()
+            "TPE1" -> artist = e.values.firstOrNull()
+            "TIT1" -> group = e.values.firstOrNull()
+        }
+    }
+    val song = icy ?: title?.let { t -> listOfNotNull(artist?.takeIf { it.isNotBlank() }, t).joinToString(" - ") } ?: group
+    return song?.trim()?.takeIf { it.isNotEmpty() }
 }
