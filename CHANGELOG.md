@@ -14,7 +14,7 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
-## Unreleased
+## 3.1.1
 
 - When a channel, film or episode starts to play, the player shows its information banner for 5 seconds, as **OK** does.
 - The player plays HLS streams with WebVTT subtitles again. Since 3.0.0, these streams stopped with "No streams available".
