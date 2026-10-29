@@ -203,15 +203,19 @@ Repositories update by themselves once a day. Plugins that declare only language
 
 Extensions are Zephyr TV's own format to add films, series, TV channels, radio, videos and more. As Nuvio plugins
 do, they run on the TV, apart from everything else and with access to the internet only. **Add only extensions you
-trust.** In this beta they can be installed, but their content doesn't show yet.
+trust.** **OMG Premium TV** comes with Zephyr TV: add your M3U playlists or Xtream accounts in its **Options**, and
+the channels, films and series show in its app.
 
 **Settings → Extra features → Extensions**:
 
 - **Add an extension**: the address of its `manifest-zephyrtv.json` (or of the folder it's in), pasted from your
   phone or typed with the remote; or its `.zip` file sent from your phone. Before installing it, Zephyr TV shows what
   it is, who wrote it and what it provides.
-- **Each extension** has a page with **On**, **Adult content (18+)**, **Move up / Move down**, **Update now** and
+- **Each extension** has a page with **On**, **Options**, **Where it shows** (in its app, or in the collectors:
+  Films, TV Series, TV Channels, Radio, Videos…), **Adult content (18+)**, **Move up / Move down**, **Update now** and
   **Remove**. Those that come with Zephyr TV can be switched off, not removed.
+- An extension with content of its own has **its app** on the apps row, with its logo, once it has something to
+  show.
 - **Check for updates**: Zephyr TV also does it by itself, once a day.
 
 ## 13. Where channels, films and adult content show

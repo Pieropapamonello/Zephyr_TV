@@ -14,6 +14,16 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.0.0-beta.2
+
+- New: **Extensions**, in **Settings → Extra features → Extensions**. Add an extension from the address of its manifest-zephyrtv.json, or send its .zip file from your phone. Zephyr TV shows what the extension is before it installs it.
+- An extension with content of its own has its own app on the apps row, with its logo. Its channels, films and series are in that app.
+- **Where it shows** puts the content of an extension in the collectors instead: Films, TV Series, TV Channels, Radio, Videos, Courses, Podcasts, Audiobooks and Events.
+- Each extension has **Options**. Lists, such as playlists or accounts, have items that you can add, change, move and remove. Type the fields of an item on your phone in one step.
+- New: **OMG Premium TV** comes with Zephyr TV. Add your M3U playlists or Xtream accounts in its **Options**. Its channels show with their groups, logos and TV guide.
+- The section **Add-ons and Plugins** is now **Extra features**. **Virtual apps and integrations** holds the settings for where channels, films and adult content show.
+- Extensions and Nuvio plugins run in separate processes. When one stops responding, Zephyr TV stops it and starts it again.
+
 ## 3.0.0-beta.1
 
 - First beta of Zephyr TV 3. Version 3 adds **Extensions**, a new kind of add-on made for Zephyr TV. This beta prepares them. You cannot install extensions yet.
