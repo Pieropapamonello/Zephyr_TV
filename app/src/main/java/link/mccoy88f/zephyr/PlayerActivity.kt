@@ -1514,6 +1514,8 @@ class PlayerActivity : Activity() {
                 when (state) {
                     Player.STATE_READY -> {
                         ui.removeCallbacks(stuck)
+                        // Its first start (not one started again after a stall): the banner comes up, as OK brings it.
+                        val started = playing?.let { !it.played && it.restarts == 0 } == true
                         playing?.played = true
                         // Sound only (a radio station): its logo and name stay, on the blur of its logo, not a black screen.
                         soundOnly = p.currentTracks.groups.none { it.type == C.TRACK_TYPE_VIDEO }
@@ -1521,7 +1523,7 @@ class PlayerActivity : Activity() {
                         if (vod && p.playWhenReady && !scrobbling) ui.post { scrobble("start") } // once it has sought to where it resumes
                         if (pendingSeek > 0) p.seekTo(pendingSeek).also { pendingSeek = -1L }
                         if (vod) group = streams.getOrNull(tried)?.group else remember(channels[at])
-                        if (banner.visibility == View.VISIBLE && shown == at) showBanner(at)
+                        if ((started || banner.visibility == View.VISIBLE) && shown == at) showBanner(at)
                     }
                     // Waiting too long, at the start or later, is a stream that's stuck: the next one.
                     Player.STATE_BUFFERING -> {

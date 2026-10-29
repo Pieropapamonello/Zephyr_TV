@@ -16,6 +16,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- When a channel, film or episode starts to play, the player shows its information banner for 5 seconds, as **OK** does.
 - The player plays HLS streams with WebVTT subtitles again. Since 3.0.0, these streams stopped with "No streams available".
 - In Spotlight, the play mark of **Watch** shows when the button has the focus. Before, it was white on the white button.
 
