@@ -18,6 +18,9 @@ import org.junit.runner.RunWith
 /**
  * On a device, by hand: every channel of the playlist -e playlist <url>, its first stream played as the player does
  * (checked first, HLS through HlsAlign, headers), muted and with no screen, 10 s at most: whether it starts, and why not.
+ * Each line also goes to scan.txt in the app's external files (adb may drop on a long run: the file stays).
+ * Run it only on a TV nobody is using, with its owner's leave: it takes the video decoders one stream after another,
+ * which on some TVs freezes what's on screen (a BRAVIA was restarted from its remote during one).
  */
 @UnstableApi
 @RunWith(AndroidJUnit4::class)
@@ -28,6 +31,8 @@ class PlaylistScanTest {
         val inst = InstrumentationRegistry.getInstrumentation()
         val ctx = inst.targetContext
         val list = Http.open(url!!, emptyMap(), 30_000).bufferedReader().use { M3u.read(it) }
+        val out = java.io.File(ctx.getExternalFilesDir(null), "scan.txt").apply { writeText("") }
+        fun println(line: String) { kotlin.io.println(line); out.appendText(line + "\n") }
         println("SCAN start ${list.channels.size} channels")
         for (c in list.channels) {
             val st = c.streams.firstOrNull() ?: continue
