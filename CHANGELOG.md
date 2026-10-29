@@ -14,6 +14,14 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## Unreleased
+
+- The page of a film or an episode looks for the streams when it opens. **Watch** shows how many streams there are, and the player starts with them. When no source has streams, the page says so before the player opens.
+- A TV channel's streams are found when its card stays selected for a moment. A channel made of several (for example HD and SD) has all its streams ready when it starts.
+- The streams found stay ready for 90 seconds, for the launcher and the player. A search that is still going on is not done again.
+- Subtitles are off by default. The player shows only the subtitles that a stream forces.
+- New setting: **Content → Subtitles always on**. A subtitle choice made in the player stays until the player closes.
+
 ## 3.1.1
 
 - When a channel, film or episode starts to play, the player shows its information banner for 5 seconds, as **OK** does.

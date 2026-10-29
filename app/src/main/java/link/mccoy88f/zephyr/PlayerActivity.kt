@@ -1119,7 +1119,13 @@ class PlayerActivity : Activity() {
         tracksList.removeAllViews()
     }
 
-    /** Plays track [t], and keeps its language for the channels after this one (and the next time). */
+    /**
+     * Subtitles picked in this player (a language, "und", or "" for Off): for the channels and episodes after this
+     * one. Kept for the next time too only with Subtitles always on; otherwise each time starts with them off.
+     */
+    private var textLang: String? = null
+
+    /** Plays track [t], and keeps its language for the channels after this one (see textLang). */
     private fun pick(t: Track, type: Int) {
         val p = player ?: return
         val lang = t.group.getTrackFormat(t.index).language
@@ -1130,14 +1136,15 @@ class PlayerActivity : Activity() {
             .build()
         // Subtitles picked are kept for what plays next; audio isn't: the next stream starts with its default.
         if (type == C.TRACK_TYPE_AUDIO) return
-        choices.edit().putString(TEXT_LANG, lang ?: "und").apply()
+        textLang = lang ?: "und"
+        if (subtitlesOn()) choices.edit().putString(TEXT_LANG, textLang).apply()
     }
 
     private fun subtitlesOff() {
         val p = player ?: return
         p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
             .clearOverridesOfType(C.TRACK_TYPE_TEXT).setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
-        choices.edit().putString(TEXT_LANG, "").apply()
+        textLang = "" // for this time only: with Subtitles always on, the next starts with them again
         showCues(emptyList())
     }
 
@@ -1158,13 +1165,17 @@ class PlayerActivity : Activity() {
             // Each stream starts with the default audio: the TV's language (the TMDB one's) where it has it, else its
             // own; one picked in Audio is for that stream alone (see pick).
             setPreferredAudioLanguage((prefs.getString(K.TMDB_LANG, null) ?: TmdbClient.defaultLanguage()).substringBefore('-'))
-            when (val t = choices.getString(TEXT_LANG, null)) {
-                null -> {}
-                "" -> setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-                else -> setPreferredTextLanguage(t).setSelectUndeterminedTextLanguage(true)
-            }
+            // Subtitles: as picked in this player; else, always on, the language picked last (or the TV's, else the
+            // stream's default); else off, but those the stream forces (a foreign line in a dubbed film).
+            val tv = (prefs.getString(K.TMDB_LANG, null) ?: TmdbClient.defaultLanguage()).substringBefore('-')
+            val t = textLang ?: if (subtitlesOn()) choices.getString(TEXT_LANG, null)?.ifEmpty { null } ?: tv else null
+            setTrackTypeDisabled(C.TRACK_TYPE_TEXT, t == "")
+            if (t == null) setPreferredTextLanguage(null).setSelectUndeterminedTextLanguage(false).setIgnoredTextSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+            else if (t != "") setPreferredTextLanguage(t).setSelectUndeterminedTextLanguage(true).setIgnoredTextSelectionFlags(0)
         }.build()
     }
+
+    private fun subtitlesOn() = prefs.getBoolean(K.SUBTITLES_ON, false)
 
     /**
      * The subtitles on screen: text ones in a caption at the bottom, picture ones (DVB, common on IPTV) where the
@@ -1244,7 +1255,9 @@ class PlayerActivity : Activity() {
         release()
         pendingSeek = if (vod && !isAdult()) VodProgress.position(userDir, c.id) ?: -1L else -1L
         // A film's or episode's: its streams looked for, then checked, then each tried ("stream 1 of 5").
-        val known = fetched[c.id]?.takeIf { System.currentTimeMillis() - it.first < FRESH_MS } != null
+        // Or found ahead by the launcher (see StreamCache.warm): every source's.
+        val known = fetched[c.id]?.takeIf { System.currentTimeMillis() - it.first < FRESH_MS } != null ||
+            (vod && sources.isNotEmpty() && sources.all { StreamCache.fresh(cacheDir, it.first, c.type, c.id) != null })
         say(getString(if (vod && !known) R.string.player_finding_streams else R.string.player_loading))
         if (banner.visibility == View.VISIBLE) showBanner(i) // zapping: the banner keeps up with it; else the middle says it all
         lateLeft = 0
@@ -1292,7 +1305,7 @@ class PlayerActivity : Activity() {
         val preferred = preferredQuality(prefs)
         val answers = java.util.concurrent.ExecutorCompletionService<List<Stremio.Stream>>(pool)
         for ((b, name) in sources) answers.submit {
-            runCatching { sourceStreams(prefs, filesDir, b, name, c.type, c.id) }
+            runCatching { cachedStreams(prefs, filesDir, cacheDir, b, name, c.type, c.id) }
                 .onFailure { warn("streams failed: ${b.substringAfter("://").substringBefore('/')} ($it)") }.getOrDefault(emptyList())
         }
         val start = System.currentTimeMillis()
@@ -1328,9 +1341,9 @@ class PlayerActivity : Activity() {
         fetched[c.id]?.takeIf { System.currentTimeMillis() - it.first < FRESH_MS }?.let { return it.second }
         if (vod) return titleStreams(c, late)
         // The channel's add-on, then the Nuvio plugins that can play it (those for TV channels, by its id).
-        val own = runCatching { Stremio.streams(base, c.type, c.id) }.onFailure { warn("streams failed: $it") }.getOrDefault(emptyList())
+        val own = runCatching { StreamCache.get(cacheDir, base, c.type, c.id) { Stremio.streams(base, c.type, c.id) } }.onFailure { warn("streams failed: $it") }.getOrDefault(emptyList())
         val plugins = pluginSources(prefs, filesDir, c.type, c.id, adultShows(prefs)).flatMap { (b, name) ->
-            runCatching { sourceStreams(prefs, filesDir, b, name, c.type, c.id) }.getOrDefault(emptyList())
+            runCatching { cachedStreams(prefs, filesDir, cacheDir, b, name, c.type, c.id) }.getOrDefault(emptyList())
         }
         return (own + plugins).also { if (it.isNotEmpty()) fetched[c.id] = System.currentTimeMillis() to it }
     }
@@ -1342,7 +1355,7 @@ class PlayerActivity : Activity() {
      */
     private fun titleStreams(c: Channel, late: ((List<Stremio.Stream>?) -> Unit)? = null): List<Stremio.Stream> {
         val asked = sources.map { (b, name) ->
-            pool.submit(Callable { runCatching { sourceStreams(prefs, filesDir, b, name, c.type, c.id) }.onFailure { warn("streams failed: ${b.substringAfter("://").substringBefore('/')} ($it)") }.getOrDefault(emptyList()) })
+            pool.submit(Callable { runCatching { cachedStreams(prefs, filesDir, cacheDir, b, name, c.type, c.id) }.onFailure { warn("streams failed: ${b.substringAfter("://").substringBefore('/')} ($it)") }.getOrDefault(emptyList()) })
         }
         val start = System.currentTimeMillis()
         val got = arrayOfNulls<List<Stremio.Stream>>(asked.size)
@@ -1692,14 +1705,14 @@ class PlayerActivity : Activity() {
         /** [s] for an Intent: its address, name, headers, source, ClearKey keys and the app that opens it. */
         internal fun streamJson(s: Stremio.Stream): JSONObject = JSONObject().put("url", s.url).put("title", s.title)
             .put("headers", JSONObject(s.headers as Map<*, *>)).put("group", s.group ?: JSONObject.NULL).put("source", s.source ?: JSONObject.NULL)
-            .put("clearkey", JSONObject(s.clearkey as Map<*, *>)).put("app", s.app ?: JSONObject.NULL)
+            .put("clearkey", JSONObject(s.clearkey as Map<*, *>)).put("app", s.app ?: JSONObject.NULL).put("lang", s.langRank)
 
-        private fun streamOf(j: JSONObject): Stremio.Stream {
+        internal fun streamOf(j: JSONObject): Stremio.Stream {
             val h = j.optJSONObject("headers") ?: JSONObject()
             val k = j.optJSONObject("clearkey") ?: JSONObject()
             return Stremio.Stream(j.getString("url"), j.optString("title"), h.keys().asSequence().associateWith { h.optString(it) },
                 j.optString("group").takeIf { !j.isNull("group") && it.isNotEmpty() }, j.optString("source").takeIf { !j.isNull("source") && it.isNotEmpty() },
-                clearkey = k.keys().asSequence().associateWith { k.optString(it) }, app = if (j.isNull("app")) null else j.optString("app"))
+                j.optInt("lang", Stremio.LANG_OURS), k.keys().asSequence().associateWith { k.optString(it) }, if (j.isNull("app")) null else j.optString("app"))
         }
         const val TYPES = "types"
         const val IDS = "ids"

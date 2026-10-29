@@ -111,7 +111,7 @@ OK on a film or series card opens its page. At the top are its picture and logo;
 - **Films**: **Watch** (or **Resume from…**) and **Mark as watched**.
 - **Series**: the seasons, with how many episodes you watched. In a season, Left and Right go to the season beside it. Each episode has its page with **Watch** and **Mark as watched**.
 
-The page does **not** look for streams when it opens: the player does when you select **Watch**, or the **Choose a stream** page does when the choice is manual ([chapter 9](#9-choosing-streams-quality-language-quick-start)).
+The page of a film or an episode looks for the streams when it opens. **Watch** shows **Looking for streams…**, then how many streams the sources have. When you select **Watch**, the player starts with the streams already found. The streams found stay ready for 90 seconds; after that, the player looks for them again. A TV channel's streams are found in the same way, when its card stays selected for a moment: a channel made of several (for example HD and SD) has them all ready.
 
 ## 8. The player
 
@@ -142,6 +142,7 @@ The banner has the **Previous episode**, **Play/Pause**, **Next episode**, **Aud
 | **Quick start** | On | Starts at once with the first working stream in the preferred quality and in the language of the TV, while the other sources keep looking. When no source has that quality, it waits for every source (up to 30 seconds) and starts the best one a step below. Not with **Highest**: then the player waits for every source and picks the best |
 | **Streams in the TV's language first** | On | Tries the streams in the language of the TV first, then those that say no language, then those in other languages. With none in the language of the TV, it waits for every source before it plays one in another language |
 | **Hide streams without a language** | Off | Hides the streams that don't say their language |
+| **Subtitles always on** | Off | Off: each stream starts without subtitles, but those it forces (for example a line in another language). On: the subtitles in the language you picked last, else in the TV's language. A choice made in the player stays until you close it |
 
 How **quality** and **language** are recognised:
 - **Quality**: from the stream's name, for example 2160p/4K/UHD, 1440p/QHD, 1080p/FHD/Full HD, 720p/HD, 480p/SD.

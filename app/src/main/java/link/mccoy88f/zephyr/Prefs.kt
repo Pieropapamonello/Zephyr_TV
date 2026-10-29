@@ -60,6 +60,7 @@ internal object K {
     const val ADULT_UNTIL = "adult_until" // when the 18+ unlock runs out (wall clock ms; Long.MAX_VALUE: until locked again)
     const val ADULT_BOOT = "adult_boot" // when the TV had started at the 18+ unlock (see adultUnlocked)
     const val ADULT_FOREVER = "adult_forever" // an 18+ unlock lasts until locked again, not two hours
+    const val SUBTITLES_ON = "subtitles_on" // subtitles on in every stream (the last picked language, else the TV's); off: forced ones only
     const val HIDE_UNKNOWN_LANG = "hide_unknown_lang" // streams that say no language hidden, not last (see languageRank)
     const val FAST_START = "fast_start" // a film starts with the first working stream in the preferred quality (see quickStreams)
     const val STREAM_QUALITY = "stream_quality" // the quality streams are preferred in, by height; none: the highest

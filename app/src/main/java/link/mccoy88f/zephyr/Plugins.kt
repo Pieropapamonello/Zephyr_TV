@@ -103,6 +103,10 @@ internal fun sourceStreams(p: SharedPreferences, dir: File, base: String, name: 
         .filter { !(hideUnknown && it.langRank == Stremio.LANG_UNKNOWN) }
 }
 
+/** [sourceStreams] through StreamCache: those found ahead by the launcher, or a search going on, waited for. */
+internal fun cachedStreams(p: SharedPreferences, dir: File, cache: File, base: String, name: String, type: String, id: String) =
+    StreamCache.get(cache, base, type, id) { sourceStreams(p, dir, base, name, type, id) }
+
 /**
  * The language streams are preferred in ("it", from the TMDB language "it-IT"), or null when Content → Streams in
  * the TV's language first is off: then no language comes first.

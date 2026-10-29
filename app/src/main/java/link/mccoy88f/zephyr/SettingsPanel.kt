@@ -323,6 +323,11 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
                 prefs.edit().putBoolean(K.HIDE_UNKNOWN_LANG, !prefs.getBoolean(K.HIDE_UNKNOWN_LANG, false)).apply()
                 renderSettings(WATCH_SECTION * SECTION + 8)
             },
+            // Subtitles: off unless the stream forces them (a foreign line in a dubbed film), or on in every stream.
+            page(getString(R.string.setting_subtitles_on), toggle(prefs.getBoolean(K.SUBTITLES_ON, false))) {
+                prefs.edit().putBoolean(K.SUBTITLES_ON, !prefs.getBoolean(K.SUBTITLES_ON, false)).apply()
+                renderSettings(WATCH_SECTION * SECTION + 9)
+            },
         )
     }
     // The TV's own side: its inputs (HDMI and the like) and its channels, with their logos and guide.

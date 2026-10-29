@@ -109,14 +109,13 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
             pageReturn = { showVodTitle(meta, ref, services.known, found = found) }
             playTitle(ref, meta, null, only)
         }
-        // Watch at once, from all of them; once they've said how many streams each has, Watch on each one too, at
-        // the bottom: the rows above stay where they are, and focus with them.
+        // Watch, from all of them; how many streams they have once they've said (see warmTitle), none: no Watch.
         val having = found?.filterValues { it > 0 }?.keys?.let { keys -> sources.filter { it.first in keys } }
         val one = soleAddon(having ?: sources)
         if (having?.isEmpty() == true) rows += page(getString(R.string.title_no_streams)) { }
         else {
             icons[rows.size] = watchIcon(one)
-            rows += page(watchLabel(one, at, seen), if (seen) "✓" else "") {
+            rows += page(watchLabel(one, at, seen), listOfNotNull(if (seen) "✓" else null, streamsLine(found)).joinToString(" · ")) {
                 if (manualStreams()) pickStream(ref, meta, null) { showVodTitle(meta, ref, services.known, found = found) } else play(one?.base)
             }
         }
@@ -126,10 +125,6 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
             traktHistory(listOf(t.id to t.id), !seen)
             if (!seen) VodProgress.remove(vodDir(), t.id)
             showVodTitle(meta, ref, services.known, focusRow = markRow, found = found)
-        }
-        if (one == null && having != null && !manualStreams()) having.forEach { (base, name) ->
-            icons[rows.size] = sourceIcon(base, name)
-            rows += page(getString(R.string.tmdb_search_on, name), resources.getQuantityString(R.plurals.title_streams, found[base] ?: 0, found[base] ?: 0)) { play(base) }
         }
     } else {
         // TV Series: show the list of seasons on the main title page
@@ -155,7 +150,7 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
     val art = if (ref.background != null) Triple(ref.background, ref.logo, ref.poster ?: t.poster) else Triple(t.background, t.logo, ref.poster ?: t.poster)
     titlePage(t.name, art, ref.fallback, t.name, top, rows, focus, icons, holds, descView) { closeLauncherSettings() }
     services.later { showVodTitle(meta, ref, it, focusRow, found) }
-    // No source is asked from here: the player asks them all when Watch starts it (or the streams' page, picked by hand).
+    if (!episodic && found == null) warmTitle(t.type, t.id, sources, t.name) { counts -> showVodTitle(meta, ref, services.known, focusedRow(), counts) }
 }
 
 /**
@@ -245,34 +240,19 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
     }
     val having = found?.filterValues { it > 0 }?.keys?.let { keys -> sources.filter { it.first in keys } }
     val manual = manualStreams()
-    when {
-        sources.isEmpty() || having?.isEmpty() == true -> rows += page(getString(R.string.title_no_streams)) { }
-        // Picked by hand: Watch lists every source's streams at once (see pickStream), nothing to count first.
-        // Watch at once: the player asks every source (or, picked by hand, the streams' page does: see pickStream).
-        having == null -> {
-            val sole = soleAddon(sources)
-            icons[rows.size] = watchIcon(sole)
-            rows += page(watchLabel(sole, VodProgress.position(vodDir(), e.id), seen)) {
-                if (manual) pickStream(ref, meta, e) { showVodEpisode(meta, ref, e, services.known, found, 0) } else play(sole?.base)
-            }
-        }
-        else -> {
-            val sole = soleAddon(having)
-            val at = VodProgress.position(vodDir(), e.id)
-            icons[rows.size] = watchIcon(sole)
-            rows += page(watchLabel(sole, at, seen)) { play(sole?.base) }
+    if (sources.isEmpty() || having?.isEmpty() == true) rows += page(getString(R.string.title_no_streams)) { }
+    else {
+        // Watch: the player takes the streams found here (see warmTitle), or, picked by hand, the streams' page does.
+        val sole = soleAddon(having ?: sources)
+        icons[rows.size] = watchIcon(sole)
+        rows += page(watchLabel(sole, VodProgress.position(vodDir(), e.id), seen), streamsLine(found)) {
+            if (manual) pickStream(ref, meta, e) { showVodEpisode(meta, ref, e, services.known, found, 0) } else play(sole?.base)
         }
     }
     val markRow = rows.size
     rows += page(getString(if (seen) R.string.title_mark_unwatched else R.string.title_mark_watched)) {
         markWatched(meta, listOf(e), !seen)
         showVodEpisode(meta, ref, e, services.known, found, markRow)
-    }
-    // Several add-ons have it: each of them too, with how many streams it has; at the bottom, so the rows above
-    // stay where they are when these come in, and focus with them.
-    if (having != null && having.size > 1 && !manual) having.forEach { (base, name) ->
-        icons[rows.size] = sourceIcon(base, name)
-        rows += page(getString(R.string.tmdb_search_on, name), resources.getQuantityString(R.plurals.title_streams, found[base] ?: 0, found[base] ?: 0)) { play(base) }
     }
     val still = e.thumbnail
     val art = when {
@@ -285,8 +265,25 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
         showVodSeason(meta, ref, e.season, services.known, e.id)
     }
     services.later { showVodEpisode(meta, ref, e, it, found, focusedRow() ?: targetFocus) }
-    // No source is asked from here: the player asks them all when Watch starts it (or the streams' page, picked by hand).
+    if (found == null) warmTitle(t.type, e.id, sources, title) { counts -> showVodEpisode(meta, ref, e, services.known, counts, focusedRow() ?: targetFocus) }
 }
+
+/**
+ * A film's or episode's streams looked for as its page opens, every source at once, and kept for the player (see
+ * StreamCache): Watch then plays at once. Once all have answered, [shown] with how many each has, while the page
+ * (titled [page]) is still the one up.
+ */
+private fun MainActivity.warmTitle(type: String, id: String, sources: List<Pair<String, String>>, page: String, shown: (Map<String, Int>) -> Unit) {
+    if (sources.isEmpty()) return
+    val names = sources.toMap()
+    StreamCache.warm(cacheDir, sources.map { it.first }, type, id, { b -> sourceStreams(prefs, filesDir, b, names[b].orEmpty(), type, id) }) { counts ->
+        ui.post { if (pageShowing(page)) shown(counts) }
+    }
+}
+
+/** Watch's count: looking for streams, then how many all the sources have. */
+private fun MainActivity.streamsLine(found: Map<String, Int>?): String =
+    found?.values?.sum()?.let { n -> resources.getQuantityString(R.plurals.title_streams, n, n) } ?: getString(R.string.title_finding_streams)
 
 /**
  * Marks [episodes] of the series [meta] watched ([on]) or not, from its pages: watched ones off Continue Playing; the
@@ -665,7 +662,7 @@ internal fun MainActivity.pickStream(ref: TitleRef, meta: Stremio.TitleMeta, epi
     }
     show()
     for ((base, name) in sources) netIo.execute {
-        val got = runCatching { sourceStreams(prefs, filesDir, base, name, t.type, id) }.getOrDefault(emptyList())
+        val got = runCatching { cachedStreams(prefs, filesDir, cacheDir, base, name, t.type, id) }.getOrDefault(emptyList())
             .map { Stremio.Stream(it.url, it.title, it.headers, it.group, it.source ?: name, it.langRank, it.clearkey, it.app) }
         ui.post {
             left--

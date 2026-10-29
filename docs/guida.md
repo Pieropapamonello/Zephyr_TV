@@ -111,7 +111,7 @@ OK su una scheda di film o serie apre la sua pagina. In alto ci sono l'immagine 
 - **Film**: **Guarda** (o **Riprendi da…**) e **Segna come visto**.
 - **Serie**: le stagioni, con quanti episodi hai visto. In una stagione, sinistra e destra passano alla stagione accanto. Ogni episodio ha la sua pagina con **Guarda** e **Segna come visto**.
 
-La pagina **non** cerca gli stream quando si apre: lo fa il player quando premi **Guarda**, oppure la pagina **Scegli lo stream** se la scelta è manuale ([capitolo 9](#9-scegliere-gli-stream-qualità-lingua-avvio-rapido)).
+La pagina di un film o di un episodio cerca gli stream quando si apre. **Guarda** mostra **Cerco gli stream…**, poi quanti stream hanno le fonti. Quando premi **Guarda**, il player parte con gli stream già trovati. Gli stream trovati restano pronti per 90 secondi; dopo, il player li cerca di nuovo. Gli stream di un canale TV si trovano allo stesso modo, quando resti un momento sulla sua card: un canale fatto di più canali (per esempio HD e SD) li ha tutti pronti.
 
 ## 8. Il player
 
@@ -142,6 +142,7 @@ Nel banner ci sono i pulsanti **Episodio precedente**, **Play/Pausa**, **Episodi
 | **Avvio rapido dei contenuti** | Attivo | Parte subito con il primo stream che funziona nella qualità preferita e nella lingua del TV, mentre le altre fonti continuano a cercare. Se nessuna fonte ha quella qualità, aspetta tutte le fonti (fino a 30 secondi) e parte con il migliore del gradino inferiore. Non vale con **Massima**: in quel caso il player aspetta tutte le fonti e sceglie il migliore |
 | **Prima gli stream nella lingua del TV** | Attivo | Prova prima gli stream nella lingua del TV, poi quelli senza lingua, per ultimi quelli in altre lingue. Se non ne trova nessuno nella lingua del TV, aspetta tutte le fonti prima di avviarne uno in un'altra lingua |
 | **Nascondi stream senza lingua** | Spento | Nasconde gli stream che non dicono in che lingua sono |
+| **Sottotitoli sempre attivi** | Spento | Spento: ogni stream parte senza sottotitoli, tranne quelli che lo stream impone (per esempio una frase in un'altra lingua). Acceso: i sottotitoli nella lingua scelta per ultima, altrimenti in quella del TV. Una scelta fatta nel player vale finché non lo chiudi |
 
 Come vengono riconosciute **qualità** e **lingua**:
 - **Qualità**: dal nome dello stream, per esempio 2160p/4K/UHD, 1440p/QHD, 1080p/FHD/Full HD, 720p/HD, 480p/SD.

@@ -332,6 +332,26 @@ internal fun MainActivity.playAddonChannel(p: Prog, row: List<AddonChannel>? = n
     }
 }
 
+/**
+ * [c]'s streams looked for ahead and kept for the player (see StreamCache), as it does: its add-on's, then the plugins'
+ * for TV channels. A channel made of several (one name, HD and SD) has them all ready: the player goes straight to them.
+ */
+internal fun MainActivity.warmChannel(c: AddonChannel) {
+    val base = Stremio.saved(filesDir, c.addon)?.addon?.base ?: c.addon.removeSuffix("/manifest.json")
+    val type = c.item.type
+    val id = c.item.id
+    val adult = adultUnlocked()
+    StreamCache.later {
+        val names = (listOf(base to "") + pluginSources(prefs, filesDir, type, id, adult)).toMap()
+        StreamCache.warm(cacheDir, names.keys.toList(), type, id, { b ->
+            if (b == base) Stremio.streams(base, type, id) else sourceStreams(prefs, filesDir, b, names[b].orEmpty(), type, id)
+        })
+    }
+}
+
+/** How long a channel's card stays picked before its streams are looked for (see warmChannel). */
+internal const val WARM_MS = 600L
+
 /** The channel last played (written by PlayerActivity, in its own process: a file, not the preferences). */
 internal fun MainActivity.lastAddonChannel(): Pair<Long, AddonChannel>? = runCatching {
     val o = org.json.JSONObject(java.io.File(filesDir, PlayerActivity.LAST_FILE).readText())

@@ -731,9 +731,12 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     }
     val frame = FrameLayout(this)
     var details: TextView? = null // the line under the title, set below; scrolls too (a channel's program)
+    // A channel's streams looked for once its card stays picked a moment (not each card passed over): OK then plays.
+    val warm = p.addon?.let { c -> Runnable { if (frame.isFocused) warmChannel(c) } }
     style(frame, dp(8), card = true, lift = 1.1f) { focused ->
         title.isSelected = focused
         details?.isSelected = focused
+        warm?.let { ui.removeCallbacks(it); if (focused) ui.postDelayed(it, WARM_MS) }
         if (focused) {
             lastCard = frame
             showRowLabel(frame, false)
