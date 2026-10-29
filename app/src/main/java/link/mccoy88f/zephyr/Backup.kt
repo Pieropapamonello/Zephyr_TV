@@ -1,6 +1,7 @@
 package link.mccoy88f.zephyr
 
 import android.content.SharedPreferences
+import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -8,7 +9,9 @@ import org.json.JSONObject
  * Zephyr TV's settings as a small JSON file, to keep on a phone and bring back after a reset or onto another TV.
  * It holds what the user chose (theme, wallpapers, the apps row, Spotlight with its TMDB key, weather...), not
  * passing state (the last weather reading, update checks) and not the layout lock PIN, which could lock someone
- * out of a TV whose PIN they no longer remember. Photos used as wallpapers stay on the TV that has them.
+ * out of a TV whose PIN they no longer remember. Photos used as wallpapers stay on the TV that has them. With each
+ * user's data too ("data": what they watched, where they got to), not their Trakt account (its keys: they sign in
+ * again from a phone).
  */
 internal object Backup {
     private const val FORMAT = 1
@@ -21,9 +24,49 @@ internal object Backup {
         K.TMDB_API_KEY, K.TMDB_LANG, K.TMDB_TYPE, K.TMDB_DEFAULT_APPS, K.TMDB_ENRICH, K.TMDB_CYCLE, K.TMDB_PROVIDERS, K.TMDB_SOURCE, K.TMDB_LIST,
         K.WEATHER, K.WX_UNIT, K.GEO_MANUAL, K.GEO_CITY, K.GEO_LAT, K.GEO_LON,
         K.SS_FOLDER, K.CLOCK_24, K.NIGHT, K.NIGHT_FROM, K.NIGHT_TO,
+        K.EPG_URL, K.CHANNEL_LOGOS, K.INPUTS_MODE, K.INPUTS_PINNED, K.INPUTS_IN_APPS,
     )
 
-    fun export(prefs: SharedPreferences): String {
+    /** A user's files a backup carries, from their folder (see vodDir): what they watched and where they got to. */
+    private val USER_FILES = listOf("vod_watched.json", "vod_progress.json")
+
+    /** The ids user folders go by (as Users keeps them): nothing else is written from a backup. */
+    private val USER_ID = Regex("[A-Za-z0-9_-]{1,32}")
+
+    /** [user]'s folder in [files]: the first user's is [files] itself (see vodDir). */
+    private fun userDir(files: File, user: String) = if (user == "") files else File(files, "user_$user")
+
+    /** Each of [users]' files (see USER_FILES) under [files], as {user: {file: its text}}. */
+    internal fun exportData(files: File, users: List<String>): JSONObject {
+        val out = JSONObject()
+        for (u in users.filter { it == "" || USER_ID.matches(it) }) {
+            val mine = JSONObject()
+            for (name in USER_FILES) File(userDir(files, u), name).takeIf { it.isFile }?.let { mine.put(name, it.readText()) }
+            if (mine.length() > 0) out.put(u, mine)
+        }
+        return out
+    }
+
+    /** Puts [data] (see exportData) back under [files], replacing those files; how many it wrote. */
+    internal fun restoreData(files: File, data: JSONObject): Int {
+        var n = 0
+        for (u in data.keys()) {
+            if (u != "" && !USER_ID.matches(u)) continue
+            val mine = data.optJSONObject(u) ?: continue
+            val dir = userDir(files, u).apply { mkdirs() }
+            for (name in USER_FILES) {
+                val text = mine.optString(name).takeIf { it.isNotEmpty() } ?: continue
+                if (runCatching { JSONObject(text) }.isFailure && runCatching { JSONArray(text) }.isFailure) continue // not what it should be
+                val part = File(dir, "$name.part")
+                part.writeText(text)
+                if (part.renameTo(File(dir, name))) n++
+            }
+        }
+        return n
+    }
+
+    /** [prefs]' settings (KEYS), and with [files] and [users] their data (see exportData). */
+    fun export(prefs: SharedPreferences, files: File? = null, users: List<String> = emptyList()): String {
         val values = JSONObject()
         for ((key, value) in prefs.all) {
             if (key !in KEYS) continue
@@ -37,15 +80,17 @@ internal object Backup {
                 else -> continue
             })
         }
-        return JSONObject().put("app", "zephyr").put("format", FORMAT).put("prefs", values).toString(2)
+        val root = JSONObject().put("app", "zephyr").put("format", FORMAT).put("prefs", values)
+        if (files != null) root.put("data", exportData(files, users))
+        return root.toString(2)
     }
 
     /**
      * Puts the settings in [json] back, replacing the current ones a backup covers (a setting missing from the
-     * file goes back to its default). Returns how many it set; throws [IllegalArgumentException] for a file that
-     * isn't a Zephyr TV backup.
+     * file goes back to its default), and with [files] the users' data it carries. Returns how many settings it set;
+     * throws [IllegalArgumentException] for a file that isn't a Zephyr TV backup.
      */
-    fun restore(prefs: SharedPreferences, json: String): Int {
+    fun restore(prefs: SharedPreferences, json: String, files: File? = null): Int {
         val root = try {
             JSONObject(json)
         } catch (e: org.json.JSONException) {
@@ -72,6 +117,7 @@ internal object Backup {
             n++
         }
         edit.apply()
+        if (files != null) root.optJSONObject("data")?.let { restoreData(files, it) }
         return n
     }
 }

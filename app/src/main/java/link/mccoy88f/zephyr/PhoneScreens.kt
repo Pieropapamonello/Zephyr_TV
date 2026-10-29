@@ -175,16 +175,17 @@ internal fun MainActivity.showBackup() {
 
 internal fun MainActivity.backupToPhone() {
     val page = PhonePages.download(getString(R.string.phone_backup_title), getString(R.string.phone_backup_intro),
-        getString(R.string.phone_backup_download), "zephyr-backup.json", Backup.export(prefs), phoneFooter())
+        getString(R.string.phone_backup_download), "zephyr-backup.json", Backup.export(prefs, filesDir, users().map { it.id }), phoneFooter())
     showPhoneLink(getString(R.string.backup_save), PhoneTask(page, 0) { 405 to "" }, label("", 12f)) { showBackup() }
 }
 
 internal fun MainActivity.restoreFromPhone() {
     val status = label(getString(R.string.backup_waiting), 14f)
     val page = PhonePages.file(phoneTexts(R.string.phone_restore_title, R.string.phone_restore_intro), getString(R.string.phone_choose_file), ".json,application/json")
-    showPhoneLink(getString(R.string.backup_restore), PhoneTask(page, 256 * 1024) { file ->
+    // Up to a few MB: the users' watched titles and progress come with the settings.
+    showPhoneLink(getString(R.string.backup_restore), PhoneTask(page, 16L * 1024 * 1024) { file ->
         val n = try {
-            Backup.restore(prefs, file.readText())
+            Backup.restore(prefs, file.readText(), filesDir)
         } catch (e: Exception) {
             warn("restore failed ($e)")
             return@PhoneTask 400 to getString(R.string.phone_restore_bad)

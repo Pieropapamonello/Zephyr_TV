@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.0.1
+
+- The backup keeps more settings: the TV guide address, the channel logos from iptv-org, and how the HDMI inputs show.
+- The backup keeps the data of each user: the titles watched and **Continue Playing**. Restore puts them back. The Trakt account is not in the backup: sign in again from your phone after a restore.
+
 ## 3.0.0
 
 - New: **Extensions**, in **Settings → Extra features → Extensions**. Extensions add films, series, TV channels, radio stations and videos. They run on the TV, apart from everything else.
