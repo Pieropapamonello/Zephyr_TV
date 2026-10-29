@@ -1,7 +1,7 @@
 # Estensioni — cosa implementare
 
 Documento di lavoro: tutto quello che serve perché Zephyr TV supporti lo [standard delle estensioni](estensioni.md)
-(versione 1.0) e perché OMG Premium TV diventi la prima estensione, preinstallata. Le fasi sono in ordine: ognuna si
+(versione 1.0) e perché OMG Premium TV diventi la prima estensione, proposta da Zephyr TV. Le fasi sono in ordine: ognuna si
 appoggia alle precedenti, e alla fine di ognuna Zephyr TV si compila, passa i test e si può rilasciare.
 
 Legenda: ☐ da fare · ◐ in parte già in Zephyr TV · ☑ fatto
@@ -55,8 +55,9 @@ Nuovo file `Extensions.kt` (modello e disco) e `ExtensionPages.kt` (pagine delle
   `PhonePages.text`; con il telecomando, l'indirizzo.
 - ☑ **Aggiornamenti**: una volta al giorno (come `refreshPlugins`), dall'indirizzo di installazione o da `updateUrl`;
   versione più nuova → scarica, verifica, sostituisce, mantiene impostazioni e dati. "Aggiorna ora" a mano.
-- ☑ **Preinstallate**: lo zip in `assets/extensions/`, installato al primo avvio e quando l'APK ne porta una versione
-  più nuova; non rimovibile (solo spenta).
+- ☑ **Proposte** (al posto delle preinstallate, decisione del 2026-10-29): Zephyr TV non contiene estensioni;
+  quelle proposte (OMG Premium TV) compaiono nella pagina Estensioni finché non sono installate e si installano con
+  OK dal loro `manifest-zephyrtv.json`, sempre allo stesso indirizzo (`releases/latest/download`).
 - ☑ **Rimozione**: cancella cartella, impostazioni, `localStorage`, playlist di `zephyr.m3u`, cache.
 - ☑ **Preferenze** in `Prefs.kt`: ordine, spente, 18+, impostazioni (JSON), "Dove compare", indirizzo di
   installazione. Tutte nel backup (`Backup.kt`), tranne i file scaricati.
@@ -224,7 +225,8 @@ Nel repository `mccoy88f/OMG-Premium-TV`, accanto all'add-on.
   proxy".
 - ☐ **Catch-up**: `catchup` dalle playlist e dal timeshift di Xtream.
 - ☑ **Guida**: `guide()` con gli `url-tvg` delle playlist e l'EPG di Xtream (`xmltv.php`).
-- ☑ In Zephyr: lo zip in `assets/extensions/`, `updateUrl` verso le release di OMG Premium TV.
+- ☑ In Zephyr: proposta nella pagina Estensioni, installata dalle release di OMG (Action `zephyr-extension.yml`,
+  tag `zephyr-v<versione>`).
 
 ---
 
@@ -237,7 +239,7 @@ Nel repository `mccoy88f/OMG-Premium-TV`, accanto all'add-on.
 - **Limite delle estensioni installate** e dello spazio su disco totale.
 - **In arrivo** (sezione 12 dello standard): dopo la fase 10, in quest'ordine proposto: `subtle`, `subtitles`,
   `progress`, `auth`, `webview`, `resolver`, `repository`, `trailers`, `schedule`, `widevine`.
-- ☑ Provato sul TV: preinstallata al primo avvio, playlist pubblica nelle opzioni → tile "OMG Premium TV" con le sue
+- ☑ Provato sul TV (allora preinstallata), playlist pubblica nelle opzioni → tile "OMG Premium TV" con le sue
   righe (25 gruppi, 333 canali) e un canale in riproduzione nel player. Test strumentato `OmgExtensionTest`.
 - ☐ Account Xtream reale, proxy reale, catch-up: non provati (nessun account di prova).
-- ☐ Release di OMG con `manifest-zephyrtv.json` (finché manca, il controllo aggiornamenti fallisce una volta al giorno).
+- ☑ Release di OMG con `manifest-zephyrtv.json`: `zephyr-v1.0.0`, costruita dall'Action.

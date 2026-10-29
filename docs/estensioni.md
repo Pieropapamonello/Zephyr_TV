@@ -387,8 +387,8 @@ massimo 1 MB. Resta tra le chiamate e si cancella con l'estensione.
 - Ogni estensione: **Attiva**, **Opzioni**, **Contenuti V.M. - Adulti**, **Sposta su / giù** (le sue righe arrivano
   in quest'ordine), **Aggiorna ora**, **Rimuovi**. Rimuoverla cancella le sue impostazioni, il suo `localStorage` e
   le sue playlist.
-- Le **estensioni preinstallate** arrivano con Zephyr TV (OMG Premium TV): si possono spegnere, non rimuovere, e si
-  aggiornano con Zephyr TV, oppure dal loro `updateUrl` quando c'è una versione più nuova.
+- Le **estensioni proposte** (OMG Premium TV) compaiono nell'elenco finché non sono installate: OK le installa dal
+  loro indirizzo, che non cambia mai. Zephyr TV non ne contiene nessuna; se ne rimuovi una, torna proposta.
 
 ### `manifest-zephyrtv.json`
 
@@ -425,7 +425,7 @@ cartella che lo contiene (`https://example.org/mia-estensione/` legge
 ### Aggiornamenti
 
 Zephyr TV legge il `manifest-zephyrtv.json` di un'estensione una volta al giorno: l'indirizzo da cui è stata aggiunta
-oppure, per una installata da `.zip` o preinstallata, il suo `updateUrl`. Una `version` più nuova, per uno `zephyr`
+oppure, per una installata da `.zip`, il suo `updateUrl`. Una `version` più nuova, per uno `zephyr`
 che conosce, viene scaricata, verificata con `sha256` e installata al posto della vecchia, mantenendo impostazioni e
 dati. L'`id` non può cambiare. Un'estensione senza nessuno dei due indirizzi si aggiorna solo aggiungendo un suo nuovo
 `.zip`.

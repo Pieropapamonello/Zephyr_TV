@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## Unreleased
+
+- OMG Premium TV no longer comes inside Zephyr TV. **Extensions** suggests it: select it to install it from its address. Zephyr TV installs the latest version.
+- You can remove every extension. A suggested extension that you remove shows as suggested again.
+
 ## 3.0.0-beta.2
 
 - New: **Extensions**, in **Settings → Extra features → Extensions**. Add an extension from the address of its manifest-zephyrtv.json, or send its .zip file from your phone. Zephyr TV shows what the extension is before it installs it.

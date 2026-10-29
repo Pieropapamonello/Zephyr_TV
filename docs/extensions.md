@@ -376,8 +376,8 @@ const channel = await zephyr.m3u.channel("main", id);
   someone else, and installs it once confirmed.
 - Each extension: **On**, **Options**, **Adult content (18+)**, **Move up / down** (its rows come in this order),
   **Update now**, **Remove**. Removing it deletes its settings, its `localStorage` and its playlists.
-- **Preinstalled extensions** come with Zephyr TV (OMG Premium TV): they can be switched off, not removed, and
-  update with Zephyr TV, or from their `updateUrl` when newer.
+- **Suggested extensions** (OMG Premium TV) are listed until installed: OK installs one from its address, which
+  never changes. Zephyr TV carries none of them; removed, one is suggested again.
 
 ### `manifest-zephyrtv.json`
 
@@ -413,7 +413,7 @@ in (`https://example.org/my-extension/` reads `https://example.org/my-extension/
 ### Updates
 
 Zephyr TV reads an extension's `manifest-zephyrtv.json` once a day: the address it was added from, or, for one
-installed from a `.zip` or preinstalled, its `updateUrl`. A newer `version` for a `zephyr` it knows is downloaded,
+installed from a `.zip`, its `updateUrl`. A newer `version` for a `zephyr` it knows is downloaded,
 checked against `sha256`, and installed in place of the old one, its settings and data kept. The `id` can't change.
 An extension with neither address updates only when a new `.zip` of it is added.
 

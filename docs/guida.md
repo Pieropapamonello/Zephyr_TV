@@ -203,8 +203,8 @@ I repository si aggiornano da soli una volta al giorno. I plugin che dichiarano 
 
 Le estensioni sono il formato di Zephyr TV per aggiungere film, serie, canali TV, radio, video e altro. Come i plugin
 Nuvio, girano sul TV, separate dal resto e con accesso solo a internet. **Aggiungi solo estensioni di cui ti fidi.**
-**OMG Premium TV** è inclusa: nelle sue **Opzioni** aggiungi le tue playlist M3U o i tuoi account Xtream, e i canali,
-i film e le serie compaiono nella sua app.
+**OMG Premium TV** è proposta nell'elenco: OK la installa. Nelle sue **Opzioni** aggiungi le tue playlist M3U o i tuoi
+account Xtream, e i canali, i film e le serie compaiono nella sua app.
 
 **Impostazioni → Funzioni aggiuntive → Estensioni**:
 
@@ -213,7 +213,7 @@ i film e le serie compaiono nella sua app.
   installarla Zephyr TV mostra cos'è, chi l'ha scritta e cosa fornisce.
 - **Ogni estensione** ha una pagina con **Attivo**, **Opzioni**, **Dove compare** (nella sua app, oppure nei
   raccoglitori: Film, Serie TV, Canali TV, Radio, Video…), **Contenuti V.M. - Adulti**, **Sposta su / giù**,
-  **Aggiorna ora** e **Rimuovi**. Quelle incluse in Zephyr TV si possono spegnere ma non rimuovere.
+  **Aggiorna ora** e **Rimuovi**.
 - Un'estensione con contenuti propri ha **la sua app** nella riga delle app, con il suo logo, quando ha qualcosa da
   mostrare.
 - **Controlla aggiornamenti**: Zephyr TV lo fa anche da solo, una volta al giorno.

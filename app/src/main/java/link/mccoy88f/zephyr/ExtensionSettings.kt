@@ -22,8 +22,14 @@ internal fun extensionOn(p: SharedPreferences, id: String) = id !in p.getStringS
 /** Whether [e] is 18+: it says so, or the user marked it. */
 internal fun extensionAdult(p: SharedPreferences, e: Extensions.Extension) = e.adult || e.id in p.getStringSet(K.EXT_ADULT, emptySet())!!
 
-/** Whether the extension [id] came with Zephyr TV: it can be switched off, not removed. */
-internal fun extensionBuiltIn(p: SharedPreferences, id: String) = id in p.getStringSet(K.EXT_BUILTIN, emptySet())!!
+/**
+ * The extensions Zephyr TV suggests (id, name, the address of its manifest-zephyrtv.json, always the same): each one
+ * not installed is a row on the Extensions page, installed from its address with OK. Zephyr TV carries none of them.
+ */
+internal val SUGGESTED_EXTENSIONS = listOf(
+    Triple("io.github.mccoy88f.omg-premium-tv", "OMG Premium TV",
+        "https://github.com/mccoy88f/OMG-Premium-TV/releases/latest/download/manifest-zephyrtv.json"),
+)
 
 /** Where the extension [id] was added from (its manifest-zephyrtv.json), or null (from a .zip, or preinstalled). */
 internal fun extensionSource(p: SharedPreferences, id: String): String? =
@@ -58,8 +64,7 @@ private const val EXT_CHECK_MS = 24 * 3600_000L
 private val extensionsChecking = java.util.concurrent.atomic.AtomicBoolean()
 
 /**
- * In the background: the preinstalled extensions (assets/extensions), installed or brought up to the version this
- * Zephyr TV carries; the extensions in the order but missing (a backup put back on another TV), installed again from
+ * In the background: the extensions in the order but missing (a backup put back on another TV), installed again from
  * their address; and each extension's address read once a day, a newer version installed. [done] on the UI thread,
  * with how many were installed or updated.
  */
@@ -68,7 +73,6 @@ internal fun MainActivity.refreshExtensions(force: Boolean = false, done: ((Int)
     netIo.execute {
         var changed = 0
         try {
-            changed += installBuiltIns()
             val installed = Extensions.installed(filesDir).associateBy { it.id }
             // Missing, with an address to have it from: installed again.
             for (id in prefs.getString(K.EXT_ORDER, "")!!.lines().filter { it.isNotBlank() && it !in installed }) {
@@ -98,29 +102,6 @@ internal fun MainActivity.refreshExtensions(force: Boolean = false, done: ((Int)
             }
         }
     }
-}
-
-/** The extensions that come with Zephyr TV (the .zip files in assets/extensions): installed when missing or older. Off the UI thread. */
-private fun MainActivity.installBuiltIns(): Int {
-    var changed = 0
-    val names = runCatching { assets.list("extensions")?.filter { it.endsWith(".zip") } }.getOrNull().orEmpty()
-    for (name in names) {
-        val zip = File(cacheDir, "builtin-$name")
-        runCatching {
-            assets.open("extensions/$name").use { input -> zip.outputStream().use { input.copyTo(it) } }
-            val m = Extensions.manifestOf(zip) ?: return@runCatching
-            val id = m.optString("id")
-            val have = Extensions.installed(filesDir, id)
-            if (have == null || Extensions.newer(m.optString("version"), have.version)) {
-                val e = Extensions.install(filesDir, zip)
-                if (have == null) rememberExtension(prefs, e, null, false)
-                changed++
-            }
-            prefs.edit().putStringSet(K.EXT_BUILTIN, prefs.getStringSet(K.EXT_BUILTIN, emptySet())!! + id).apply()
-        }.onFailure { warn("Preinstalled extension failed: $name ($it)") }
-        zip.delete()
-    }
-    return changed
 }
 
 // ---------- settings ----------
@@ -167,33 +148,36 @@ private fun MainActivity.intro(text: String) = label(text, 13f).apply {
     setPadding(dp(14), 0, dp(14), dp(12))
 }
 
-/** Extensions: what they are (and that they run code from elsewhere), each one, Add an extension, Check for updates. */
+/**
+ * Extensions: what they are (and that they run code from elsewhere), each one, those Zephyr TV suggests and isn't
+ * running (Install: from their address), Add an extension, Check for updates.
+ */
 internal fun MainActivity.extensionsPage(focus: Int = 0) {
     val all = extensions(prefs, filesDir)
+    val suggested = SUGGESTED_EXTENSIONS.filter { (id, _, _) -> all.none { it.id == id } }
     showPage(getString(R.string.ext_title), all.map { e ->
         page(e.name, if (extensionOn(prefs, e.id)) SUBMENU else getString(R.string.state_off)) { extensionPage(e.id) }
-    } + listOf(
+    } + suggested.map { (_, name, url) -> page(name, getString(R.string.ext_install)) { extensionFromAddress(url) } } + listOf(
         page(getString(R.string.ext_add), SUBMENU) { extensionFromPhone() },
         page(getString(R.string.ext_check)) {
             Toast.makeText(this, getString(R.string.ext_reading), Toast.LENGTH_SHORT).show()
             refreshExtensions(force = true) { n ->
                 Toast.makeText(this, if (n == 0) getString(R.string.ext_none_updated) else getString(R.string.ext_some_updated, n), Toast.LENGTH_LONG).show()
-                if (pageShowing(getString(R.string.ext_title))) extensionsPage(all.size + 1)
+                if (pageShowing(getString(R.string.ext_title))) extensionsPage(all.size + suggested.size + 1)
             }
         },
     ), focus, top = intro(getString(R.string.ext_intro))) { addonsAndPlugins(3) }
 }
 
-/** An extension's page: what it is, On, 18+, up or down the list, Update now, Remove (not a preinstalled one). */
+/** An extension's page: what it is, On, Options, Where it shows, 18+, up or down the list, Update now, Remove. */
 private fun MainActivity.extensionPage(id: String, focus: Int = 0) {
     val e = Extensions.installed(filesDir, id) ?: return extensionsPage()
     val ids = extensions(prefs, filesDir).map { it.id }
     val at = ids.indexOf(id)
     val on = extensionOn(prefs, id)
-    val builtIn = extensionBuiltIn(prefs, id)
     val about = listOfNotNull(
         e.description.takeIf { it.isNotBlank() },
-        listOfNotNull("v${e.version}", e.author.takeIf { it.isNotBlank() }, getString(R.string.ext_builtin).takeIf { builtIn }).joinToString(" · "),
+        listOfNotNull("v${e.version}", e.author.takeIf { it.isNotBlank() }).joinToString(" · "),
         provides(e.types, e.resources).takeIf { it.isNotEmpty() }?.let { getString(R.string.ext_provides, it) },
     ).joinToString("\n")
     fun move(by: Int) {
@@ -254,7 +238,7 @@ private fun MainActivity.extensionPage(id: String, focus: Int = 0) {
             }
         }
     }
-    if (!builtIn) rows += page(getString(R.string.addon_remove)) {
+    rows += page(getString(R.string.addon_remove)) {
         Extensions.remove(filesDir, id)
         forgetExtension(prefs, id)
         extensionChanged(id)

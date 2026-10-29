@@ -428,7 +428,6 @@
     <string name="ext_provides">Fournit : %1$s</string>
     <string name="ext_warning">Elle exécute du code écrit par %1$s. Installez-la seulement si vous lui faites confiance.</string>
     <string name="ext_warning_anon">Elle exécute du code écrit par quelqu\'un d\'autre. Installez-la seulement si vous lui faites confiance.</string>
-    <string name="ext_builtin">Incluse dans Zephyr TV</string>
     <string name="ext_err_not">Ce n\'est pas une extension Zephyr TV.</string>
     <string name="ext_err_newer">Cette extension demande un Zephyr TV plus récent. Mettez Zephyr TV à jour.</string>
     <string name="ext_err_needs">Cette extension demande des fonctions que ce Zephyr TV n\'a pas (%1$s). Mettez Zephyr TV à jour.</string>

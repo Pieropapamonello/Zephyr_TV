@@ -77,7 +77,6 @@ internal object K {
     const val EXT_SOURCES = "ext_sources" // where each was added from, JSON {id: its manifest-zephyrtv.json address}
     const val EXT_COLLECT = "ext_collect" // extensions whose content goes to the collectors instead of their own app, by id
     const val EXT_OPTIONS = "ext_options" // extensions' settings chosen, JSON: {id: {key: value}}
-    const val EXT_BUILTIN = "ext_builtin" // the preinstalled ones, by id: they can be switched off, not removed
     const val NUVIO_ORDER = "nuvio_order" // plugins in the order the user put them, "<manifest>#<id>" one per line
     const val NUVIO_OPTIONS = "nuvio_options" // plugins' options chosen, JSON: {"<manifest>#<id>": {key: value}}
     const val ADULT_PLACE = "adult_place" // where the adult add-ons show: virtual, apps, mixed (see AdultPlace)

@@ -428,7 +428,6 @@
     <string name="ext_provides">Ofrece: %1$s</string>
     <string name="ext_warning">Ejecuta código escrito por %1$s. Instálala solo si confías.</string>
     <string name="ext_warning_anon">Ejecuta código escrito por otros. Instálala solo si confías.</string>
-    <string name="ext_builtin">Incluida en Zephyr TV</string>
     <string name="ext_err_not">Esto no es una extensión de Zephyr TV.</string>
     <string name="ext_err_newer">Esta extensión necesita un Zephyr TV más reciente. Actualiza Zephyr TV.</string>
     <string name="ext_err_needs">Esta extensión necesita funciones que este Zephyr TV no tiene (%1$s). Actualiza Zephyr TV.</string>
