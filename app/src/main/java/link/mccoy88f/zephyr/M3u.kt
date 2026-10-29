@@ -187,12 +187,13 @@ internal object M3u {
      * The playlist [name] of the extension whose data is in [data]: read from [url] (with [headers]) when it's older
      * than [maxAgeS] or wasn't read yet, else as kept. Its summary: how many channels, its groups, its guides.
      */
-    fun load(data: File, name: String, url: String, headers: Map<String, String>, maxAgeS: Long): JSONObject {
+    fun load(data: File, name: String, url: String, headers: Map<String, String>, maxAgeS: Long, text: String? = null): JSONObject {
         val summary = summaryFile(data, name)
         val kept = runCatching { JSONObject(summary.readText()) }.getOrNull()
-        if (kept != null && kept.optString("url") == url && System.currentTimeMillis() - summary.lastModified() < maxAgeS * 1000) return kept
+        if (text == null && kept != null && kept.optString("url") == url && System.currentTimeMillis() - summary.lastModified() < maxAgeS * 1000) return kept
         val playlist = try {
-            Http.open(url, headers, 30_000).bufferedReader().use { read(it) }
+            // Written by the extension itself (from an account's API), or downloaded.
+            if (text != null) read(text.reader().buffered()) else Http.open(url, headers, 30_000).bufferedReader().use { read(it) }
         } catch (e: Exception) {
             if (kept != null) return kept // the one kept, rather than none
             throw e

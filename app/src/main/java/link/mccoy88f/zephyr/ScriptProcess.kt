@@ -104,8 +104,9 @@ internal class ExtensionService : ScriptService() {
             "asset" to { args -> Extensions.safe(root, args.optString("path"))?.takeIf { it.isFile }?.readText() ?: throw IOException("no file ${args.optString("path")}") },
             // zephyr.m3u: playlists read here, kept in its data folder (see M3u).
             "m3u.load" to { args ->
-                val url = args.optString("url").takeIf { it.startsWith("http") } ?: throw IOException("no playlist address")
-                M3u.load(data, args.optString("name"), url, headers(args.optJSONObject("headers")), args.optLong("maxAge", 86_400))
+                val text = args.optString("text").takeIf { it.isNotEmpty() }
+                val url = args.optString("url").takeIf { it.startsWith("http") } ?: if (text != null) "" else throw IOException("no playlist address")
+                M3u.load(data, args.optString("name"), url, headers(args.optJSONObject("headers")), args.optLong("maxAge", 86_400), text)
             },
             "m3u.channels" to { args ->
                 M3u.channels(data, args.optString("name"), args.optString("group").ifEmpty { null }, args.optString("search").ifEmpty { null },

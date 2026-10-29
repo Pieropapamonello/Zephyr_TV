@@ -134,9 +134,11 @@ internal fun MainActivity.addonApps(): List<MainActivity.App> {
     fun icon(res: Int) = getDrawable(res)!!
     // Its logo once it's on disk (downloaded with its channels, see updateAddon), else the [res] mark.
     fun tile(addon: Stremio.Addon, res: Int): MainActivity.App {
-        val logo = addon.logo?.takeIf { channelLogoFiles.has(it) }?.let { uri ->
-            runCatching { BitmapFactory.decodeFile(channelLogoFiles.get(uri) { openStream(it) }.path) }.getOrNull()
-        }
+        // An extension's: a file of its package, read as it is.
+        val logo = addon.logo?.takeIf { it.startsWith("file://") }?.let { BitmapFactory.decodeFile(it.removePrefix("file://")) }
+            ?: addon.logo?.takeIf { channelLogoFiles.has(it) }?.let { uri ->
+                runCatching { BitmapFactory.decodeFile(channelLogoFiles.get(uri) { openStream(it) }.path) }.getOrNull()
+            }
         return MainActivity.App(STREMIO + addon.id, addon.name, Intent(), logo?.let { BitmapDrawable(resources, it) } ?: icon(res))
     }
     val tv = if (urls.isEmpty()) emptyList() else when (addonsTv()) {
@@ -149,8 +151,11 @@ internal fun MainActivity.addonApps(): List<MainActivity.App> {
         TvPlace.TV -> emptyList()
     }
     // An adult add-on with an app of its own: one tile, its channels, films and series in it.
+    // An extension's only once it has something to show (one not set up yet has no catalogs).
     val adultOwn = shownAddonUrls().filter { ownApp(it) }.mapNotNull { url ->
-        Stremio.saved(filesDir, url)?.addon?.let { tile(it, if (adultOwnApp(url)) R.drawable.ic_adult else R.drawable.ic_apps) }
+        // Not read yet (just installed, or restored from a backup): its tile comes once it is.
+        (Stremio.saved(filesDir, url)?.addon ?: null.also { if (Stremio.due(filesDir, url)) updateAddon(url, null) })?.takeIf { adultOwnApp(url) || it.catalogs.isNotEmpty() || it.vod.isNotEmpty() }
+            ?.let { tile(it, if (adultOwnApp(url)) R.drawable.ic_adult else R.drawable.ic_apps) }
     }
     return (tv + vodApps() + vodTileAddons().map { tile(it, R.drawable.ic_movie) } + adultTile() + adultOwn + collectorApps()).distinctBy { it.pkg }
 }
@@ -224,7 +229,7 @@ internal fun MainActivity.updateAddon(url: String, pkg: String?, done: ((Stremio
     val first = Stremio.saved(filesDir, url) == null
     val listing = Stremio.update(filesDir, url)
     // Its logo, for its tile and its icon on its settings row and Watch on rows: downloaded here, not while they show.
-    val tiles = addonsTv() == TvPlace.APPS
+    val tiles = addonsTv() == TvPlace.APPS || ownApp(url) // a tile of its own: on the apps row once read
     val logo = listing?.addon?.logo?.takeIf { !channelLogoFiles.has(it) }
         ?.let { runCatching { channelLogoFiles.get(it) { u -> openStream(u) } }.isSuccess } == true
     ui.post {

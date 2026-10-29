@@ -371,6 +371,8 @@ const canale = await zephyr.m3u.channel("principale", id);
   `#KODIPROP` `inputstream.adaptive.license_key` (ClearKey). Gli `url-tvg` / `x-tvg-url` della playlist sono le sue
   `guides`.
 - `zephyr.m3u.forget(nome)` cancella una playlist conservata.
+- `load` accetta `text` al posto di `url`: una playlist scritta dall'estensione stessa (per esempio dalle API di un
+  account), letta e conservata allo stesso modo; viene riletta a ogni chiamata così.
 
 `localStorage` è dell'estensione (`getItem`, `setItem`, `removeItem`, `clear`, `key`, `length`), solo stringhe, al
 massimo 1 MB. Resta tra le chiamate e si cancella con l'estensione.

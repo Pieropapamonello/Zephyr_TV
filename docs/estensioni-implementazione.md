@@ -206,25 +206,25 @@ Oggi `Epg.kt` ha un solo indirizzo XMLTV, abbinato per nome.
 - ☐ Standard: togliere "bozza" quando la fase 10 funziona su un TV vero.
 - ☐ Changelog di ogni rilascio.
 
-## Fase 10 — OMG Premium TV come estensione
+## Fase 10 — OMG Premium TV come estensione ◐
 
 Nel repository `mccoy88f/OMG-Premium-TV`, accanto all'add-on.
 
-- ☐ **Build**: un comando (esbuild) che da `src/` produce `main.js`, con `manifest.json`, icona e `locales/`, lo
+- ☑ **Build**: un comando (esbuild) che da `src/` produce `main.js`, con `manifest.json`, icona e `locales/`, lo
   `.zip` e il `manifest-zephyrtv.json` (con `sha256`); pubblicati nelle release di GitHub.
-- ☐ **Riuso del codice TypeScript** già presente: abbinamento EPG, Xtream (`xtream.ts`), proxy (`proxy.ts`),
-  categorie e TMDB per i film e le serie. Il parser M3U resta lato Zephyr (`zephyr.m3u`), con le stesse regole.
-- ☐ **Impostazioni**: Playlist M3U (`list`: nome, indirizzo), Account Xtream (`list`: nome, server, utente, password),
+- ◐ **Riuso del codice**: le regole di `xtream.ts` e `proxy.ts` sono riportate in `zephyr/main.js` (JavaScript puro,
+  senza build); il parser M3U è in Zephyr (`zephyr.m3u`) con le stesse regole di `m3u-parser.ts`.
+- ☑ **Impostazioni**: Playlist M3U (`list`: nome, indirizzo), Account Xtream (`list`: nome, server, utente, password),
   Proxy (indirizzo, password, solo tramite proxy), EPG della playlist sì/no.
-- ☐ **Canali**: da `zephyr.m3u` e dalle API Xtream (`get_live_categories`, `get_live_streams`); un catalogo `tv` per
+- ☑ **Canali**: da `zephyr.m3u` e dalle API Xtream (`get_live_categories`, `get_live_streams`); un catalogo `tv` per
   playlist o account, gruppi come generi; `epgId`, loghi della playlist.
-- ☐ **Film e serie Xtream**: cataloghi `movie` e `series`, `meta` e `stream` con id propri, collegati a IMDb dove
+- ☑ **Film e serie Xtream**: cataloghi `movie` e `series`, `meta` e `stream` con id propri, collegati a IMDb dove
   possibile.
-- ☐ **Proxy**: riconoscimento MediaFlow / EasyProxy (`/api/info`), indirizzi degli stream riscritti, "solo tramite
+- ☑ **Proxy**: riconoscimento MediaFlow / EasyProxy (`/api/info`), indirizzi degli stream riscritti, "solo tramite
   proxy".
 - ☐ **Catch-up**: `catchup` dalle playlist e dal timeshift di Xtream.
-- ☐ **Guida**: `guide()` con gli `url-tvg` delle playlist e l'EPG di Xtream (`xmltv.php`).
-- ☐ In Zephyr: lo zip in `assets/extensions/`, `updateUrl` verso le release di OMG Premium TV.
+- ☑ **Guida**: `guide()` con gli `url-tvg` delle playlist e l'EPG di Xtream (`xmltv.php`).
+- ☑ In Zephyr: lo zip in `assets/extensions/`, `updateUrl` verso le release di OMG Premium TV.
 
 ---
 
@@ -237,3 +237,7 @@ Nel repository `mccoy88f/OMG-Premium-TV`, accanto all'add-on.
 - **Limite delle estensioni installate** e dello spazio su disco totale.
 - **In arrivo** (sezione 12 dello standard): dopo la fase 10, in quest'ordine proposto: `subtle`, `subtitles`,
   `progress`, `auth`, `webview`, `resolver`, `repository`, `trailers`, `schedule`, `widevine`.
+- ☑ Provato sul TV: preinstallata al primo avvio, playlist pubblica nelle opzioni → tile "OMG Premium TV" con le sue
+  righe (25 gruppi, 333 canali) e un canale in riproduzione nel player. Test strumentato `OmgExtensionTest`.
+- ☐ Account Xtream reale, proxy reale, catch-up: non provati (nessun account di prova).
+- ☐ Release di OMG con `manifest-zephyrtv.json` (finché manca, il controllo aggiornamenti fallisce una volta al giorno).

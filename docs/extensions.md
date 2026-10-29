@@ -361,6 +361,8 @@ const channel = await zephyr.m3u.channel("main", id);
 - Read for each channel: `tvg-id`, `tvg-name`, `tvg-logo`, `group-title`, `#EXTVLCOPT` and `#EXTHTTP` (headers),
   `#KODIPROP` `inputstream.adaptive.license_key` (ClearKey). The playlist's `url-tvg` / `x-tvg-url` are its `guides`.
 - `zephyr.m3u.forget(name)` removes a playlist kept.
+- `load` takes `text` instead of `url`: a playlist the extension wrote itself (from an account's API, for example),
+  read and kept the same way; it's read again at each such call.
 
 `localStorage` is the extension's own (`getItem`, `setItem`, `removeItem`, `clear`, `key`, `length`), strings, at most
 1 MB. It's kept between calls and removed with the extension.

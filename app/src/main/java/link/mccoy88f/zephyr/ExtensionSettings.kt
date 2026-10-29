@@ -80,9 +80,10 @@ internal fun MainActivity.refreshExtensions(force: Boolean = false, done: ((Int)
                 val url = extensionUpdateUrl(prefs, e) ?: continue
                 val stamp = File(Extensions.dataDir(filesDir, e.id), ".checked")
                 if (!force && System.currentTimeMillis() - stamp.lastModified() < EXT_CHECK_MS) continue
+                // Checked, whatever the answer: one that fails is tried again tomorrow, not at each return home.
+                stamp.writeText("")
                 runCatching {
                     val p = Extensions.published(url)
-                    stamp.writeText("")
                     if (p.id == e.id && Extensions.newer(p.version, e.version)) { Extensions.download(filesDir, p); changed++ }
                 }.onFailure { warn("Extension update failed: ${e.name} ($it)") }
             }
