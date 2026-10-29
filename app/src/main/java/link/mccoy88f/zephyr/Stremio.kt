@@ -429,8 +429,8 @@ internal object Stremio {
      * them: direct web addresses only (no torrents), each named by its quality line and its file ("1080p · Film.mkv").
      */
     fun titleStreams(base: String, name: String, type: String, id: String): List<Stream> =
-        streams(get("$base/stream/${enc(type)}/${enc(id)}.json", Http.STREAMS_TIMEOUT_MS), vod = true).map {
-            Stream(it.url, it.title, it.headers, it.group, name)
+        streams(get("$base/stream/${enc(type)}/${enc(id)}.json", Http.STREAMS_TIMEOUT_MS), vod = true, external = base.startsWith(EXT)).map {
+            Stream(it.url, it.title, it.headers, it.group, name, clearkey = it.clearkey, app = it.app)
         }
 
     /** What the add-on tells about a channel on its page: what's on and next ([description]), and what's on in short. */
@@ -466,7 +466,7 @@ internal object Stremio {
 
     /** The ways to play channel [id], in the add-on's order (best first); those without a web address are left out. */
     fun streams(base: String, type: String, id: String): List<Stream> =
-        streams(get("$base/stream/${enc(type)}/${enc(id)}.json", Http.STREAMS_TIMEOUT_MS))
+        streams(get("$base/stream/${enc(type)}/${enc(id)}.json", Http.STREAMS_TIMEOUT_MS), external = base.startsWith(EXT))
 
     /**
      * The streams in an add-on's answer that have a web address (torrents, YouTube ids and outside links are left
@@ -478,12 +478,13 @@ internal object Stremio {
     const val LANG_UNKNOWN = 1
     const val LANG_OTHER = 2
 
-    internal fun streams(answer: JSONObject, vod: Boolean = false): List<Stream> {
+    /** [external]: another app's streams (externalUrl, ytId) too, an extension's; an add-on's are trailers and web pages. */
+    internal fun streams(answer: JSONObject, vod: Boolean = false, external: Boolean = false): List<Stream> {
         val list = answer.optJSONArray("streams") ?: return emptyList()
         return (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { s ->
             val hints = s.optJSONObject("behaviorHints")
             // Another app's: a link it opens (externalUrl), a YouTube video (ytId).
-            val external = text(s, "externalUrl") ?: text(s, "ytId")?.let { "vnd.youtube:$it" }
+            val external = if (!external) null else text(s, "externalUrl") ?: text(s, "ytId")?.let { "vnd.youtube:$it" }
             // A web address, or the playlist itself written in it (data:, as some Nuvio plugins hand an HLS one).
             val url = text(s, "url")?.takeIf { it.startsWith("http://") || it.startsWith("https://") || it.startsWith("data:") }
                 ?.let { if (it.startsWith("data://")) "data:" + it.removePrefix("data://") else it } // "data://": a plugin's slip
