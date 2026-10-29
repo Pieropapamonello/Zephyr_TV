@@ -14,7 +14,7 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
-## Unreleased
+## 3.2.0
 
 - The page of a film or an episode looks for the streams when it opens. **Watch** shows how many streams there are, and the player starts with them. When no source has streams, the page says so before the player opens.
 - A TV channel's streams are found when its card stays selected for a moment. A channel made of several (for example HD and SD) has all its streams ready when it starts.
