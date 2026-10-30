@@ -150,7 +150,7 @@ private fun MainActivity.fileHere(task: PhoneTask, uri: Uri, status: TextView) {
     }.start()
 }
 
-/** The types of a file input's [accept] (".json,application/json", "image/*") as MIME types. */
+// The types of a file input's accept (".json,application/json", or all images) as MIME types.
 private fun types(accept: String): Array<String> = accept.split(',').map { it.trim() }.mapNotNull { a ->
     if ('/' in a) a else MimeTypeMap.getSingleton().getMimeTypeFromExtension(a.removePrefix("."))
 }.distinct().ifEmpty { listOf("*/*") }.toTypedArray()
