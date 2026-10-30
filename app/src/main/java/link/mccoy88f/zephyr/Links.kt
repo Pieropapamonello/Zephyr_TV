@@ -14,7 +14,8 @@ import android.widget.Toast
 //   ztv://nuvio?u=<address of a Nuvio repository>                a Nuvio plugin repository, added once confirmed
 // Shared as an https address (chats only make those clickable): SHARE_PAGE#<the same after ztv://>, a page that opens
 // Zephyr TV, or says where to get it; Zephyr TV takes that address too. Also: stremio:// links (an add-on's
-// installation, a title's page), an add-on's manifest.json address, and text shared from other apps with any of them.
+// installation, a title's page), Nuvio's nuvio:// links (a title's page, an add-on: see NuvioTV's DeepLinkParser), an
+// add-on's manifest.json address, and text shared from other apps with any of them.
 // Functions of MainActivity, kept here by topic; their state lives in MainActivity.
 
 /** The page shared links go to (docs/open/index.html, on the repository's GitHub Pages). */
@@ -31,7 +32,7 @@ internal fun MainActivity.handleLink(intent: Intent?): Boolean {
         ACTION_PLAY_QUEUE -> return true.also { ui.post { appRow.getChildAt(0)?.requestFocus() } }
         Intent.ACTION_SEND -> {
             val text = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
-            val link = Regex("""(ztv|stremio|https?)://\S+""").find(text)?.value?.trimEnd('.', ',', ')', ']')
+            val link = Regex("""(ztv|stremio|nuvio|https?)://\S+""").find(text)?.value?.trimEnd('.', ',', ')', ']')
                 ?: return true.also { Toast.makeText(this, getString(R.string.link_unknown), Toast.LENGTH_LONG).show() }
             return openLink(Uri.parse(link))
         }
@@ -58,6 +59,7 @@ internal fun MainActivity.openLink(uri: Uri): Boolean {
         if (at >= 0 && parts.size > at + 2) return true.also { openShared(parts[at + 1], parts[at + 2], "", null, null) }
         return false
     }
+    if (uri.scheme == "nuvio") return openNuvio(uri)
     if (uri.scheme == "http" || uri.scheme == "https") {
         val path = uri.path.orEmpty()
         return when {
@@ -83,6 +85,38 @@ private fun MainActivity.openZtv(u: Uri): Boolean {
         else -> return false
     }
     return true
+}
+
+/**
+ * Nuvio's links, as its apps read them: an add-on (nuvio://host/…/manifest.json, as stremio://), or a title's page
+ * (nuvio://meta?type=&id=, detail|open|watch/<type>/<id>, movie|series/<id>, imdb|tmdb/<type>/<id>). Its parties
+ * (nuvio://party/<code>) are Nuvio's own: said so.
+ */
+private fun MainActivity.openNuvio(uri: Uri): Boolean {
+    val host = uri.host.orEmpty().lowercase()
+    val path = uri.pathSegments
+    fun type(t: String?) = when (t?.lowercase()) { "movie", "movies", "film" -> "movie"; "series", "show", "shows", "tv" -> "series"; else -> null }
+    fun title(t: String?, id: String?): Boolean {
+        val ty = type(t) ?: return false
+        if (id.isNullOrBlank()) return false
+        openShared(ty, id, "", null, null)
+        return true
+    }
+    return when {
+        host.contains('.') || host == "localhost" || host.any { it.isDigit() } ->
+            true.also { confirmAddon("https://" + uri.toString().substringAfter("://")) }
+        host == "meta" -> title(uri.getQueryParameter("type") ?: uri.getQueryParameter("mediaType"),
+            uri.getQueryParameter("id") ?: uri.getQueryParameter("imdb") ?: uri.getQueryParameter("tmdb")?.let { "tmdb:" + it.removePrefix("tmdb:") })
+        host in setOf("detail", "details", "open", "watch") -> title(path.getOrNull(0), path.getOrNull(1))
+        host in setOf("movie", "movies", "series", "show", "shows", "tv") -> title(host, path.getOrNull(0))
+        host == "imdb" -> if (type(path.getOrNull(0)) != null) title(path.getOrNull(0), path.getOrNull(1)) else title(uri.getQueryParameter("type"), path.getOrNull(0))
+        host == "tmdb" -> {
+            val (t, id) = if (type(path.getOrNull(0)) != null) path.getOrNull(0) to path.getOrNull(1) else uri.getQueryParameter("type") to path.getOrNull(0)
+            title(t, id?.let { "tmdb:" + it.removePrefix("tmdb:") })
+        }
+        host == "party" -> true.also { Toast.makeText(this, getString(R.string.link_party), Toast.LENGTH_LONG).show() }
+        else -> false
+    }
 }
 
 /** A shared title's page: a film's, or a series' (its episode said, as the link has it). */

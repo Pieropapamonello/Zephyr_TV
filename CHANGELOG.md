@@ -14,6 +14,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.5.1
+
+- Zephyr TV opens the nuvio:// links of Nuvio too: the page of a film or series, and add-ons. The watch parties of Nuvio stay in Nuvio.
+
 ## 3.5.0
 
 - Zephyr TV works on Android phones and tablets too. It has an icon among their apps, and it uses one APK for TVs, phones and tablets.

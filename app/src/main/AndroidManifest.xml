@@ -85,6 +85,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="ztv" />
                 <data android:scheme="stremio" />
+                <data android:scheme="nuvio" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

@@ -551,6 +551,7 @@
     <string name="share">Condividi</string>
     <string name="share_text">%1$s — guardalo su Zephyr TV: %2$s</string>
     <string name="link_unknown">Zephyr TV non ha trovato un link che può aprire.</string>
+    <string name="link_party">La visione di gruppo è una funzione di Nuvio: apri il link in Nuvio.</string>
     <string name="link_episode">Stagione %1$d, episodio %2$d</string>
     <string name="link_addon_title">Aggiungere questo add-on?</string>
     <string name="link_nuvio_title">Aggiungere questo repository di plugin?</string>
