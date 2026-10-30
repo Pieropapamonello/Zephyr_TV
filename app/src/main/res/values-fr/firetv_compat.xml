@@ -1,4 +1,10 @@
 <resources>
+    <string name="firetv_voice_action">Voix avec la télécommande Fire TV</string>
+    <string name="firetv_voice_title">Recherche vocale sur Fire TV</string>
+    <string name="firetv_voice_help_bridge">Maintenez le microphone de la télécommande, dites « cherche Inception sur YouTube », puis relâchez-le. Pour ouvrir Stremio, dites « cherche Stremio sur YouTube ». Choisissez Zephyr comme destination dans le pont. Cette Fire TV ne propose pas de dictée Android dans le champ de recherche.</string>
+    <string name="firetv_voice_help_no_bridge">Cette Fire TV ne propose pas de dictée Android. Utilisez le clavier ou le QR pour saisir la recherche sur votre téléphone. Le transfert des recherches Alexa vers Zephyr nécessite le pont compatible, un APK séparé.</string>
+    <string name="firetv_voice_bridge_settings">Gérer le pont vocal</string>
+    <string name="firetv_voice_back">Retour à la recherche</string>
     <string name="firetv_home_title">Gestionnaire d’accueil Zephyr TV</string>
     <string name="firetv_home_subtitle">Compatibilité Fire OS 6</string>
     <string name="firetv_home_unsupported">Ce gestionnaire est réservé à Android 7.0/7.1. Sur les versions récentes, utilisez la configuration d’accueil existante.</string>

@@ -94,12 +94,13 @@ internal fun MainActivity.openSearch(text: String = "", focus: Int? = null, voic
     val rows = listOf(
         // Search: with words, or with the filters alone (all of Cinemeta's popular ones, without either).
         page(getString(R.string.search_go)) { go(typed(), always = true) },
-        page(getString(R.string.search_dictate)) { listen(input, ::go) },
+        if (needsFireTvVoiceHelp()) page(getString(R.string.firetv_voice_action)) { openFireTvVoiceHelp(typed()) }
+        else page(getString(R.string.search_dictate)) { listen(input, ::go) },
         page(getString(R.string.search_filters), if (searchFiltersExpanded) "▲ $summary" else "▼ $summary") {
             searchFiltersExpanded = !searchFiltersExpanded
             openSearch(typed(), 2)
         },
-    ) + filterRows + listOf(
+    ) + filterRows + if (needsFireTvVoiceHelp()) emptyList() else listOf(
         page(getString(R.string.search_assistant)) { closeLauncherSettings(); assistant() },
     )
     showPage(getString(R.string.search_title), rows, focus ?: 0, top = top) { closeLauncherSettings() }
@@ -112,7 +113,8 @@ internal fun MainActivity.openSearch(text: String = "", focus: Int? = null, voic
     if (focus == null) input.requestFocus()
     pageExit = { stopListening() }
     if (voice) ui.post {
-        if (SpeechRecognizer.isRecognitionAvailable(this)) listen(input, ::go)
+        if (needsFireTvVoiceHelp()) openFireTvVoiceHelp(typed())
+        else if (SpeechRecognizer.isRecognitionAvailable(this)) listen(input, ::go)
         else Toast.makeText(this, getString(R.string.firetv_voice_unavailable), Toast.LENGTH_LONG).show()
     }
     // Under the rows, the phone: the same search typed on its own keyboard. The link works while the page is open.
@@ -175,6 +177,7 @@ internal fun MainActivity.openSearch(text: String = "", focus: Int? = null, voic
  * starts once it's said. (The TV's own dictation screen hears it but, on some TVs, never hands the words back.)
  */
 internal fun MainActivity.listen(input: EditText, go: (String) -> Unit) {
+    if (needsFireTvVoiceHelp()) { openFireTvVoiceHelp(input.text.toString()); return }
     if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
         afterMicAccess = { listen(input, go) }
         return requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), MIC_REQUEST)

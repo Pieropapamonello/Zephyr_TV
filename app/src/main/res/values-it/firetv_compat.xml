@@ -1,4 +1,10 @@
 <resources>
+    <string name="firetv_voice_action">Voce con telecomando Fire TV</string>
+    <string name="firetv_voice_title">Ricerca vocale su Fire TV</string>
+    <string name="firetv_voice_help_bridge">Tieni premuto il microfono del telecomando, dì “cerca Inception su YouTube” e rilascialo. Per aprire Stremio dì “cerca Stremio su YouTube”. Nel bridge scegli Zephyr come destinazione. Questa Fire TV non offre la dettatura Android nel campo di ricerca.</string>
+    <string name="firetv_voice_help_no_bridge">Questa Fire TV non offre la dettatura Android. Per cercare in Zephyr usa la tastiera oppure il QR per scrivere dal telefono. Per inoltrare le ricerche di Alexa a Zephyr serve il bridge compatibile, un APK separato.</string>
+    <string name="firetv_voice_bridge_settings">Gestisci bridge vocale</string>
+    <string name="firetv_voice_back">Torna alla ricerca</string>
     <string name="firetv_home_title">Gestore Home di Zephyr TV</string>
     <string name="firetv_home_subtitle">Compatibilità Fire OS 6</string>
     <string name="firetv_home_unsupported">Questo gestore è per Android 7.0/7.1. Sulle versioni successive usa la configurazione Home già esistente.</string>

@@ -884,6 +884,7 @@ class MainActivity : Activity() {
      * Started directly rather than looked up first: Android 11+ hides other apps' activities from lookups.
      */
     internal fun assistant() {
+        if (needsFireTvVoiceHelp()) { openFireTvVoiceHelp(); return }
         for (intent in listOf(
             Intent("android.intent.action.VOICE_ASSIST"),
             Intent(Intent.ACTION_ASSIST),

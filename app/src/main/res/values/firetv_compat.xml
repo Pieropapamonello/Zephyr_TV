@@ -1,4 +1,10 @@
 <resources>
+    <string name="firetv_voice_action">Voice with the Fire TV remote</string>
+    <string name="firetv_voice_title">Voice search on Fire TV</string>
+    <string name="firetv_voice_help_bridge">Hold the remote microphone, say “search Inception on YouTube”, then release it. To open Stremio say “search Stremio on YouTube”. Select Zephyr as the destination in the bridge. This Fire TV has no Android dictation service for the search field.</string>
+    <string name="firetv_voice_help_no_bridge">This Fire TV has no Android dictation service. Search Zephyr with the keyboard or scan the QR to type on your phone. Forwarding Alexa searches to Zephyr requires the compatible bridge, a separate APK.</string>
+    <string name="firetv_voice_bridge_settings">Manage voice bridge</string>
+    <string name="firetv_voice_back">Back to search</string>
     <string name="firetv_home_title">Zephyr TV Home manager</string>
     <string name="firetv_home_subtitle">Fire OS 6 compatibility</string>
     <string name="firetv_home_unsupported">This redirect is for Android 7.0/7.1 only. Use the existing Home setup on newer versions.</string>

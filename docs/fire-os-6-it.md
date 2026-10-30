@@ -45,6 +45,22 @@ sono stati verificati la preferenza conservata e HomeKeeper attivo.
 
 ## Come funziona la ricerca vocale
 
+### Pulsanti di ricerca sulla Fire TV
+
+Sulle Fire TV Amazon (modello AFT) senza Android RecognitionService, le due voci
+**Dillo a voce** e **Assistente vocale** sono sostituite da **Voce con telecomando
+Fire TV**. Questa voce apre istruzioni leggibili e, se è installato il nostro
+companion, il pulsante **Gestisci bridge vocale**. **Torna alla ricerca** conserva
+il testo già scritto. Il riconoscimento mancante viene controllato prima di
+chiedere il permesso microfono: non si presenta una richiesta inutile.
+
+La registrazione parte dal microfono fisico del telecomando, non dalla voce
+di questo menu. La tastiera e il QR dal telefono restano disponibili. Sugli
+altri dispositivi o quando esiste un vero servizio Android di riconoscimento,
+i normali comandi di dettatura e assistente sono mantenuti.
+
+### Percorso della richiesta
+
 Il percorso provato è:
 
 **Microfono del telecomando → Alexa → richiesta YouTube → bridge → ACTION_SEARCH
@@ -131,6 +147,8 @@ delle ricerche. Finite le prove ADB, disattivare il debug ADB/rete della Fire TV
 
 ## Prove e build 3.5.3
 
+Le verifiche seguenti si riferiscono alla prima release **Nello.1**.
+
 L'aggiornamento dalla build Nello 3.5.1 alla 3.5.3 è stato installato con `adb
 install -r`: pacchetto `.debug`, versionCode 65, minSdk 24. Sono stati conservati
 i dati e l'opzione Home; il bridge 0.1.0 è un APK separato e non è stato sostituito.
@@ -150,3 +168,17 @@ La [release Nello 3.5.3](https://github.com/Pieropapamonello/Zephyr_TV/releases/
 contiene l'APK Zephyr modificato e i sorgenti GPL-3.0 del relativo tag. Le aggiunte
 documentali successive al tag sono sul branch della PR. Il bridge va compilato
 separatamente; non è incluso in quell'APK Zephyr.
+
+### Correzione menu vocale — Nello.2
+
+109 test JVM superati, inclusi i tre nuovi controlli sulla scelta tra dettatura
+nativa e istruzioni Fire TV. Compilazione/lint e verifiche manuali sul dispositivo
+coprono la sostituzione delle voci non funzionanti, le istruzioni multilinea,
+l'apertura del selettore del bridge e il ritorno alla ricerca. Non è un nuovo
+riconoscitore vocale e non introduce il comando Alexa «su Zephyr».
+
+La skill Alexa dedicata non è implementata in questa patch. Richiede prima la
+registrazione dell'account Amazon Developer e la successiva configurazione e
+verifica dell'infrastruttura; la frase esatta «cerca Inception su Zephyr» non è
+garantita da una skill personalizzata. Il programma VSK per l'integrazione video
+ufficiale non accetta nuovi partner secondo la documentazione Amazon consultata.
