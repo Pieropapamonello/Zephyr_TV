@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://github.com/mccoy88f/Zephyr_TV/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mccoy88f/Zephyr_TV?label=release"></a>
-  <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84">
+  <img alt="Android 7.0+" src="https://img.shields.io/badge/Android-7.0%2B-3ddc84">
   <img alt="APK size" src="https://img.shields.io/badge/APK-13%20MB-blue">
   <a href="LICENSE"><img alt="GPL-3.0 License" src="https://img.shields.io/github/license/mccoy88f/Zephyr_TV"></a>
 </p>
@@ -82,7 +82,7 @@ Measured with Plume Launcher 1.3, the version Zephyr TV is based on, on a Hisens
 
 ## Requirements
 
-- Any Android device running **Android 8.0 (Oreo) or newer**: Android TV, Google TV, a stick or a box, a phone or a tablet (ARM). On a phone or tablet, Zephyr TV has an icon among the apps; see [Phones and tablets](docs/guide.md#phones-and-tablets)
+- Any Android device running **Android 7.0 (Nougat) or newer**: Android TV, Google TV, Fire TV, a stick or a box, a phone or a tablet (ARM). On Android 7, **Continue Playing** shows only what you watch in Zephyr TV and the apps have no rows of their own: other apps publish those only from Android 8. On a phone or tablet, Zephyr TV has an icon among the apps; see [Phones and tablets](docs/guide.md#phones-and-tablets)
 - A way to sideload an APK: the *Downloader* app, a USB drive with a file manager, or `adb`
 
 ## Installation

@@ -76,8 +76,10 @@ internal fun MainActivity.refreshWatchNext() {
  */
 internal fun MainActivity.queryWatchNext(): List<Prog> {
     val hidden = prefs.getStringSet(K.HIDDEN_WATCH, emptySet())!!
-    val watchNext = readPrograms(TvContract.WatchNextPrograms.CONTENT_URI, hidden)
-    val channels = continueChannels().flatMap { id ->
+    // Watch Next and the apps' channels came with Android 8: on 7, only Zephyr TV's own cards.
+    val tv = android.os.Build.VERSION.SDK_INT >= 26
+    val watchNext = if (tv) readPrograms(TvContract.WatchNextPrograms.CONTENT_URI, hidden) else emptyList()
+    val channels = if (!tv) emptyList() else continueChannels().flatMap { id ->
         readPrograms(TvContract.buildPreviewProgramsUriForChannel(id), hidden).map { (_, p) -> prefs.getLong("t_${p.pkg}", 0) to p }
     }
     // And the Stremio add-on channel last played, and the films and episodes begun.
@@ -228,6 +230,7 @@ internal fun MainActivity.appLabel(pkg: String) = apps.firstOrNull { it.pkg == p
  * own order, empty ones left out. Runs on the io thread.
  */
 internal fun MainActivity.appSections(pkg: String, hidden: Set<String>): List<Section> {
+    if (android.os.Build.VERSION.SDK_INT < 26) return emptyList() // apps' rows came with Android 8
     val rows = ArrayList<Pair<Long, String>>() // (channel id, its name)
     contentResolver.query(TvContract.Channels.CONTENT_URI, arrayOf("_id", "display_name", "package_name"), null, null, null)?.use { c ->
         while (c.moveToNext()) if (c.getString(2) == pkg) rows += c.getLong(0) to (c.getString(1) ?: "")

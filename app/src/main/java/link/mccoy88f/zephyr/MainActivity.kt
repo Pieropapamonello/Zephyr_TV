@@ -1287,6 +1287,7 @@ class MainActivity : Activity() {
      * single-layer icons and for photo-like layers that fill the square, which keep the greyscale look.
      */
     internal fun glyph(icon: Drawable): Bitmap? {
+        if (Build.VERSION.SDK_INT < 26) return null // Android 7 has no adaptive icons: the greyscale look
         val fg = (icon as? AdaptiveIconDrawable)?.foreground ?: return null
         val size = dp(96) // large, so a small symbol is still sharp after trimming and scaling up
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)

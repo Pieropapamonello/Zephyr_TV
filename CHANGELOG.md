@@ -14,6 +14,15 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.6.0-beta.1
+
+- Zephyr TV installs on Android 7.0 and 7.1 too, for example on older boxes and on Fire TV with Fire OS 6. Before, it needed Android 8.0.
+- On Android 7, **Continue Playing** shows the films, episodes and channels that you watch in Zephyr TV. Android 7 has no Watch Next, so the cards of other apps do not show.
+- On Android 7, the apps have no rows of their own (for example the Recommended row of YouTube). Other apps publish these rows only from Android 8.
+- On Android 7, the apps show their normal icons in greyscale, because Android 7 has no adaptive icons.
+- On Android 7, an update asks you to turn on **Unknown sources** in **Security**, one time.
+- On Android 7.0, the add-ons, plugins and extensions on servers with Let's Encrypt certificates connect. Zephyr TV has the Let's Encrypt root certificates, which Android 7.0 does not have.
+
 ## 3.5.3
 
 - On a phone or tablet, the ← and ✕ buttons of the side panels have their arrow and cross in the middle.

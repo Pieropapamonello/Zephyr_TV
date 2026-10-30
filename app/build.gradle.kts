@@ -12,11 +12,11 @@ android {
 
     defaultConfig {
         applicationId = "link.mccoy88f.zephyr"
-        minSdk = 26
+        minSdk = 24
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         targetSdk = 36
-        versionCode = 65
-        versionName = "3.5.3"
+        versionCode = 66
+        versionName = "3.6.0-beta.1"
         // What's new: only this version's section of CHANGELOG.md ships, one entry per line, without ** marks.
         val notes = rootProject.file("CHANGELOG.md").readText().replace("\r", "")
             .substringAfter("\n## $versionName\n", "").substringBefore("\n## ")
@@ -42,6 +42,11 @@ android {
             keyAlias = keys.getProperty("keyAlias")
             keyPassword = keys.getProperty("keyPassword")
         }
+    }
+
+    // Android 7: java.time and java.util.Base64 (Android 8's) from the desugaring library.
+    compileOptions {
+        isCoreLibraryDesugaringEnabled = true
     }
 
     lint {
@@ -83,6 +88,7 @@ configurations.matching { it.name.endsWith("UnitTestRuntimeClasspath") }.configu
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     // The one exception to "no dependencies": Media3's ExoPlayer, for the Stremio add-ons' channels (see PlayerActivity).
     val media3 = "1.11.1"
     implementation("androidx.media3:media3-exoplayer:$media3")

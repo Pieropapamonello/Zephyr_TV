@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://github.com/mccoy88f/Zephyr_TV/releases/latest"><img alt="Ultima versione" src="https://img.shields.io/github/v/release/mccoy88f/Zephyr_TV?label=release"></a>
-  <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84">
+  <img alt="Android 7.0+" src="https://img.shields.io/badge/Android-7.0%2B-3ddc84">
   <img alt="Dimensione APK" src="https://img.shields.io/badge/APK-13%20MB-blue">
   <a href="LICENSE"><img alt="Licenza GPL-3.0" src="https://img.shields.io/github/license/mccoy88f/Zephyr_TV"></a>
 </p>
@@ -82,7 +82,7 @@ Misurato con Plume Launcher 1.3, la versione su cui si basa Zephyr TV, su una Hi
 
 ## Requisiti
 
-- Qualsiasi dispositivo Android con **Android 8.0 (Oreo) o successivo**: Android TV, Google TV, una chiavetta o un box, un telefono o un tablet (ARM). Su telefono o tablet, Zephyr TV ha un'icona tra le app; vedi [Telefoni e tablet](docs/guida.md#telefoni-e-tablet)
+- Qualsiasi dispositivo Android con **Android 7.0 (Nougat) o successivo**: Android TV, Google TV, Fire TV, una chiavetta o un box, un telefono o un tablet (ARM). Su Android 7, **Continua la riproduzione** mostra solo quello che guardi in Zephyr TV e le app non hanno righe proprie: le altre app le pubblicano solo da Android 8. Su telefono o tablet, Zephyr TV ha un'icona tra le app; vedi [Telefoni e tablet](docs/guida.md#telefoni-e-tablet)
 - Un modo per installare un APK: l'app *Downloader*, una chiavetta USB con un file manager, oppure `adb`
 
 ## Installazione
