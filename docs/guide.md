@@ -104,7 +104,7 @@ The **streams**, the links that play, come from **Stremio add-ons** ([chapter 11
 
 ## 7. A title's page
 
-OK on a film or series card opens its page. At the top are its picture and logo; below:
+OK on a film or series card opens its page, over the whole screen: its picture fills the screen, and on the left are its logo and, below it:
 
 - **Details**: rating, kind, year, genre, length, and whether you watched it.
 - **Description**: shows at once, before the rest.

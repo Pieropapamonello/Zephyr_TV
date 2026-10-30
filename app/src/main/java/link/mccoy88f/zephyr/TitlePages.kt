@@ -10,7 +10,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
 
-// A film's or series' page in the side panel (its seasons, an episode's page, the trailer and services), and
+// A film's or series' page, as a whole page (see DetailPage: its seasons, an episode's page, the trailer and services), and
 // playing one in Zephyr TV's player. Functions of MainActivity, like the other topics; see Titles for the rows.
 
 /**
@@ -380,8 +380,8 @@ private fun MainActivity.titleTop(info: String, name: String?, about: String?, s
 }
 
 /**
- * A title's page in the panel: [art] (backdrop, logo, poster) across the top, over the panel's padding so it reaches
- * its edges and the top of the screen; [top] under it, then [rows], each with its icon from [icons] by its index, then
+ * A title's page, as a whole page (see detailPage): [art] (backdrop, logo, poster) over the screen; [top] under its
+ * title or logo, then [rows], each with its icon from [icons] by its index, then
  * [servicesBar] (the trailer and the apps that have it), last.
  */
 private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, String?>, fallback: Triple<String?, String?, String?>?, name: String, top: View,
@@ -390,18 +390,11 @@ private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, 
                                    descView: View? = null, servicesBar: View? = null,
                                    back: () -> Unit) {
     if (settingsScrim.visibility != View.VISIBLE) showPanel()
-    val panel = findViewById<LinearLayout>(R.id.settingsPanel)
-    val panelWidth = dp(380) // the panel's width (activity_main.xml)
-    val picture = FrameLayout(this).apply { setBackgroundColor(artGround()) }
-    fillArt(picture, panelWidth, panelWidth * 9 / 16, art.first, art.second, art.third, name, fallback)
     showPage(title, rows, focus, top = top, back = back, panes = glass)
-    panel.addView(picture, 0, LinearLayout.LayoutParams(panelWidth, panelWidth * 9 / 16).apply {
-        setMargins(-panel.paddingStart, -panel.paddingTop, -panel.paddingEnd, dp(20))
-    })
-    panel.clipToPadding = false
-    pageExit = {
-        panel.removeView(picture)
-        panel.clipToPadding = true
+    // A whole page: the art over the screen, its logo over the page (see DetailPage).
+    detailPage("$name|${art.first}|${art.third}", listOfNotNull(art.second, fallback?.second).distinct()) { frame, w, h ->
+        fillArt(frame, w, h, art.first, null, art.third, name, fallback?.let { Triple(it.first, null, it.third) })
+        sharpBackdrop(frame, w, listOfNotNull(art.first, fallback?.first).distinct())
     }
     // If starting on description, focus it and scroll to top
     if (focus < 0 && descView != null) {

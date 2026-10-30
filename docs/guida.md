@@ -104,7 +104,7 @@ Gli **stream**, cioè i link da riprodurre, arrivano dagli **add-on Stremio** ([
 
 ## 7. La pagina di un titolo
 
-OK su una scheda di film o serie apre la sua pagina. In alto ci sono l'immagine e il logo, sotto:
+OK su una scheda di film o serie apre la sua pagina, a tutto schermo: l'immagine riempie lo schermo e a sinistra ci sono il logo e, sotto:
 
 - **Informazioni**: valutazione, tipo, anno, genere, durata, e se l'hai già visto.
 - **Descrizione**: compare subito, prima del resto.

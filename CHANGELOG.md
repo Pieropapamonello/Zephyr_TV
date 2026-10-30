@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.6.0-beta.2
+
+- The page of a film, series, season, episode or TV channel is now a page over the whole screen, not a panel at the side. The picture of the title fills the screen. On the left are its logo, what it is about and its buttons.
+- A TV channel's page shows the logo of the channel large on the right.
+
 ## 3.6.0-beta.1
 
 - Zephyr TV installs on Android 7.0 and 7.1 too, for example on older boxes and on Fire TV with Fire OS 6. Before, it needed Android 8.0.
