@@ -55,6 +55,13 @@ do not intercept Amazon's private audio path or claim that Alexa hands its query
 to third-party apps. The missing-service message keeps keyboard/phone search
 available rather than pretending to have heard speech.
 
+There is a separate, optional [experimental voice bridge](../voice-bridge/README.md)
+for Alexa's existing YouTube integration. It forwards already-transcribed queries
+to Zephyr without overriding the microphone. Unlike the main Zephyr APK, it must
+replace the installed YouTube/SmartTube Amazon bridge package and has its own
+installation and recovery constraints. Physical Alexa search and app launch
+were verified with that companion on the tested Fire TV.
+
 Amazon documents the microphone button as a system-wide action that apps cannot
 override: [general FAQ](https://developer.amazon.com/docs/fire-tv/faq-general.html)
 and [controller guidelines](https://developer.amazon.com/docs/fire-tv/controller-behavior-guidelines.html).
@@ -66,7 +73,8 @@ The official API-26 APK was rejected with INSTALL_FAILED_OLDER_SDK; this debug
 build installed and rendered the launcher. Home redirection and the recovery
 manager were exercised. Explicit ACTION_SEARCH opened Stremio for `apri Stremio`
 and displayed internal content results for `cerca Inception`.
-The physical microphone and an injected SEARCH key still opened Amazon results.
+Without the optional companion, the physical microphone and an injected SEARCH
+key still opened Amazon results.
 After a reboot, the opted-in foreground service and Zephyr returned automatically
 without manually launching the app (observed about 143 seconds after boot).
 
