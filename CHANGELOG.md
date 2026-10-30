@@ -16,6 +16,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 
 ## Unreleased
 
+- The standard documents the extension repositories (`repository-zephyrtv.json`). Zephyr TV's own repository is now online: OMG Premium TV and Live Webcams are suggested again in **Zephyr Extensions**.
 - A TV channel or webcam that plays in the YouTube app no longer closes the player. Before, the player closed and showed the home screen again.
 - When the player can't look for the streams, it says so. It doesn't close.
 

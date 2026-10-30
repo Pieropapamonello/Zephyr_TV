@@ -393,8 +393,13 @@ massimo 1 MB. Resta tra le chiamate e si cancella con l'estensione.
 - Ogni estensione: **Attiva**, **Opzioni**, **Contenuti V.M. - Adulti**, **Sposta su / giù** (le sue righe arrivano
   in quest'ordine), **Aggiorna ora**, **Rimuovi**. Rimuoverla cancella le sue impostazioni, il suo `localStorage` e
   le sue playlist.
-- Le **estensioni proposte** (OMG Premium TV) compaiono nell'elenco finché non sono installate: OK le installa dal
-  loro indirizzo, che non cambia mai. Zephyr TV non ne contiene nessuna; se ne rimuovi una, torna proposta.
+- **Aggiungi un'estensione** accetta anche l'indirizzo di un **repository** (il suo `repository-zephyrtv.json`, qui
+  sotto): Zephyr TV aggiunge il repository e ne mostra le estensioni.
+- Le estensioni dei repository non installate compaiono dopo quelle installate: OK ne installa una dal suo indirizzo.
+  Ogni repository ha la sua riga: le sue estensioni, **Rileggi l'elenco**, **Togli il repository** (le estensioni
+  installate da lì restano). Zephyr TV non contiene estensioni; ha **il suo repository** fin dall'inizio
+  (OMG Premium TV, Webcam dal vivo e le altre di
+  [Zephyr-TV-Extensions](https://github.com/mccoy88f/Zephyr-TV-Extensions)), finché l'utente non lo toglie.
 
 ### `manifest-zephyrtv.json`
 
@@ -427,6 +432,33 @@ altrove. Il suo indirizzo è quello che gli utenti aggiungono, e quello che Zeph
 È fisso solo il nome del file: Zephyr TV accetta un indirizzo che finisce con `manifest-zephyrtv.json`, oppure la
 cartella che lo contiene (`https://example.org/mia-estensione/` legge
 `https://example.org/mia-estensione/manifest-zephyrtv.json`).
+
+### `repository-zephyrtv.json`
+
+Un **repository** pubblica molte estensioni a un solo indirizzo: un file JSON chiamato **`repository-zephyrtv.json`**
+che elenca i loro `manifest-zephyrtv.json`:
+
+```json
+{
+  "zephyr": 1,
+  "name": "Le mie estensioni",
+  "extensions": [
+    "webcams/manifest-zephyrtv.json",
+    "https://example.org/altra/manifest-zephyrtv.json"
+  ]
+}
+```
+
+| Campo | Obbligatorio | Significato |
+|---|---|---|
+| `zephyr` | sì | `1`. Un repository per una versione più nuova viene rifiutato. |
+| `name` | sì | Mostrato in Zephyr TV. |
+| `extensions` | sì | Gli indirizzi dei `manifest-zephyrtv.json` delle sue estensioni: assoluti, o relativi a quello del repository. |
+
+Zephyr TV legge un repository una volta al giorno, con il `manifest-zephyrtv.json` di ogni sua estensione (non i
+pacchetti). Un'estensione nuova nell'elenco compare tra quelle da installare: nessuna si installa da sola. Quelle 18+
+compaiono solo con i contenuti 18+ sbloccati. Un'estensione installata da un repository si aggiorna dal suo
+indirizzo, come le altre.
 
 ### Aggiornamenti
 
@@ -462,7 +494,7 @@ estensioni di cui ti fidi.
   e `audiobook`, gli stream `externalUrl` e `ytId`, gli stream solo audio,
   `manifest-zephyrtv.json`, `catalog`, `meta`, `stream`, `guide`,
   `manifest`, `settings` con `list`, `featured`, `radio`, `event`, i raccoglitori, il catch-up, `requires` e `zephyr.has()`,
-  `zephyr.m3u`, `localStorage`.
+  `zephyr.m3u`, `localStorage`, `repository-zephyrtv.json`.
 
 ## 11. Un'estensione minima
 
@@ -513,7 +545,6 @@ standard, con il suo nome per `requires`, quando Zephyr TV la implementa.
 | `auth` | accesso dal telefono con un codice (device code) | `zephyr.auth.deviceCode({ url, code, expires })`: Zephyr TV mostra il codice e un QR finché l'estensione non dice che è fatto |
 | `resolver` | estensioni che trasformano il link di un sito di hosting in uno stream, per le altre | risorsa `resolve({ url })` → `{ streams }`; `zephyr.resolve(url)` per le altre |
 | `webview` | pagine dietro un controllo del browser | `zephyr.webview({ url, until })` → `{ cookies, html }`, in una WebView nascosta |
-| `repository` | molte estensioni da un solo indirizzo | `repository-zephyrtv.json`: `{ name, extensions: ["<indirizzo di manifest-zephyrtv.json>", …] }` |
 | `trailers` | trailer nella pagina di un film o di una serie | `trailerStreams` del Meta, come in Stremio |
 | `schedule` | lavoro in background ogni qualche ora (rileggere una playlist, rinnovare un token) | handler `schedule({ settings })`, con `scheduleHours` nel manifest |
 | `subtle` | cifrature e hash veloci | `crypto.subtle` (`digest`, AES, HMAC) e `crypto.getRandomValues` |

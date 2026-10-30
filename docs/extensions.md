@@ -381,8 +381,13 @@ const channel = await zephyr.m3u.channel("main", id);
   someone else, and installs it once confirmed.
 - Each extension: **On**, **Options**, **Adult content (18+)**, **Move up / down** (its rows come in this order),
   **Update now**, **Remove**. Removing it deletes its settings, its `localStorage` and its playlists.
-- **Suggested extensions** (OMG Premium TV) are listed until installed: OK installs one from its address, which
-  never changes. Zephyr TV carries none of them; removed, one is suggested again.
+- **Add an extension** also takes a **repository**'s address (its `repository-zephyrtv.json`, see below): Zephyr TV
+  adds the repository and shows its extensions.
+- The extensions of the repositories that aren't installed are listed after the installed ones: OK installs one from
+  its address. Each repository has its row: its extensions, **Read the list again**, **Remove the repository** (the
+  extensions installed from it stay). Zephyr TV carries no extension; it has **its own repository** from the start
+  (OMG Premium TV, Live Webcams and the others of
+  [Zephyr-TV-Extensions](https://github.com/mccoy88f/Zephyr-TV-Extensions)), until the user removes it.
 
 ### `manifest-zephyrtv.json`
 
@@ -414,6 +419,32 @@ or anywhere else. Its address is what users add, and what Zephyr TV reads for up
 
 Only the file's own name is fixed: Zephyr TV accepts an address ending in `manifest-zephyrtv.json`, or the folder it's
 in (`https://example.org/my-extension/` reads `https://example.org/my-extension/manifest-zephyrtv.json`).
+
+### `repository-zephyrtv.json`
+
+A **repository** publishes many extensions at one address: a JSON file named **`repository-zephyrtv.json`** that
+lists their `manifest-zephyrtv.json`:
+
+```json
+{
+  "zephyr": 1,
+  "name": "My extensions",
+  "extensions": [
+    "webcams/manifest-zephyrtv.json",
+    "https://example.org/other/manifest-zephyrtv.json"
+  ]
+}
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `zephyr` | yes | `1`. A repository for a newer version is refused. |
+| `name` | yes | Shown in Zephyr TV. |
+| `extensions` | yes | The addresses of its extensions' `manifest-zephyrtv.json`: absolute, or relative to the repository's. |
+
+Zephyr TV reads a repository once a day, with each of its extensions' `manifest-zephyrtv.json` (not their packages).
+An extension new in the list shows among those to install: none is installed by itself. 18+ ones show only while 18+
+is unlocked. An extension installed from a repository updates from its own address, as any other.
 
 ### Updates
 
@@ -448,7 +479,7 @@ extensions you trust.
   and `audiobook`, `externalUrl` and `ytId` streams, audio-only streams,
   `manifest-zephyrtv.json`, `catalog`, `meta`, `stream`, `guide`,
   `manifest`, `settings` with `list`, `featured`, `radio`, `event`, collectors, catch-up, `requires` and `zephyr.has()`,
-  `zephyr.m3u`, `localStorage`.
+  `zephyr.m3u`, `localStorage`, `repository-zephyrtv.json`.
 
 ## 11. A minimal extension
 
@@ -499,7 +530,6 @@ the standard, with its name for `requires`, once Zephyr TV has it.
 | `auth` | signing in from a phone with a code (device code) | `zephyr.auth.deviceCode({ url, code, expires })`: Zephyr TV shows the code and a QR code until the extension says it's done |
 | `resolver` | extensions that turn a hosting site's link into a stream, for the others | resource `resolve({ url })` → `{ streams }`; `zephyr.resolve(url)` for the others |
 | `webview` | pages behind a browser check | `zephyr.webview({ url, until })` → `{ cookies, html }`, in a hidden WebView |
-| `repository` | many extensions from one address | `repository-zephyrtv.json`: `{ name, extensions: ["<manifest-zephyrtv.json address>", …] }` |
 | `trailers` | trailers on a film's or series' page | `trailerStreams` of Meta, as Stremio's |
 | `schedule` | work every few hours in the background (a playlist read again, a token renewed) | handler `schedule({ settings })`, with `scheduleHours` in the manifest |
 | `subtle` | fast ciphers and hashes | `crypto.subtle` (`digest`, AES, HMAC) and `crypto.getRandomValues` |
