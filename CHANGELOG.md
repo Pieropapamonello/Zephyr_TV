@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.6
+
+- On a phone or tablet, the status bar of the device (time, network) does not show over the home screen. Swipe down from the top to see it for a moment.
+- To show it always, turn on **Phone status bar** in **Appearance & wallpapers**.
+
 ## 3.4.0-beta.5
 
 - When you come back from the player to the page of a film, the focus is on the row you selected: **Watch** or **Watch on**. Before, it was on the description.

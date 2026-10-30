@@ -219,3 +219,20 @@ internal fun MainActivity.panelClose() {
 }
 
 private const val PANEL_CLOSE = "panel-close"
+
+/**
+ * A phone or tablet: its status bar (time, network, notifications) hidden over the home screen, unless switched on in
+ * Appearance; a swipe down from the top shows it for a moment. On a TV there's none.
+ */
+internal fun MainActivity.applyStatusBar() {
+    if (!handheld()) return
+    val shown = prefs.getBoolean(K.STATUS_BAR, false)
+    if (android.os.Build.VERSION.SDK_INT >= 30) window.insetsController?.let { c ->
+        c.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        if (shown) c.show(android.view.WindowInsets.Type.statusBars()) else c.hide(android.view.WindowInsets.Type.statusBars())
+    } else {
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = if (shown) 0
+            else android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+    }
+}

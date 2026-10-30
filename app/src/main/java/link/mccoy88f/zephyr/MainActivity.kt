@@ -313,6 +313,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        applyStatusBar()
         ensureHomeService()
         homeSetupResumed()
         checkAdultLock()
@@ -2079,6 +2080,7 @@ class MainActivity : Activity() {
         const val NIGHT_ROW = THEME_ROW + 9
         const val NIGHT_FROM_ROW = THEME_ROW + 10
         const val NIGHT_TO_ROW = THEME_ROW + 11
+        const val STATUS_BAR_ROW = THEME_ROW + 12 // phones and tablets only
         const val SORT_ROW = APPS_SECTION * SECTION + 1
         const val ROW_APPS_ROW = APPS_SECTION * SECTION + 2
         const val ALIGN_ROW = APPS_SECTION * SECTION + 3

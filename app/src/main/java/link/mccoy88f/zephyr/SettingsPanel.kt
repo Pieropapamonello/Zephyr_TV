@@ -232,6 +232,13 @@ internal fun MainActivity.sectionRows(section: Int): List<Triple<String, String,
             },
             page(getString(R.string.setting_night_from), hourName(nightFrom())) { pickNightHour(K.NIGHT_FROM, R.string.setting_night_from, NIGHT_FROM_ROW) },
             page(getString(R.string.setting_night_to), hourName(nightTo())) { pickNightHour(K.NIGHT_TO, R.string.setting_night_to, NIGHT_TO_ROW) },
+        ) + listOfNotNull(
+            // A phone or tablet: its own status bar over the home screen, or not (the home screen has its clock).
+            if (!handheld()) null else page(getString(R.string.setting_status_bar), toggle(prefs.getBoolean(K.STATUS_BAR, false))) {
+                prefs.edit().putBoolean(K.STATUS_BAR, !prefs.getBoolean(K.STATUS_BAR, false)).apply()
+                applyStatusBar()
+                renderSettings(STATUS_BAR_ROW)
+            },
         )
     }
     APPS_SECTION -> {

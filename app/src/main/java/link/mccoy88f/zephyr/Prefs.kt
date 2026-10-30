@@ -22,6 +22,7 @@ internal object K {
     const val COLOUR_ICONS = "colour_icons"
     const val CLOCK_24 = "clock_24" // "auto" (the TV's setting), "24" or "12"
     const val NIGHT = "night" // night mode on
+    const val STATUS_BAR = "status_bar" // a phone or tablet: its status bar (time, network) shown; hidden by default
     const val NIGHT_FROM = "night_from" // night mode window, minutes after midnight
     const val NIGHT_TO = "night_to"
 

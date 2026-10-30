@@ -334,6 +334,7 @@
     <string name="clock_24">24 ore</string>
     <string name="clock_12">12 ore</string>
     <string name="setting_night">Modalità notte</string>
+    <string name="setting_status_bar">Barra di stato del telefono</string>
     <string name="setting_night_from">Inizio modalità notte</string>
     <string name="setting_night_to">Fine modalità notte</string>
     <string name="search_title">Cerca</string>
