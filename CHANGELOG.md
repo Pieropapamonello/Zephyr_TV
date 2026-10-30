@@ -14,6 +14,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.5.6
+
+- New: **Visible rows**, on the page of each catalog in **Content catalog**. It lists the rows of the catalog. Turn each row on or off. A row that is off does not show under Films, TV Series or the app of the catalog.
+
 ## 3.5.5
 
 - On the page of a film, series or episode, you can go down with the remote control to the trailer and the buttons of the apps. In 3.5.4, they did not get the focus.

@@ -158,6 +158,7 @@ How **quality** and **language** are recognised:
 - **The first is the main one.** It gives the titles' details, descriptions, pictures and search. When it doesn't know a title, Zephyr TV asks the next catalogs.
 - **The others** add their rows to Films and TV Series, in the list's order. The cards of titles the main one knows have its pictures, in the add-ons' rows and the search results too: a title looks the same everywhere.
 - **Select a catalog** to move it up or down, or to remove it. One always stays.
+- **Visible rows**, on a catalog's page, lists its rows (for example "Films · Popular"): turn each one on or off. A row turned off does not show under Films, TV Series or the catalog's own app.
 - **Add a catalog** offers Cinemeta, Nuvio Catalog, catalogs you used before, or a **New address** (the manifest of an add-on with catalogs).
 
 Under the list, the TMDB settings:

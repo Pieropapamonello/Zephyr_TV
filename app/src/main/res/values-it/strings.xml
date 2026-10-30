@@ -578,6 +578,7 @@
     <string name="catalog_add">Aggiungi un catalogo</string>
     <string name="catalog_in_use">In uso</string>
     <string name="catalog_use">Usa questo catalogo</string>
+    <string name="catalog_rows">Righe visibili</string>
     <string name="catalog_add_intro">L\'indirizzo di un add-on Stremio con cataloghi di film o serie. Finisce con manifest.json.</string>
     <string name="toast_catalog_no_vod">Questo add-on non ha cataloghi di film o serie.</string>
     <string name="title_watch">Guarda</string>

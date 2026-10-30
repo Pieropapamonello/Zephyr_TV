@@ -533,7 +533,17 @@ private fun MainActivity.sourcePage(url: String) {
         saveSources(list)
         configureCinemeta(at + by)
     }
+    val addon = Stremio.saved(filesDir, url)?.addon
+    val shelves = addon?.vod.orEmpty().filter { it.listed }
     showPage(catalogName(url), listOfNotNull(
+        // Its rows, each shown or not, under Films, Series and its own tile alike.
+        if (addon == null || shelves.isEmpty()) null else page(getString(R.string.catalog_rows), SUBMENU) {
+            toggles(getString(R.string.catalog_rows), shelves.map { "${kindName(it.type)} · ${it.name}" to shelfKey(addon, it) },
+                K.SHELVES_OFF, getString(R.string.state_shown), getString(R.string.state_hidden)) {
+                addonsChanged()
+                sourcePage(url)
+            }
+        },
         if (at > 0) page(getString(R.string.addon_move_up)) { move(-1) } else null,
         if (at < sources.size - 1) page(getString(R.string.addon_move_down)) { move(+1) } else null,
         if (sources.size > 1) page(getString(R.string.addon_remove)) { saveSources(sources - url); configureCinemeta() } else null,
