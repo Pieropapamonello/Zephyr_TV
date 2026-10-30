@@ -15,8 +15,8 @@ android {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         targetSdk = 36
-        versionCode = 50
-        versionName = "3.4.0-beta.2"
+        versionCode = 51
+        versionName = "3.4.0-beta.3"
         // What's new: only this version's section of CHANGELOG.md ships, one entry per line, without ** marks.
         val notes = rootProject.file("CHANGELOG.md").readText().replace("\r", "")
             .substringAfter("\n## $versionName\n", "").substringBefore("\n## ")
@@ -90,6 +90,10 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-dash:$media3")
     implementation("androidx.media3:media3-exoplayer-rtsp:$media3") // rtsp:// streams (IP cameras, some IPTV)
     implementation("androidx.media3:media3-datasource-rtmp:$media3") // rtmp:// streams
+    // Phones and tablets: Dolby (AC3, E-AC3), DTS and the like decoded in software, which TVs decode themselves or
+    // pass on to a receiver. Without it their sound is left out. Jellyfin's build of Media3's FFmpeg decoder (GPL-3.0).
+    implementation("androidx.media3:media3-decoder:$media3")
+    implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")
     // The second exception: QuickJS, the JavaScript engine Nuvio's plugins run in (see NuvioPlugins).
     implementation("io.github.dokar3:quickjs-kt:$QUICKJS")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2") // what it runs on; used directly too

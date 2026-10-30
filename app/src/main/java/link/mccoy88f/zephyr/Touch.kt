@@ -41,7 +41,9 @@ internal fun MainActivity.homeDrag(e: MotionEvent): Boolean {
             d.mode = HomeDrag.Mode.UNDECIDED
             content.animate().cancel()
             d.from = -content.translationY
-            d.onSpotlight = spotlightContainer.visibility == View.VISIBLE && hits(spotlightContainer, e)
+            // Spotlight: its title and the picture round it, all the screen above the apps.
+            d.onSpotlight = spotlightContainer.visibility == View.VISIBLE &&
+                e.rawY < IntArray(2).also { bottomSection.getLocationOnScreen(it) }[1]
             d.velocity?.recycle()
             d.velocity = VelocityTracker.obtain().apply { addMovement(e) }
             return false
@@ -53,7 +55,8 @@ internal fun MainActivity.homeDrag(e: MotionEvent): Boolean {
             if (d.mode == HomeDrag.Mode.UNDECIDED) {
                 val slop = ViewConfiguration.get(this).scaledTouchSlop
                 d.mode = when {
-                    abs(dy) > slop && abs(dy) > abs(dx) -> if (pageRoom() > 0) HomeDrag.Mode.PAGE else HomeDrag.Mode.VIEWS
+                    // The page moves while it has room, or when it's still down from rows no longer there.
+                    abs(dy) > slop && abs(dy) > abs(dx) -> if (pageRoom() > 0 || content.translationY != 0f) HomeDrag.Mode.PAGE else HomeDrag.Mode.VIEWS
                     abs(dx) > slop && d.onSpotlight -> HomeDrag.Mode.SPOTLIGHT
                     abs(dx) > slop -> HomeDrag.Mode.VIEWS
                     else -> return false
@@ -73,7 +76,10 @@ internal fun MainActivity.homeDrag(e: MotionEvent): Boolean {
                     cardsOnScreen()
                     true
                 }
-                HomeDrag.Mode.SPOTLIGHT -> true
+                HomeDrag.Mode.SPOTLIGHT -> {
+                    spotlightContainer.translationX = dx * 0.6f // the title follows the finger
+                    true
+                }
                 else -> false
             }
         }
@@ -84,7 +90,15 @@ internal fun MainActivity.homeDrag(e: MotionEvent): Boolean {
             val vy = v?.yVelocity ?: 0f
             d.velocity?.recycle()
             d.velocity = null
-            if (mode == HomeDrag.Mode.SPOTLIGHT && e.actionMasked == MotionEvent.ACTION_UP) cycleSpotlight(if (e.rawX < d.x) 1 else -1)
+            if (mode == HomeDrag.Mode.SPOTLIGHT) {
+                val dx = e.rawX - d.x
+                // Far enough: the title after (finger to the left) or before, coming in from that side; else back.
+                if (e.actionMasked == MotionEvent.ACTION_UP && abs(dx) > dp(48)) {
+                    cycleSpotlight(if (dx < 0) 1 else -1)
+                    spotlightContainer.translationX = if (dx < 0) dp(40).toFloat() else -dp(40).toFloat()
+                }
+                spotlightContainer.animate().translationX(0f).setDuration(200).setInterpolator(DECELERATE).start()
+            }
             if (mode == HomeDrag.Mode.PAGE && abs(vy) > ViewConfiguration.get(this).scaledMinimumFlingVelocity) {
                 // A flick goes on a little past the finger, as a list does.
                 val to = (-content.translationY - vy * 0.25f).coerceIn(0f, pageRoom())
@@ -157,4 +171,22 @@ internal fun MainActivity.cardsAlong(scroll: ViewGroup, x: Int) {
     val row = scroll.getChildAt(0) as? ViewGroup ?: return
     if (row.getTag(R.id.watchScroll) !is RowCards) return
     if (x + scroll.width * 2 >= row.width) moreCards(row)
+}
+
+/**
+ * The page back up as far as its rows still reach, once they change under a finger: an app with fewer rows (or none)
+ * selected after scrolling down another's. On a TV focus does it (see keepInView). Set up once, from onCreate.
+ */
+internal fun MainActivity.touchSetup() {
+    val content = findViewById<View>(R.id.content)
+    bottomSection.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+        if (!bottomSection.isInTouchMode || drag.mode == HomeDrag.Mode.PAGE) return@addOnLayoutChangeListener
+        content.post {
+            val room = pageRoom()
+            if (-content.translationY > room) content.animate().translationY(-room).setDuration(200).setInterpolator(DECELERATE).start()
+        }
+    }
+    // Spotlight's title: a tap shows its buttons (focus, as on a TV), the next shows all of what it's about.
+    spotlightInfoBox.isClickable = true
+    spotlightInfoBox.setOnClickListener { toggleOverview() }
 }

@@ -71,6 +71,7 @@ internal fun MainActivity.openLauncherSettings(row: Int? = null) {
 internal fun MainActivity.showPanel() {
     panelFrom = currentFocus
     val panel = findViewById<View>(R.id.settingsPanel)
+    panelClose() // a phone or tablet: an X at its top left, and a tap beside it closes it (see Handheld)
     // Glass: a smoked pane over the home screen, lit along its inner edge, instead of a solid sheet.
     if (glass) panel.background = LayerDrawable(arrayOf(
         GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xD92A2A32.toInt(), 0xE6101014.toInt())),
@@ -769,9 +770,39 @@ internal fun MainActivity.pinPage(title: String, back: (() -> Unit)?, done: (Str
             setPadding(0, dp(24), 0, 0)
         })
     }
+    // A phone or tablet: its number keyboard types the digits, in a box out of sight; a tap on the boxes brings it up.
+    val typed = if (!handheld()) null else EditText(this).apply {
+        inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        filters = arrayOf(android.text.InputFilter.LengthFilter(4))
+        alpha = 0f
+        isCursorVisible = false
+        background = null
+        addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val t = s?.toString().orEmpty()
+                for (i in 0 until 4) digits[i] = t.getOrNull(i)?.digitToIntOrNull()
+                at = minOf(t.length, 3)
+                draw()
+                if (t.length == 4) post { submit(); setText("") }
+            }
+        })
+    }
+    typed?.let { t ->
+        box.addView(t, LinearLayout.LayoutParams(dp(1), dp(1)))
+        row.isClickable = true
+        row.setOnClickListener { showKeyboard(t) }
+    }
     showPage(title, emptyList(), top = box, back = back)
     pinBox = row
-    row.requestFocus()
+    if (typed != null) showKeyboard(typed) else row.requestFocus()
+}
+
+/** [field] focused, with the device's keyboard up (a phone or tablet). */
+internal fun MainActivity.showKeyboard(field: EditText) {
+    field.requestFocus()
+    field.post { getSystemService(android.view.inputmethod.InputMethodManager::class.java).showSoftInput(field, 0) }
 }
 
 /** A faint outline for input boxes: their fill alone sits too close to the panel's colour to find at a glance. */

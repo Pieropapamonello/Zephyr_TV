@@ -186,3 +186,36 @@ internal fun MainActivity.fileResult(result: Int, data: Intent?) {
     fileDone = null
     done(if (result == Activity.RESULT_OK) data?.data else null)
 }
+
+/**
+ * The side panel on a phone or tablet: an X at its top left closes it, and so does a tap on the home screen beside it.
+ * Added once; [showPanel] calls it each time the panel opens.
+ */
+internal fun MainActivity.panelClose() {
+    if (!handheld() || settingsScrim.findViewWithTag<android.view.View>(PANEL_CLOSE) != null) return
+    val panel = findViewById<android.view.View>(R.id.settingsPanel)
+    panel.isClickable = true // a tap on the panel's own space stays in it
+    settingsScrim.setOnClickListener { closeLauncherSettings() }
+    val size = dp(36)
+    val x = TextView(this).apply {
+        tag = PANEL_CLOSE
+        text = "✕"
+        textSize = 18f
+        gravity = android.view.Gravity.CENTER
+        setTextColor(android.graphics.Color.WHITE)
+        contentDescription = getString(R.string.setup_close)
+        background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(0x99000000.toInt()) // readable on the panel and on a title's picture alike
+        }
+        elevation = dp(12).toFloat()
+        setOnClickListener { closeLauncherSettings() }
+    }
+    // At the panel's top left: the panel is on the right, as wide as its layout says.
+    (settingsScrim as android.view.ViewGroup).addView(x, android.widget.FrameLayout.LayoutParams(size, size, android.view.Gravity.TOP or android.view.Gravity.END).apply {
+        topMargin = dp(8)
+        marginEnd = panel.layoutParams.width - size - dp(8)
+    })
+}
+
+private const val PANEL_CLOSE = "panel-close"

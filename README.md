@@ -267,6 +267,7 @@ Bug reports, translations and pull requests are welcome. Zephyr TV stays small o
 - **Wallpapers:** "Canada" by Thomas Curryer, via [Unsplash](https://unsplash.com/@tawc20) (CC0)
 - **App logos:** [Simple Icons](https://simpleicons.org) (CC0). All trademarks belong to their respective owners.
 - **TV channel logos:** [iptv-org](https://github.com/iptv-org): their [channel database](https://github.com/iptv-org/database) (public domain) through their [API](https://github.com/iptv-org/api), for channels the TV has no logo for. The logos belong to their channels.
+- **Dolby and DTS sound on phones and tablets:** [FFmpeg](https://ffmpeg.org), through Jellyfin's [build of the Media3 FFmpeg decoder](https://github.com/jellyfin/jellyfin-androidx-media) (GPL-3.0).
 - **Films and series:** data and images from [TMDB](https://www.themoviedb.org). Zephyr TV uses the TMDB API but is not endorsed or certified by TMDB.
 
 ## License

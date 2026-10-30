@@ -247,6 +247,7 @@ class MainActivity : Activity() {
         applyTheme()
         applyClock()
         setupSpotlight() // after applyTheme: its veil and arrow discs use the theme's colours
+        touchSetup() // phones and tablets: the page and Spotlight with a finger
         loadWallpaper()
 
         // Top bar: users, search, network, All apps, TV inputs, Android settings, launcher settings. Round, lit on focus.

@@ -102,6 +102,11 @@ class PlayerActivity : Activity() {
     private var group: String? = null // the bingeGroup of the stream playing: the next episode's like it first
     private var seeking = false // the banner came up for a seek: Left/Right go on seeking, not to its buttons
     private var scrubbing = false // a finger on the progress bar: it shows where the finger is, not where the film is
+    // A phone or tablet (touch, no leanback): sound decoded in software, and an X on the panel (see Handheld).
+    private val handheld by lazy {
+        !packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK) &&
+            packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_TOUCHSCREEN)
+    }
     private var ticks = 0
     private val pool by lazy { Executors.newFixedThreadPool(6) } // a film's streams, every add-on and plugin at once
     private val lateWaits by lazy { Executors.newCachedThreadPool() } // waiting for the sources that answer late
@@ -402,6 +407,12 @@ class PlayerActivity : Activity() {
             setPadding(dp(28), dp(40), dp(28), dp(28))
             setBackgroundColor(0xF0101014.toInt())
             tracksTitle = text(22f, bold = true).apply { setPadding(dp(14), 0, 0, dp(16)) }
+            if (handheld) addView(text(20f).apply { // a finger: an X closes it, as Back does
+                text = "✕"
+                gravity = Gravity.CENTER
+                contentDescription = getString(R.string.setup_close)
+                setOnClickListener { closeTracks() }
+            }, LinearLayout.LayoutParams(dp(40), dp(40)).apply { topMargin = -dp(32); bottomMargin = dp(4) })
             addView(tracksTitle)
             addView(ScrollView(this@PlayerActivity).apply { isVerticalScrollBarEnabled = false; addView(tracksList) })
             visibility = View.GONE
@@ -1619,7 +1630,11 @@ class PlayerActivity : Activity() {
                 .build(androidx.media3.exoplayer.drm.LocalMediaDrmCallback(license.toString().toByteArray()))
         }
         val sources = DefaultMediaSourceFactory(DefaultDataSource.Factory(this, http)).apply { drm?.let { m -> setDrmSessionManagerProvider { m } } }
-        val p = ExoPlayer.Builder(this).setMediaSourceFactory(sources)
+        // A phone or tablet has no Dolby or DTS decoder as TVs have: FFmpeg's, after the device's own (see build.gradle).
+        val renderers = androidx.media3.exoplayer.DefaultRenderersFactory(this).setExtensionRendererMode(
+            if (handheld) androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+            else androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+        val p = ExoPlayer.Builder(this, renderers).setMediaSourceFactory(sources)
             .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
             .setHandleAudioBecomingNoisy(true)
             .build()

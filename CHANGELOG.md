@@ -14,6 +14,14 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.3
+
+- On a phone or tablet, the player plays Dolby (AC3, E-AC3) and DTS sound. Before, these films and channels had no sound there.
+- On a phone or tablet, a PIN page (layout lock, 18+ lock) opens the number keyboard of the device. Tap the boxes to show it again.
+- On a phone or tablet, each side panel has an X at its top left to close it. A tap beside the panel closes it too. The audio and subtitles panel of the player has an X too.
+- On a phone or tablet, the home screen goes back up when the rows under the apps get fewer. Before, after you scrolled down the rows of one app and tapped an app with fewer rows, the top of the screen stayed out of view.
+- On a phone or tablet, Spotlight follows your finger when you swipe it to the side. Tap its title to show its buttons. Tap it again to show all of the description.
+
 ## 3.4.0-beta.2
 
 - On a phone or tablet, the rows lower on the home screen react to a tap and scroll to the side. Before, only the first rows did.
