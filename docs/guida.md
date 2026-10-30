@@ -356,7 +356,7 @@ Zephyr TV funziona anche su telefoni e tablet Android, con il dito:
 - **Home**: scorri su e giù, e di lato per scorrere una riga; tocca un'app per vederne le righe e di nuovo per
   aprirla (un'app senza righe si apre subito); tira giù dall'alto per rileggere le righe. Scorri Spotlight per il
   titolo prima o dopo.
-- **Pannelli**: ✕ li chiude, ← torna alla pagina prima; anche un tocco fuori dal pannello lo chiude.
+- **Pannelli**: ← in alto a sinistra torna alla pagina prima, ✕ in alto a destra li chiude; anche un tocco fuori dal pannello lo chiude.
 - **Player**: tocca per le informazioni e i pulsanti; doppio tocco a sinistra o a destra per tornare indietro o
   andare avanti di 10 secondi; trascina la barra di avanzamento; scorri su e giù a sinistra per la luminosità, a
   destra per il volume, al centro per cambiare canale; pizzica per riempire lo schermo o adattarlo; 🔒 blocca i

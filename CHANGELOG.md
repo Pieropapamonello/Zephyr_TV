@@ -25,7 +25,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - On a phone or tablet, pull the home screen down from the top to read the rows of the app again.
 - On a phone or tablet, Spotlight shows dots, or a count, for its titles. Taps and long presses vibrate a little.
 - On a tablet, a row shows more cards.
-- On a phone or tablet, the side panels have ← next to ✕, to go to the page before.
+- On a phone or tablet, the side panels have ← at the top left, to go to the page before, and ✕ at the top right.
 - New: links. **Share** on the page of a film, series or episode sends a link: Zephyr TV opens it on another phone or tablet.
 - Zephyr TV opens ztv:// links, stremio:// links and the addresses of Stremio add-ons, also when they are shared to it from another app. It adds an add-on or a repository only after you confirm it. An extension shows what it is before it installs.
 - On a phone or tablet, hold the Zephyr TV icon for **Search** and **Play queue**.

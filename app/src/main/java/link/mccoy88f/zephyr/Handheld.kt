@@ -188,7 +188,8 @@ internal fun MainActivity.fileResult(result: Int, data: Intent?) {
 }
 
 /**
- * The side panel on a phone or tablet: an X at its top left closes it, and so does a tap on the home screen beside it.
+ * The side panel on a phone or tablet: ← at its top left goes to the page before, ✕ at its top right closes it, and so
+ * does a tap on the home screen beside it.
  * Added once; [showPanel] calls it each time the panel opens.
  */
 internal fun MainActivity.panelClose() {
@@ -211,12 +212,12 @@ internal fun MainActivity.panelClose() {
         elevation = dp(12).toFloat()
         setOnClickListener { closeLauncherSettings() }
     }
-    // At the panel's top left: the panel is on the right, as wide as its layout says.
+    // At the panel's top right, which is the screen's: the panel is on the right.
     (settingsScrim as android.view.ViewGroup).addView(x, android.widget.FrameLayout.LayoutParams(size, size, android.view.Gravity.TOP or android.view.Gravity.END).apply {
         topMargin = dp(8)
-        marginEnd = panel.layoutParams.width - size - dp(8)
+        marginEnd = dp(8)
     })
-    // Beside it, ←: the page before, as Back (and the panel closed from its first page).
+    // At its top left, ←: the page before, as Back (and the panel closed from its first page).
     val left = TextView(this).apply {
         text = "←"
         textSize = 18f
@@ -233,7 +234,7 @@ internal fun MainActivity.panelClose() {
     }
     (settingsScrim as android.view.ViewGroup).addView(left, android.widget.FrameLayout.LayoutParams(size, size, android.view.Gravity.TOP or android.view.Gravity.END).apply {
         topMargin = dp(8)
-        marginEnd = panel.layoutParams.width - size * 2 - dp(16)
+        marginEnd = panel.layoutParams.width - size - dp(8) // the panel is as wide as its layout says
     })
 }
 

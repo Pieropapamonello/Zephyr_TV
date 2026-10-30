@@ -356,7 +356,7 @@ Zephyr TV works on Android phones and tablets too, with a finger:
 - **Home**: swipe up and down to scroll it, to the side to scroll a row; tap an app to show its rows, and again to
   open it (an app with no rows opens at once); pull down from the top to read its rows again. Swipe Spotlight to
   see the title before or after.
-- **Panels**: ✕ closes them, ← goes to the page before; a tap beside a panel closes it too.
+- **Panels**: ← at the top left goes to the page before, ✕ at the top right closes them; a tap beside a panel closes it too.
 - **Player**: tap for the information and the buttons; double-tap left or right to go back or on 10 seconds; drag
   the progress bar; swipe up or down on the left for the brightness, on the right for the volume, in the middle to
   change channel; pinch to fill the screen or fit it; 🔒 locks the controls; leave the player while a video plays
