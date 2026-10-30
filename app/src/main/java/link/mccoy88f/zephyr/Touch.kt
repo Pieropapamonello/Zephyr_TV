@@ -20,6 +20,7 @@ internal class HomeDrag {
     var mode = Mode.UNDECIDED
     var onSpotlight = false
     var velocity: VelocityTracker? = null
+    var hanging: View? = null // the rows hanging below the page that the finger is on (see hanging)
 
     enum class Mode { UNDECIDED, PAGE, SPOTLIGHT, VIEWS }
 }
@@ -58,7 +59,13 @@ internal fun MainActivity.homeDrag(e: MotionEvent): Boolean {
                     else -> return false
                 }
                 // Ours from here: the views under the finger let go of it (no tap, no press shown).
-                if (d.mode != HomeDrag.Mode.VIEWS) window.superDispatchTouchEvent(MotionEvent.obtain(e).apply { action = MotionEvent.ACTION_CANCEL })
+                if (d.mode != HomeDrag.Mode.VIEWS) {
+                    val cancel = MotionEvent.obtain(e).apply { action = MotionEvent.ACTION_CANCEL }
+                    window.superDispatchTouchEvent(cancel)
+                    d.hanging?.let { send(it, cancel) }
+                    d.hanging = null
+                    cancel.recycle()
+                }
             }
             return when (d.mode) {
                 HomeDrag.Mode.PAGE -> {
@@ -89,6 +96,32 @@ internal fun MainActivity.homeDrag(e: MotionEvent): Boolean {
         }
     }
     return d.mode == HomeDrag.Mode.PAGE || d.mode == HomeDrag.Mode.SPOTLIGHT
+}
+
+/**
+ * The sections after the first hang below the page, past its bottom edge (see BottomSection): scrolled up into view,
+ * they're still outside the page's bounds, where Android hands no touch on. A finger that goes down there is handed
+ * to them here, its taps and sideways scrolls with it. True when it was.
+ */
+internal fun MainActivity.hanging(e: MotionEvent): Boolean {
+    val d = drag
+    if (e.actionMasked == MotionEvent.ACTION_DOWN) {
+        d.hanging = null
+        if (settingsScrim.visibility != View.VISIBLE && allApps.visibility != View.VISIBLE && !editing &&
+            !hits(findViewById(R.id.content), e) && hits(bottomSection, e)) d.hanging = bottomSection
+    }
+    val to = d.hanging ?: return false
+    send(to, e)
+    if (e.actionMasked == MotionEvent.ACTION_UP || e.actionMasked == MotionEvent.ACTION_CANCEL) d.hanging = null
+    return true
+}
+
+/** [e] to [v], in its own coordinates. */
+private fun send(v: View, e: MotionEvent) {
+    val at = IntArray(2).also { v.getLocationOnScreen(it) }
+    val local = MotionEvent.obtain(e).apply { setLocation(e.rawX - at[0], e.rawY - at[1]) }
+    v.dispatchTouchEvent(local)
+    local.recycle()
 }
 
 private fun hits(v: View, e: MotionEvent): Boolean {

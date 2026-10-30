@@ -113,6 +113,12 @@
     <string name="wallpaper_rockies_dusk">Rockies (dusk)</string>
     <string name="wallpaper_prefix_folder">Folder: %1$s</string>
     <string name="add_from_phone">Add from phone…</string>
+    <string name="add_photo">Add a photo…</string>
+    <string name="here_type">Type it…</string>
+    <string name="here_choose_file">Choose a file</string>
+    <string name="here_save_file">Save the file</string>
+    <string name="here_saved">Saved</string>
+    <string name="here_too_big">This file is too big, or empty.</string>
     <string name="choose_from_tv">Choose a folder on this TV…</string>
     <string name="remove_photo">Remove a photo…</string>
     <string name="choose_folder_title">Choose a folder</string>

@@ -14,6 +14,15 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.2
+
+- On a phone or tablet, the rows lower on the home screen react to a tap and scroll to the side. Before, only the first rows did.
+- On a phone or tablet, what a TV does with a QR code and a phone is done on the device itself:
+  - To type an address, a key or a name, use the keyboard of the device.
+  - To add a photo, a backup or an extension file, select **Choose a file**.
+  - To save a backup, select **Save the file**.
+- On a phone or tablet, the rows that offer to type something on a phone do not show, and the search has no QR code.
+
 ## 3.4.0-beta.1
 
 - Zephyr TV works on Android phones and tablets too. It has an icon among their apps.

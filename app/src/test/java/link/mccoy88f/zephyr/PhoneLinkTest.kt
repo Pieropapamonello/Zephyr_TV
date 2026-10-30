@@ -42,7 +42,7 @@ class PhoneLinkTest {
 
 class PhonePagesTest {
     @Test fun downloadContentCantBreakOutOfThePage() {
-        val page = PhonePages.download("T", "I", "Save", "b.json", "{\"a\":\"</script><b>'x'\\n\"}\nline2")
+        val page = PhonePages.download("T", "I", "Save", "b.json", "{\"a\":\"</script><b>'x'\\n\"}\nline2").html
         assertTrue(page.contains("\\x3c/script>"))
         assertTrue(!page.contains("</script><b>"))
         assertTrue(page.contains("\\'x\\'"))

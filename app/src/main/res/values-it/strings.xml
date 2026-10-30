@@ -113,6 +113,12 @@
     <string name="wallpaper_rockies_dusk">Montagne Rocciose (tramonto)</string>
     <string name="wallpaper_prefix_folder">Cartella: %1$s</string>
     <string name="add_from_phone">Aggiungi dal telefono…</string>
+    <string name="add_photo">Aggiungi una foto…</string>
+    <string name="here_type">Scrivilo…</string>
+    <string name="here_choose_file">Scegli un file</string>
+    <string name="here_save_file">Salva il file</string>
+    <string name="here_saved">Salvato</string>
+    <string name="here_too_big">Questo file è troppo grande, o vuoto.</string>
     <string name="choose_from_tv">Scegli una cartella su questa TV…</string>
     <string name="remove_photo">Rimuovi una foto…</string>
     <string name="choose_folder_title">Scegli una cartella</string>

@@ -55,6 +55,7 @@ internal fun MainActivity.showPhoneLink(
     title: String, task: PhoneTask, status: TextView,
     more: List<Triple<String, String, () -> Unit>> = emptyList(), back: () -> Unit,
 ) {
+    if (handheld()) return doHere(title, task, status, more, back) // a phone or tablet: here, not on another phone
     val ip = lanAddress() ?: return Toast.makeText(this, getString(R.string.toast_connect_network), Toast.LENGTH_LONG).show()
     val link = try {
         PhoneLink(cacheDir, task)

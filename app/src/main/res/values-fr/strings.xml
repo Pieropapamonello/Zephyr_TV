@@ -113,6 +113,12 @@
     <string name="wallpaper_rockies_dusk">Rocheuses (crépuscule)</string>
     <string name="wallpaper_prefix_folder">Dossier : %1$s</string>
     <string name="add_from_phone">Ajouter depuis le téléphone…</string>
+    <string name="add_photo">Ajouter une photo…</string>
+    <string name="here_type">Saisir…</string>
+    <string name="here_choose_file">Choisir un fichier</string>
+    <string name="here_save_file">Enregistrer le fichier</string>
+    <string name="here_saved">Enregistré</string>
+    <string name="here_too_big">Ce fichier est trop volumineux, ou vide.</string>
     <string name="choose_from_tv">Choisir un dossier sur cette TV…</string>
     <string name="remove_photo">Supprimer une photo…</string>
     <string name="choose_folder_title">Choisissez un dossier</string>

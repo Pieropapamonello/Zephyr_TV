@@ -113,6 +113,12 @@
     <string name="wallpaper_rockies_dusk">Montañas Rocosas (atardecer)</string>
     <string name="wallpaper_prefix_folder">Carpeta: %1$s</string>
     <string name="add_from_phone">Añadir desde el móvil…</string>
+    <string name="add_photo">Añadir una foto…</string>
+    <string name="here_type">Escríbelo…</string>
+    <string name="here_choose_file">Elegir un archivo</string>
+    <string name="here_save_file">Guardar el archivo</string>
+    <string name="here_saved">Guardado</string>
+    <string name="here_too_big">Este archivo es demasiado grande, o está vacío.</string>
     <string name="choose_from_tv">Elegir una carpeta de esta TV…</string>
     <string name="remove_photo">Quitar una foto…</string>
     <string name="choose_folder_title">Elige una carpeta</string>

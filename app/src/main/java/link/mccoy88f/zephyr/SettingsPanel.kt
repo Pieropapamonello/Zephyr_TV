@@ -618,8 +618,9 @@ internal fun MainActivity.focusedRow(): Int? {
 }
 
 /** [panes]: [top] and the rows as panes of glass (a title's or a channel's page in the Glass theme), see [glassPane]. */
-internal fun MainActivity.showPage(title: String, rows: List<Triple<String, String, () -> Unit>>, focus: Int = 0, top: View? = null,
+internal fun MainActivity.showPage(title: String, allRows: List<Triple<String, String, () -> Unit>>, focus: Int = 0, top: View? = null,
                                   panes: Boolean = false, back: (() -> Unit)?) {
+    val rows = handheldRows(allRows) // a phone or tablet: no rows for doing it on a phone
     // The page left keeps the row it had focus on; Back to a page puts focus there again, wherever it was.
     findViewById<TextView>(R.id.settingsTitle).text?.toString()?.let { left -> focusedRow()?.let { pageFocus[left] = it } }
     val focus = if (goingBack) pageFocus[title]?.takeIf { it in rows.indices } ?: focus else focus

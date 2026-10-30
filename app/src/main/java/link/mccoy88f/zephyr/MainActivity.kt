@@ -382,6 +382,7 @@ class MainActivity : Activity() {
 
     @Deprecated("Only used for the default-home role request")
     override fun onActivityResult(code: Int, result: Int, data: Intent?) {
+        if (code == FILE_REQUEST) return fileResult(result, data)
         if (code == ROLE_REQUEST) refreshSettings(DEFAULT_HOME_ROW)
         if (code == ROLE_REQUEST && setupStep == 1) {
             setupStep = 0
@@ -804,6 +805,7 @@ class MainActivity : Activity() {
     }
 
     internal var upload: PhoneLink? = null
+    internal var fileDone: ((android.net.Uri?) -> Unit)? = null // the file picker or Save dialog open (see Handheld)
 
     // ---------- launcher settings panel (top-bar button; the Settings tile is Android's) ----------
 
@@ -1363,7 +1365,7 @@ class MainActivity : Activity() {
             spotlightIdle = false
             restartSpotlightTick()
         }
-        return homeDrag(e) || super.dispatchTouchEvent(e)
+        return homeDrag(e) || hanging(e) || super.dispatchTouchEvent(e)
     }
 
     override fun dispatchKeyEvent(e: KeyEvent): Boolean {
@@ -2048,6 +2050,7 @@ class MainActivity : Activity() {
         const val WRITE_SECURE = "android.permission.WRITE_SECURE_SETTINGS"
         const val ROLE_REQUEST = 2
         const val MIC_REQUEST = 4
+        const val FILE_REQUEST = 5 // a file picked, or saved, on a phone or tablet (see Handheld)
         const val SPOTLIGHT_IDLE_MS = 15 * 60_000L // Spotlight stops turning after this long without a key press
         const val TMDB_FRESH_MS = 3 * 3600_000L // how long a trending list is kept before it's fetched again
         val SPOTLIGHT_PKGS = listOf("com.nuvio.tv", "com.nuvio.app", "com.stremio.one", "com.netflix.ninja", "com.google.android.youtube.tv", "com.amazon.amazonvideo.livingroom")

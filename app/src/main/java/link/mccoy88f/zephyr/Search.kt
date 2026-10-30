@@ -112,6 +112,7 @@ internal fun MainActivity.openSearch(text: String = "", focus: Int? = null) {
     if (focus == null) input.requestFocus()
     pageExit = { stopListening() }
     // Under the rows, the phone: the same search typed on its own keyboard. The link works while the page is open.
+    if (handheld()) return // a phone or tablet: its own keyboard is the one in the box
     val ip = lanAddress() ?: return
     val page = PhonePages.text(phoneTexts(R.string.phone_search_title, R.string.phone_search_intro), getString(R.string.search_hint))
     lateinit var link: PhoneLink // the task below checks it's still this page's

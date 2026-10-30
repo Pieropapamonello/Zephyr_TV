@@ -15,7 +15,23 @@ import java.util.concurrent.Executors
  * [onSend], which gets what it sent (as a temporary file, deleted afterwards) and returns the status code and the
  * text the phone shows. [onSend] runs on a server thread.
  */
-internal class PhoneTask(val page: String, val maxBytes: Long, val onSend: (File) -> Pair<Int, String>)
+internal class PhoneTask(val page: PhonePage, val maxBytes: Long, val onSend: (File) -> Pair<Int, String>) {
+    /** A page of its own (read-only, nothing to do on the device itself: see PhoneLocal). */
+    constructor(html: String, maxBytes: Long, onSend: (File) -> Pair<Int, String>) : this(PhonePage(html, PhoneLocal.View), maxBytes, onSend)
+}
+
+/** A phone page, and what it asks for, so a phone or tablet running Zephyr TV can ask for it itself (see Handheld). */
+internal class PhonePage(val html: String, val local: PhoneLocal, val texts: PhoneTexts? = null)
+
+/** What a phone page asks for: some text, a file, a form, or a file to save; View: only something to read. */
+internal sealed class PhoneLocal {
+    class Text(val hint: String) : PhoneLocal()
+    class Addon(val hint: String, val adultLabel: String) : PhoneLocal()
+    class File(val accept: String) : PhoneLocal()
+    class Download(val fileName: String, val content: String) : PhoneLocal()
+    class Form(val fields: List<Triple<String, String, Pair<String, Boolean>>>) : PhoneLocal()
+    object View : PhoneLocal()
+}
 
 /**
  * A small web server that lets a phone on the same Wi-Fi do something on the TV: send a wallpaper, type the TMDB
@@ -80,7 +96,7 @@ internal class PhoneLink(private val tempDir: File, private val task: PhoneTask)
         val path = request.substringAfter(' ').substringBefore(' ').substringBefore('?')
         when {
             path != "/$token" -> reply(out, 404, "text/plain; charset=utf-8", "Not found. Scan the code on the TV again.")
-            method == "GET" -> reply(out, 200, "text/html; charset=utf-8", task.page)
+            method == "GET" -> reply(out, 200, "text/html; charset=utf-8", task.page.html)
             method == "POST" -> {
                 val length = headers["content-length"]?.toLongOrNull() ?: -1
                 if (length !in 1..task.maxBytes) return reply(out, 413, "text/plain; charset=utf-8", "Too big.")
@@ -168,44 +184,46 @@ internal object PhonePages {
     """.trimIndent()
 
     /** Pick a file (of [accept] types) and send it. */
-    fun file(t: PhoneTexts, choose: String, accept: String) = frame(t,
+    fun file(t: PhoneTexts, choose: String, accept: String) = PhonePage(frame(t,
         """<label><input id="f" type="file" accept="${esc(accept)}"><span id="n">${esc(choose)}</span></label>
         <button id="b" disabled>${esc(t.send)}</button>""",
         """const f=document.getElementById('f'),n=document.getElementById('n');
         f.onchange=()=>{b.disabled=!f.files.length;n.textContent=f.files.length?f.files[0].name:'${js(choose)}';s.textContent=''};
-        b.onclick=()=>send(f.files[0]);""")
+        b.onclick=()=>send(f.files[0]);"""), PhoneLocal.File(accept), t)
 
     /** Shows a button that saves [content] on the phone as [fileName]; nothing goes back to the TV. */
-    fun download(title: String, intro: String, button: String, fileName: String, content: String, footer: String = ""): String {
+    fun download(title: String, intro: String, button: String, fileName: String, content: String, footer: String = ""): PhonePage {
         val data = content.replace("\\", "\\\\").replace("'", "\\'").replace("<", "\\x3c").replace("\n", "\\n")
-        return frame(PhoneTexts(title, intro, button, "", "", footer),
+        val texts = PhoneTexts(title, intro, button, "", "", footer)
+        return PhonePage(frame(texts,
             """<button id="b">${esc(button)}</button>""",
             """b.onclick=()=>{const u=URL.createObjectURL(new Blob(['$data'],{type:'application/json'}));
-            const a=document.createElement('a');a.href=u;a.download='${js(fileName)}';document.body.appendChild(a);a.click();a.remove();};""")
+            const a=document.createElement('a');a.href=u;a.download='${js(fileName)}';document.body.appendChild(a);a.click();a.remove();};"""),
+            PhoneLocal.Download(fileName, content), texts)
     }
 
     /** Type or paste some text and send it. */
-    fun text(t: PhoneTexts, hint: String) = frame(t,
+    fun text(t: PhoneTexts, hint: String) = PhonePage(frame(t,
         """<textarea id="t" placeholder="${esc(hint)}" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>
         <button id="b" disabled>${esc(t.send)}</button>""",
         """const x=document.getElementById('t');
         x.oninput=()=>{b.disabled=!x.value.trim();s.textContent=''};
-        b.onclick=()=>send(x.value.trim());""")
+        b.onclick=()=>send(x.value.trim());"""), PhoneLocal.Text(hint), t)
 
     /**
      * Several fields at once ([fields]: key, label, placeholder, secret), sent as a JSON object: an account's server,
      * user and password typed on a phone in one go.
      */
-    fun form(t: PhoneTexts, fields: List<Triple<String, String, Pair<String, Boolean>>>) = frame(t,
+    fun form(t: PhoneTexts, fields: List<Triple<String, String, Pair<String, Boolean>>>) = PhonePage(frame(t,
         fields.joinToString("") { (key, label, more) ->
             """<p style="margin:0 0 6px;opacity:1">${esc(label)}</p><textarea data-k="${esc(key)}" rows="1" placeholder="${esc(more.first)}"
             style="min-height:2.6em${if (more.second) ";-webkit-text-security:disc" else ""}" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>"""
         } + """<button id="b">${esc(t.send)}</button>""",
         """const xs=[...document.querySelectorAll('textarea')];
-        b.onclick=()=>{const o={};xs.forEach(x=>{if(x.value.trim())o[x.dataset.k]=x.value.trim()});send(JSON.stringify(o));};""")
+        b.onclick=()=>{const o={};xs.forEach(x=>{if(x.value.trim())o[x.dataset.k]=x.value.trim()});send(JSON.stringify(o));};"""), PhoneLocal.Form(fields), t)
 
     /** Add a Stremio add-on, with a checkbox for adult content (18+). */
-    fun addon(t: PhoneTexts, hint: String, adultLabel: String) = frame(t,
+    fun addon(t: PhoneTexts, hint: String, adultLabel: String) = PhonePage(frame(t,
         """<textarea id="t" placeholder="${esc(hint)}" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>
         <label style="display:flex;align-items:center;gap:12px;cursor:pointer;border:0;padding:8px 0;margin-bottom:16px;text-align:left">
           <input id="a" type="checkbox" style="display:inline;width:20px;height:20px;accent-color:currentColor"> <span>${esc(adultLabel)}</span>
@@ -213,5 +231,5 @@ internal object PhonePages {
         <button id="b" disabled>${esc(t.send)}</button>""",
         """const x=document.getElementById('t'),a=document.getElementById('a');
         x.oninput=()=>{b.disabled=!x.value.trim();s.textContent=''};
-        b.onclick=()=>send(x.value.trim()+'\n'+(a.checked?'adult':''));""")
+        b.onclick=()=>send(x.value.trim()+'\n'+(a.checked?'adult':''));"""), PhoneLocal.Addon(hint, adultLabel), t)
 }
