@@ -158,6 +158,7 @@ Come vengono riconosciute **qualità** e **lingua**:
 - **Il primo è il principale.** Dà dettagli, descrizioni, immagini e ricerca dei titoli. Se non conosce un titolo, Zephyr TV chiede ai cataloghi successivi.
 - **Gli altri** aggiungono le loro righe a Film e Serie TV, nell'ordine della lista. Le copertine dei titoli che il principale conosce sono le sue, anche nelle righe degli add-on e nei risultati della ricerca: un titolo appare uguale ovunque.
 - **Selezionando un catalogo** puoi spostarlo su o giù, o rimuoverlo. Ne resta sempre almeno uno.
+- **Righe visibili**, nella pagina di un catalogo, elenca le sue righe (per esempio "Film · Popolari"): attiva o disattiva ognuna. Una riga disattivata non compare in Film, in Serie TV né nell'app del catalogo.
 - **Aggiungi un catalogo** propone Cinemeta, Nuvio Catalog, i cataloghi usati in passato, oppure un **Nuovo indirizzo** (il manifest di un add-on con cataloghi).
 
 Sotto la lista, le impostazioni TMDB:

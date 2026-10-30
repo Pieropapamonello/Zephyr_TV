@@ -21,6 +21,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - On Android 7, the apps have no rows of their own (for example the Recommended row of YouTube). Other apps publish these rows only from Android 8.
 - On Android 7, the apps show their normal icons in greyscale, because Android 7 has no adaptive icons.
 - On Android 7, an update asks you to turn on **Unknown sources** in **Security**, one time.
+- New: **Visible rows**, on the page of each catalog in **Content catalog**. It lists the rows of the catalog. Turn each row on or off. A row that is off does not show under Films, TV Series or the app of the catalog.
 - On Android 7.0, the add-ons, plugins and extensions on servers with Let's Encrypt certificates connect. Zephyr TV has the Let's Encrypt root certificates, which Android 7.0 does not have.
 
 ## 3.5.3

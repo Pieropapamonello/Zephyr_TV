@@ -578,6 +578,7 @@
     <string name="catalog_add">Ajouter un catalogue</string>
     <string name="catalog_in_use">Utilisé</string>
     <string name="catalog_use">Utiliser ce catalogue</string>
+    <string name="catalog_rows">Rangées visibles</string>
     <string name="catalog_add_intro">L\'adresse d\'un add-on Stremio avec des catalogues de films ou de séries. Elle se termine par manifest.json.</string>
     <string name="toast_catalog_no_vod">Cet add-on n\'a pas de catalogues de films ou de séries.</string>
     <string name="title_watch">Regarder</string>

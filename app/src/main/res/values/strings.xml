@@ -577,6 +577,7 @@
     <string name="catalog_add">Add a catalog</string>
     <string name="catalog_in_use">In use</string>
     <string name="catalog_use">Use this catalog</string>
+    <string name="catalog_rows">Visible rows</string>
     <string name="catalog_add_intro">The address of a Stremio add-on with catalogs of films or series. It ends in manifest.json.</string>
     <string name="toast_catalog_no_vod">This add-on has no catalogs of films or series.</string>
     <string name="title_watch">Watch</string>

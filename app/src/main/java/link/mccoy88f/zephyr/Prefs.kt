@@ -55,6 +55,7 @@ internal object K {
     const val CINEMETA_URL = "cinemeta_url" // the catalog source's manifest, when not Cinemeta (see MainActivity.cinemetaUrl)
     const val CATALOG_SOURCES = "catalog_sources" // the catalog sources in use, in order, one per line (see catalogSources)
     const val CATALOGS = "catalogs" // catalogs added as alternatives to Cinemeta, manifest addresses one per line (see catalogUrls)
+    const val SHELVES_OFF = "shelves_off" // "vod:<add-on id>:<type>:<catalog id>" of the catalogs' rows turned off, everywhere
     const val SECTION_NAMES = "section_names" // JSON: "pkg/section" to the name the user gave it
     const val USERS = "users" // JSON: Zephyr TV's users, [{id, name}] (see Users)
     const val USER = "user" // the id of the user in use ("": the first)

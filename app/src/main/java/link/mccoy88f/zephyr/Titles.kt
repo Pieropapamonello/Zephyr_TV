@@ -117,11 +117,12 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
     if (tmdbKey() != null) Releases.use(filesDir)
     val watched = VodWatched.all(vodDir())
     val main = cinemetaUrl()
+    val shelvesOff = prefs.getStringSet(K.SHELVES_OFF, emptySet())!! // turned off on the catalog's page (see shelfKey)
     return addons.flatMap { addon ->
         if (Stremio.vodDue(filesDir, addon.url) && addon.vod.any { it.listed }) refreshShelves(addon, pkg)
         // Under Films, the add-ons' own types too ("Porn", "Anime"): they play as films.
         Stremio.shelves(filesDir, addon).filter { type == null || (it.catalog.type == "series") == (type == "series") }
-            .filter { shows(addon.url, it.catalog.type) }.mapNotNull { shelf ->
+            .filter { shows(addon.url, it.catalog.type) && shelfKey(addon, it.catalog) !in shelvesOff }.mapNotNull { shelf ->
             val kind = kindName(shelf.catalog.type)
             val name = if (type != null || adult) "${addon.name} · ${shelf.catalog.name}" else "$kind · ${shelf.catalog.name}"
             // In the TV's language when TMDB has the title (those it hasn't been asked about yet: once it's answered);
@@ -133,7 +134,7 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
                 .onEach { if (it.type == "movie" && Releases.askable(it.id) && Releases.known(it.id) == null) unasked += it.id }
                 .filter { !(hideSoon && it.type == "movie" && Releases.unreleased(it.id)) }
                 .map { titleCard(it, addon.url, pkg, it.id in watched) }
-            if (cards.isEmpty()) null else Section("vod:${addon.id}:${shelf.catalog.type}:${shelf.catalog.id}", name, name, cards)
+            if (cards.isEmpty()) null else Section(shelfKey(addon, shelf.catalog), name, name, cards)
         }
     }.plus(
         // Last, the films and series watched: under Films and Series, or Cinemeta's own tile.
@@ -145,6 +146,9 @@ internal fun MainActivity.titleSections(pkg: String, hidden: Set<String>): List<
         if (unasked.isNotEmpty()) releasesLater(unasked.distinct(), pkg)
     }
 }
+
+/** A catalog's row, the same under every tile: its section's key, and what turns it off (K.SHELVES_OFF). */
+internal fun shelfKey(addon: Stremio.Addon, c: Stremio.Catalog) = "vod:${addon.id}:${c.type}:${c.id}"
 
 /** Whether films not out at home yet are hidden from Spotlight and the apps' rows (Content). */
 internal fun MainActivity.hideUnreleased() = prefs.getBoolean(K.HIDE_UNRELEASED, false)
