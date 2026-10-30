@@ -392,12 +392,14 @@ class PlayerActivity : Activity() {
         val gestures = touches()
         root.setOnTouchListener { _, e -> gestures.onTouchEvent(e) }
         banner.isClickable = true
-        bar.setOnTouchListener { _, e -> scrub(e) }
-        desc.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            val r = android.graphics.Rect().also { bar.getHitRect(it) }
-            r.top -= dp(16)
-            r.bottom += dp(16)
-            desc.touchDelegate = android.view.TouchDelegate(r, bar)
+        // Not a TouchDelegate: one moves a touch beside the view it's for to that view's middle, so the film went to its
+        // half wherever the finger was. The strip round the bar, in its box, is read here instead, where the finger is.
+        bar.setOnTouchListener { _, e -> scrub(e, e.x) }
+        var onBar = false
+        desc.setOnTouchListener { _, e ->
+            if (e.actionMasked == android.view.MotionEvent.ACTION_DOWN)
+                onBar = bar.visibility == View.VISIBLE && e.y >= bar.top - dp(16) && e.y <= bar.bottom + dp(16)
+            onBar && scrub(e, e.x - bar.left)
         }
 
         // Audio and subtitles: a side panel over the picture, its rows picked with Up/Down and OK.
@@ -605,10 +607,10 @@ class PlayerActivity : Activity() {
     })
 
     /** The progress bar with a finger: it follows the finger, and the film goes there when it's lifted. */
-    private fun scrub(e: android.view.MotionEvent): Boolean {
+    private fun scrub(e: android.view.MotionEvent, x: Float): Boolean {
         val p = player ?: return false
         val duration = p.duration.takeIf { vod && it > 0 && it != C.TIME_UNSET } ?: return false
-        val f = (e.x / bar.width.coerceAtLeast(1)).coerceIn(0f, 1f)
+        val f = (x / bar.width.coerceAtLeast(1)).coerceIn(0f, 1f) // [x]: across the bar, from its start
         when (e.actionMasked) {
             android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_MOVE -> {
                 scrubbing = true

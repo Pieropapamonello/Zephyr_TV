@@ -186,7 +186,15 @@ internal fun MainActivity.touchSetup() {
             if (-content.translationY > room) content.animate().translationY(-room).setDuration(200).setInterpolator(DECELERATE).start()
         }
     }
-    // Spotlight's title: a tap shows its buttons (focus, as on a TV), the next shows all of what it's about.
+    // Spotlight's title: a tap shows its buttons (focus, as on a TV), the next shows all of what it's about. It only
+    // takes focus once tapped: focusable with a finger from the start, Android would put the first focus there, not
+    // on the Play queue.
     spotlightInfoBox.isClickable = true
-    spotlightInfoBox.setOnClickListener { toggleOverview() }
+    spotlightInfoBox.setOnClickListener {
+        if (spotlightInfoBox.isFocused) toggleOverview()
+        else {
+            spotlightInfoBox.isFocusableInTouchMode = true
+            spotlightInfoBox.requestFocus()
+        }
+    }
 }

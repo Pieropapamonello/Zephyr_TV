@@ -14,6 +14,12 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.4
+
+- On a phone or tablet, a tap on the progress bar of the player goes to that point. Before, it went to the middle.
+- When the home screen starts, the focus is on the Play queue, not on Spotlight.
+- On a phone or tablet, a swipe on the Favourites row only scrolls it. Before, it selected an app by itself, and its rows loaded under it.
+
 ## 3.4.0-beta.3
 
 - On a phone or tablet, the player plays Dolby (AC3, E-AC3) and DTS sound. Before, these films and channels had no sound there.

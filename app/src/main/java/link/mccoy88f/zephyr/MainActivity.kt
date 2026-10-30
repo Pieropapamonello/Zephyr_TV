@@ -1042,7 +1042,9 @@ class MainActivity : Activity() {
     internal fun renderApps() {
         val focusedTag = currentFocus?.tag
         // Rebuilds can happen in the background (an app or HDMI device added); only take focus if the row had it.
-        val takeFocus = currentFocus == null || currentFocus?.parent === appRow
+        // And the first time, wherever Android put it (Spotlight's title): the home screen starts on the Play queue.
+        val takeFocus = currentFocus == null || currentFocus?.parent === appRow ||
+            (appRow.childCount == 0 && settingsScrim.visibility != View.VISIBLE && allApps.visibility != View.VISIBLE)
         val gap = dp(GRID_GAP)
         val width = (resources.displayMetrics.widthPixels - dp(96) - gap * (ROW_TILES - 1)) / ROW_TILES
         appRow.removeAllViews()

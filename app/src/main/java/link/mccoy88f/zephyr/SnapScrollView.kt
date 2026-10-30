@@ -99,6 +99,18 @@ class SnapScrollView(context: Context, attrs: AttributeSet?) : HorizontalScrollV
         updateArrows()
     }
 
+    /**
+     * A row flung with a finger scrolls, and leaves focus where it is. HorizontalScrollView's own moves focus onto an
+     * item it brings on screen: an app selected by itself, its rows loading under it, while the finger only scrolled.
+     */
+    override fun fling(velocityX: Int) {
+        if (!isInTouchMode) return super.fling(velocityX)
+        val was = descendantFocusability
+        descendantFocusability = FOCUS_BLOCK_DESCENDANTS // nothing in it to move focus to
+        super.fling(velocityX)
+        descendantFocusability = was
+    }
+
     override fun computeScrollDeltaToGetChildRectOnScreen(rect: Rect): Int {
         val left = scrollX + paddingLeft
         val right = scrollX + width - paddingRight
