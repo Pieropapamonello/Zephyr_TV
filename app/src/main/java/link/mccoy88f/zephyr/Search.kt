@@ -478,7 +478,8 @@ internal fun MainActivity.showChannel(d: ChannelDetail) {
     val tile = d.addon?.let { addonTile(it) }
     val watch = tile?.let { getString(R.string.tmdb_search_on, it.label) } ?: getString(if (d.addon != null) R.string.channel_play else R.string.channel_watch)
     val rows = listOf(page(watch) {
-        closeLauncherSettings()
+        // The page stays behind the player (or the TV's app): back from it, the page again, focus on Watch.
+        pageReturn = { showChannel(d) }
         val p = Prog(d.name, d.number, 0, null, d.intent, d.pkg, addon = d.addon)
         if (d.addon != null) playAddonChannel(p) else open(p)
     })

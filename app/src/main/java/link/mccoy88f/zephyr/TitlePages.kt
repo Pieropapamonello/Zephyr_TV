@@ -105,8 +105,10 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
     } else if (!episodic) {
         val at = VodProgress.position(vodDir(), t.id)
         val seen = t.id in marks
+        // Back from the player: the page again, focus on the row that started it (Watch, or Watch on one of them).
         fun play(only: String?) {
-            pageReturn = { showVodTitle(meta, ref, services.known, found = found) }
+            val row = focusedRow()
+            pageReturn = { showVodTitle(meta, ref, services.known, focusRow = row, found = found) }
             playTitle(ref, meta, null, only)
         }
         // Watch, from all of them; how many streams they have once they've said (see warmTitle), none: no Watch.
@@ -116,7 +118,8 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
         else {
             icons[rows.size] = watchIcon(one)
             rows += page(watchLabel(one, at, seen), listOfNotNull(if (seen) "✓" else null, streamsLine(found)).joinToString(" · ")) {
-                if (manualStreams()) pickStream(ref, meta, null) { showVodTitle(meta, ref, services.known, found = found) } else play(one?.base)
+                val row = focusedRow()
+                if (manualStreams()) pickStream(ref, meta, null) { showVodTitle(meta, ref, services.known, focusRow = row, found = found) } else play(one?.base)
             }
         }
         val markRow = rows.size

@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.5
+
+- When you come back from the player to the page of a film, the focus is on the row you selected: **Watch** or **Watch on**. Before, it was on the description.
+- The page of a TV channel stays open while the channel plays. When you come back, it shows again with the focus on **Watch**, also from the search results.
+
 ## 3.4.0-beta.4
 
 - On a phone or tablet, a tap on the progress bar of the player goes to that point. Before, it went to the middle.
