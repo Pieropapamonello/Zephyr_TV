@@ -43,10 +43,6 @@ import link.mccoy88f.zephyr.MainActivity.Prog
 // ---------- continue watching (Android TV Watch Next) ----------
 
 internal fun MainActivity.refreshWatchNext() {
-    if (checkSelfPermission(TV_LISTINGS) != PackageManager.PERMISSION_GRANTED) {
-        showWatchNext(emptyList())
-        return
-    }
     ui.post { if (tmdbLastFocusApp == null) watchTitle.text = getString(R.string.continue_watching) }
     io.execute {
         val list = try {
@@ -75,14 +71,21 @@ internal fun MainActivity.refreshWatchNext() {
  * Newest first across apps, at most [PER_APP] each, so one app with ten shows can't bury the others.
  */
 internal fun MainActivity.queryWatchNext(): List<Prog> {
-    if (!HomePolicy.supportsTvChannels(android.os.Build.VERSION.SDK_INT)) return emptyList()
     val hidden = prefs.getStringSet(K.HIDDEN_WATCH, emptySet())!!
-    val watchNext = readPrograms(TvContract.WatchNextPrograms.CONTENT_URI, hidden)
-    val channels = continueChannels().flatMap { id ->
-        readPrograms(TvContract.buildPreviewProgramsUriForChannel(id), hidden).map { (_, p) -> prefs.getLong("t_${p.pkg}", 0) to p }
-    }
-    // And the Stremio add-on channel last played, and the films and episodes begun.
-    val all = watchNext + channels + listOfNotNull(lastChannelCard(hidden)) + titleProgressCards(hidden)
+    val all = watchHistorySources(android.os.Build.VERSION.SDK_INT,
+        checkSelfPermission(TV_LISTINGS) == PackageManager.PERMISSION_GRANTED,
+        system = {
+            // Do not touch these Android 8 provider URIs on Android 7 / Fire OS 6.
+            if (HomePolicy.supportsTvChannels(android.os.Build.VERSION.SDK_INT)) {
+                val watchNext = readPrograms(TvContract.WatchNextPrograms.CONTENT_URI, hidden)
+                val channels = continueChannels().flatMap { id ->
+                    readPrograms(TvContract.buildPreviewProgramsUriForChannel(id), hidden)
+                        .map { (_, p) -> prefs.getLong("t_${p.pkg}", 0) to p }
+                }
+                watchNext + channels
+            } else emptyList()
+        },
+        local = { listOfNotNull(lastChannelCard(hidden)) + titleProgressCards(hidden) })
     publishingPkgs = all.mapNotNull { it.second.pkg }.toSet()
     val off = prefs.getStringSet(K.CW_OFF, emptySet())!!
     return newestPerApp(all.filter { it.second.pkg !in off }.distinctBy { it.second.intent ?: it.second.title }, PER_APP) { it.pkg }

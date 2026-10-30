@@ -355,7 +355,9 @@ internal const val WARM_MS = 600L
 /** The channel last played (written by PlayerActivity, in its own process: a file, not the preferences). */
 internal fun MainActivity.lastAddonChannel(): Pair<Long, AddonChannel>? = runCatching {
     val o = org.json.JSONObject(java.io.File(filesDir, PlayerActivity.LAST_FILE).readText())
-    val addon = o.getString("addon").takeIf { it in addonUrls() && !isAdultAddon(it) } ?: return null
+    val addon = o.getString("addon").takeIf {
+        hasHistorySource(it, addonUrls(), extensionAddonUrls()) && addonOn(it) && !isAdultAddon(it)
+    } ?: return null
     o.getLong("at") to AddonChannel(addon, Stremio.Item(o.getString("type"), o.getString("id"), o.getString("name"), o.optString("logo").ifEmpty { null }, null))
 }.getOrNull()
 

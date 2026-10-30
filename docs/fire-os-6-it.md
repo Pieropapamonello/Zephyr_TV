@@ -184,3 +184,26 @@ registrazione dell'account Amazon Developer e la successiva configurazione e
 verifica dell'infrastruttura; la frase esatta «cerca Inception su Zephyr» non è
 garantita da una skill personalizzata. Il programma VSK per l'integrazione video
 ufficiale non accetta nuovi partner secondo la documentazione Amazon consultata.
+
+### Coda di riproduzione su Android 7 — Nello.4
+
+La coda legge ora i progressi salvati dal player Zephyr e l'ultimo canale aperto
+anche senza il provider Android TV Watch Next (introdotto con Android 8).
+Un provider mancante o un permesso negato non nasconde più i dati locali.
+Sono inclusi anche i canali delle estensioni native installate e abilitate;
+le estensioni rimosse non lasciano collegamenti non funzionanti.
+
+Le sessioni multimediali delle altre app richiedono l'accesso alle notifiche di
+Zephyr: il listener dell'app legge i metadati delle sessioni, non il contenuto
+delle notifiche. Su Fire OS 6 non è disponibile il comando Android più recente
+`cmd notification allow_listener`; va usata la schermata di sistema, quando
+presente, oppure una configurazione ADB che preservi gli altri listener.
+
+Questa correzione non importa la cronologia privata di Stremio, Nuvio o SmartTube:
+una vecchia visione esterna non pubblicata al sistema non è ricostruibile dal
+launcher. Le sessioni visibili possono sparire quando il player esterno le chiude.
+
+Verifica Nello.4: 121 test JVM superati, build e lint completati (con avvisi).
+Sulla Fire TV API 25 è stata verificata la presenza dell'ultimo canale nella coda
+e la sua riapertura dal relativo collegamento. Le prove di questa sezione non
+implicano l'importazione della cronologia delle app esterne.
