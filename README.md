@@ -76,7 +76,7 @@ Measured with Plume Launcher 1.3, the version Zephyr TV is based on, on a Hisens
 
 ## Requirements
 
-- Android TV or Google TV running **Android 8.0 (Oreo) or newer**
+- Android TV or Google TV running **Android 8.0 (Oreo) or newer**. It also works on Android phones and tablets (8.0 or newer, ARM): swipe the home screen, tap an app once for its rows and again to open it
 - A way to sideload an APK: the *Downloader* app, a USB drive with a file manager, or `adb`
 
 ## Installation

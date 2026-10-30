@@ -4,7 +4,7 @@ Thanks for wanting to help. Zephyr TV is a fork of [Plume Launcher](https://gith
 
 ## What Zephyr TV is
 
-Zephyr TV is a minimal home screen for Android TV and Google TV. Every change is weighed against these principles:
+Zephyr TV is a minimal home screen for Android TV and Google TV, which also works on Android phones and tablets with a finger. Every change is weighed against these principles:
 
 - **Small and light.** A 1.2 MB APK, about 50–70 MB of RAM, no extra background services. One library only: Media3's ExoPlayer, for the Stremio add-ons' channels, in a player that runs in a process of its own.
 - **Simple home screen.** One apps row and one Continue Watching row. Nothing else competes for attention.

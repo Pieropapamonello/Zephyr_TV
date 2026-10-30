@@ -88,6 +88,7 @@ class SnapScrollView(context: Context, attrs: AttributeSet?) : HorizontalScrollV
 
     override fun onScrollChanged(l: Int, t: Int, oldl: Int, oldt: Int) {
         super.onScrollChanged(l, t, oldl, oldt)
+        if (isInTouchMode) (context as? MainActivity)?.cardsAlong(this, l) // a finger moves no focus to build them on
         invalidateOutline()
         updateArrows()
     }

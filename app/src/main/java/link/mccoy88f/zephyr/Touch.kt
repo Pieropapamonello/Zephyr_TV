@@ -1,0 +1,127 @@
+package link.mccoy88f.zephyr
+
+import android.view.MotionEvent
+import android.view.VelocityTracker
+import android.view.View
+import android.view.ViewConfiguration
+import android.view.ViewGroup
+import link.mccoy88f.zephyr.MainActivity.Companion.DECELERATE
+import kotlin.math.abs
+
+// Phones and tablets: the home screen with a finger. The rows already scroll sideways (they're scroll views) and
+// tiles and cards open with a tap; this file adds what a remote's focus does on a TV: the page up and down, and
+// Spotlight's titles with a swipe. Functions of MainActivity, kept here by topic; their state lives in MainActivity.
+
+/** A finger on the home screen, from its press: where, and what it turned out to be. */
+internal class HomeDrag {
+    var x = 0f
+    var y = 0f
+    var from = 0f // the page's shift when it went down
+    var mode = Mode.UNDECIDED
+    var onSpotlight = false
+    var velocity: VelocityTracker? = null
+
+    enum class Mode { UNDECIDED, PAGE, SPOTLIGHT, VIEWS }
+}
+
+/**
+ * Takes the vertical drags on the home screen (the page under the apps scrolls, as focus going down slides it on a TV,
+ * see keepInView) and the sideways swipes on Spotlight (the title before or after). Everything else, a tap, a row
+ * scrolled sideways, goes on to the views. True when the event was taken.
+ */
+internal fun MainActivity.homeDrag(e: MotionEvent): Boolean {
+    if (settingsScrim.visibility == View.VISIBLE || allApps.visibility == View.VISIBLE || editing) return false
+    val d = drag
+    val content = findViewById<View>(R.id.content)
+    when (e.actionMasked) {
+        MotionEvent.ACTION_DOWN -> {
+            d.x = e.rawX
+            d.y = e.rawY
+            d.mode = HomeDrag.Mode.UNDECIDED
+            content.animate().cancel()
+            d.from = -content.translationY
+            d.onSpotlight = spotlightContainer.visibility == View.VISIBLE && hits(spotlightContainer, e)
+            d.velocity?.recycle()
+            d.velocity = VelocityTracker.obtain().apply { addMovement(e) }
+            return false
+        }
+        MotionEvent.ACTION_MOVE -> {
+            d.velocity?.addMovement(e)
+            val dx = e.rawX - d.x
+            val dy = e.rawY - d.y
+            if (d.mode == HomeDrag.Mode.UNDECIDED) {
+                val slop = ViewConfiguration.get(this).scaledTouchSlop
+                d.mode = when {
+                    abs(dy) > slop && abs(dy) > abs(dx) -> if (pageRoom() > 0) HomeDrag.Mode.PAGE else HomeDrag.Mode.VIEWS
+                    abs(dx) > slop && d.onSpotlight -> HomeDrag.Mode.SPOTLIGHT
+                    abs(dx) > slop -> HomeDrag.Mode.VIEWS
+                    else -> return false
+                }
+                // Ours from here: the views under the finger let go of it (no tap, no press shown).
+                if (d.mode != HomeDrag.Mode.VIEWS) window.superDispatchTouchEvent(MotionEvent.obtain(e).apply { action = MotionEvent.ACTION_CANCEL })
+            }
+            return when (d.mode) {
+                HomeDrag.Mode.PAGE -> {
+                    content.translationY = -(d.from - dy).coerceIn(0f, pageRoom())
+                    cardsOnScreen()
+                    true
+                }
+                HomeDrag.Mode.SPOTLIGHT -> true
+                else -> false
+            }
+        }
+        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+            val mode = d.mode
+            d.mode = HomeDrag.Mode.UNDECIDED
+            val v = d.velocity?.apply { addMovement(e); computeCurrentVelocity(1000) }
+            val vy = v?.yVelocity ?: 0f
+            d.velocity?.recycle()
+            d.velocity = null
+            if (mode == HomeDrag.Mode.SPOTLIGHT && e.actionMasked == MotionEvent.ACTION_UP) cycleSpotlight(if (e.rawX < d.x) 1 else -1)
+            if (mode == HomeDrag.Mode.PAGE && abs(vy) > ViewConfiguration.get(this).scaledMinimumFlingVelocity) {
+                // A flick goes on a little past the finger, as a list does.
+                val to = (-content.translationY - vy * 0.25f).coerceIn(0f, pageRoom())
+                content.animate().translationY(-to).setDuration(280).setInterpolator(DECELERATE)
+                    .setUpdateListener { cardsOnScreen() }
+                    .withEndAction { content.animate().setUpdateListener(null) }.start()
+            }
+            return mode == HomeDrag.Mode.PAGE || mode == HomeDrag.Mode.SPOTLIGHT
+        }
+    }
+    return d.mode == HomeDrag.Mode.PAGE || d.mode == HomeDrag.Mode.SPOTLIGHT
+}
+
+private fun hits(v: View, e: MotionEvent): Boolean {
+    val at = IntArray(2).also { v.getLocationOnScreen(it) }
+    return e.rawX >= at[0] && e.rawX < at[0] + v.width && e.rawY >= at[1] && e.rawY < at[1] + v.height
+}
+
+/** How far the page can go up: until the last row's bottom is on screen, as keepInView does for its focus. */
+internal fun MainActivity.pageRoom(): Float {
+    val content = findViewById<View>(R.id.content)
+    val last = moreSections.takeIf { it.visibility == View.VISIBLE && it.childCount > 0 }?.let { it.getChildAt(it.childCount - 1) }
+        ?: watchScroll.takeIf { it.visibility == View.VISIBLE } ?: return 0f
+    val at = IntArray(2).also { last.getLocationInWindow(it) }
+    val bottom = at[1] - content.translationY - bottomSection.translationY + last.height
+    return (bottom - (findViewById<View>(R.id.root).height - dp(16))).coerceAtLeast(0f)
+}
+
+/**
+ * The rows scrolled onto the screen get their cards: on a TV the rows below get theirs as focus comes near (see
+ * watchCard), and a finger moves no focus.
+ */
+internal fun MainActivity.cardsOnScreen() {
+    val bottom = findViewById<View>(R.id.root).height
+    for (row in cardRows()) {
+        if ((row.getTag(R.id.watchScroll) as? RowCards)?.built != 0) continue
+        val at = IntArray(2).also { (row.parent as? View ?: row).getLocationInWindow(it) }
+        if (at[1] < bottom) moreCards(row)
+    }
+}
+
+/** A row scrolled sideways with a finger near the end of its cards: the next page, as focus there does. */
+internal fun MainActivity.cardsAlong(scroll: ViewGroup, x: Int) {
+    val row = scroll.getChildAt(0) as? ViewGroup ?: return
+    if (row.getTag(R.id.watchScroll) !is RowCards) return
+    if (x + scroll.width * 2 >= row.width) moreCards(row)
+}

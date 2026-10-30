@@ -132,6 +132,7 @@ class MainActivity : Activity() {
     // Spotlight's own thread: downloading the next backdrop ahead mustn't hold up the rows' data on io.
     internal val spotlightIo = Executors.newSingleThreadExecutor()
     internal var lastInput = SystemClock.elapsedRealtime() // last key press, for pausing Spotlight when nobody watches
+    internal val drag = HomeDrag() // a finger on the home screen (see Touch)
     internal var spotlightIdle = false
     internal var nightShown = false // night mode's dimming is showing
     internal val loading = java.util.Collections.synchronizedSet(HashSet<String>())
@@ -270,7 +271,7 @@ class MainActivity : Activity() {
             }
             setOnClickListener { action() }
         }
-        findViewById<View>(R.id.tvInputsButton).visibility = if (inputsMode() == "apps") View.GONE else View.VISIBLE
+        showInputsButton() // gone where there are no inputs (a stick, a phone) or they're tiles in the apps row
         showUserIcon() // the user in use's letters, in place of the icon
         if (prefs.contains(K.REOPEN_ROW)) {
             val row = prefs.getInt(K.REOPEN_ROW, THEME_ROW)
@@ -927,8 +928,8 @@ class MainActivity : Activity() {
     }
 
     internal val inputCallback = object : TvInputManager.TvInputCallback() {
-        override fun onInputAdded(id: String) { updateInputsDot(); if (inputsMode() == "apps" || inputsInApps()) refreshApps() }
-        override fun onInputRemoved(id: String) { updateInputsDot(); if (inputsMode() == "apps" || inputsInApps()) refreshApps() }
+        override fun onInputAdded(id: String) { showInputsButton(); updateInputsDot(); if (inputsMode() == "apps" || inputsInApps()) refreshApps() }
+        override fun onInputRemoved(id: String) { showInputsButton(); updateInputsDot(); if (inputsMode() == "apps" || inputsInApps()) refreshApps() }
         override fun onInputStateChanged(id: String, state: Int) { updateInputsDot(); if (inputsMode() == "apps" || inputsInApps()) refreshApps() }
     }
 
@@ -1065,6 +1066,8 @@ class MainActivity : Activity() {
         tiles.forEachIndexed { i, t ->
             t.id = View.generateViewId()
             appRow.addView(t, LinearLayout.LayoutParams(width, dp(76)).apply { if (i > 0) marginStart = gap })
+            // A finger: the first tap selects the app, its rows showing under it, as focus does on a TV; the next opens it.
+            t.isFocusableInTouchMode = true
             val own = t.onFocusChangeListener
             t.setOnFocusChangeListener { v, focused ->
                 own?.onFocusChange(v, focused)
@@ -1354,6 +1357,15 @@ class MainActivity : Activity() {
      * framework's long-press timer. We treat the first auto-repeat of OK as "held"; the long-click
      * listener in style() is a fallback for remotes that send no repeats. [holdFired] stops both firing.
      */
+    override fun dispatchTouchEvent(e: android.view.MotionEvent): Boolean {
+        lastInput = SystemClock.elapsedRealtime()
+        if (spotlightIdle) {
+            spotlightIdle = false
+            restartSpotlightTick()
+        }
+        return homeDrag(e) || super.dispatchTouchEvent(e)
+    }
+
     override fun dispatchKeyEvent(e: KeyEvent): Boolean {
         lastInput = SystemClock.elapsedRealtime()
         if (spotlightIdle) {

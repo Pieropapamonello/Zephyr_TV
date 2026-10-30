@@ -101,6 +101,7 @@ class PlayerActivity : Activity() {
     private var pendingSeek = -1L // where the stream starts once it's ready: resumed, or where a failed one stopped
     private var group: String? = null // the bingeGroup of the stream playing: the next episode's like it first
     private var seeking = false // the banner came up for a seek: Left/Right go on seeking, not to its buttons
+    private var scrubbing = false // a finger on the progress bar: it shows where the finger is, not where the film is
     private var ticks = 0
     private val pool by lazy { Executors.newFixedThreadPool(6) } // a film's streams, every add-on and plugin at once
     private val lateWaits by lazy { Executors.newCachedThreadPool() } // waiting for the sources that answer late
@@ -381,6 +382,18 @@ class PlayerActivity : Activity() {
             visibility = View.GONE
         }
         root.addView(banner, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
+        // A finger (phones and tablets): taps, double taps and swipes on the picture; the banner keeps its own taps,
+        // and its bar, too thin for a finger, takes them from a strip around it.
+        val gestures = touches()
+        root.setOnTouchListener { _, e -> gestures.onTouchEvent(e) }
+        banner.isClickable = true
+        bar.setOnTouchListener { _, e -> scrub(e) }
+        desc.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            val r = android.graphics.Rect().also { bar.getHitRect(it) }
+            r.top -= dp(16)
+            r.bottom += dp(16)
+            desc.touchDelegate = android.view.TouchDelegate(r, bar)
+        }
 
         // Audio and subtitles: a side panel over the picture, its rows picked with Up/Down and OK.
         tracksList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -393,6 +406,7 @@ class PlayerActivity : Activity() {
             addView(ScrollView(this@PlayerActivity).apply { isVerticalScrollBarEnabled = false; addView(tracksList) })
             visibility = View.GONE
         }
+        tracksPanel.isClickable = true // a tap beside its rows stays in it; one on the picture closes it (see touches)
         root.addView(tracksPanel, FrameLayout.LayoutParams(dp(380), FrameLayout.LayoutParams.MATCH_PARENT, Gravity.END))
         setContentView(root)
         @Suppress("DEPRECATION")
@@ -515,7 +529,7 @@ class PlayerActivity : Activity() {
         onNow.visibility = if (onNow.text.isNullOrEmpty()) View.GONE else View.VISIBLE
         more.visibility = if (expanded && !more.text.isNullOrEmpty()) View.VISIBLE else View.GONE
         bar.visibility = if (duration == null) View.GONE else View.VISIBLE
-        bar.progress = if (duration == null) 0 else (pos * 100 / duration).toInt().coerceIn(0, 100)
+        if (!scrubbing) bar.progress = if (duration == null) 0 else (pos * 100 / duration).toInt().coerceIn(0, 100)
         desc.visibility = if (onNow.visibility == View.VISIBLE || bar.visibility == View.VISIBLE) View.VISIBLE else View.GONE
     }
 
@@ -529,15 +543,78 @@ class PlayerActivity : Activity() {
         val duration = p.duration.takeIf { it > 0 && it != C.TIME_UNSET }
         val from = if (hardSeekTo >= 0) hardSeekTo else p.currentPosition
         val to = (from + step * by).coerceIn(0, duration?.minus(1000) ?: Long.MAX_VALUE)
+        if (banner.visibility != View.VISIBLE) seeking = true
+        seekTo(to)
+    }
+
+    /** To [to] ms in: a Dolby or DTS stream starts again there (see hardSeek); the banner shows where. */
+    private fun seekTo(to: Long) {
+        val p = player ?: return
         if (passthrough(p)) {
             hardSeekTo = to
             ui.removeCallbacks(hardSeek)
             ui.postDelayed(hardSeek, HARD_SEEK_MS)
         } else p.seekTo(to)
         ui.removeCallbacks(stuck)
-        if (banner.visibility != View.VISIBLE) seeking = true
         showBanner(at)
         fillTime(channels[at])
+    }
+
+    /**
+     * A finger: a tap shows the banner or hides it (and closes the audio and subtitles panel); a double tap on a film
+     * goes back or on 10 seconds, on the side tapped; a swipe up or down on a channel goes to the next or the one
+     * before. The banner's buttons and its bar take their own taps (see scrub).
+     */
+    private fun touches() = android.view.GestureDetector(this, object : android.view.GestureDetector.SimpleOnGestureListener() {
+        override fun onDown(e: android.view.MotionEvent) = true
+
+        override fun onSingleTapConfirmed(e: android.view.MotionEvent): Boolean {
+            when {
+                tracksPanel.visibility == View.VISIBLE -> closeTracks()
+                banner.visibility == View.VISIBLE -> hideBanner.run()
+                else -> {
+                    seeking = false
+                    showBanner(shown)
+                }
+            }
+            return true
+        }
+
+        override fun onDoubleTap(e: android.view.MotionEvent): Boolean {
+            if (!vod || tracksPanel.visibility == View.VISIBLE) return false
+            seek(if (e.x < resources.displayMetrics.widthPixels / 2) -1 else +1)
+            return true
+        }
+
+        override fun onFling(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, vx: Float, vy: Float): Boolean {
+            if (vod || tracksPanel.visibility == View.VISIBLE || Math.abs(vy) < Math.abs(vx) * 2) return false
+            zap(if (vy < 0) +1 else -1)
+            return true
+        }
+    })
+
+    /** The progress bar with a finger: it follows the finger, and the film goes there when it's lifted. */
+    private fun scrub(e: android.view.MotionEvent): Boolean {
+        val p = player ?: return false
+        val duration = p.duration.takeIf { vod && it > 0 && it != C.TIME_UNSET } ?: return false
+        val f = (e.x / bar.width.coerceAtLeast(1)).coerceIn(0f, 1f)
+        when (e.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_MOVE -> {
+                scrubbing = true
+                ui.removeCallbacks(hideBanner)
+                bar.progress = (f * 100).toInt()
+                onNow.text = listOfNotNull(channels[at].now, "${clock((duration * f).toLong())} / ${clock(duration)}").joinToString("  ·  ")
+            }
+            android.view.MotionEvent.ACTION_UP -> {
+                scrubbing = false
+                seekTo((duration * f).toLong().coerceAtMost(duration - 1000))
+            }
+            android.view.MotionEvent.ACTION_CANCEL -> {
+                scrubbing = false
+                fillTime(channels[at])
+            }
+        }
+        return true
     }
 
     private fun isAdult(): Boolean = adult || (streams.getOrNull(tried)?.source?.let { it in adultSources } == true)

@@ -74,10 +74,19 @@ internal fun MainActivity.hdmiInputs(): List<MainActivity.App> = try {
     emptyList()
 }
 
+/** Whether the device has external inputs (HDMI and the like) at all: a stick, a phone or a tablet has none. */
+internal fun MainActivity.hasInputs(): Boolean = runCatching {
+    getSystemService(TvInputManager::class.java)?.tvInputList.orEmpty().any { it.type == TvInputInfo.TYPE_HDMI || it.isPassthroughInput }
+}.getOrDefault(false)
+
+/** The top bar's TV inputs button: in the menu mode, on a device with inputs. */
+internal fun MainActivity.showInputsButton() {
+    findViewById<View>(R.id.tvInputsButton)?.visibility = if (inputsMode() == "apps" || !hasInputs()) View.GONE else View.VISIBLE
+}
+
 /** Updates top bar button visibility and reloads apps according to the active mode. */
 internal fun MainActivity.applyInputsMode() {
-    val mode = inputsMode()
-    findViewById<View>(R.id.tvInputsButton)?.visibility = if (mode == "apps") View.GONE else View.VISIBLE
+    showInputsButton()
     updateInputsDot()
     refreshApps()
 }

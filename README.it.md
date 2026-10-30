@@ -76,7 +76,7 @@ Misurato con Plume Launcher 1.3, la versione su cui si basa Zephyr TV, su una Hi
 
 ## Requisiti
 
-- Android TV o Google TV con **Android 8.0 (Oreo) o successivo**
+- Android TV o Google TV con **Android 8.0 (Oreo) o successivo**. Funziona anche su telefoni e tablet Android (8.0 o successivo, ARM): scorri la Home col dito, tocca un'app una volta per le sue righe e di nuovo per aprirla
 - Un modo per installare un APK: l'app *Downloader*, una chiavetta USB con un file manager, oppure `adb`
 
 ## Installazione

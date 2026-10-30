@@ -14,6 +14,18 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.1
+
+- Zephyr TV works on Android phones and tablets too. It has an icon among their apps.
+- With a finger, swipe up and down to scroll the home screen. Swipe the rows to the side.
+- Tap an app once to show its rows under it. Tap it again to open it.
+- Swipe Spotlight to the side to see the title before or after. Tap the title to show its buttons.
+- In the player, tap the picture to show or hide the information. Tap the buttons to use them.
+- On a film or an episode, double-tap the left or right side of the picture to go back or on 10 seconds. Drag the progress bar to go to another point.
+- On a TV channel, swipe up or down to go to the next or the previous channel.
+- Zephyr TV turns with the device, in both landscape positions.
+- The TV inputs button in the top bar does not show on a device without inputs, for example a stick, a phone or a tablet.
+
 ## 3.3.4
 
 - A YouTube video or live of an extension (for example a webcam) opens on its page in the YouTube app. Before, the YouTube app opened on its home screen.

@@ -47,6 +47,7 @@ internal fun MainActivity.setupSpotlight() {
     for (v in arrayOf(spotlightContainer, bottomSection)) v.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> centerSpotlight() }
 
     // The title has no card to light up like the tiles: a soft panel round its text says it has focus.
+    spotlightInfoBox.isFocusableInTouchMode = true // a tap on the title shows its buttons, as focus does
     spotlightInfoBox.background = TextHalo(spotlightInfoBox as ViewGroup, dp(14).toFloat(), (fg and 0xFFFFFF) or 0x2E000000).apply { alpha = 0 }
 
     window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
