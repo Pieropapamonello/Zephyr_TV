@@ -14,6 +14,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.5.5
+
+- On the page of a film, series or episode, you can go down with the remote control to the trailer and the buttons of the apps. In 3.5.4, they did not get the focus.
+
 ## 3.5.4
 
 - The player plays Blu-ray files (.m2ts). Before, it showed "The device can't play this format" for them.
