@@ -69,7 +69,7 @@
     <string name="phone_epg_title">Dirección de la guía de TV</string>
     <string name="phone_epg_intro">Pega la dirección de una guía de TV en formato XMLTV (.xml o .xml.gz).</string>
     <string name="phone_epg_bad">No es una dirección web. Empieza por http:// o https://.</string>
-    <string name="phone_epg_saved">Dirección guardada en la TV. Descargando la guía.</string>
+    <string name="phone_epg_saved">Dirección guardada en el dispositivo. Descargando la guía.</string>
     <string name="setting_restore_hidden_shows">Recuperar elementos ocultos</string>
     <string name="hidden_shows_none">Ninguno oculto</string>
     <string name="hidden_shows_count">%1$d ocultos</string>
@@ -119,7 +119,7 @@
     <string name="here_save_file">Guardar el archivo</string>
     <string name="here_saved">Guardado</string>
     <string name="here_too_big">Este archivo es demasiado grande, o está vacío.</string>
-    <string name="choose_from_tv">Elegir una carpeta de esta TV…</string>
+    <string name="choose_from_tv">Elegir una carpeta de este dispositivo…</string>
     <string name="remove_photo">Quitar una foto…</string>
     <string name="choose_folder_title">Elige una carpeta</string>
     <string name="photos_count_singular">%1$d foto</string>
@@ -132,7 +132,7 @@
     <string name="add_from_phone_title">Añadir desde el móvil</string>
     <string name="upload_waiting">Esperando una foto…</string>
     <string name="upload_added_status">Añadida \"%1$s\". Envía otra o pulsa Listo.</string>
-    <string name="upload_qr_instructions">Escanea con la cámara del móvil o abre esta dirección. El móvil y la TV deben estar en la misma Wi-Fi.</string>
+    <string name="upload_qr_instructions">Escanea con la cámara del móvil o abre esta dirección. El móvil y el dispositivo deben estar en la misma Wi-Fi.</string>
 
     <!-- Photo interval -->
     <string name="interval_every_minute">Cada minuto</string>
@@ -190,13 +190,13 @@
     <!-- Toasts & Notifications -->
     <string name="toast_photo_access_needed">Zephyr TV necesita acceso a las fotos para mostrar tus carpetas</string>
     <string name="toast_home_button_permission">Activa \"Zephyr TV: botón Inicio\" en Ajustes → Sistema → Accesibilidad</string>
-    <string name="toast_no_photos_found">No se han encontrado fotos. Copia algunas a la TV o conecta una memoria USB con fotos.</string>
-    <string name="toast_connect_network">Conecta primero la TV a la Wi-Fi o a Ethernet</string>
+    <string name="toast_no_photos_found">No se han encontrado fotos. Copia algunas al dispositivo o conecta una memoria USB con fotos.</string>
+    <string name="toast_connect_network">Conecta primero el dispositivo a la Wi-Fi o a Ethernet</string>
     <string name="toast_upload_server_failed">No se ha podido abrir la página de envío</string>
     <string name="toast_screensaver_choose_gallery">Elige aquí \"Galería\" como salvapantallas</string>
     <string name="toast_screensaver_downloading">Descargando los cuadros de la galería (%1$s)…</string>
     <string name="toast_screensaver_download_failed">No se han podido descargar los cuadros. Comprueba la conexión e inténtalo de nuevo.</string>
-    <string name="toast_screensaver_cannot_start">Esta TV no puede iniciar el salvapantallas a petición</string>
+    <string name="toast_screensaver_cannot_start">Este dispositivo no puede iniciar el salvapantallas a petición</string>
     <string name="toast_update_available">Zephyr TV %1$s está disponible. Actualízala en los ajustes de Zephyr TV.</string>
     <string name="toast_update_check_failed">No se han podido buscar actualizaciones. Comprueba la conexión.</string>
     <string name="toast_update_up_to_date">Zephyr TV está actualizada</string>
@@ -263,7 +263,7 @@
     <string name="setup_service_title">Activa el botón Inicio de Zephyr TV</string>
     <string name="setup_service_body">Se abrirán los ajustes de Accesibilidad. Selecciona \"Zephyr TV: botón Inicio\", actívalo y pulsa Atrás para volver aquí.</string>
     <string name="setup_adb_title">Desbloquéalo una vez con ADB</string>
-    <string name="setup_adb_body">Esta TV bloquea el interruptor del botón Inicio para las apps instaladas fuera de Play Store. Activa la depuración por red en Opciones para desarrolladores y ejecuta estos comandos desde un ordenador o una app de ADB en el móvil. Zephyr TV hace el resto.</string>
+    <string name="setup_adb_body">Este dispositivo bloquea el interruptor del botón Inicio para las apps instaladas fuera de Play Store. Activa la depuración por red en Opciones para desarrolladores y ejecuta estos comandos desde un ordenador o una app de ADB en el móvil. Zephyr TV hace el resto.</string>
     <string name="setup_scan_help">Ayuda paso a paso</string>
     <string name="setup_done_title">Inicio configurado</string>
     <string name="setup_done_body">Ahora el botón Inicio del mando abre Zephyr TV.</string>
@@ -296,18 +296,18 @@
     <string name="align_centre">Centro</string>
     <string name="align_right">Derecha</string>
     <!-- Phone link (QR) pages -->
-    <string name="phone_send">Enviar a la TV</string>
+    <string name="phone_send">Enviar al dispositivo</string>
     <string name="phone_sending">Enviando…</string>
-    <string name="phone_unreachable">No se ha podido conectar con la TV. ¿Sigue abierta esa pantalla?</string>
+    <string name="phone_unreachable">No se ha podido conectar con el dispositivo. ¿Sigue abierta esa pantalla?</string>
     <string name="phone_wallpaper_title">Añadir un fondo</string>
-    <string name="phone_wallpaper_intro">Elige una foto. Aparece en la TV un momento después de enviarla.</string>
+    <string name="phone_wallpaper_intro">Elige una foto. Aparece en el dispositivo un momento después de enviarla.</string>
     <string name="phone_choose_photo">Elegir foto</string>
-    <string name="phone_wallpaper_added">\"%1$s\" añadida a la TV. Puedes enviar otra.</string>
-    <string name="phone_not_a_photo">No parece una foto que la TV pueda abrir.</string>
+    <string name="phone_wallpaper_added">\"%1$s\" añadida al dispositivo. Puedes enviar otra.</string>
+    <string name="phone_not_a_photo">No parece una foto que el dispositivo pueda abrir.</string>
     <string name="phone_tmdb_title">Clave API de TMDB</string>
     <string name="phone_tmdb_intro">Pega tu clave API o tu token de acceso de lectura de TMDB. Los encontrarás en themoviedb.org, en Ajustes → API.</string>
     <string name="phone_tmdb_hint">Clave API o token de acceso de lectura</string>
-    <string name="phone_tmdb_saved">Clave guardada en la TV. Destacados está activado.</string>
+    <string name="phone_tmdb_saved">Clave guardada en el dispositivo. Destacados está activado.</string>
     <string name="phone_tmdb_refused">TMDB no acepta esta clave. Compruébala e inténtalo de nuevo.</string>
     <string name="phone_tmdb_unchecked">Clave guardada, pero no se ha podido comprobar con TMDB.</string>
     <string name="setting_tmdb_key_phone">Introducir desde el móvil…</string>
@@ -325,9 +325,9 @@
     <string name="phone_backup_intro">Guarda este archivo. Contiene tus ajustes de Zephyr TV y tu clave de TMDB, así que mantenlo privado. No incluye las fotos ni el PIN de bloqueo.</string>
     <string name="phone_backup_download">Descargar la copia</string>
     <string name="phone_restore_title">Restaurar Zephyr TV</string>
-    <string name="phone_restore_intro">Elige un archivo de copia de Zephyr TV. Sus ajustes sustituyen a los de la TV.</string>
+    <string name="phone_restore_intro">Elige un archivo de copia de Zephyr TV. Sus ajustes sustituyen a los del dispositivo.</string>
     <string name="phone_choose_file">Elegir archivo</string>
-    <string name="phone_restore_done">%1$d ajustes restaurados. Zephyr TV se reinicia en la TV.</string>
+    <string name="phone_restore_done">%1$d ajustes restaurados. Zephyr TV se reinicia en el dispositivo.</string>
     <string name="phone_restore_bad">No es un archivo de copia de Zephyr TV.</string>
     <!-- Clock and night mode -->
     <string name="setting_clock">Reloj</string>
@@ -340,12 +340,12 @@
     <string name="search_title">Buscar</string>
     <string name="search_hint">Película, serie o canal de TV</string>
     <string name="search_dictate">Dilo en voz alta</string>
-    <string name="search_assistant">Asistente de voz de la TV</string>
+    <string name="search_assistant">Asistente de voz</string>
     <string name="search_phone">O escribe en el móvil: escanea el código</string>
-    <string name="phone_search_title">Buscar en la TV</string>
-    <string name="phone_search_intro">Escribe el título de una película o serie, o el nombre de un canal de TV. La TV muestra lo que encuentra.</string>
-    <string name="phone_search_sent">Buscando “%1$s” en la TV.</string>
-    <string name="toast_no_voice_search">Esta TV no tiene búsqueda por voz</string>
+    <string name="phone_search_title">Buscar en el dispositivo</string>
+    <string name="phone_search_intro">Escribe el título de una película o serie, o el nombre de un canal de TV. El dispositivo muestra lo que encuentra.</string>
+    <string name="phone_search_sent">Buscando “%1$s” en el dispositivo.</string>
+    <string name="toast_no_voice_search">Este dispositivo no tiene búsqueda por voz</string>
     <string name="search_listening">Te escucho… di un título</string>
     <string name="search_not_heard">No te he entendido. Elige Dilo en voz alta para reintentar</string>
     <string name="search_results_tile">Resultados: “%1$s”</string>
@@ -360,9 +360,9 @@
     <string name="setting_now_playing">Mostrar lo que suena</string>
     <string name="now_playing_needs_access">Necesita acceso</string>
     <string name="now_playing_on">Zephyr TV ve lo que suena en otras apps.</string>
-    <string name="now_playing_help">Para mostrar lo que suena en otras apps, Zephyr TV necesita acceso a las notificaciones. En esta TV solo el sistema puede darlo: ejecuta una vez este comando desde un ordenador y vuelve aquí.</string>
-    <string name="now_playing_low_ram">Esta TV tiene poca memoria, así que Android puede desactivar lo que permite a las apps ver lo que suena. Si quieres probar, ejecuta una vez este comando desde un ordenador y vuelve aquí.</string>
-    <string name="now_playing_low_ram_short">Puede que no funcione en esta TV</string>
+    <string name="now_playing_help">Para mostrar lo que suena en otras apps, Zephyr TV necesita acceso a las notificaciones. En este dispositivo solo el sistema puede darlo: ejecuta una vez este comando desde un ordenador y vuelve aquí.</string>
+    <string name="now_playing_low_ram">Este dispositivo tiene poca memoria, así que Android puede desactivar lo que permite a las apps ver lo que suena. Si quieres probar, ejecuta una vez este comando desde un ordenador y vuelve aquí.</string>
+    <string name="now_playing_low_ram_short">Puede que no funcione en este dispositivo</string>
     <string name="play_queue">Cola de reproducción</string>
     <string name="playing_paused">%1$s · En pausa</string>
     <string name="toast_no_results">No se ha encontrado nada para “%1$s”</string>
@@ -389,7 +389,7 @@
     <string name="phone_list_title">Tu lista de TMDB</string>
     <string name="phone_list_intro">Pega el enlace de una lista pública de themoviedb.org, o su número. Destacados mostrará sus títulos, en el orden de la lista.</string>
     <string name="phone_list_hint">https://www.themoviedb.org/list/…</string>
-    <string name="phone_list_saved">Lista guardada en la TV: %1$d títulos.</string>
+    <string name="phone_list_saved">Lista guardada en el dispositivo: %1$d títulos.</string>
     <string name="phone_list_bad">No es una lista pública de TMDB, o está vacía.</string>
 
     <!-- Stremio add-ons -->
@@ -411,7 +411,7 @@
     <string name="nuvio_option_waiting">Esperando el texto desde el teléfono…</string>
     <string name="nuvio_option_phone_intro">Escribe o pega el texto de esta opción.</string>
     <string name="nuvio_option_empty">Nada que guardar: el cuadro está vacío.</string>
-    <string name="nuvio_option_saved">Guardado en la TV.</string>
+    <string name="nuvio_option_saved">Guardado en el dispositivo.</string>
     <string name="nuvio_order">Orden de los plugins</string>
     <string name="nuvio_order_intro">OK en un plugin para cogerlo y luego OK en el sitio donde va. Sus streams se piden en este orden.</string>
     <string name="nuvio_order_moving">Moviendo %1$s: OK en el sitio donde va, o de nuevo en él para dejarlo donde estaba.</string>
@@ -434,7 +434,7 @@
     <string name="ext_zip">Enviar un .zip desde el teléfono</string>
     <string name="ext_zip_intro">Elige el archivo .zip de la extensión. Zephyr TV te muestra qué es antes de instalarla.</string>
     <string name="ext_choose_zip">Elegir un archivo .zip</string>
-    <string name="ext_received">Recibido. Mira la TV.</string>
+    <string name="ext_received">Recibido. Mira la pantalla.</string>
     <string name="ext_reading">Leyendo la extensión…</string>
     <string name="ext_repo_row">Repositorio: %1$s</string>
     <string name="ext_repo_intro">Las extensiones de este repositorio. Instala las que quieras: las instaladas se quedan aunque quites el repositorio.</string>
@@ -497,21 +497,21 @@
     <string name="addon_phone_waiting">Esperando la dirección desde el teléfono…</string>
     <string name="phone_addon_title">Dirección del complemento de Stremio</string>
     <string name="phone_addon_intro">Pega la dirección de un complemento de Stremio (su manifest.json).</string>
-    <string name="phone_addon_saved">Dirección recibida. La TV está añadiendo el complemento.</string>
+    <string name="phone_addon_saved">Dirección recibida. El dispositivo está añadiendo el complemento.</string>
     <string name="player_loading">Cargando…</string>
     <string name="player_no_streams">Ningún stream disponible</string>
-    <string name="player_no_audio">La TV no puede reproducir el audio de este canal: solo vídeo</string>
+    <string name="player_no_audio">El dispositivo no puede reproducir el audio de este canal: solo vídeo</string>
     <string name="player_why_certificate">El certificado del servidor no es válido</string>
     <string name="player_why_denied">El servidor rechaza el acceso (puede que no esté disponible en tu país)</string>
     <string name="player_why_missing">El stream ya no existe</string>
     <string name="player_why_unreachable">El servidor no responde</string>
-    <string name="player_why_format">La TV no puede reproducir este formato</string>
+    <string name="player_why_format">El dispositivo no puede reproducir este formato</string>
     <string name="player_why_stuck">El stream no arranca</string>
     <string name="player_finding_more">Buscando más streams…</string>
-    <string name="player_finding_language">Buscando streams en el idioma del televisor…</string>
+    <string name="player_finding_language">Buscando streams en el idioma del dispositivo…</string>
     <string name="player_finding_streams">Cargando los streams disponibles…</string>
     <string name="player_checking_streams">Comprobando las fuentes válidas…</string>
-    <string name="setting_stream_language">Primero los streams en el idioma del televisor</string>
+    <string name="setting_stream_language">Primero los streams en el idioma del dispositivo</string>
     <string name="setting_stream_quality">Calidad preferida</string>
     <string name="stream_quality_max">Máxima</string>
     <string name="setting_fast_start">Inicio rápido de los contenidos</string>
@@ -567,13 +567,13 @@
     <string name="stream_choice_auto">Automática</string>
     <string name="stream_choice_manual">Manual</string>
     <string name="stream_pick_title">Elige el stream</string>
-    <string name="cinemeta_intro">Las películas y series vienen de estos catálogos. El primero es el catálogo principal: da los detalles, la búsqueda y las imágenes de los títulos. Los otros añaden sus filas a Películas y Series, en este orden. Cinemeta es la biblioteca gratuita de Stremio. Nuvio Catalog usa TMDB, en el idioma del televisor.</string>
+    <string name="cinemeta_intro">Las películas y series vienen de estos catálogos. El primero es el catálogo principal: da los detalles, la búsqueda y las imágenes de los títulos. Los otros añaden sus filas a Películas y Series, en este orden. Cinemeta es la biblioteca gratuita de Stremio. Nuvio Catalog usa TMDB, en el idioma del dispositivo.</string>
     <string name="cinemeta_default">Cinemeta (predeterminado)</string>
     <string name="catalog_nuvio">Nuvio Catalog (TMDB)</string>
     <string name="catalog_new_address">Nueva dirección</string>
     <string name="catalog_primary">Principal</string>
     <string name="setup_catalog_title">Películas y series</string>
-    <string name="setup_catalog_body">Elige de dónde vienen las películas y series. Nuvio usa TMDB, en el idioma del televisor. Cinemeta es la biblioteca gratuita de Stremio. Puedes cambiarlo en Ajustes, en Contenidos, en Catálogo de contenidos.</string>
+    <string name="setup_catalog_body">Elige de dónde vienen las películas y series. Nuvio usa TMDB, en el idioma del dispositivo. Cinemeta es la biblioteca gratuita de Stremio. Puedes cambiarlo en Ajustes, en Contenidos, en Catálogo de contenidos.</string>
     <string name="catalog_add">Añadir un catálogo</string>
     <string name="catalog_in_use">En uso</string>
     <string name="catalog_use">Usar este catálogo</string>
@@ -645,7 +645,7 @@
     <string name="user_switched">Perfil: %1$s</string>
     <string name="trakt_connect">Conectar Trakt</string>
     <string name="trakt_not_connected">No conectado</string>
-    <string name="trakt_sign_in_intro">Escanea el código con el teléfono. Inicia sesión en Trakt y autoriza Zephyr TV. La TV se conecta sola.</string>
+    <string name="trakt_sign_in_intro">Escanea el código con el teléfono. Inicia sesión en Trakt y autoriza Zephyr TV. El dispositivo se conecta solo.</string>
     <string name="trakt_waiting">Esperando a Trakt…</string>
     <string name="trakt_expired">El código caducó. Vuelve a abrir esta página.</string>
     <string name="trakt_connected">Trakt conectado: %1$s</string>
@@ -715,6 +715,6 @@
     <string name="user_name_phone">Escríbelo en el teléfono</string>
     <string name="user_phone_waiting">Esperando el nombre…</string>
     <string name="phone_user_title">El nombre de un usuario</string>
-    <string name="phone_user_intro">Escribe el nombre. Su primer carácter aparece en el icono de usuarios de la TV: una letra o un emoji.</string>
-    <string name="phone_user_saved">Guardado en la TV: %1$s</string>
+    <string name="phone_user_intro">Escribe el nombre. Su primer carácter aparece en el icono de usuarios del dispositivo: una letra o un emoji.</string>
+    <string name="phone_user_saved">Guardado en el dispositivo: %1$s</string>
 </resources>

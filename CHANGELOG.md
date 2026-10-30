@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.13
+
+- The texts of Zephyr TV say "device" where they said "TV" for the device it runs on, as it runs on phones and tablets too. For example: "Streams in the device's language first", "This device has no voice search".
+- "TV" stays where it means TV: TV channels, TV guide, TV inputs, Watch on TV.
+
 ## 3.4.0-beta.12
 
 - On a phone or tablet, in the player, swipe up or down on the left for the brightness and on the right for the volume. In the middle, on a TV channel, a swipe changes the channel.
