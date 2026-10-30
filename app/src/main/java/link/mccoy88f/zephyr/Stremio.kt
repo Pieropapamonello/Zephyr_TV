@@ -485,8 +485,10 @@ internal object Stremio {
         val list = answer.optJSONArray("streams") ?: return emptyList()
         return (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { s ->
             val hints = s.optJSONObject("behaviorHints")
-            // Another app's: a link it opens (externalUrl), a YouTube video (ytId).
-            val external = if (!external) null else text(s, "externalUrl") ?: text(s, "ytId")?.let { "vnd.youtube:$it" }
+            // Another app's: a link it opens (externalUrl), a YouTube video (ytId): its watch link, as YouTube for
+            // Android TV takes a vnd.youtube: link as a plain launch (it opens on its home screen, see titleLinks).
+            val yt = if (external && text(s, "externalUrl") == null) text(s, "ytId") else null
+            val external = if (!external) null else text(s, "externalUrl") ?: yt?.let { "https://www.youtube.com/watch?v=$it" }
             // A web address, or the playlist itself written in it (data:, as some Nuvio plugins hand an HLS one).
             val url = text(s, "url")?.takeIf { it.startsWith("http://") || it.startsWith("https://") || it.startsWith("data:") ||
                 OTHER_SCHEMES.any { p -> it.startsWith(p, ignoreCase = true) } }
@@ -501,11 +503,13 @@ internal object Stremio {
                 else listOfNotNull(text(s, "name")?.lines()?.map { it.trim() }?.filter { it.isNotEmpty() }?.joinToString(" "),
                     described?.lines()?.firstOrNull { it.isNotBlank() }?.trim()).distinct().joinToString(" · ")
             Stream(url, title, headers, hints?.let { text(it, "bingeGroup") }, clearkey = keys,
-                app = if (url == external) hints?.let { text(it, "androidPackage") } ?: "" else null)
+                app = if (url == external) hints?.let { text(it, "androidPackage") } ?: (if (yt != null) YOUTUBE_TV else "") else null)
         }
     }
 
-    /** What a stream's address turned out to be when asked: whether it answers at all, and its format if known. */
+    /** YouTube for Android TV: the app a ytId stream opens first (another YouTube app, else). */
+    private const val YOUTUBE_TV = "com.google.android.youtube.tv"
+
     /** What a stream's check found: whether it answers, as what ([format]); when it doesn't, [why] (see Why). */
     internal class Probe(val ok: Boolean, val format: String?, val why: Why? = null)
 

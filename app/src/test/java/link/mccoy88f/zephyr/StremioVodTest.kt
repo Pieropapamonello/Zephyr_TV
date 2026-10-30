@@ -99,4 +99,12 @@ class StremioVodTest {
         assertEquals("example-1080p", streams[0].group)
         assertEquals("Plain", streams[1].title)
     }
+
+    @Test fun anExtensionsYouTubeVideoOpensOnItsWatchPageOnYouTubeForTv() {
+        // vnd.youtube: opens YouTube for Android TV on its home screen: the watch link opens the video.
+        val s = Stremio.streams(JSONObject("""{"streams":[{"name":"YouTube","ytId":"aqz-KE-bpKQ"},
+            {"name":"Other","externalUrl":"https://example.com/watch","behaviorHints":{"androidPackage":"com.example.app"}}]}"""), external = true)
+        assertEquals(listOf("https://www.youtube.com/watch?v=aqz-KE-bpKQ", "https://example.com/watch"), s.map { it.url })
+        assertEquals(listOf("com.google.android.youtube.tv", "com.example.app"), s.map { it.app })
+    }
 }

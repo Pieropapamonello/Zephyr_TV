@@ -1498,7 +1498,8 @@ class PlayerActivity : Activity() {
         val n = tried
         net.execute {
             // A check that fails is a stream that doesn't answer: the next is tried (never the player closing).
-            val probe = probes[s.url] ?: runCatching { Stremio.probe(s.url, s.headers) }.getOrElse { Stremio.Probe(false, null) }.also { probes[s.url] = it }
+            // Another app's (a YouTube video's watch link): opened, not asked as a stream.
+            val probe = if (s.app != null) Stremio.Probe(true, null) else probes[s.url] ?: runCatching { Stremio.probe(s.url, s.headers) }.getOrElse { Stremio.Probe(false, null) }.also { probes[s.url] = it }
             ui.post {
                 if (isFinishing || tuning != tune || n != tried) return@post
                 // The only stream (one picked by hand) is played even when the check failed: some servers turn the

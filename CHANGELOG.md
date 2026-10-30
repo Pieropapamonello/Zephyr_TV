@@ -14,6 +14,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## Unreleased
+
+- A YouTube video or live of an extension (for example a webcam) opens on its page in the YouTube app. Before, the YouTube app opened on its home screen.
+
 ## 3.3.3
 
 - The standard documents the extension repositories (`repository-zephyrtv.json`). Zephyr TV's own repository is now online: OMG Premium TV and Live Webcams are suggested again in **Zephyr Extensions**.
