@@ -320,6 +320,7 @@ class MainActivity : Activity() {
         }
         shortcuts() // a phone or tablet: Search and the Play queue on the icon
         ui.post { if (!handleVoiceSearchIntent(intent)) handleLink(intent) } // a search, link, share or shortcut
+        ui.post { refreshStartupCatalogs() }
     }
 
     /**

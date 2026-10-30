@@ -207,3 +207,35 @@ Verifica Nello.4: 121 test JVM superati, build e lint completati (con avvisi).
 Sulla Fire TV API 25 è stata verificata la presenza dell'ultimo canale nella coda
 e la sua riapertura dal relativo collegamento. Le prove di questa sezione non
 implicano l'importazione della cronologia delle app esterne.
+
+### Preferenze IPTV — Nello.5
+
+Per i canali live, con lingua preferita italiana, il player sceglie prima una
+traccia supportata dichiarata `it`/`ita` o con etichetta italiana; in assenza,
+usa una traccia con lingua (ad esempio `qak`) o etichetta che termina in `ak` (convenzione di
+alcuni provider, non una garanzia linguistica). L'audio scelto manualmente resta
+selezionato per quel flusso. Film e serie mantengono la selezione precedente.
+
+I flussi live dichiarati 1080p vengono provati prima degli altri, che rimangono
+nella lista di ripiego. Nei manifest adattivi il player preferisce le varianti
+1080p supportate, conservando i bitrate Full HD disponibili nello stesso gruppo.
+Se non ci sono varianti Full HD supportate, mantiene la normale selezione del
+lettore. Non applica un ingrandimento artificiale ai flussi 720p e non garantisce
+la disponibilità di 1080p da parte del provider.
+
+Un'estensione può dichiarare `behaviorHints.refreshOnStartup: true` per far
+rileggere i propri cataloghi alla creazione dell'Activity Home di Zephyr. È una
+scelta esplicita per estensione, non un download di tutti i cataloghi al ritorno
+da ogni app. L'estensione deve a sua volta gestire il rinnovo delle sue sorgenti.
+
+La richiesta M3U `maxAge: 0` è ora rispettata dal bridge JavaScript invece di
+essere sostituita erroneamente dal valore predefinito di 24 ore. Regressione
+eseguibile senza dipendenze con `node --test scripts/extension-m3u-bridge.test.cjs`.
+
+Verifica Nello.5: 126 test JVM, il test Node del bridge M3U e sette test
+separati dell'estensione locale superati; build e lint completati con avvisi.
+Sulla Fire TV API 25: 1080p osservato su due canali; italiano selezionato al
+posto dell'inglese quando dichiarato; selezione manuale rispettata. Su un altro
+manifest con otto audio è stata selezionata la settima traccia (codice `qak`).
+Rinnovo della cache M3U verificato all'avvio del launcher. Queste prove non
+certificano lingue, qualità o disponibilità di ogni sorgente esterna.

@@ -346,6 +346,7 @@ script's memory. Zephyr TV downloads it, reads it and keeps it on the TV; the co
 ```js
 // Reads the playlist (again when older than maxAge seconds): its groups and how many channels.
 const list = await zephyr.m3u.load("main", { url, headers, maxAge: 86400 });
+// maxAge: 0 explicitly refreshes now (the default only applies when maxAge is absent).
 // → { channels: 18234, groups: ["News", "Sport", …], guides: ["https://…/epg.xml.gz"] }
 
 // A page of its channels, by group or by words in the name.
