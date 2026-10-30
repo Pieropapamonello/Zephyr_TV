@@ -14,7 +14,7 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
-## Unreleased
+## 3.5.3
 
 - On a phone or tablet, the ← and ✕ buttons of the side panels have their arrow and cross in the middle.
 - In the Glass theme, the ← and ✕ buttons are panes of glass, as the cards are.
