@@ -1127,6 +1127,37 @@ class PlayerActivity : Activity() {
     }
 
     /** Stream: the channel's streams, as the add-on lists them; the one picked plays (then the next ones, if it fails). */
+    /** A stream's row in the panel: [info] on top, scrolling; [source] under it in violet; ✓ when it's [on]. */
+    private fun streamRow(info: String, source: String, on: Boolean, pick: () -> Unit) {
+        val bg = GradientDrawable().apply { cornerRadius = dp(8).toFloat() }
+        val top = text(16f).apply {
+            text = if (on) "✓  $info" else "     $info"
+            isSingleLine = true
+            ellipsize = TextUtils.TruncateAt.MARQUEE
+            marqueeRepeatLimit = -1
+            isSelected = handheld
+        }
+        val under = text(13f).apply { text = "     $source"; setTextColor(0xFFC4A1FF.toInt()); setPadding(0, dp(2), 0, 0) }
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            background = bg
+            isFocusable = true
+            isClickable = true
+            addView(top)
+            if (source.isNotBlank()) addView(under)
+            setOnFocusChangeListener { _, has ->
+                bg.setColor(if (has) Color.WHITE else Color.TRANSPARENT)
+                top.setTextColor(if (has) Color.BLACK else Color.WHITE)
+                top.isSelected = has || handheld
+                under.setTextColor(if (has) 0xFF6A1B9A.toInt() else 0xFFC4A1FF.toInt())
+            }
+            setOnClickListener { pick(); closeTracks() }
+        }
+        tracksList.addView(row)
+        if (on) row.post { row.requestFocus() }
+    }
+
     private fun openStreams() {
         if (streams.size < 2) return
         // Grouped by quality, the highest first, each group under its heading; picking one plays it from the list as is.
@@ -1143,8 +1174,8 @@ class PlayerActivity : Activity() {
                         setPadding(dp(14), dp(16), 0, dp(6))
                     })
                 }
-                val name = if (s.source != null && !s.title.contains(s.source, ignoreCase = true)) "${s.source} · ${s.title}" else s.title
-                row(getString(R.string.player_stream_row, k + 1, name), k == tried, 1) {
+                // Two lines: what it is on top (scrolling when it's long), where it's from under it, in violet.
+                streamRow(getString(R.string.player_stream_row, k + 1, s.title), s.source.orEmpty(), k == tried) {
                     tried = k - 1
                     attempts = 0
                     next()

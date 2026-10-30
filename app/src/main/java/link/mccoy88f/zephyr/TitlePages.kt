@@ -648,19 +648,24 @@ internal fun MainActivity.pickStream(ref: TitleRef, meta: Stremio.TitleMeta, epi
     val found = java.util.Collections.synchronizedList(ArrayList<Stremio.Stream>())
     var left = sources.size
     var shown = false
+    // Each stream on two lines: what it is on top (scrolling when it's long), where it's from under it, in violet.
     fun show() {
-        val rows = found.toList().distinctBy { it.url }.map { s ->
-            page(s.title.ifBlank { s.url.substringAfterLast('/').take(60) }, s.source.orEmpty()) {
-                pageReturn = back
-                closeLauncherSettings()
-                playTitle(ref, meta, episode, chosen = s)
-            }
-        } + when {
+        val keep = if (shown) focusedRow() ?: 0 else 0
+        val list = found.toList().distinctBy { it.url }
+        val rest = when {
             left > 0 -> listOf(page(getString(R.string.title_finding_streams)) { })
             found.isEmpty() -> listOf(page(getString(R.string.title_no_streams)) { })
             else -> emptyList()
         }
-        showPage(title, rows, if (shown) focusedRow() ?: 0 else 0, back = back)
+        showPage(title, rest, back = back)
+        list.forEachIndexed { i, s ->
+            settingsList.addView(twoLineRow(s.title.ifBlank { s.url.substringAfterLast('/').take(60) }, s.source.orEmpty()) {
+                pageReturn = back
+                closeLauncherSettings()
+                playTitle(ref, meta, episode, chosen = s)
+            }, i, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
+        }
+        settingsList.getChildAt(keep.coerceAtMost(settingsList.childCount - 1))?.requestFocus()
         shown = true
     }
     show()

@@ -14,6 +14,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.8
+
+- In the list of streams (with **Stream choice** set to **Manual**, and in the player), each stream has two lines. The top line tells what the stream is, and it scrolls when it is too long. The bottom line tells its source, in violet.
+
 ## 3.4.0-beta.7
 
 - New: **Hide your IP (Cloudflare WARP)**, in **Extra features**. It says whether a VPN is on, and opens Cloudflare WARP or its Play Store page.
