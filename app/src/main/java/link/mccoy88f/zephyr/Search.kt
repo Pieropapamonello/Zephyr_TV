@@ -251,6 +251,7 @@ internal fun MainActivity.searchTmdb(query: String) {
     searchQuery = label
     searchChannels = emptyList()
     searchTitles = emptyList()
+    startYouTubeSearch(query, n)
     watchApp = null
     renderApps()
     (0 until appRow.childCount).map { appRow.getChildAt(it) }.firstOrNull { it.tag == SEARCH_PKG }?.requestFocus()
@@ -294,7 +295,7 @@ internal fun MainActivity.searchTmdb(query: String) {
         ui.post {
             if (searchLoading != n) return@post // closed, or another search started meanwhile
             searchLoading = 0
-            if (shownChannels.isEmpty() && shownTitles.isEmpty()) {
+            if (shownChannels.isEmpty() && shownTitles.isEmpty() && youtubeQuery == null) {
                 endSearch()
                 return@post Toast.makeText(this, getString(R.string.toast_no_results, label), Toast.LENGTH_SHORT).show()
             }
@@ -375,6 +376,7 @@ internal fun MainActivity.showSearchResults() {
     showSections(listOfNotNull(
         filmsSection,
         seriesSection,
+        youTubeSearchSection(),
     ) + collectorSections + listOfNotNull(
         adultSection,
         tvChannels,
@@ -532,6 +534,11 @@ internal fun MainActivity.endSearch(): Boolean {
     searchLoading = 0
     searchChannels = emptyList()
     searchTitles = emptyList()
+    youtubeCancellation?.cancel()
+    youtubeQuery = null
+    youtubePackage = null
+    youtubeVideos = emptyList()
+    youtubeLoading = false
     if (watchApp == SEARCH_PKG) watchApp = null
     renderApps()
     if (onIt) appRow.getChildAt(0)?.requestFocus()
@@ -580,8 +587,7 @@ private fun MainActivity.pickType(text: String) {
 }
 
 private fun MainActivity.isRadioChannel(d: ChannelDetail): Boolean =
-    d.addon?.let { c -> c.item.type == "radio" || extensionRoutes(c.addon, "radio") } == true ||
-        COLLECTOR_PKGS[d.pkg] == "radio"
+    SearchChannelKind.isRadio(d.addon?.item?.type, COLLECTOR_PKGS[d.pkg])
 
 private fun MainActivity.browseCollectors(filter: SearchFilter): List<Pair<Stremio.Title, String>> {
     val collectors = if (filter.type == "all") listOf("videos", "podcasts", "courses", "audiobooks", "events")

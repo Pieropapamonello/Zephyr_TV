@@ -131,6 +131,13 @@ class MainActivity : Activity() {
     internal val longIo = Executors.newSingleThreadExecutor()
     // Spotlight's own thread: downloading the next backdrop ahead mustn't hold up the rows' data on io.
     internal val spotlightIo = Executors.newSingleThreadExecutor()
+    internal val youtubeIo = Executors.newSingleThreadExecutor()
+    internal var youtubeCancellation: android.os.CancellationSignal? = null
+    internal var youtubeQuery: String? = null
+    internal var youtubePackage: String? = null
+    internal var youtubeVideos: List<YouTubeVideo> = emptyList()
+    internal var youtubeLoading = false
+    internal var youtubeFailed = false
     internal var lastInput = SystemClock.elapsedRealtime() // last key press, for pausing Spotlight when nobody watches
     internal val drag = HomeDrag() // a finger on the home screen (see Touch)
     internal var spotlightIdle = false
@@ -443,6 +450,8 @@ class MainActivity : Activity() {
         io.shutdownNow()
         posterIo.shutdownNow()
         spotlightIo.shutdownNow()
+        youtubeCancellation?.cancel()
+        youtubeIo.shutdownNow()
         netIo.shutdownNow()
         longIo.shutdownNow()
         super.onDestroy()

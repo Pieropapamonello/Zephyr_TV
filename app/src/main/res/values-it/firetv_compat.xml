@@ -1,4 +1,10 @@
 <resources>
+    <string name="youtube_search_heading">YouTube · %1$s</string>
+    <string name="youtube_search_more">Tutti i risultati in SmartTube</string>
+    <string name="youtube_search_loading">Caricamento video YouTube…</string>
+    <string name="youtube_search_unavailable">Video non disponibili qui. Continua la ricerca in SmartTube.</string>
+    <string name="youtube_search_empty">Nessun video restituito dal servizio. Cerca direttamente in SmartTube.</string>
+    <string name="youtube_search_open">Apri la ricerca completa in SmartTube.</string>
     <string name="firetv_voice_action">Voce con telecomando Fire TV</string>
     <string name="firetv_voice_title">Ricerca vocale su Fire TV</string>
     <string name="firetv_voice_help_bridge">Tieni premuto il microfono del telecomando, dì “cerca Inception su YouTube” e rilascialo. Per aprire Stremio dì “cerca Stremio su YouTube”. Nel bridge scegli Zephyr come destinazione. Questa Fire TV non offre la dettatura Android nel campo di ricerca.</string>

@@ -1,5 +1,7 @@
 # Zephyr su Android 7 / Fire OS 6 — guida in italiano
 
+[Risultati YouTube collegati a SmartTube — Nello.3](youtube-smarttube-it.md).
+
 La PR si basa ora su **Zephyr TV 3.5.3** e contiene due APK separati:
 
 | APK | Funzione | Pacchetto della build di prova |

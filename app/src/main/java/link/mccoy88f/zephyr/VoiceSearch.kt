@@ -46,6 +46,11 @@ internal fun MainActivity.acceptVoiceWords(words: String, search: (String) -> Un
 internal fun MainActivity.handleVoiceSearchIntent(i: Intent): Boolean {
     if (i.action != Intent.ACTION_SEARCH) return false
     val query = i.getStringExtra(SearchManager.QUERY)?.take(500) ?: return false
-    ui.post { acceptVoiceWords(query) }
+    ui.post {
+        if (editing) endEdit()
+        if (settingsScrim.visibility == android.view.View.VISIBLE) closeLauncherSettings()
+        if (allApps.visibility == android.view.View.VISIBLE) closeAllApps()
+        acceptVoiceWords(query)
+    }
     return true
 }
