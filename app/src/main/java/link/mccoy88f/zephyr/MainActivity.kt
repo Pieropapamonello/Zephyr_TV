@@ -222,6 +222,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
+        HomeKeeper.start(this)
         Problems.init(File(filesDir, "problems.log"))
         Images.use(this) // images on disk (see Images): every part of Zephyr TV goes through it
         Js.useAssets(applicationContext) // the modules plugins and extensions require()
@@ -307,11 +308,11 @@ class MainActivity : Activity() {
         // Sony's table changes when a device is plugged in or out: the dot follows (see connectedInputs).
         runCatching { contentResolver.registerContentObserver(SONY_INPUTS, true, inputsObserver) }
 
-        if (checkSelfPermission(TV_LISTINGS) != PackageManager.PERMISSION_GRANTED) {
+        if (Build.VERSION.SDK_INT >= 26 && checkSelfPermission(TV_LISTINGS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(TV_LISTINGS), 1)
         }
         shortcuts() // a phone or tablet: Search and the Play queue on the icon
-        ui.post { handleLink(intent) } // started by a link, a share or a shortcut (see Links)
+        ui.post { if (!handleVoiceSearchIntent(intent)) handleLink(intent) } // a search, link, share or shortcut
     }
 
     /**
@@ -462,6 +463,7 @@ class MainActivity : Activity() {
     /** Home pressed while already home: close whatever is open and go back to the start of the apps row. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (handleVoiceSearchIntent(intent)) return
         if (intent.action == UPDATE_STATUS) return installStatus(intent)
         if (handleLink(intent)) return // a link, a share or a shortcut: what it asks, not Home's start again
         if (homeTest != 0 && intent.hasCategory(Intent.CATEGORY_HOME)) { // the Home press reached us: setup works
@@ -1287,6 +1289,7 @@ class MainActivity : Activity() {
      * single-layer icons and for photo-like layers that fill the square, which keep the greyscale look.
      */
     internal fun glyph(icon: Drawable): Bitmap? {
+        if (Build.VERSION.SDK_INT < 26) return null
         val fg = (icon as? AdaptiveIconDrawable)?.foreground ?: return null
         val size = dp(96) // large, so a small symbol is still sharp after trimming and scaling up
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -1395,6 +1398,10 @@ class MainActivity : Activity() {
     }
 
     override fun dispatchKeyEvent(e: KeyEvent): Boolean {
+        if (VoiceCommand.isVoiceKey(e.keyCode)) {
+            if (e.action == KeyEvent.ACTION_DOWN && e.repeatCount == 0) openSearch(voice = true)
+            return true
+        }
         lastInput = SystemClock.elapsedRealtime()
         if (spotlightIdle) {
             spotlightIdle = false

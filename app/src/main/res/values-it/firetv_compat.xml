@@ -1,0 +1,15 @@
+<resources>
+    <string name="firetv_home_title">Gestore Home di Zephyr TV</string>
+    <string name="firetv_home_subtitle">Compatibilità Fire OS 6</string>
+    <string name="firetv_home_unsupported">Questo gestore è per Android 7.0/7.1. Sulle versioni successive usa la configurazione Home già esistente.</string>
+    <string name="firetv_home_active">Attivo</string>
+    <string name="firetv_home_paused">Sospeso</string>
+    <string name="firetv_home_info">Stato: %1$s\nAmazon rimane installato e attivo. Gli eventi di utilizzo delle app vengono elaborati solo su questo dispositivo.</string>
+    <string name="firetv_home_enable">Usa Zephyr come Home</string>
+    <string name="firetv_home_pause">Sospendi e apri la Home Amazon</string>
+    <string name="firetv_home_settings">Apri impostazioni Fire TV</string>
+    <string name="firetv_home_notification">Gestione Home attiva. Apri per sospenderla.</string>
+    <string name="firetv_home_access_needed">Prima abilita le statistiche tramite ADB: appops set %1$s GET_USAGE_STATS allow</string>
+    <string name="firetv_voice_unavailable">Nessun servizio Android di riconoscimento vocale disponibile. Usa la tastiera o il telefono.</string>
+    <string name="firetv_debug_updates">Build di prova: installa un APK di prova compatibile, non una release ufficiale.</string>
+</resources>

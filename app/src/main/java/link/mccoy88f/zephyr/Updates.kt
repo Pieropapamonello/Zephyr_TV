@@ -32,6 +32,10 @@ private fun MainActivity.isShowingUpdates(): Boolean {
 }
 
 internal fun MainActivity.checkUpdate(force: Boolean) {
+    if (!officialUpdatesAllowed(packageName)) {
+        if (force) Toast.makeText(this,getString(R.string.firetv_debug_updates),Toast.LENGTH_LONG).show()
+        return
+    }
     if (checking || !force && System.currentTimeMillis() - prefs.getLong(K.UPD_TIME, 0) < 24 * 3600_000L) return
     checking = true
     if (force) {
@@ -128,7 +132,7 @@ internal fun MainActivity.updateDot(index: Int) {
 
 internal fun MainActivity.installUpdate(ver: String) {
     if (updating) return
-    if (!packageManager.canRequestPackageInstalls()) {
+    if (android.os.Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
         Toast.makeText(this, getString(R.string.toast_update_permission), Toast.LENGTH_LONG).show()
         return openSettings(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
     }

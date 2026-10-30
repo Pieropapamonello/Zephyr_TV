@@ -75,6 +75,7 @@ internal fun MainActivity.refreshWatchNext() {
  * Newest first across apps, at most [PER_APP] each, so one app with ten shows can't bury the others.
  */
 internal fun MainActivity.queryWatchNext(): List<Prog> {
+    if (!HomePolicy.supportsTvChannels(android.os.Build.VERSION.SDK_INT)) return emptyList()
     val hidden = prefs.getStringSet(K.HIDDEN_WATCH, emptySet())!!
     val watchNext = readPrograms(TvContract.WatchNextPrograms.CONTENT_URI, hidden)
     val channels = continueChannels().flatMap { id ->
@@ -228,6 +229,7 @@ internal fun MainActivity.appLabel(pkg: String) = apps.firstOrNull { it.pkg == p
  * own order, empty ones left out. Runs on the io thread.
  */
 internal fun MainActivity.appSections(pkg: String, hidden: Set<String>): List<Section> {
+    if (!HomePolicy.supportsTvChannels(android.os.Build.VERSION.SDK_INT)) return emptyList()
     val rows = ArrayList<Pair<Long, String>>() // (channel id, its name)
     contentResolver.query(TvContract.Channels.CONTENT_URI, arrayOf("_id", "display_name", "package_name"), null, null, null)?.use { c ->
         while (c.moveToNext()) if (c.getString(2) == pkg) rows += c.getLong(0) to (c.getString(1) ?: "")

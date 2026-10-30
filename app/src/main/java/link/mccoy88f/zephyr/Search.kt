@@ -36,7 +36,7 @@ private var searchFiltersExpanded = false
  * with them alone too, without words), dictation into that box, the TV's own assistant, and a QR code to type on a
  * phone instead. [text]: what's in the box (the page built again after a filter changed); [focus]: the row to focus.
  */
-internal fun MainActivity.openSearch(text: String = "", focus: Int? = null) {
+internal fun MainActivity.openSearch(text: String = "", focus: Int? = null, voice: Boolean = false) {
     if (focus == null && text.isEmpty()) searchFiltersExpanded = searchFilter.any
     if (settingsScrim.visibility != View.VISIBLE) showPanel()
     // The keyboard's Search wants words or a filter; the Search row goes without (Cinemeta's popular ones).
@@ -111,6 +111,10 @@ internal fun MainActivity.openSearch(text: String = "", focus: Int? = null) {
     }
     if (focus == null) input.requestFocus()
     pageExit = { stopListening() }
+    if (voice) ui.post {
+        if (SpeechRecognizer.isRecognitionAvailable(this)) listen(input, ::go)
+        else Toast.makeText(this, getString(R.string.firetv_voice_unavailable), Toast.LENGTH_LONG).show()
+    }
     // Under the rows, the phone: the same search typed on its own keyboard. The link works while the page is open.
     if (handheld()) return // a phone or tablet: its own keyboard is the one in the box
     val ip = lanAddress() ?: return
@@ -201,7 +205,7 @@ internal fun MainActivity.listen(input: EditText, go: (String) -> Unit) {
             // What was heard, in the box, a moment before the search starts: some TVs give no words until the end.
             input.setText(said)
             input.setSelection(said.length)
-            ui.postDelayed({ if (input.isAttachedToWindow) go(said) }, HEARD_MS)
+            ui.postDelayed({ if (input.isAttachedToWindow) acceptVoiceWords(said, go) }, HEARD_MS)
         }
 
         override fun onError(error: Int) {
