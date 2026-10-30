@@ -585,8 +585,11 @@ internal object Stremio {
         return Probe(false, null)
     }
 
-    /** "hls", "dash", "ts" or null (let the player work it out), from an answer's type, address and first bytes. */
+    /** "hls", "dash", "ts", "m2ts" or null (let the player work it out), from an answer's type, address and first bytes. */
     internal fun format(contentType: String?, url: String, head: ByteArray): String? {
+        // A Blu-ray's MPEG-TS (see M2ts): packets of 192 bytes, each a time of 4 bytes then 0x47; whatever its type says.
+        if (head.size > 196 && head[4] == 0x47.toByte() && head[196] == 0x47.toByte() && (head.size <= 388 || head[388] == 0x47.toByte())
+            && !(head[0] == 0x47.toByte() && head[188] == 0x47.toByte())) return "m2ts"
         val type = contentType?.lowercase().orEmpty()
         when {
             "mpegurl" in type -> return "hls"

@@ -90,8 +90,9 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-dash:$media3")
     implementation("androidx.media3:media3-exoplayer-rtsp:$media3") // rtsp:// streams (IP cameras, some IPTV)
     implementation("androidx.media3:media3-datasource-rtmp:$media3") // rtmp:// streams
-    // Phones and tablets: Dolby (AC3, E-AC3), DTS and the like decoded in software, which TVs decode themselves or
-    // pass on to a receiver. Without it their sound is left out. Jellyfin's build of Media3's FFmpeg decoder (GPL-3.0).
+    // Sound the device has no decoder for decoded in software: Dolby (AC3, E-AC3), DTS and the like on phones and
+    // tablets, TrueHD or DTS on many TVs (which decode the rest themselves or pass it on to a receiver). Without it
+    // their sound is left out. Jellyfin's build of Media3's FFmpeg decoder (GPL-3.0).
     implementation("androidx.media3:media3-decoder:$media3")
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")
     // WARP for Zephyr TV alone: WireGuard's own Android library (Apache-2.0), its tunnel as this app's VPN (see Warp).

@@ -69,6 +69,9 @@ class StremioTest {
         assertEquals("dash", Stremio.format("text/xml", "https://x/s/token", "<?xml version=\"1.0\"?>\n<MPD xmlns=\"urn:mpeg:dash\">".toByteArray()))
         val ts = ByteArray(376).also { it[0] = 0x47; it[188] = 0x47 }
         assertEquals("ts", Stremio.format("application/octet-stream", "https://x/s/token", ts))
+        val m2ts = ByteArray(2048).also { b -> for (i in 4 until b.size step 192) b[i] = 0x47 }
+        assertEquals("m2ts", Stremio.format("application/octet-stream", "https://x/s/token", m2ts))
+        assertEquals("m2ts", Stremio.format("video/mp2t", "https://x/film.ts", m2ts))
         assertNull(Stremio.format("video/mp4", "https://x/s/token", "....ftypisom".toByteArray()))
     }
 
