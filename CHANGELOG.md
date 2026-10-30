@@ -14,7 +14,7 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
-## Unreleased
+## 3.3.3
 
 - The standard documents the extension repositories (`repository-zephyrtv.json`). Zephyr TV's own repository is now online: OMG Premium TV and Live Webcams are suggested again in **Zephyr Extensions**.
 - A TV channel or webcam that plays in the YouTube app no longer closes the player. Before, the player closed and showed the home screen again.
