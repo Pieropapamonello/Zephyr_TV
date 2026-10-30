@@ -189,56 +189,57 @@ internal fun MainActivity.fileResult(result: Int, data: Intent?) {
 
 /**
  * The side panel on a phone or tablet: ← at its top left goes to the page before, ✕ at its top right closes it, and so
- * does a tap on the home screen beside it.
- * Added once; [showPanel] calls it each time the panel opens.
+ * does a tap on the home screen beside it. Added once; [showPanel] calls it each time the panel opens, and each time
+ * the two buttons take the theme: panes of glass in Glass, dark circles otherwise.
  */
 internal fun MainActivity.panelClose() {
-    if (!handheld() || settingsScrim.findViewWithTag<android.view.View>(PANEL_CLOSE) != null) return
-    val panel = findViewById<android.view.View>(R.id.settingsPanel)
-    panel.isClickable = true // a tap on the panel's own space stays in it
-    settingsScrim.setOnClickListener { closeLauncherSettings() }
-    val size = dp(36)
-    val x = TextView(this).apply {
-        tag = PANEL_CLOSE
-        text = "✕"
-        textSize = 18f
-        gravity = android.view.Gravity.CENTER
-        setTextColor(android.graphics.Color.WHITE)
-        contentDescription = getString(R.string.setup_close)
-        background = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.OVAL
-            setColor(0x99000000.toInt()) // readable on the panel and on a title's picture alike
+    if (!handheld()) return
+    val scrim = settingsScrim as android.view.ViewGroup
+    val made = scrim.findViewWithTag<android.widget.ImageView>(PANEL_CLOSE)?.let { it to scrim.findViewWithTag<android.widget.ImageView>(PANEL_BACK) }
+    val (x, left) = made ?: run {
+        val panel = findViewById<android.view.View>(R.id.settingsPanel)
+        panel.isClickable = true // a tap on the panel's own space stays in it
+        settingsScrim.setOnClickListener { closeLauncherSettings() }
+        // Icons, not the characters ✕ and ←: a font puts those off the middle of the circle.
+        fun button(tag: String, icon: Int, about: Int, tap: () -> Unit) = android.widget.ImageView(this).apply {
+            this.tag = tag
+            setImageResource(icon)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            contentDescription = getString(about)
+            elevation = dp(12).toFloat()
+            setOnClickListener { tap() }
         }
-        elevation = dp(12).toFloat()
-        setOnClickListener { closeLauncherSettings() }
-    }
-    // At the panel's top right, which is the screen's: the panel is on the right.
-    (settingsScrim as android.view.ViewGroup).addView(x, android.widget.FrameLayout.LayoutParams(size, size, android.view.Gravity.TOP or android.view.Gravity.END).apply {
-        topMargin = dp(8)
-        marginEnd = dp(8)
-    })
-    // At its top left, ←: the page before, as Back (and the panel closed from its first page).
-    val left = TextView(this).apply {
-        text = "←"
-        textSize = 18f
-        gravity = android.view.Gravity.CENTER
-        setTextColor(android.graphics.Color.WHITE)
-        contentDescription = getString(R.string.back)
-        background = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.OVAL
-            setColor(0x99000000.toInt())
-        }
-        elevation = dp(12).toFloat()
+        val size = dp(36)
+        val x = button(PANEL_CLOSE, R.drawable.ic_panel_close, R.string.setup_close) { closeLauncherSettings() }
+        // At the panel's top right, which is the screen's: the panel is on the right.
+        scrim.addView(x, android.widget.FrameLayout.LayoutParams(size, size, android.view.Gravity.TOP or android.view.Gravity.END).apply {
+            topMargin = dp(8)
+            marginEnd = dp(8)
+        })
+        // At its top left, ←: the page before, as Back (and the panel closed from its first page).
         @Suppress("DEPRECATION")
-        setOnClickListener { onBackPressed() }
+        val left = button(PANEL_BACK, R.drawable.ic_panel_back, R.string.back) { onBackPressed() }
+        scrim.addView(left, android.widget.FrameLayout.LayoutParams(size, size, android.view.Gravity.TOP or android.view.Gravity.END).apply {
+            topMargin = dp(8)
+            marginEnd = panel.layoutParams.width - size - dp(8) // the panel is as wide as its layout says
+        })
+        x to left
     }
-    (settingsScrim as android.view.ViewGroup).addView(left, android.widget.FrameLayout.LayoutParams(size, size, android.view.Gravity.TOP or android.view.Gravity.END).apply {
-        topMargin = dp(8)
-        marginEnd = panel.layoutParams.width - size - dp(8) // the panel is as wide as its layout says
-    })
+    for (b in listOfNotNull(x, left)) {
+        if (glass) glassPane(b, dp(18)) // a circle: half its size
+        else {
+            b.background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(0x99000000.toInt()) // readable on the panel and on a title's picture alike
+            }
+            b.foreground = null
+        }
+    }
 }
 
 private const val PANEL_CLOSE = "panel-close"
+private const val PANEL_BACK = "panel-back"
 
 /**
  * A phone or tablet: its status bar (time, network, notifications) hidden over the home screen, unless switched on in

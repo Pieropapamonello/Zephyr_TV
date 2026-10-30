@@ -14,6 +14,17 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.5.3
+
+- On a phone or tablet, the ← and ✕ buttons of the side panels have their arrow and cross in the middle.
+- In the Glass theme, the ← and ✕ buttons are panes of glass, as the cards are.
+- In **Hide your IP (Cloudflare WARP)**, the row **VPN** is now **VPN status (any app)**. It tells whether a VPN is on, from Zephyr TV or from another app.
+
+## 3.5.2
+
+- While the player loads, the last line (Loading, Checking the streams…) fades in and out slowly. It stops when the video plays.
+- When you skip forward or back and the video loads again, the loading screen shows with "Loading" until the video plays. Before, the picture stayed still with no sign.
+
 ## 3.5.1
 
 - Zephyr TV opens the nuvio:// links of Nuvio too: the page of a film or series, and add-ons. The watch parties of Nuvio stay in Nuvio.
