@@ -219,6 +219,8 @@ internal fun MainActivity.addonsAndPlugins(focus: Int = 0) {
         page(getString(R.string.addons_stremio), "${addonUrls().size}") { renderSettings(MainActivity.ADDON_ADD_ROW) },
         page(getString(R.string.nuvio_plugins), "${repos.size}") { nuvioPage() },
         page(getString(R.string.ext_title), "${extensions(prefs, filesDir).size}") { extensionsPage() },
+        // Their requests, and the videos, from Cloudflare's addresses instead of the device's (see Privacy).
+        page(getString(R.string.warp_title), getString(if (vpnOn()) R.string.warp_vpn_on else R.string.state_off)) { privacyPage { addonsAndPlugins(4) } },
     ), focus) { renderSettingsHome(HOME_SECTIONS.indexOf(MainActivity.ADDONS_SECTION)) }
 }
 

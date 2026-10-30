@@ -415,6 +415,12 @@
     <string name="nuvio_order_intro">OK on a plugin to pick it up, then OK on the place it goes. Their streams are asked for in this order.</string>
     <string name="nuvio_order_moving">Moving %1$s: OK on the place it goes, or on it again to leave it where it was.</string>
     <string name="ext_title">Zephyr Extensions</string>
+    <string name="warp_title">Hide your IP (Cloudflare WARP)</string>
+    <string name="warp_state">VPN</string>
+    <string name="warp_vpn_on">On</string>
+    <string name="warp_open">Open WARP</string>
+    <string name="warp_get">Get WARP (the 1.1.1.1 app)</string>
+    <string name="warp_intro">Add-ons, plugins and extensions ask the sites they read from your connection, so those sites see your IP, and so does the server of each video. Cloudflare WARP, in the free 1.1.1.1 app, sends all the traffic of this device through Cloudflare: the sites see one of its addresses instead. Turn it on in the app; Zephyr TV needs nothing else. Some sites refuse VPN addresses: if one stops working, turn WARP off for a moment.</string>
     <string name="ext_intro">Extensions add films, series, TV channels, radio, videos and more to Zephyr TV. They are programs written by other people: Zephyr TV runs them apart from everything else, with access to the internet only. Add only extensions you trust.</string>
     <string name="ext_add">Add an extension</string>
     <string name="ext_add_intro">The address of the extension\'s manifest-zephyrtv.json (or of the folder it\'s in), or of a repository\'s repository-zephyrtv.json.</string>

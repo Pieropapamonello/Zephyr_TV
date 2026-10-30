@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.7
+
+- New: **Hide your IP (Cloudflare WARP)**, in **Extra features**. It says whether a VPN is on, and opens Cloudflare WARP or its Play Store page.
+- With WARP on, the sites that add-ons, plugins and extensions read, and the servers of the videos, see an address of Cloudflare and not yours.
+
 ## 3.4.0-beta.6
 
 - On a phone or tablet, the status bar of the device (time, network) does not show over the home screen. Swipe down from the top to see it for a moment.

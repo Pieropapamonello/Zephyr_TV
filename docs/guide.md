@@ -220,6 +220,15 @@ trust.** **OMG Premium TV** is suggested in the list: OK installs it. Add your M
   show.
 - **Check for updates**: Zephyr TV also does it by itself, once a day.
 
+### Hiding your IP
+
+Add-ons, plugins and extensions ask the sites they read from your connection, so those sites see your IP, and so
+does the server of each video. **Cloudflare WARP**, in the free **1.1.1.1** app, sends all the traffic of the device
+through Cloudflare: the sites see one of its addresses instead. Zephyr TV needs nothing else.
+
+**Settings → Extra features → Hide your IP (Cloudflare WARP)** says whether a VPN is on, and opens WARP (or its
+Play Store page). Some sites refuse VPN addresses: if one stops working, turn WARP off for a moment.
+
 ## 13. Where channels, films and adult content show
 
 **Settings → Extra features → Virtual apps and integrations** (OK changes the choice):
