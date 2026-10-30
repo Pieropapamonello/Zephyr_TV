@@ -14,7 +14,7 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
-## Unreleased
+## 3.3.4
 
 - A YouTube video or live of an extension (for example a webcam) opens on its page in the YouTube app. Before, the YouTube app opened on its home screen.
 
