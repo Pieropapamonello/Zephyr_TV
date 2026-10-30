@@ -188,6 +188,7 @@ class MainActivity : Activity() {
     internal var spotlightApps: List<App>? = null // apps behind the Spotlight buttons; null rebuilds them
     internal var tmdbLastFocusApp: String? = null
     internal var searchQuery: String? = null // the last search, while its results tile is in the apps row; null for none
+    internal var lastSearchWord: String = "" // the words typed in the search box for the active search
     internal var searchFilter = SearchFilter() // the search's filters: films or series, year, genre (see Search)
     internal var searchChannels: List<ChannelDetail> = emptyList() // the TV channels the search found
     internal var searchTitles: List<Pair<Stremio.Title, String>> = emptyList() // without a TMDB key, the films and series the add-ons found (and from which)
@@ -250,7 +251,7 @@ class MainActivity : Activity() {
         // Top bar: users, search, network, All apps, TV inputs, Android settings, launcher settings. Round, lit on focus.
         for ((id, action) in listOf<Pair<Int, () -> Unit>>(
             R.id.usersButton to { showUsers() },
-            R.id.searchButton to { openSearch() },
+            R.id.searchButton to { openSearch(if (searchQuery != null) lastSearchWord else "") },
             R.id.wifi to { openSettings(Settings.ACTION_WIFI_SETTINGS) },
             R.id.allAppsButton to { openAllApps() },
             R.id.tvInputsButton to { openInputsMenu(findViewById(R.id.tvInputsButton)) },
@@ -1054,7 +1055,7 @@ class MainActivity : Activity() {
         }
 
         val searchTile = searchQuery?.let { q ->
-            tile(null, getDrawable(R.drawable.ic_search)!!, mono = true, SEARCH_PKG) { firstCard()?.requestFocus() }.apply {
+            tile(null, getDrawable(R.drawable.ic_search)!!, mono = true, SEARCH_PKG) { openSearch(lastSearchWord) }.apply {
                 contentDescription = getString(R.string.search_results_tile, q)
             }
         }

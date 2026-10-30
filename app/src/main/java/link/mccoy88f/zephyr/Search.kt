@@ -37,7 +37,7 @@ private var searchFiltersExpanded = false
  * phone instead. [text]: what's in the box (the page built again after a filter changed); [focus]: the row to focus.
  */
 internal fun MainActivity.openSearch(text: String = "", focus: Int? = null) {
-    if (focus == null && text.isEmpty()) searchFiltersExpanded = false
+    if (focus == null && text.isEmpty()) searchFiltersExpanded = searchFilter.any
     if (settingsScrim.visibility != View.VISIBLE) showPanel()
     // The keyboard's Search wants words or a filter; the Search row goes without (Cinemeta's popular ones).
     fun go(query: String, always: Boolean = false) {
@@ -64,6 +64,7 @@ internal fun MainActivity.openSearch(text: String = "", focus: Int? = null) {
         setOnFocusChangeListener { _, focused -> bg.setStroke(if (focused) dp(2) else dp(1), if (focused) fg else fieldEdge()) }
         setOnEditorActionListener { v, _, _ -> go(v.text.toString()); true }
         setText(text)
+        setSelection(text.length)
     }
     val top = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -238,6 +239,7 @@ internal fun MainActivity.searchTmdb(query: String) {
     // Its tile at once, focused, with its words over cards loading; the results fill it once they're in.
     val n = ++searchCount
     searchLoading = n
+    lastSearchWord = query
     searchQuery = label
     searchChannels = emptyList()
     searchTitles = emptyList()
@@ -516,6 +518,8 @@ internal fun MainActivity.endSearch(): Boolean {
     if (searchQuery == null) return false
     val onIt = currentFocus?.let { it.tag == SEARCH_PKG || (it.getTag(R.id.watchRow) as? Prog)?.let { p -> p.channelPage != null || p.vod != null } == true } ?: true
     searchQuery = null
+    lastSearchWord = ""
+    searchFilter = SearchFilter()
     searchLoading = 0
     searchChannels = emptyList()
     searchTitles = emptyList()

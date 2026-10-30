@@ -19,6 +19,7 @@ Put changes that are not released under `## Unreleased`. Rename that heading to 
 - In search filters, **Type of content** offers every available type: TV channels, Radio, Videos, Podcasts, and more.
 - When 18+ content shows, its titles and channels appear in search results under their own **Adult content** row.
 - In search filters, **Adult content → Only adult content** shows all adult titles found.
+- While a search is open, selecting search opens the panel with its words and filters kept.
 
 ## 3.3.0
 
