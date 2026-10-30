@@ -552,9 +552,12 @@ internal object Stremio {
             }.getOrDefault(ByteArray(0))
             return Probe(true, format(meta.substringBefore(';').trim('/'), "", head))
         }
+        // Another app's (externalUrl, ytId: "vnd.youtube:…"), or any address that isn't the web's: nothing to ask.
+        if (!url.startsWith("http://", true) && !url.startsWith("https://", true)) return Probe(true, null)
         var at = url
         for (hop in 0..5) {
-            val c = Http.connect(at, headers).apply { instanceFollowRedirects = false }
+            val c = runCatching { Http.connect(at, headers).apply { instanceFollowRedirects = false } }
+                .getOrElse { return Probe(false, null, whyOf(it) ?: Why.UNREACHABLE) }
             try {
                 val code = c.responseCode
                 if (code in 300..399) {

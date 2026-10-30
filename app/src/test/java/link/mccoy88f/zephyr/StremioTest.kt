@@ -96,4 +96,10 @@ class StremioTest {
         assertEquals("tv%7Crai1.it", Stremio.enc("tv|rai1.it"))
         assertEquals("Film%20-%20Serie%20TV", Stremio.enc("Film - Serie TV"))
     }
+
+    @Test fun anotherAppsStreamIsNotCheckedOnTheWeb() {
+        // A YouTube live (an extension's ytId) is opened by its app: nothing to ask, and never a failure that closes the player.
+        org.junit.Assert.assertTrue(Stremio.probe("vnd.youtube:abcdefghijk", emptyMap()).ok)
+        org.junit.Assert.assertTrue(Stremio.probe("spotify:track:1", emptyMap()).ok)
+    }
 }

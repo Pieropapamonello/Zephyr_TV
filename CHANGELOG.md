@@ -14,6 +14,11 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## Unreleased
+
+- A TV channel or webcam that plays in the YouTube app no longer closes the player. Before, the player closed and showed the home screen again.
+- When the player can't look for the streams, it says so. It doesn't close.
+
 ## 3.3.2
 
 - While a search is open, selecting search opens the panel with its words and filters kept.

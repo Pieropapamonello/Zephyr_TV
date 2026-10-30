@@ -1285,24 +1285,30 @@ class PlayerActivity : Activity() {
         waitingLate = false
         holdForLanguage = false
         net.execute {
-            val lateOnes: (List<Stremio.Stream>?) -> Unit = { more -> val ok = more?.let { checked(it) }; ui.post { late(tuning, ok) } }
-            val cached = fetched[c.id]?.takeIf { System.currentTimeMillis() - it.first < FRESH_MS } != null
-            // Quick start: the first stream in the preferred quality that works plays at once (see quickStreams).
-            val (found, ready) = if (vod && !cached && quickStart(prefs)) quickStreams(c, lateOnes)
-                else streamsOf(c, lateOnes) to false
-            if (!ready && vod && found.size > 1) ui.post { if (tuning == tune) say(getString(R.string.player_checking_streams)) }
-            val list = if (ready) found else checked(found)
-            ui.post {
-                if (isFinishing || tuning != tune) return@post
-                streams = list
-                prefetch(i)
-                // None in the TV's language yet, and sources still looking: theirs are waited for before another
-                // language's (or one that says none) plays.
-                if (vod && list.isNotEmpty() && list.none { it.langRank == Stremio.LANG_OURS } && lateLeft > 0) {
-                    holdForLanguage = true
-                    return@post say(getString(R.string.player_finding_language))
+            // Whatever goes wrong looking for them is said, as none found: the player never closes on it.
+            try {
+                val lateOnes: (List<Stremio.Stream>?) -> Unit = { more -> val ok = more?.let { checked(it) }; ui.post { late(tuning, ok) } }
+                val cached = fetched[c.id]?.takeIf { System.currentTimeMillis() - it.first < FRESH_MS } != null
+                // Quick start: the first stream in the preferred quality that works plays at once (see quickStreams).
+                val (found, ready) = if (vod && !cached && quickStart(prefs)) quickStreams(c, lateOnes)
+                    else streamsOf(c, lateOnes) to false
+                if (!ready && vod && found.size > 1) ui.post { if (tuning == tune) say(getString(R.string.player_checking_streams)) }
+                val list = if (ready) found else checked(found)
+                ui.post {
+                    if (isFinishing || tuning != tune) return@post
+                    streams = list
+                    prefetch(i)
+                    // None in the TV's language yet, and sources still looking: theirs are waited for before another
+                    // language's (or one that says none) plays.
+                    if (vod && list.isNotEmpty() && list.none { it.langRank == Stremio.LANG_OURS } && lateLeft > 0) {
+                        holdForLanguage = true
+                        return@post say(getString(R.string.player_finding_language))
+                    }
+                    next()
                 }
-                next()
+        } catch (e: Exception) {
+                warn("streams not found: $e")
+                ui.post { if (!isFinishing && tuning == tune) say(noStreams()) }
             }
         }
     }
@@ -1491,7 +1497,8 @@ class PlayerActivity : Activity() {
         val tuning = tune
         val n = tried
         net.execute {
-            val probe = probes[s.url] ?: Stremio.probe(s.url, s.headers).also { probes[s.url] = it }
+            // A check that fails is a stream that doesn't answer: the next is tried (never the player closing).
+            val probe = probes[s.url] ?: runCatching { Stremio.probe(s.url, s.headers) }.getOrElse { Stremio.Probe(false, null) }.also { probes[s.url] = it }
             ui.post {
                 if (isFinishing || tuning != tune || n != tried) return@post
                 // The only stream (one picked by hand) is played even when the check failed: some servers turn the
