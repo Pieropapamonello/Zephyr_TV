@@ -23,13 +23,85 @@ internal fun extensionOn(p: SharedPreferences, id: String) = id !in p.getStringS
 internal fun extensionAdult(p: SharedPreferences, e: Extensions.Extension) = e.adult || e.id in p.getStringSet(K.EXT_ADULT, emptySet())!!
 
 /**
- * The extensions Zephyr TV suggests (id, name, the address of its manifest-zephyrtv.json, always the same): each one
- * not installed is a row on the Extensions page, installed from its address with OK. Zephyr TV carries none of them.
+ * Zephyr TV's own repository: there from the start, until the user takes it away. Its extensions not installed are
+ * rows on the Extensions page, installed from their address with OK: Zephyr TV carries none of them.
  */
-internal val SUGGESTED_EXTENSIONS = listOf(
-    Triple("io.github.mccoy88f.omg-premium-tv", "OMG Premium TV",
-        "https://github.com/mccoy88f/OMG-Premium-TV/releases/latest/download/manifest-zephyrtv.json"),
-)
+internal const val OFFICIAL_REPOSITORY = "https://raw.githubusercontent.com/mccoy88f/Zephyr-TV-Extensions/main/repository-zephyrtv.json"
+
+/** The repositories' addresses, in the order added: Zephyr TV's own when the list was never changed. */
+internal fun extensionRepos(p: SharedPreferences): List<String> =
+    p.getString(K.EXT_REPOS, null)?.lines()?.filter { it.isNotBlank() } ?: listOf(OFFICIAL_REPOSITORY)
+
+private fun saveExtensionRepos(p: SharedPreferences, list: List<String>) =
+    p.edit().putString(K.EXT_REPOS, list.distinct().joinToString("\n")).apply()
+
+/**
+ * What each repository holds, as read last, on disk: its name, when, and its extensions as their
+ * manifest-zephyrtv.json say (without their packages). Read again once a day (see refreshRepos).
+ */
+internal object Repos {
+    private const val FILE = "ext_repositories.json"
+
+    class Item(val url: String, val id: String, val name: String, val description: String, val version: String, val adult: Boolean)
+    class Read(val name: String, val at: Long, val items: List<Item>)
+
+    @Synchronized
+    private fun all(files: File): JSONObject = runCatching { JSONObject(File(files, FILE).readText()) }.getOrDefault(JSONObject())
+
+    @Synchronized
+    fun saved(files: File, url: String): Read? = all(files).optJSONObject(url)?.let { o ->
+        val a = o.optJSONArray("items") ?: org.json.JSONArray()
+        Read(o.optString("name"), o.optLong("at"), (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { i ->
+            Item(i.optString("url"), i.optString("id"), i.optString("name"), i.optString("description"), i.optString("version"), i.optBoolean("adult"))
+        })
+    }
+
+    @Synchronized
+    fun save(files: File, url: String, read: Read?) {
+        val o = all(files)
+        if (read == null) o.remove(url) else o.put(url, JSONObject().put("name", read.name).put("at", read.at).put("items", org.json.JSONArray(read.items.map { i ->
+            JSONObject().put("url", i.url).put("id", i.id).put("name", i.name).put("description", i.description).put("version", i.version).put("adult", i.adult)
+        })))
+        val part = File(files, "$FILE.part")
+        part.writeText(o.toString())
+        part.renameTo(File(files, FILE))
+    }
+
+    /** The repository at [url] read, with each of its extensions' manifest-zephyrtv.json (those that answer). Network. */
+    fun read(url: String, m: JSONObject = Http.json(url)): Read {
+        val r = Extensions.repository(url, m)
+        val items = parallel(r.extensions, 4, 30) { address ->
+            Extensions.published(address).let { p -> Item(address, p.id, p.name, p.description, p.version, p.adult) }
+        }
+        return Read(r.name, System.currentTimeMillis(), items)
+    }
+}
+
+private val reposReading = java.util.concurrent.atomic.AtomicBoolean()
+
+/**
+ * In the background: each repository read again when its last reading is a day old ([force]: all of them now), or
+ * missing. [done] on the UI thread, with whether any reading changed what's listed.
+ */
+internal fun MainActivity.refreshRepos(force: Boolean = false, done: ((Boolean) -> Unit)? = null) {
+    if (!reposReading.compareAndSet(false, true)) return
+    netIo.execute {
+        var changed = false
+        try {
+            for (url in extensionRepos(prefs)) {
+                val old = Repos.saved(filesDir, url)
+                if (!force && old != null && System.currentTimeMillis() - old.at < EXT_CHECK_MS) continue
+                runCatching { Repos.read(url) }.onSuccess { r ->
+                    if (old == null || old.name != r.name || old.items.map { it.id to it.version } != r.items.map { it.id to it.version }) changed = true
+                    Repos.save(filesDir, url, r)
+                }.onFailure { warn("Repository not read: $url ($it)") }
+            }
+        } finally {
+            reposReading.set(false)
+            ui.post { done?.invoke(changed) }
+        }
+    }
+}
 
 /** Where the extension [id] was added from (its manifest-zephyrtv.json), or null (from a .zip, or preinstalled). */
 internal fun extensionSource(p: SharedPreferences, id: String): String? =
@@ -69,6 +141,7 @@ private val extensionsChecking = java.util.concurrent.atomic.AtomicBoolean()
  * with how many were installed or updated, and the names of those that couldn't be checked or updated.
  */
 internal fun MainActivity.refreshExtensions(force: Boolean = false, done: ((Int, List<String>) -> Unit)? = null) {
+    refreshRepos() // the repositories too, once a day
     if (!extensionsChecking.compareAndSet(false, true)) return
     netIo.execute {
         var changed = 0
@@ -150,15 +223,20 @@ private fun MainActivity.intro(text: String) = label(text, 13f).apply {
 }
 
 /**
- * Extensions: what they are (and that they run code from elsewhere), each one, those Zephyr TV suggests and isn't
- * running (Install: from their address), Add an extension, Check for updates.
+ * Extensions: what they are (and that they run code from elsewhere), each one, those of the repositories not
+ * installed (Install: from their address), each repository, Add an extension, Check for updates.
  */
 internal fun MainActivity.extensionsPage(focus: Int = 0) {
     val all = extensions(prefs, filesDir)
-    val suggested = SUGGESTED_EXTENSIONS.filter { (id, _, _) -> all.none { it.id == id } }
+    val repos = extensionRepos(prefs).map { it to Repos.saved(filesDir, it) }
+    // A repository never read yet (Zephyr TV's own, the first time): read now, and the page shown again once it's in.
+    if (repos.any { it.second == null }) refreshRepos { if (pageShowing(getString(R.string.ext_title))) extensionsPage(focusedRow() ?: focus) }
+    val suggested = repos.flatMap { it.second?.items.orEmpty() }.distinctBy { it.id }.filter { i -> all.none { it.id == i.id } }
+        .filter { !it.adult || adultUnlocked() }
     showPage(getString(R.string.ext_title), all.map { e ->
         page(e.name, if (extensionOn(prefs, e.id)) SUBMENU else getString(R.string.state_off)) { extensionPage(e.id) }
-    } + suggested.map { (_, name, url) -> page(name, getString(R.string.ext_install)) { extensionFromAddress(url) } } + listOf(
+    } + suggested.map { i -> page(i.name, getString(R.string.ext_install)) { extensionFromAddress(i.url) } } +
+        repos.map { (url, r) -> page(getString(R.string.ext_repo_row, r?.name ?: url.substringAfter("://").substringBefore('/')), r?.items?.size?.toString() ?: "…") { repoPage(url) } } + listOf(
         page(getString(R.string.ext_add), SUBMENU) { extensionFromPhone() },
         page(getString(R.string.ext_check)) {
             Toast.makeText(this, getString(R.string.ext_reading), Toast.LENGTH_SHORT).show()
@@ -169,8 +247,9 @@ internal fun MainActivity.extensionsPage(focus: Int = 0) {
                     n == 0 -> getString(R.string.ext_none_updated)
                     else -> getString(R.string.ext_some_updated, n)
                 }, Toast.LENGTH_LONG).show()
-                if (pageShowing(getString(R.string.ext_title))) extensionsPage(all.size + suggested.size + 1)
+                if (pageShowing(getString(R.string.ext_title))) extensionsPage(all.size + suggested.size + repos.size + 1)
             }
+            refreshRepos(force = true) { changed -> if (changed && pageShowing(getString(R.string.ext_title))) extensionsPage(focusedRow() ?: 0) }
         },
     ), focus, top = intro(getString(R.string.ext_intro))) { addonsAndPlugins(3) }
 }
@@ -290,7 +369,24 @@ private fun MainActivity.extensionFromAddress(input: String) {
     val url = Extensions.publishedUrl(input) ?: return Toast.makeText(this, getString(R.string.ext_err_not), Toast.LENGTH_LONG).show()
     Toast.makeText(this, getString(R.string.ext_reading), Toast.LENGTH_SHORT).show()
     netIo.execute {
-        val result = runCatching { Extensions.published(url) }
+        val m = runCatching { Http.json(url) }.getOrElse {
+            ui.post { Toast.makeText(this, refusal(Extensions.Refused(Extensions.Why.UNREACHABLE, it.toString())), Toast.LENGTH_LONG).show() }
+            return@execute
+        }
+        // A repository: added to the list, and its page shown, its extensions to install from there.
+        if (Extensions.isRepository(m)) {
+            val read = runCatching { Repos.read(url, m) }
+            ui.post {
+                read.onSuccess { r ->
+                    Repos.save(filesDir, url, r)
+                    saveExtensionRepos(prefs, extensionRepos(prefs) + url)
+                    Toast.makeText(this, getString(R.string.ext_repo_added, r.name), Toast.LENGTH_LONG).show()
+                    repoPage(url)
+                }.onFailure { Toast.makeText(this, refusal(it), Toast.LENGTH_LONG).show() }
+            }
+            return@execute
+        }
+        val result = runCatching { Extensions.published(url, m) }
         ui.post {
             result.onSuccess { p ->
                 // What it provides is in its package, not read yet: shown once installed.
@@ -300,6 +396,42 @@ private fun MainActivity.extensionFromAddress(input: String) {
             }.onFailure { Toast.makeText(this, refusal(it), Toast.LENGTH_LONG).show() }
         }
     }
+}
+
+/**
+ * A repository's page: its extensions (installed ones open their page, the others install from their address),
+ * Read again, Remove (those installed from it stay).
+ */
+private fun MainActivity.repoPage(url: String, focus: Int = 0) {
+    val r = Repos.saved(filesDir, url)
+    val title = getString(R.string.ext_repo_row, r?.name ?: url.substringAfter("://").substringBefore('/'))
+    val installed = extensions(prefs, filesDir).associateBy { it.id }
+    val items = r?.items.orEmpty().filter { !it.adult || adultUnlocked() }
+    val rows = ArrayList<Triple<String, String, () -> Unit>>()
+    if (r != null && items.isEmpty()) rows += page(getString(R.string.ext_repo_empty)) { }
+    items.forEach { i ->
+        val have = installed[i.id]
+        rows += page(i.name, if (have != null) getString(R.string.ext_repo_have) else getString(R.string.ext_install)) {
+            if (have != null) extensionPage(i.id) else extensionFromAddress(i.url)
+        }
+    }
+    val again = rows.size
+    rows += page(getString(R.string.ext_repo_refresh)) {
+        Toast.makeText(this, getString(R.string.ext_reading), Toast.LENGTH_SHORT).show()
+        netIo.execute {
+            val read = runCatching { Repos.read(url) }
+            ui.post {
+                read.onSuccess { Repos.save(filesDir, url, it) }.onFailure { Toast.makeText(this, refusal(it), Toast.LENGTH_LONG).show() }
+                if (pageShowing(title)) repoPage(url, again)
+            }
+        }
+    }
+    rows += page(getString(R.string.ext_repo_remove)) {
+        saveExtensionRepos(prefs, extensionRepos(prefs) - url)
+        Repos.save(filesDir, url, null)
+        extensionsPage()
+    }
+    showPage(title, rows, focus, top = intro(listOf(getString(R.string.ext_repo_intro), url).joinToString("\n"))) { extensionsPage() }
 }
 
 /** The extension in the package [zip] (sent from a phone): shown before installing, then installed from it. */
@@ -368,15 +500,15 @@ internal val COLLECTOR_PKGS = mapOf(
 
 /** The collector a content [type] goes to ("movie" → "movies", "channel" → "videos"); an extension's own type is a film's. */
 internal fun collectorOf(type: String) = when (type) {
-    "movie" -> "movies"
+    "movie", "movies" -> "movies"
     "series" -> "series"
     "tv" -> "tv"
     "radio" -> "radio"
-    "video", "channel" -> "videos"
-    "course" -> "courses"
-    "podcast" -> "podcasts"
-    "audiobook" -> "audiobooks"
-    "event" -> "events"
+    "video", "videos", "channel" -> "videos"
+    "course", "courses" -> "courses"
+    "podcast", "podcasts" -> "podcasts"
+    "audiobook", "audiobooks" -> "audiobooks"
+    "event", "events" -> "events"
     else -> "movies"
 }
 

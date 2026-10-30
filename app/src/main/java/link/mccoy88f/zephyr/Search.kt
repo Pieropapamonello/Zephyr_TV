@@ -76,11 +76,7 @@ internal fun MainActivity.openSearch(text: String = "", focus: Int? = null) {
             f.adult.takeIf { it != SearchFilter.ADULT_SHOW && adultSearchOffered() }?.let { adultFilterName(it) }).joinToString(" · ")
     fun typed() = input.text?.toString().orEmpty()
     val filterRows = if (!searchFiltersExpanded) emptyList() else listOfNotNull(
-        page(getString(R.string.search_filter_type), typeName(f.type)) {
-            val types = listOf("all", "movie", "series", "tv")
-            searchFilter = SearchFilter(types[(types.indexOf(f.type) + 1) % types.size], f.year, f.genre, f.adult)
-            openSearch(typed(), 3)
-        },
+        page(getString(R.string.search_filter_type), typeName(f.type)) { pickType(typed()) },
         page(getString(R.string.search_filter_year), f.year ?: getString(R.string.search_filter_any)) { pickYear(typed()) },
         page(getString(R.string.search_filter_genre), f.genre?.let { genreName(it) } ?: getString(R.string.search_filter_any)) { pickGenre(typed()) },
         // Adult content: only while 18+ shows (unlocked, or no lock) and there's an adult add-on.
@@ -249,14 +245,38 @@ internal fun MainActivity.searchTmdb(query: String) {
     renderApps()
     (0 until appRow.childCount).map { appRow.getChildAt(it) }.firstOrNull { it.tag == SEARCH_PKG }?.requestFocus()
     spotlightIo.execute {
-        // TV channels only for words, and not when films or series alone are asked for; TV channels alone: no titles.
-        val channels = if (query.isBlank() || filter.type !in setOf("all", "tv")) emptyList() else runCatching { findChannels(query) }.getOrDefault(emptyList())
+        // TV channels and radio channels
+        val channels = when {
+            filter.type in setOf("all", "tv", "radio") -> runCatching {
+                val all = if (query.isBlank()) {
+                    if (filter.type == "radio") findAddonChannels("").filter { isRadioChannel(it) }
+                    else emptyList()
+                } else findChannels(query)
+                when (filter.type) {
+                    "radio" -> all.filter { isRadioChannel(it) }
+                    "tv" -> all.filter { !isRadioChannel(it) }
+                    else -> all
+                }
+            }.getOrDefault(emptyList())
+            else -> emptyList()
+        }
         val titles = runCatching {
-            if (filter.type == "tv") emptyList()
-            else if (query.isBlank() && adultSearch() == SearchFilter.ADULT_ONLY) browseAdult(filter)
-            else if (query.isBlank()) browseLibrary(filter)
-            else searchLibrary(query).filter { (t, _) -> filter.accepts(t) { g -> genreName(g) } }
-        }.getOrDefault(emptyList())
+            when {
+                filter.type in setOf("tv", "radio") -> emptyList()
+                query.isBlank() -> {
+                    when (adultSearch()) {
+                        SearchFilter.ADULT_ONLY -> browseAdult(filter)
+                        SearchFilter.ADULT_HIDE -> browseLibrary(filter) + browseCollectors(filter)
+                        else -> browseLibrary(filter) + browseCollectors(filter) + browseAdult(filter)
+                    }
+                }
+                else -> {
+                    val searched = if (adultSearch() == SearchFilter.ADULT_ONLY) emptyList() else searchLibrary(query)
+                    val fromShelves = searchShelves(query, filter)
+                    (searched + fromShelves).filter { (t, _) -> filter.accepts(t) { g -> genreName(g) } }
+                }
+            }
+        }.getOrDefault(emptyList()).distinctBy { it.first.type + it.first.id }
         // Adult content kept, left out, or alone (by the add-on each came from: Stremio's catalogs don't tell a title's age).
         fun keep(adult: Boolean) = when (adultSearch()) { SearchFilter.ADULT_HIDE -> !adult; SearchFilter.ADULT_ONLY -> adult; else -> true }
         val shownChannels = channels.filter { keep(it.addon?.let { c -> isAdultAddon(c.addon) } == true) }
@@ -282,27 +302,74 @@ internal fun MainActivity.searchTmdb(query: String) {
 }
 
 /**
- * The results' cards under the apps row, a row each: the films, the series (as under the Films and Series tiles),
- * then the TV channels it found.
+ * The results' cards under the apps row, a row each: the films, the series, the other collectors,
+ * adult content, then the TV channels it found.
  */
 internal fun MainActivity.showSearchResults() {
     val query = searchQuery ?: return
     watchApp = SEARCH_PKG
     if (searchLoading != 0) return showSearchLoading(query)
-    val channels = searchChannels.takeIf { it.isNotEmpty() }?.let { list ->
+
+    val adultTitles = searchTitles.filter { isAdultAddon(it.second) }
+    val regularTitles = searchTitles.filter { !isAdultAddon(it.second) }
+
+    val adultChannels = searchChannels.filter { it.addon?.let { c -> isAdultAddon(c.addon) } == true }
+    val regularChannels = searchChannels.filter { it.addon?.let { c -> isAdultAddon(c.addon) } != true }
+
+    val watched = VodWatched.all(vodDir())
+
+    val filmsSection = regularTitles.filter { collectorOf(it.first.type) == "movies" }.takeIf { it.isNotEmpty() }?.let { found ->
+        Section("addon-films", query, getString(R.string.search_films_for, query), found.map { (t, source) ->
+            titleCard(t, source, titleTile(t.type, source), t.id in watched)
+        })
+    }
+    val seriesSection = regularTitles.filter { collectorOf(it.first.type) == "series" }.takeIf { it.isNotEmpty() }?.let { found ->
+        Section("addon-series", query, getString(R.string.search_series_for, query), found.map { (t, source) ->
+            titleCard(t, source, titleTile(t.type, source), t.id in watched)
+        })
+    }
+    val collectorOrder = listOf("videos", "podcasts", "courses", "audiobooks", "events")
+    val collectorSections = collectorOrder.mapNotNull { kind ->
+        regularTitles.filter { collectorOf(it.first.type) == kind }.takeIf { it.isNotEmpty() }?.let { found ->
+            val heading = "${kindName(kind)} · $query"
+            Section("addon-$kind", query, heading, found.map { (t, source) ->
+                titleCard(t, source, titleTile(t.type, source), t.id in watched)
+            })
+        }
+    }
+    val adultSection = adultTitles.takeIf { it.isNotEmpty() }?.let { found ->
+        Section("addon-adult", query, getString(R.string.search_adult_for, query), found.map { (t, source) ->
+            titleCard(t, source, titleTile(t.type, source), t.id in watched)
+        })
+    }
+    val tvChannels = regularChannels.filter { !isRadioChannel(it) }.takeIf { it.isNotEmpty() }?.let { list ->
         Section("channels", query, getString(R.string.search_channels_for, query), list.map { d ->
             Prog(d.name, listOfNotNull(d.number, d.now?.title).filter { it.isNotEmpty() }.joinToString(" · "), d.now?.let { Epg.progress(it) } ?: 0,
                 d.logo, d.intent, d.pkg, badge = d.number, channelPage = d)
         })
     }
-    // Cinemeta's and the add-ons' films and series: their cards, as under the Films and Series tiles.
-    fun addonTitles(key: String, heading: Int, type: String) = searchTitles.filter { it.first.type == type }.takeIf { it.isNotEmpty() }?.let { found ->
-        Section(key, query, getString(heading, query), VodWatched.all(vodDir()).let { watched -> found.map { (t, source) -> titleCard(t, source, titleTile(t.type, source), t.id in watched) } })
+    val radioChannels = (regularChannels + adultChannels).filter { isRadioChannel(it) }.takeIf { it.isNotEmpty() }?.let { list ->
+        val heading = "${getString(R.string.ext_kind_radio)} · $query"
+        Section("radio", query, heading, list.map { d ->
+            Prog(d.name, listOfNotNull(d.number, d.now?.title).filter { it.isNotEmpty() }.joinToString(" · "), d.now?.let { Epg.progress(it) } ?: 0,
+                d.logo, d.intent, d.pkg, badge = d.number, channelPage = d)
+        })
     }
+    val adultChannelsSection = adultChannels.filter { !isRadioChannel(it) }.takeIf { it.isNotEmpty() }?.let { list ->
+        Section("adult-channels", query, "${getString(R.string.adult_app)} · ${getString(R.string.search_type_channels)}", list.map { d ->
+            Prog(d.name, listOfNotNull(d.number, d.now?.title).filter { it.isNotEmpty() }.joinToString(" · "), d.now?.let { Epg.progress(it) } ?: 0,
+                d.logo, d.intent, d.pkg, badge = d.number, channelPage = d)
+        })
+    }
+
     showSections(listOfNotNull(
-        addonTitles("addon-films", R.string.search_films_for, "movie"),
-        addonTitles("addon-series", R.string.search_series_for, "series"),
-        channels,
+        filmsSection,
+        seriesSection,
+    ) + collectorSections + listOfNotNull(
+        adultSection,
+        tvChannels,
+        radioChannels,
+        adultChannelsSection,
     ))
 }
 
@@ -460,14 +527,67 @@ internal fun MainActivity.endSearch(): Boolean {
 
 // ---------- filters ----------
 
-/** Films and series, films, series. */
-/** The search's kind of content: all, films, TV series, or TV channels. */
-private fun MainActivity.typeName(type: String) = getString(when (type) {
-    "movie" -> R.string.vod_movies
-    "series" -> R.string.vod_series
-    "tv" -> R.string.search_type_channels
-    else -> R.string.search_type_all
-})
+/** The search's kind of content: all, films, TV series, TV channels, or generic collectors (radio, videos, podcasts...). */
+private fun MainActivity.typeName(type: String) = when (type) {
+    "all" -> getString(R.string.search_type_all)
+    "movie" -> getString(R.string.vod_movies)
+    "series" -> getString(R.string.vod_series)
+    "tv" -> getString(R.string.search_type_channels)
+    else -> kindName(type)
+}
+
+internal fun MainActivity.availableFilterTypes(): List<String> {
+    val types = mutableListOf("all", "movie", "series", "tv")
+    val found = shownAddonUrls().flatMap { url ->
+        val a = Stremio.saved(filesDir, url)?.addon
+        val fromAddon = (a?.catalogs.orEmpty() + a?.vod.orEmpty()).map { collectorOf(it.type) }
+        val fromExt = ExtensionCalls.idOf(url)?.let { id -> Extensions.installed(filesDir, id)?.collectors }.orEmpty()
+        fromAddon + fromExt
+    }.toSet()
+    val collectors = listOf("radio", "videos", "podcasts", "courses", "audiobooks", "events")
+    for (c in collectors) {
+        if (c in found || (c == "radio" && radioPlace() != RadioPlace.OFF)) {
+            types.add(c)
+        }
+    }
+    val f = searchFilter.type
+    if (f !in types) types.add(f)
+    return types
+}
+
+private fun MainActivity.pickType(text: String) {
+    val types = availableFilterTypes()
+    val f = searchFilter
+    showPage(getString(R.string.search_filter_type), types.map { t ->
+        page(typeName(t), if (t == f.type) CHOSEN else "") {
+            searchFilter = SearchFilter(t, f.year, f.genre, f.adult)
+            openSearch(text, 3)
+        }
+    }, types.indexOf(f.type).coerceAtLeast(0)) { openSearch(text, 3) }
+}
+
+private fun MainActivity.isRadioChannel(d: ChannelDetail): Boolean =
+    d.addon?.let { c -> c.item.type == "radio" || extensionRoutes(c.addon, "radio") } == true ||
+        COLLECTOR_PKGS[d.pkg] == "radio"
+
+private fun MainActivity.browseCollectors(filter: SearchFilter): List<Pair<Stremio.Title, String>> {
+    val collectors = if (filter.type == "all") listOf("videos", "podcasts", "courses", "audiobooks", "events")
+    else listOf(collectorOf(filter.type)).filter { it in listOf("videos", "podcasts", "courses", "audiobooks", "events") }
+    if (collectors.isEmpty()) return emptyList()
+    val addons = vodAddons().filter { !isAdultAddon(it.url) }
+    return addons.flatMap { addon ->
+        Stremio.shelves(filesDir, addon).filter { s ->
+            extensionRoutes(addon.url, s.catalog.type) && collectorOf(s.catalog.type) in collectors
+        }.flatMap { s -> s.titles.map { it to addon.url } }
+    }.filter { (t, _) -> filter.accepts(t) { g -> genreName(g) } }.distinctBy { it.first.type + it.first.id }.take(100)
+}
+
+private fun MainActivity.searchShelves(query: String, filter: SearchFilter): List<Pair<Stremio.Title, String>> {
+    return vodAddons().flatMap { a ->
+        Stremio.shelves(filesDir, a).flatMap { s -> s.titles.map { it to a.url } }
+    }.filter { (t, _) -> t.name.contains(query, ignoreCase = true) && filter.accepts(t) { g -> genreName(g) } }
+        .distinctBy { it.first.type + it.first.id }
+}
 
 /** What a search with [f] and no words is for: "Films · 2020 · Drama", or Cinemeta's popular titles. */
 private fun MainActivity.filterLabel(f: SearchFilter) = listOfNotNull(f.type.takeIf { it != "all" }?.let { typeName(it) }, f.year, f.genre?.let { genreName(it) },
@@ -476,8 +596,12 @@ private fun MainActivity.filterLabel(f: SearchFilter) = listOfNotNull(f.type.tak
 
 /** Adult content alone, without words: the adult add-ons' rows as last read, those [filter] lets through. Off the UI thread. */
 private fun MainActivity.browseAdult(filter: SearchFilter): List<Pair<Stremio.Title, String>> =
-    vodAddons().filter { isAdultAddon(it.url) }.flatMap { a -> Stremio.shelves(filesDir, a).flatMap { s -> s.titles.map { it to a.url } } }
-        .filter { (t, _) -> filter.accepts(t) { g -> genreName(g) } }.distinctBy { it.first.type + it.first.id }.take(100)
+    vodAddons().filter { isAdultAddon(it.url) }.flatMap { a ->
+        if (Stremio.shelves(filesDir, a).isEmpty() && a.vod.any { it.listed }) {
+            runCatching { Stremio.updateShelves(filesDir, a) }
+        }
+        Stremio.shelves(filesDir, a).flatMap { s -> s.titles.map { it to a.url } }
+    }.filter { (t, _) -> filter.accepts(t) { g -> genreName(g) } }.distinctBy { it.first.type + it.first.id }.take(100)
 
 /** Whether the search offers its Adult content filter: 18+ shows (unlocked, or no lock) and an adult add-on is there. */
 private fun MainActivity.adultSearchOffered() = adultUnlocked() && shownAddonUrls().any { isAdultAddon(it) }

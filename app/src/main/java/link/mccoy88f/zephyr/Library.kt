@@ -66,7 +66,7 @@ internal class SearchFilter(val type: String = "all", val year: String? = null, 
 
     /** Whether [t] passes, its year and genres as Cinemeta has them (a series' years "2008–2013" span), or [local] names. */
     fun accepts(t: Stremio.Title, local: (String) -> String = { it }): Boolean {
-        if (type != "all" && t.type != type) return false
+        if (type != "all" && collectorOf(t.type) != collectorOf(type)) return false
         if (year != null && !spans(t.year, year.toInt())) return false
         return genre == null || t.genres.any { it.equals(genre, ignoreCase = true) || it.equals(local(genre), ignoreCase = true) }
     }

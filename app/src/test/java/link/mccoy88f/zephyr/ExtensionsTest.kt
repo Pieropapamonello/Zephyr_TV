@@ -90,4 +90,23 @@ class ExtensionsTest {
         val f = tmp.newFile().apply { writeText("abc") }
         assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", Extensions.sha256(f))
     }
+
+    @Test fun aRepositoryListsItsExtensionsAddresses() {
+        val url = "https://example.org/repo/repository-zephyrtv.json"
+        assertEquals(url, Extensions.publishedUrl(url)) // kept: not taken for a folder
+        val m = JSONObject("""{ "zephyr": 1, "name": "Mine", "extensions": ["webcams/manifest-zephyrtv.json",
+            "https://other.example/x/manifest-zephyrtv.json", "https://other.example/x/manifest-zephyrtv.json", "ftp://no"] }""")
+        assertTrue(Extensions.isRepository(m))
+        val r = Extensions.repository(url, m)
+        assertEquals("Mine", r.name)
+        assertEquals(listOf("https://example.org/repo/webcams/manifest-zephyrtv.json", "https://other.example/x/manifest-zephyrtv.json"), r.extensions)
+        // One extension's published manifest isn't a repository; a newer standard's repository is refused.
+        assertFalse(Extensions.isRepository(JSONObject("""{ "zephyr": 1, "id": "a.b", "package": "a.zip", "extensions": [] }""")))
+        try {
+            Extensions.repository(url, JSONObject("""{ "zephyr": 99, "name": "Later", "extensions": [] }"""))
+            fail()
+        } catch (e: Extensions.Refused) {
+            assertEquals(Extensions.Why.NEWER_STANDARD, e.why)
+        }
+    }
 }

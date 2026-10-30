@@ -79,6 +79,7 @@ internal object K {
     const val EXT_ORDER = "ext_order" // extensions installed, by id, in the user's order, one per line
     const val EXT_OFF = "ext_off" // extensions switched off, by id
     const val EXT_ADULT = "ext_adult" // extensions marked 18+ by the user, by id (one saying so itself is 18+ anyway)
+    const val EXT_REPOS = "ext_repos" // the repositories' addresses, one a line; none set: Zephyr TV's own (see extensionRepos)
     const val EXT_SOURCES = "ext_sources" // where each was added from, JSON {id: its manifest-zephyrtv.json address}
     const val EXT_COLLECT = "ext_collect" // extensions whose content goes to the collectors instead of their own app, by id
     const val EXT_OPTIONS = "ext_options" // extensions' settings chosen, JSON: {id: {key: value}}

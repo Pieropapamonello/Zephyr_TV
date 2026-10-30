@@ -22,6 +22,7 @@ internal object Extensions {
 
     /** The name of the file an extension is published with. */
     const val PUBLISHED = "manifest-zephyrtv.json"
+    const val REPOSITORY = "repository-zephyrtv.json" // a repository: many extensions' addresses in one (see repository)
 
     private const val MAX_ZIP = 10L * 1024 * 1024
     private const val MAX_FILES = 20L * 1024 * 1024 // unzipped
@@ -50,6 +51,9 @@ internal object Extensions {
                              val description: String, val author: String, val icon: String?, val packageUrl: String,
                              val sha256: String, val adult: Boolean)
 
+    /** A repository-zephyrtv.json: its [name], and the addresses of its extensions' manifest-zephyrtv.json. */
+    internal class Repository(val url: String, val name: String, val extensions: List<String>)
+
     /** Why an extension can't be installed. */
     internal enum class Why { NOT_AN_EXTENSION, NEWER_STANDARD, NEEDS_FEATURES, TOO_LARGE, DAMAGED, DIFFERENT, UNREACHABLE }
 
@@ -65,7 +69,27 @@ internal object Extensions {
         val url = input.trim()
         if (!url.startsWith("https://") && !url.startsWith("http://")) return null
         if (url.substringAfter("://").substringBefore('/').isEmpty()) return null
-        return if (url.substringBefore('?').substringBefore('#').endsWith(PUBLISHED)) url else url.removeSuffix("/") + "/" + PUBLISHED
+        val path = url.substringBefore('?').substringBefore('#')
+        return if (path.endsWith(PUBLISHED) || path.endsWith(REPOSITORY)) url else url.removeSuffix("/") + "/" + PUBLISHED
+    }
+
+    /** Whether [m], read from an address, is a repository (its list of extensions) rather than one extension. */
+    fun isRepository(m: JSONObject) = m.has("extensions") && !m.has("package")
+
+    /**
+     * [m], the repository-zephyrtv.json read from [url], checked: `{ "zephyr": 1, "name": …, "extensions": [address…] }`,
+     * each address a manifest-zephyrtv.json (absolute, or relative to the repository's). Throws Refused.
+     */
+    fun repository(url: String, m: JSONObject): Repository {
+        val zephyr = m.optInt("zephyr", 0)
+        val list = m.optJSONArray("extensions")
+        if (zephyr < 1 || list == null || m.optString("name").isBlank()) throw Refused(Why.NOT_AN_EXTENSION, url)
+        if (zephyr > STANDARD) throw Refused(Why.NEWER_STANDARD, "$zephyr")
+        val addresses = (0 until list.length()).mapNotNull { i ->
+            list.optString(i).takeIf { it.isNotBlank() }?.let { runCatching { java.net.URL(java.net.URL(url), it).toString() }.getOrNull() }
+                ?.takeIf { it.startsWith("http") }
+        }.distinct()
+        return Repository(url, m.optString("name"), addresses)
     }
 
     /** [m], the manifest-zephyrtv.json read from [url], checked. Throws Refused. */
