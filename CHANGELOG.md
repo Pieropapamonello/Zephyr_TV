@@ -14,6 +14,10 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.11
+
+- On a phone or tablet, when you come back from the player, the home screen stays as you left it: the page that was open (for example the page of a film) and the app or virtual app you selected. Before, the home screen could start again from the beginning.
+
 ## 3.4.0-beta.10
 
 - The page of an episode shows what that episode is about. Before, it could show the description of the series.

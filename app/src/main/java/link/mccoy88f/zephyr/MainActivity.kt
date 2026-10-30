@@ -312,8 +312,22 @@ class MainActivity : Activity() {
         }
     }
 
+    /**
+     * The screen's size changed (a phone: the player hid its bars, the status bar shown or hidden, the device turned
+     * round): the home screen stays as it is, with the page and the app it had open, instead of being made again.
+     * The apps row's tiles take the new width.
+     */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val width = resources.displayMetrics.widthPixels
+        if (shownWidth != 0 && width != shownWidth) renderApps()
+        shownWidth = width
+    }
+    private var shownWidth = 0
+
     override fun onResume() {
         super.onResume()
+        if (shownWidth == 0) shownWidth = resources.displayMetrics.widthPixels
         applyStatusBar()
         ensureHomeService()
         homeSetupResumed()
