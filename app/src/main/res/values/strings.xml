@@ -422,7 +422,7 @@
     <string name="warp_on_toast">WARP on: Zephyr TV goes through Cloudflare</string>
     <string name="warp_device">The whole device: the 1.1.1.1 app</string>
     <string name="warp_switch">WARP for Zephyr TV</string>
-    <string name="warp_state">VPN</string>
+    <string name="warp_state">VPN status (any app)</string>
     <string name="warp_vpn_on">On</string>
     <string name="warp_intro">Add-ons, plugins and extensions ask the sites they read from your connection, so those sites see your IP, and so does the server of each video. With WARP for Zephyr TV on, all of what Zephyr TV does goes through Cloudflare\'s free WARP network: the sites see one of its addresses instead. Only Zephyr TV: the other apps stay as they are. Android asks once to allow the VPN, and shows its key icon while it is on; another VPN cannot be on at the same time. Some sites refuse VPN addresses: if one stops working, turn WARP off for a moment.</string>
     <string name="ext_intro">Extensions add films, series, TV channels, radio, videos and more to Zephyr TV. They are programs written by other people: Zephyr TV runs them apart from everything else, with access to the internet only. Add only extensions you trust.</string>
