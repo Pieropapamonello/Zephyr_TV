@@ -142,6 +142,7 @@ class PlayerActivity : Activity() {
     private lateinit var loadName: TextView
     private lateinit var loadSub: TextView // under the name, for an episode: its season, number and name
     private var loadFor = -1 // the channel (film, episode) the loading screen shows
+    private var breath: android.animation.ObjectAnimator? = null // the status line, breathing while it's under way
     private var soundOnly = false // what plays has no picture (a radio station): its screen stays, with the song on air
     private var onAir: String? = null // the song on air, as the stream says it (ICY, ID3)
     private lateinit var banner: LinearLayout
@@ -936,9 +937,11 @@ class PlayerActivity : Activity() {
 
     /**
      * The channel tuned in the middle of the screen, its logo and name over [text] (Loading…, Loading stream 2 of
-     * 3…, or that none works); null takes it away, once the picture plays.
+     * 3…, or that none works); null takes it away, once the picture plays. While [busy] (something under way, not
+     * an answer such as no streams or the song on air), the line breathes.
      */
-    private fun say(text: String?) {
+    private fun say(text: String?, busy: Boolean = true) {
+        breathe(text != null && busy)
         if (text == null) {
             loading.visibility = View.GONE
             blurBackdrop.visibility = View.GONE
@@ -959,6 +962,24 @@ class PlayerActivity : Activity() {
         loading.visibility = View.VISIBLE
         blurBackdrop.visibility = View.VISIBLE
         blurBackdropShade.visibility = View.VISIBLE
+    }
+
+    /** The status line fading in and out, slowly, while [on]; still, as it was, when not. */
+    private fun breathe(on: Boolean) {
+        if (!on) {
+            breath?.cancel()
+            breath = null
+            status.alpha = 0.8f
+            return
+        }
+        if (breath != null) return
+        breath = android.animation.ObjectAnimator.ofFloat(status, View.ALPHA, 0.8f, 0.25f).apply {
+            duration = 900
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            repeatMode = android.animation.ValueAnimator.REVERSE
+            interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+            start()
+        }
     }
 
     // ---------- remote ----------
@@ -1533,7 +1554,7 @@ class PlayerActivity : Activity() {
                 }
         } catch (e: Exception) {
                 warn("streams not found: $e")
-                ui.post { if (!isFinishing && tuning == tune) say(noStreams()) }
+                ui.post { if (!isFinishing && tuning == tune) say(noStreams(), busy = false) }
             }
         }
     }
@@ -1678,7 +1699,7 @@ class PlayerActivity : Activity() {
             next()
         } else if (lateLeft == 0) {
             waitingLate = false
-            say(noStreams())
+            say(noStreams(), busy = false)
         }
     }
 
@@ -1714,7 +1735,7 @@ class PlayerActivity : Activity() {
                 waitingLate = true
                 return say(getString(R.string.player_finding_more))
             }
-            return say(noStreams())
+            return say(noStreams(), busy = false)
         }
         tried = Math.floorMod(tried + 1, streams.size)
         val s = streams[tried]
@@ -1790,7 +1811,7 @@ class PlayerActivity : Activity() {
                         playing?.played = true
                         // Sound only (a radio station): its logo and name stay, on the blur of its logo, not a black screen.
                         soundOnly = p.currentTracks.groups.none { it.type == C.TRACK_TYPE_VIDEO }
-                        say(if (soundOnly) onAir.orEmpty() else null)
+                        say(if (soundOnly) onAir.orEmpty() else null, busy = false)
                         if (vod && p.playWhenReady && !scrobbling) ui.post { scrobble("start") } // once it has sought to where it resumes
                         if (pendingSeek > 0) p.seekTo(pendingSeek).also { pendingSeek = -1L }
                         if (vod) group = streams.getOrNull(tried)?.group else remember(channels[at])
@@ -1800,6 +1821,8 @@ class PlayerActivity : Activity() {
                     Player.STATE_BUFFERING -> {
                         ui.removeCallbacks(stuck)
                         ui.postDelayed(stuck, if (vod) VOD_STUCK_MS else STUCK_MS)
+                        // Loading again once it played (after a seek, or a stall): the loading screen again, until it plays.
+                        if (playing?.played == true) say(getString(R.string.player_loading))
                     }
                     Player.STATE_ENDED -> if (vod) ended()
                 }
@@ -1998,6 +2021,7 @@ class PlayerActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         ui.removeCallbacksAndMessages(null)
+        breath?.cancel()
         release()
         net.shutdownNow()
         ahead.shutdown()
