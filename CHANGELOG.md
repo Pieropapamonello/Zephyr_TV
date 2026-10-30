@@ -14,6 +14,25 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.5.0
+
+- Zephyr TV works on Android phones and tablets too. It has an icon among their apps, and it uses one APK for TVs, phones and tablets.
+- With a finger, scroll the home screen up, down and to the side. Tap an app to show its rows, and tap again to open it. An app with no rows opens with one tap. Pull the home screen down to read the rows again.
+- Swipe Spotlight to the side to see the title before or after. Dots show where you are.
+- The side panels have ← at the top left and ✕ at the top right. A tap beside a panel closes it.
+- On a phone or tablet, what a TV does with a QR code and a phone is done on the device itself: with its keyboard, its file picker and its Save dialog.
+- In the player, tap for the information, double-tap a side to go back or on 10 seconds, and drag the progress bar. Swipe on the left for the brightness and on the right for the volume. Pinch to fill the screen. 🔒 locks the controls. A video goes on in a small window when you leave the player.
+- On a phone or tablet, Dolby and DTS sound plays.
+- At the end of an episode, the next one starts after 10 seconds.
+- When you come back from the player, the page of the film or channel shows again with the focus on the row you selected.
+- The page of an episode shows what that episode is about. It uses the English description of TMDB when there is none in your language.
+- In the lists of streams, each stream has two lines: what it is, and its source in italics.
+- New: **Hide your IP (Cloudflare WARP)**, in **Extra features**. With **WARP for Zephyr TV** on, Zephyr TV goes through the free WARP network of Cloudflare, and the other apps do not.
+- New: links. **Share** on the page of a film, series or episode sends a link. Zephyr TV opens ztv:// links, stremio:// links and the addresses of Stremio add-ons, also when they are shared to it. It adds an add-on only after you confirm it.
+- The TV inputs button does not show on a device without inputs.
+- When the home screen starts, the focus is on the Play queue.
+- The texts say "device" where they said "TV" for the device that Zephyr TV runs on.
+
 ## 3.4.0-beta.13
 
 - The texts of Zephyr TV say "device" where they said "TV" for the device it runs on, as it runs on phones and tablets too. For example: "Streams in the device's language first", "This device has no voice search".
