@@ -37,6 +37,7 @@ import link.mccoy88f.zephyr.MainActivity.Companion.NAMES_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.NIGHT_FROM_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.NIGHT_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.NIGHT_TO_ROW
+import link.mccoy88f.zephyr.MainActivity.Companion.STATUS_BAR_ROW
 import link.mccoy88f.zephyr.MainActivity.Companion.PIN_KEYS
 import link.mccoy88f.zephyr.MainActivity.Companion.PIN_TRIES
 import link.mccoy88f.zephyr.MainActivity.Companion.ROW_ALIGN
