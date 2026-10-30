@@ -4,7 +4,7 @@
 
 <p align="center"><a href="guide.md">English</a> · <b>Italiano</b></p>
 
-Questa guida spiega tutte le funzioni di Zephyr TV, dalla prima configurazione alla riproduzione di film, serie e canali. Vale per la versione 2.1 e successive. Per installare l'app vedi il [README](../README.it.md#installazione).
+Questa guida spiega tutte le funzioni di Zephyr TV, dalla prima configurazione alla riproduzione di film, serie e canali. Vale per la versione 3.5 e successive, su una TV, una chiavetta o un box, un telefono o un tablet: [Telefoni e tablet](#telefoni-e-tablet) spiega cosa cambia col dito. Per installare l'app vedi il [README](../README.it.md#installazione).
 
 ## Indice
 
@@ -30,6 +30,7 @@ Questa guida spiega tutte le funzioni di Zephyr TV, dalla prima configurazione a
 20. [Salvaschermo](#20-salvaschermo)
 21. [Il telefono come tastiera](#21-il-telefono-come-tastiera)
 22. [Sistema: tasto Home, aggiornamenti, backup](#22-sistema-tasto-home-aggiornamenti-backup)
+- [Telefoni e tablet](#telefoni-e-tablet)
 23. [Domande frequenti](#23-domande-frequenti)
 
 ---

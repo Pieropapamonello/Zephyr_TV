@@ -9,7 +9,7 @@
 <p align="center">📖 <a href="docs/guide.md"><b>User guide</b></a>: every feature, step by step.</p>
 
 <p align="center">
-  <em>Light as a breeze.</em> A minimal, ad-free home screen for Android TV and Google TV.
+  <em>Light as a breeze.</em> A minimal, ad-free home screen that turns any Android device (TV, stick, box, phone or tablet) into a smart TV.
 </p>
 
 > [!NOTE]
@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://github.com/mccoy88f/Zephyr_TV/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mccoy88f/Zephyr_TV?label=release"></a>
   <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84">
-  <img alt="APK size" src="https://img.shields.io/badge/APK-0.5%20MB-blue">
+  <img alt="APK size" src="https://img.shields.io/badge/APK-13%20MB-blue">
   <a href="LICENSE"><img alt="GPL-3.0 License" src="https://img.shields.io/github/license/mccoy88f/Zephyr_TV"></a>
 </p>
 
@@ -31,7 +31,13 @@ Zephyr TV replaces the cluttered stock home screen with the two things you actua
 
 ## Highlights
 
-- **Tiny and fast.** A 1.2 MB APK whose one library is the player for Stremio add-ons' channels (Media3). It uses about 50–70 MB of RAM and has no extra background services.
+- **Any Android device becomes a smart TV.** One APK for Android TV, Google TV, sticks and boxes, and also for Android phones and tablets. With a remote, everything moves with the arrows; with a finger, swipe the home screen and the rows, tap an app for its rows and again to open it, and pull down to read them again. The side panels have ← and ✕, and what a TV does with a QR code and your phone, a phone or tablet does by itself.
+- **Light and fast.** A 13 MB APK (the player, the Dolby and DTS decoder and WARP are most of it), with no ads, no account and no extra background services.
+- **A player made for every screen.** Media3 plays direct links, HLS, DASH, rtsp://, rtmp:// and udp://, and Dolby (AC3, E-AC3) and DTS sound on phones and tablets too. The next episode starts after 10 seconds. On a phone or tablet: double-tap to go back or on, swipe for brightness and volume, pinch to fill the screen, lock the controls, and keep watching in a small window (picture-in-picture).
+- **Stremio add-ons, Nuvio plugins and Zephyr Extensions.** Films, series, TV channels, radio stations and videos from three kinds of sources, in one home screen. Plugins and extensions run in processes of their own: when one stops responding, Zephyr TV starts it again. [Zephyr Extensions](docs/extensions.md) is Zephyr TV's own format, for example [OMG Premium TV](https://github.com/mccoy88f/OMG-Premium-TV) for M3U playlists and Xtream accounts.
+- **Radio.** Radio stations show apart from TV channels and play at once, with their logo and the song on air.
+- **Hide your IP with Cloudflare WARP.** With **WARP for Zephyr TV** on, only Zephyr TV goes through the free WARP network of Cloudflare: the add-ons, the plugins and the servers of the videos see an address of Cloudflare, not yours. No other app is needed.
+- **Links and sharing.** **Share** on the page of a film, series or episode sends a link (WhatsApp, Telegram…) that opens the same page in Zephyr TV on another device. Zephyr TV opens `ztv://`, `stremio://` and `nuvio://` links and the addresses of add-ons, and adds an add-on only after you confirm it.
 - **Home button support on Google TV.** The Home button opens Zephyr TV directly, even on devices where the system launcher can't be replaced. Holding Home still opens the Google TV dashboard.
 - **Play queue.** The first tile shows what's playing now in any app (Spotify, YouTube…) with its art and progress, then **Continue Playing**: resume shows and films from Android TV's Watch Next list and from apps that publish their own "Continue Watching" channel, such as Stremio.
 - **App sections.** Each row an app puts on the home screen (for example YouTube's Recommended and Trending) is its own section under your Favourites. Hold OK on the app and select **Visible sections** to choose them. The TV app shows all the TV's channels from channel 1, one section per tuner, 10 at a time as you move along.
@@ -46,7 +52,7 @@ Zephyr TV replaces the cluttered stock home screen with the two things you actua
 - **TV channels from Stremio add-ons.** Add an add-on by its manifest's address (for example an [OMG+ TV](https://github.com/mccoy88f/OMG-Premium-TV) configuration) in **Settings → Stremio add-ons**. Its channels show as rows, all of them and then one per category, in the TV app, in an IPTV app or in an app of their own. They play in Zephyr TV's own player: CH+ and CH- (or Up and Down) change channel, Left and Right change stream, OK shows what's on. Logos and what's on come from the add-on, else from iptv-org and your TV guide. The channel you watched last shows in **Continue Playing**.
 - **Films and series from Stremio add-ons.** Cinemeta, Stremio's own catalog, gives the **Films** and **Series** tiles their rows (or each add-on gets a tile of its own: **Settings → Stremio add-ons → Films and series**). A title's page has **Watch**, and a series its seasons and episodes. Zephyr TV asks every add-on that has streams for it, plays the first that works and tries the next by itself; the Stream button picks another. Only direct links play (http, also .php addresses), not torrents. Left and Right go back and on 10 seconds, CH+ and CH- to the episode before and after, an episode that ends goes on to the next, and what you begin shows in **Continue Playing**, where it resumes. Search finds them too (without a TMDB key, in the add-ons' catalogs; with one, **Watch with the add-ons** on a TMDB result). Cinemeta is in English only: with a TMDB key, names, posters, descriptions and episodes come from TMDB in your language.
 - **Search** from the top bar: type with the remote, say it, or type on your phone. Films, series and TV channels (the TV's and the add-ons') show in their own rows under a **Results** tile in your Favourites. OK on a film or series shows its description, the trailer and the apps that have it; OK on a channel shows what's on and **Watch on TV**.
-- **Your phone as a keyboard.** Scan a QR code to send a wallpaper, type the TMDB key or list, a search or the TV guide's address, save a settings backup, or restore one.
+- **Your phone as a keyboard (on a TV).** Scan a QR code to send a wallpaper, type the TMDB key or list, a search or the TV guide's address, save a settings backup, or restore one.
 - **Status at a glance.** A red dot on the network icon when there's no internet; a red dot on Zephyr TV settings when an update is ready, and on each item that leads to it.
 - **Updates itself.** Zephyr TV checks its GitHub releases once a day and installs new versions from its settings. The first update asks you to allow installs from Zephyr TV.
 
@@ -65,7 +71,7 @@ Zephyr TV replaces the cluttered stock home screen with the two things you actua
 
 ## How it compares
 
-Measured with Plume Launcher 1.3, the version Zephyr TV is based on, on a Hisense Google TV (Android 12, 1.8 GB RAM). Zephyr TV adds features, so its figures may be a little higher:
+Measured with Plume Launcher 1.3, the version Zephyr TV is based on, on a Hisense Google TV (Android 12, 1.8 GB RAM). Zephyr TV adds a player, a Dolby and DTS decoder, extensions and WARP: its APK is about 13 MB, and its other figures may be a little higher:
 
 | | Plume 1.3 | Projectivy Launcher | Google TV launcher |
 |---|---|---|---|
@@ -76,13 +82,13 @@ Measured with Plume Launcher 1.3, the version Zephyr TV is based on, on a Hisens
 
 ## Requirements
 
-- Android TV or Google TV running **Android 8.0 (Oreo) or newer**. It also works on Android phones and tablets (8.0 or newer, ARM): swipe the home screen, tap an app once for its rows and again to open it
+- Any Android device running **Android 8.0 (Oreo) or newer**: Android TV, Google TV, a stick or a box, a phone or a tablet (ARM). On a phone or tablet, Zephyr TV has an icon among the apps; see [Phones and tablets](docs/guide.md#phones-and-tablets)
 - A way to sideload an APK: the *Downloader* app, a USB drive with a file manager, or `adb`
 
 ## Installation
 
 1. Download the latest `ZephyrTV.apk` from the [Releases](https://github.com/mccoy88f/Zephyr_TV/releases/latest) page.
-2. Install it on your TV, using any of these:
+2. Install it on your device, using any of these (on a phone or tablet, open the downloaded file):
    - **Downloader app:** enter the release page address above.
    - **USB drive:** copy the APK over and open it with a file manager.
    - **adb:** `adb install ZephyrTV.apk`

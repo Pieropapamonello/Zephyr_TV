@@ -9,7 +9,7 @@
 <p align="center">📖 <a href="docs/guida.md"><b>Guida all'uso</b></a>: tutte le funzioni, passo per passo.</p>
 
 <p align="center">
-  <em>Leggero come una brezza.</em> Una schermata Home minimale e senza pubblicità per Android TV e Google TV.
+  <em>Leggero come una brezza.</em> Una schermata Home minimale e senza pubblicità che trasforma qualsiasi dispositivo Android (TV, chiavetta, box, telefono o tablet) in una smart TV.
 </p>
 
 > [!NOTE]
@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://github.com/mccoy88f/Zephyr_TV/releases/latest"><img alt="Ultima versione" src="https://img.shields.io/github/v/release/mccoy88f/Zephyr_TV?label=release"></a>
   <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84">
-  <img alt="Dimensione APK" src="https://img.shields.io/badge/APK-0.5%20MB-blue">
+  <img alt="Dimensione APK" src="https://img.shields.io/badge/APK-13%20MB-blue">
   <a href="LICENSE"><img alt="Licenza GPL-3.0" src="https://img.shields.io/github/license/mccoy88f/Zephyr_TV"></a>
 </p>
 
@@ -31,7 +31,13 @@ Zephyr TV sostituisce la Home di serie, piena di elementi, con le due cose che u
 
 ## In breve
 
-- **Piccolo e veloce.** Un APK da 1,2 MB, con una sola libreria: il player per i canali degli addon Stremio (Media3). Usa circa 50–70 MB di RAM e non ha servizi in background aggiuntivi.
+- **Qualsiasi dispositivo Android diventa una smart TV.** Un solo APK per Android TV, Google TV, chiavette e box, e anche per telefoni e tablet Android. Col telecomando si muove tutto con le frecce; col dito scorri la Home e le righe, tocchi un'app per le sue righe e di nuovo per aprirla, e trascini in basso per ricaricarle. I pannelli laterali hanno ← e ✕, e quello che una TV fa con un codice QR e il telefono, un telefono o un tablet lo fa da solo.
+- **Leggero e veloce.** Un APK da 13 MB (soprattutto il player, il decoder Dolby e DTS e WARP), senza pubblicità, senza account e senza servizi in background aggiuntivi.
+- **Un player per ogni schermo.** Media3 riproduce link diretti, HLS, DASH, rtsp://, rtmp:// e udp://, e l'audio Dolby (AC3, E-AC3) e DTS anche su telefoni e tablet. L'episodio dopo parte dopo 10 secondi. Su telefono o tablet: doppio tocco per tornare indietro o andare avanti, scorri per luminosità e volume, pizzica per riempire lo schermo, blocca i comandi e continua a guardare in una finestrella (picture-in-picture).
+- **Add-on Stremio, plugin Nuvio ed Estensioni Zephyr.** Film, serie, canali TV, radio e video da tre tipi di sorgenti, in un'unica Home. Plugin ed estensioni girano in processi separati: se uno non risponde, Zephyr TV lo riavvia. Le [Estensioni Zephyr](docs/estensioni.md) sono il formato proprio di Zephyr TV, per esempio [OMG Premium TV](https://github.com/mccoy88f/OMG-Premium-TV) per playlist M3U e account Xtream.
+- **Radio.** Le stazioni radio compaiono separate dai canali TV e partono subito, con il logo e la canzone in onda.
+- **Nascondi il tuo IP con Cloudflare WARP.** Con **WARP per Zephyr TV** attivo, solo Zephyr TV passa dalla rete gratuita WARP di Cloudflare: add-on, plugin e server dei video vedono un indirizzo di Cloudflare, non il tuo. Non serve nessun'altra app.
+- **Link e condivisione.** **Condividi** nella pagina di un film, una serie o un episodio manda un link (WhatsApp, Telegram…) che apre la stessa pagina in Zephyr TV su un altro dispositivo. Zephyr TV apre i link `ztv://`, `stremio://` e `nuvio://` e gli indirizzi degli add-on, e aggiunge un add-on solo dopo la tua conferma.
 - **Tasto Home su Google TV.** Il tasto Home apre direttamente Zephyr TV, anche sui dispositivi dove il launcher di sistema non si può sostituire. Tenendo premuto Home si apre ancora la dashboard di Google TV.
 - **Coda di riproduzione.** Il primo riquadro mostra cosa sta suonando ora in qualsiasi app (Spotify, YouTube…) con copertina e avanzamento, poi **Continua la riproduzione**: riprendi serie e film dalla lista "Guarda dopo" di Android TV e dalle app che pubblicano un proprio canale "Continua a guardare", come Stremio.
 - **Sezioni delle app.** Ogni riga che un'app mette in Home (per esempio "Consigliati" e "Tendenze" di YouTube) è una sezione sotto i Preferiti. Tieni premuto OK sull'app e scegli **Sezioni visibili** per sceglierle. L'app TV mostra tutti i canali della TV dal canale 1, una sezione per ogni sintonizzatore, 10 alla volta mentre scorri.
@@ -46,7 +52,7 @@ Zephyr TV sostituisce la Home di serie, piena di elementi, con le due cose che u
 - **Canali TV dagli addon Stremio.** Aggiungi un addon con l'indirizzo del suo manifest (per esempio una configurazione di [OMG+ TV](https://github.com/mccoy88f/OMG-Premium-TV)) in **Impostazioni → Addon Stremio**. I suoi canali compaiono come righe, tutti e poi una per categoria, nell'app TV, in un'app IPTV o in un'app tutta loro. Si guardano nel player di Zephyr TV: CH+ e CH- (o su e giù) cambiano canale, sinistra e destra cambiano stream, OK mostra il programma in onda. Loghi e programmi vengono dall'addon, altrimenti da iptv-org e dalla tua guida TV. L'ultimo canale guardato compare in **Continua la riproduzione**.
 - **Film e serie dagli addon Stremio.** Cinemeta, il catalogo di Stremio, riempie le righe delle tessere **Film** e **Serie TV** (oppure ogni addon ha una tessera sua: **Impostazioni → Addon Stremio → Film e serie**). La scheda di un titolo ha **Guarda**, e quella di una serie le stagioni e gli episodi. Zephyr TV chiede gli stream a tutti gli addon che li hanno, avvia il primo che funziona e prova da solo i successivi; il pulsante Stream ne sceglie un altro. Si riproducono solo i link diretti (http, anche indirizzi .php), non i torrent. Sinistra e destra tornano indietro e vanno avanti di 10 secondi, CH+ e CH- passano all'episodio prima e dopo, un episodio finito passa al successivo, e quello che inizi compare in **Continua la riproduzione**, da dove riprende. Anche la ricerca li trova (senza chiave TMDB, nei cataloghi degli addon; con la chiave, **Guarda con gli addon** su un risultato TMDB). Cinemeta è solo in inglese: con la chiave TMDB, titoli, locandine, trame ed episodi arrivano da TMDB nella tua lingua.
 - **Ricerca** dalla barra in alto: scrivi con il telecomando, parla, o scrivi dal telefono. Film, serie e canali TV (della TV e degli addon) compaiono in righe separate sotto un riquadro **Risultati** nei Preferiti. OK su un film o una serie mostra descrizione, trailer e app che lo hanno; OK su un canale mostra il programma in onda e **Guarda in TV**.
-- **Il telefono come tastiera.** Inquadra un codice QR per inviare uno sfondo, scrivere la chiave o la lista TMDB, una ricerca o l'indirizzo della guida TV, salvare un backup delle impostazioni o ripristinarne uno.
+- **Il telefono come tastiera (su una TV).** Inquadra un codice QR per inviare uno sfondo, scrivere la chiave o la lista TMDB, una ricerca o l'indirizzo della guida TV, salvare un backup delle impostazioni o ripristinarne uno.
 - **Stato a colpo d'occhio.** Un pallino rosso sull'icona della rete quando manca internet; un pallino rosso sulle impostazioni di Zephyr TV quando c'è un aggiornamento, e su ogni voce che porta lì.
 - **Si aggiorna da solo.** Zephyr TV controlla le sue release su GitHub una volta al giorno e installa le nuove versioni dalle sue impostazioni. Il primo aggiornamento ti chiede di consentire le installazioni da Zephyr TV.
 
@@ -65,7 +71,7 @@ Zephyr TV sostituisce la Home di serie, piena di elementi, con le due cose che u
 
 ## Confronto
 
-Misurato con Plume Launcher 1.3, la versione su cui si basa Zephyr TV, su una Hisense Google TV (Android 12, 1,8 GB di RAM). Zephyr TV aggiunge funzioni, quindi i suoi valori possono essere un po' più alti:
+Misurato con Plume Launcher 1.3, la versione su cui si basa Zephyr TV, su una Hisense Google TV (Android 12, 1,8 GB di RAM). Zephyr TV aggiunge un player, un decoder Dolby e DTS, le estensioni e WARP: il suo APK è di circa 13 MB, e gli altri valori possono essere un po' più alti:
 
 | | Plume 1.3 | Projectivy Launcher | Launcher di Google TV |
 |---|---|---|---|
@@ -76,13 +82,13 @@ Misurato con Plume Launcher 1.3, la versione su cui si basa Zephyr TV, su una Hi
 
 ## Requisiti
 
-- Android TV o Google TV con **Android 8.0 (Oreo) o successivo**. Funziona anche su telefoni e tablet Android (8.0 o successivo, ARM): scorri la Home col dito, tocca un'app una volta per le sue righe e di nuovo per aprirla
+- Qualsiasi dispositivo Android con **Android 8.0 (Oreo) o successivo**: Android TV, Google TV, una chiavetta o un box, un telefono o un tablet (ARM). Su telefono o tablet, Zephyr TV ha un'icona tra le app; vedi [Telefoni e tablet](docs/guida.md#telefoni-e-tablet)
 - Un modo per installare un APK: l'app *Downloader*, una chiavetta USB con un file manager, oppure `adb`
 
 ## Installazione
 
 1. Scarica l'ultimo `ZephyrTV.apk` dalla pagina [Releases](https://github.com/mccoy88f/Zephyr_TV/releases/latest).
-2. Installalo sulla TV in uno di questi modi:
+2. Installalo sul dispositivo in uno di questi modi (su telefono o tablet, apri il file scaricato):
    - **App Downloader:** inserisci l'indirizzo della pagina qui sopra.
    - **Chiavetta USB:** copia l'APK e aprilo con un file manager.
    - **adb:** `adb install ZephyrTV.apk`

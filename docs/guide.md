@@ -4,7 +4,7 @@
 
 <p align="center"><b>English</b> · <a href="guida.md">Italiano</a></p>
 
-This guide explains every feature of Zephyr TV, from the first setup to playing films, series and channels. It covers version 2.1 and later. To install the app, see the [README](../README.md#installation).
+This guide explains every feature of Zephyr TV, from the first setup to playing films, series and channels. It covers version 3.5 and later, on a TV, a stick or box, a phone or a tablet: [Phones and tablets](#phones-and-tablets) tells what changes with a finger. To install the app, see the [README](../README.md#installation).
 
 ## Contents
 
@@ -30,6 +30,7 @@ This guide explains every feature of Zephyr TV, from the first setup to playing 
 20. [Screensaver](#20-screensaver)
 21. [Your phone as a keyboard](#21-your-phone-as-a-keyboard)
 22. [System: Home button, updates, backup](#22-system-home-button-updates-backup)
+- [Phones and tablets](#phones-and-tablets)
 23. [Questions and answers](#23-questions-and-answers)
 
 ---
