@@ -1,5 +1,7 @@
 # Experimental Fire TV voice bridge
 
+[Guida in italiano: configurazione, frasi vocali, limiti e ripristino](../docs/fire-os-6-it.md).
+
 An optional companion APK, separate from Zephyr. It receives the YouTube search
 request which Alexa has already transcribed, then forwards the text to Zephyr or
 SmartTube. It has no microphone, Internet, accessibility or usage-stats permission,
@@ -50,7 +52,7 @@ Alexa still owns the microphone and speech recognition. The phrase **“on YouTu
 is required** to use its existing integration. Installing this APK does not teach
 Alexa the name “Zephyr”, remap the microphone button, or enable every Alexa skill.
 Availability can differ across Fire OS versions, languages and Alexa updates.
-Prefix overrides are unit/direct-intent tested, not physically voice-tested.
+Prefix overrides are unit-tested, not physically voice-tested.
 
 ## Recovery
 

@@ -1,5 +1,7 @@
 # Android 7 and Fire OS 6
 
+[Guida completa in italiano e frasi vocali verificate](fire-os-6-it.md).
+
 This change targets API 24 and later. Android 8-only features are skipped on older
 systems: system Watch Next/preview channels and adaptive-icon foreground layers.
 The gallery uses a software canvas there. Dynamic shortcuts start at API 25.
