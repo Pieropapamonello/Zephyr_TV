@@ -75,8 +75,8 @@ private fun MainActivity.addonMeta(ref: TitleRef): Stremio.TitleMeta? {
 
 /**
  * A film's or series' page in the side panel: its art across the top, rating, kind, year and
- * genre, what it's about; horizontally scrollable app icons without "Watch on..."; then Watch (for movies),
- * and Watch on each add-on that has it with [found] streams (as an episode's page), or the list of seasons (for TV series).
+ * genre, what it's about; then Watch (for movies), and Watch on each add-on that has it with [found] streams (as an
+ * episode's page), or the list of seasons (for TV series); last, the trailer and the apps that have it.
  */
 internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, available: Set<String>? = null,
                                        focusRow: Int? = null, found: Map<String, Int>? = null) {
@@ -98,7 +98,7 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
 
     val (servicesBar, services) = serviceBar(t, available)
     val (top, descView) = titleTop(listOfNotNull((meta.rating ?: ref.rating)?.let { "★ $it" }, kind, t.year, meta.genres.firstOrNull(), meta.runtime)
-        .joinToString(" · "), null, meta.description, seenLine, servicesBar)
+        .joinToString(" · "), null, meta.description, seenLine)
 
     val sources = streamSources(t.type, meta.episodes.firstOrNull()?.id ?: t.id)
     val rows = ArrayList<Triple<String, String, () -> Unit>>()
@@ -160,7 +160,7 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
     if (handheld()) rows += page(getString(R.string.share)) { shareTitle(t.type, t.id, t.name) }
     val focus = focusRow ?: if (descView != null) -1 else 0
     val art = if (ref.background != null) Triple(ref.background, ref.logo, ref.poster ?: t.poster) else Triple(t.background, t.logo, ref.poster ?: t.poster)
-    titlePage(t.name, art, ref.fallback, t.name, top, rows, focus, icons, holds, descView) { closeLauncherSettings() }
+    titlePage(t.name, art, ref.fallback, t.name, top, rows, focus, icons, holds, descView, servicesBar) { closeLauncherSettings() }
     services.later { showVodTitle(meta, ref, it, focusRow, found) }
     if (!episodic && found == null) warmTitle(t.type, t.id, sources, t.name) { counts -> showVodTitle(meta, ref, services.known, focusedRow(), counts) }
 }
@@ -185,7 +185,7 @@ internal fun MainActivity.showVodSeason(given: Stremio.TitleMeta, ref: TitleRef,
 
     val (servicesBar, services) = serviceBar(t, available)
     val (top, _) = titleTop(listOfNotNull(t.name, seasonName(shown), resources.getQuantityString(R.plurals.title_episodes, inSeason.size, inSeason.size))
-        .joinToString(" · "), null, null, seenLine, servicesBar)
+        .joinToString(" · "), null, null, seenLine)
 
     val rows = ArrayList<Triple<String, String, () -> Unit>>()
     val icons = HashMap<Int, android.graphics.drawable.Drawable>()
@@ -222,7 +222,7 @@ internal fun MainActivity.showVodSeason(given: Stremio.TitleMeta, ref: TitleRef,
     val pageTitle = "${t.name} · ${seasonName(shown)}"
     redrawFor = t.id
     redraw = { if (pageShowing(pageTitle)) showVodSeason(meta, ref, shown, available, episode, focusedRow() ?: focusRow) }
-    titlePage(pageTitle, art, ref.fallback, t.name, top, rows, focus, icons, holds) {
+    titlePage(pageTitle, art, ref.fallback, t.name, top, rows, focus, icons, holds, servicesBar = servicesBar) {
         showVodTitle(meta, ref, services.known)
     }
     pageSides = sides
@@ -251,7 +251,7 @@ internal fun MainActivity.showVodEpisode(given: Stremio.TitleMeta, ref: TitleRef
     val (servicesBar, services) = serviceBar(t, available)
     // What this episode is about; the series' description isn't its own, so none says so.
     val about = e.overview?.takeIf { it.isNotBlank() } ?: getString(R.string.episode_no_description)
-    val (top, descView) = titleTop(listOfNotNull(episodeLine(e), released).joinToString(" · "), e.name.takeIf { it.isNotBlank() }, about, seenLine, servicesBar)
+    val (top, descView) = titleTop(listOfNotNull(episodeLine(e), released).joinToString(" · "), e.name.takeIf { it.isNotBlank() }, about, seenLine)
 
     val sources = streamSources(t.type, e.id)
     val rows = ArrayList<Triple<String, String, () -> Unit>>()
@@ -284,7 +284,7 @@ internal fun MainActivity.showVodEpisode(given: Stremio.TitleMeta, ref: TitleRef
     }
     if (handheld()) rows += page(getString(R.string.share)) { shareTitle(t.type, t.id, t.name, e.season, e.episode) }
     val targetFocus = if (focus < 0 && descView != null) -1 else if (focus < 0) 0 else focus
-    titlePage(title, art, ref.fallback, t.name, top, rows, targetFocus, icons, descView = descView) {
+    titlePage(title, art, ref.fallback, t.name, top, rows, targetFocus, icons, descView = descView, servicesBar = servicesBar) {
         showVodSeason(meta, ref, e.season, services.known, e.id)
     }
     services.later { showVodEpisode(meta, ref, e, it, found, focusedRow() ?: targetFocus) }
@@ -349,8 +349,8 @@ private fun MainActivity.watchLabel(sole: Stremio.Addon?, at: Long?, seen: Boole
 internal fun MainActivity.episodeLine(e: Stremio.Episode) =
     if (e.season == 0) getString(R.string.title_special_n, e.episode) else getString(R.string.title_season_episode, e.season, e.episode)
 
-/** Under a title's art: its [info] line, a [name] (an episode's), when the user [seen] it, what it's about, and [servicesBar]. */
-private fun MainActivity.titleTop(info: String, name: String?, about: String?, seen: String? = null, servicesBar: View? = null): Pair<View, View?> {
+/** Under a title's art: its [info] line, a [name] (an episode's), when the user [seen] it, and what it's about. */
+private fun MainActivity.titleTop(info: String, name: String?, about: String?, seen: String? = null): Pair<View, View?> {
     var descView: View? = null
     val root = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -375,31 +375,19 @@ private fun MainActivity.titleTop(info: String, name: String?, about: String?, s
             descView = v
             addView(v)
         }
-        servicesBar?.let { sb ->
-            addView(sb)
-            val container = (sb as? android.widget.HorizontalScrollView)?.getChildAt(0) as? LinearLayout
-            if (container != null && container.childCount > 0) {
-                val firstChild = container.getChildAt(0)
-                descView?.let { dv ->
-                    dv.nextFocusDownId = firstChild.id
-                    for (c in 0 until container.childCount) {
-                        container.getChildAt(c).nextFocusUpId = dv.id
-                    }
-                }
-            }
-        }
     }
     return root to descView
 }
 
 /**
  * A title's page in the panel: [art] (backdrop, logo, poster) across the top, over the panel's padding so it reaches
- * its edges and the top of the screen; [top] under it, then [rows], each with its icon from [icons] by its index.
+ * its edges and the top of the screen; [top] under it, then [rows], each with its icon from [icons] by its index, then
+ * [servicesBar] (the trailer and the apps that have it), last.
  */
 private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, String?>, fallback: Triple<String?, String?, String?>?, name: String, top: View,
                                    rows: List<Triple<String, String, () -> Unit>>, focus: Int,
                                    icons: Map<Int, android.graphics.drawable.Drawable>, holds: Map<Int, () -> Unit> = emptyMap(),
-                                   descView: View? = null,
+                                   descView: View? = null, servicesBar: View? = null,
                                    back: () -> Unit) {
     if (settingsScrim.visibility != View.VISIBLE) showPanel()
     val panel = findViewById<LinearLayout>(R.id.settingsPanel)
@@ -441,6 +429,16 @@ private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, 
     // What holding OK on a row does (see MainActivity.onHold).
     for ((i, hold) in holds) settingsList.getChildAt(1 + i)?.setTag(R.id.settingsList, hold)
     rowIcons(icons, first = 1) // after [top]
+    servicesBar?.let { bar ->
+        settingsList.addView(bar.apply { setPadding(dp(14), dp(12), dp(14), dp(4)) })
+        // showPage keeps Down on the last row from leaving it: here it goes down to the apps, and Up from them back to it;
+        // Down from the apps goes nowhere.
+        val buttons = ((bar as? android.widget.HorizontalScrollView)?.getChildAt(0) as? LinearLayout) ?: return@let
+        val last = settingsList.getChildAt(settingsList.childCount - 2)?.takeIf { rows.isNotEmpty() } ?: return@let
+        if (last.id == View.NO_ID) last.id = View.generateViewId()
+        last.nextFocusDownId = buttons.getChildAt(0).id
+        for (c in 0 until buttons.childCount) buttons.getChildAt(c).let { it.nextFocusUpId = last.id; it.nextFocusDownId = it.id }
+    }
 }
 
 /**
@@ -485,7 +483,6 @@ private fun MainActivity.serviceBar(t: Stremio.Title, available: Set<String>?): 
         android.widget.HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
-            setPadding(0, dp(10), 0, dp(4))
             clipToPadding = false
 
             val container = LinearLayout(context).apply {
@@ -657,8 +654,9 @@ internal fun MainActivity.manualStreams() = prefs.getBoolean(K.STREAM_MANUAL, fa
 
 /**
  * Manual stream choice: every add-on's and plugin's streams for the film, or the [episode], in one list, each with
- * the source it's from. The sources are asked all at once; each one's streams come in under those already there (focus
- * stays), and the last row says the search goes on until all have answered. A stream picked plays at once.
+ * the source it's from, grouped by quality. The sources are asked all at once; each one's streams come in after those
+ * already there in their group (focus stays on the stream it's on), and the last row says the search goes on until all
+ * have answered. A stream picked plays at once.
  */
 internal fun MainActivity.pickStream(ref: TitleRef, meta: Stremio.TitleMeta, episode: Stremio.Episode?, back: () -> Unit) {
     val t = meta.title
@@ -668,24 +666,33 @@ internal fun MainActivity.pickStream(ref: TitleRef, meta: Stremio.TitleMeta, epi
     val found = java.util.Collections.synchronizedList(ArrayList<Stremio.Stream>())
     var left = sources.size
     var shown = false
-    // Each stream on two lines: what it is on top (scrolling when it's long), where it's from under it, in italics.
+    // Grouped by quality as in the player's panel (the highest first, those that say none last), each group under its
+    // heading; each stream on two lines: what it is on top (scrolling when it's long), where it's from under it, in italics.
     fun show() {
-        val keep = if (shown) focusedRow() ?: 0 else 0
-        val list = found.toList().distinctBy { it.url }
+        val keep = if (shown) currentFocus?.tag as? String else null // the stream focused stays so as others come in
+        val list = found.toList().distinctBy { it.url }.sortedByDescending { qualityGroup(it.title) }
         val rest = when {
             left > 0 -> listOf(page(getString(R.string.title_finding_streams)) { })
             found.isEmpty() -> listOf(page(getString(R.string.title_no_streams)) { })
             else -> emptyList()
         }
         showPage(title, rest, back = back)
-        list.forEachIndexed { i, s ->
+        var group = -1
+        var at = 0
+        for (s in list) {
+            val q = qualityGroup(s.title)
+            if (q != group) {
+                group = q
+                settingsList.addView(label(qualityHeading(q), 13f).apply { alpha = 0.6f; setPadding(dp(14), dp(16), 0, dp(6)) }, at++)
+            }
             settingsList.addView(twoLineRow(s.title.ifBlank { s.url.substringAfterLast('/').take(60) }, s.source.orEmpty()) {
                 pageReturn = back
                 closeLauncherSettings()
                 playTitle(ref, meta, episode, chosen = s)
-            }, i, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
+            }.apply { tag = s.url }, at++, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
         }
-        settingsList.getChildAt(keep.coerceAtMost(settingsList.childCount - 1))?.requestFocus()
+        val rows = (0 until settingsList.childCount).map { settingsList.getChildAt(it) }.filter { it.isFocusable }
+        (rows.firstOrNull { keep != null && it.tag == keep } ?: rows.firstOrNull())?.requestFocus()
         shown = true
     }
     show()
@@ -694,7 +701,8 @@ internal fun MainActivity.pickStream(ref: TitleRef, meta: Stremio.TitleMeta, epi
             .map { Stremio.Stream(it.url, it.title, it.headers, it.group, it.source ?: name, it.langRank, it.clearkey, it.app) }
         ui.post {
             left--
-            // Each source's, in the TV's language first then the preferred quality's order, under those already there.
+            // Each source's, in the TV's language first then the preferred quality's order, after those already there in
+            // their quality's group.
             found += got.sortedWith(compareBy<Stremio.Stream> { it.langRank }.then(qualityOrder(preferredQuality(prefs))))
             if (pageShowing(title)) show()
         }

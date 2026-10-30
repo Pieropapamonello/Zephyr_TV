@@ -1260,16 +1260,17 @@ class PlayerActivity : Activity() {
 
     private fun openStreams() {
         if (streams.size < 2) return
-        // Grouped by quality, the highest first, each group under its heading; picking one plays it from the list as is.
+        // Grouped by quality, the highest first and those that say none last, each group under its heading; picking one
+        // plays it from the list as is.
         openPanel(getString(R.string.player_streams)) { row ->
             var group = -1
-            for (k in streams.indices.sortedByDescending { streamQuality(streams[it].title) }) {
+            for (k in streams.indices.sortedByDescending { qualityGroup(streams[it].title) }) {
                 val s = streams[k]
-                val q = streamQuality(s.title)
+                val q = qualityGroup(s.title)
                 if (q != group) {
                     group = q
                     tracksList.addView(text(13f).apply {
-                        text = if (q == UNKNOWN_QUALITY) getString(R.string.player_quality_unknown) else if (q >= 2160) "${q}p · 4K" else "${q}p"
+                        text = qualityHeading(q)
                         alpha = 0.6f
                         setPadding(dp(14), dp(16), 0, dp(6))
                     })
@@ -1788,10 +1789,10 @@ class PlayerActivity : Activity() {
                 .build(androidx.media3.exoplayer.drm.LocalMediaDrmCallback(license.toString().toByteArray()))
         }
         val sources = DefaultMediaSourceFactory(DefaultDataSource.Factory(this, http)).apply { drm?.let { m -> setDrmSessionManagerProvider { m } } }
-        // A phone or tablet has no Dolby or DTS decoder as TVs have: FFmpeg's, after the device's own (see build.gradle).
-        val renderers = androidx.media3.exoplayer.DefaultRenderersFactory(this).setExtensionRendererMode(
-            if (handheld) androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
-            else androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+        // Sound the device has no decoder for (Dolby and DTS on a phone or tablet, TrueHD or DTS on many TVs): FFmpeg's,
+        // after the device's own, so a TV's still passes Dolby on to a receiver (see build.gradle).
+        val renderers = androidx.media3.exoplayer.DefaultRenderersFactory(this)
+            .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
         val p = ExoPlayer.Builder(this, renderers).setMediaSourceFactory(sources)
             .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
             .setHandleAudioBecomingNoisy(true)
@@ -1897,13 +1898,15 @@ class PlayerActivity : Activity() {
             when (format) {
                 "hls" -> setMimeType(MimeTypes.APPLICATION_M3U8)
                 "dash" -> setMimeType(MimeTypes.APPLICATION_MPD)
-                "ts" -> setMimeType(MimeTypes.VIDEO_MP2T)
+                "ts", "m2ts" -> setMimeType(MimeTypes.VIDEO_MP2T)
             }
             if (drm != null) setDrmConfiguration(MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID).build())
         }.build()
         // HLS read so that audio timed hours off its video is moved onto it (see HlsAlign): else the player waits for it.
         if (format == "hls") p.setMediaSource(androidx.media3.exoplayer.hls.HlsMediaSource.Factory(DefaultDataSource.Factory(this, http))
             .setExtractorFactory(HlsAlign()).apply { drm?.let { m -> setDrmSessionManagerProvider { m } } }.createMediaSource(item))
+        // A Blu-ray's MPEG-TS read as plain MPEG-TS, its packets' times left out (see M2ts).
+        else if (format == "m2ts") p.setMediaSource(DefaultMediaSourceFactory(M2ts.Factory(DefaultDataSource.Factory(this, http))).createMediaSource(item))
         else p.setMediaItem(item)
         p.playWhenReady = true
         p.prepare()
