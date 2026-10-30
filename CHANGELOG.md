@@ -14,6 +14,22 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.12
+
+- On a phone or tablet, in the player, swipe up or down on the left for the brightness and on the right for the volume. In the middle, on a TV channel, a swipe changes the channel.
+- On a phone or tablet, pinch the picture to fill the screen, or to fit it again.
+- On a phone or tablet, the player has a 🔒 button that locks the controls. Tap the picture, then 🔓, to unlock them.
+- On a phone or tablet, when you leave the player while a video plays, it goes on in a small window (picture-in-picture).
+- At the end of an episode, the next one starts after 10 seconds. You can start it at once, or stay.
+- On a phone or tablet, an app that has no rows opens with one tap.
+- On a phone or tablet, pull the home screen down from the top to read the rows of the app again.
+- On a phone or tablet, Spotlight shows dots, or a count, for its titles. Taps and long presses vibrate a little.
+- On a tablet, a row shows more cards.
+- On a phone or tablet, the side panels have ← next to ✕, to go to the page before.
+- New: links. **Share** on the page of a film, series or episode sends a link: Zephyr TV opens it on another phone or tablet.
+- Zephyr TV opens ztv:// links, stremio:// links and the addresses of Stremio add-ons, also when they are shared to it from another app. It adds an add-on or a repository only after you confirm it. An extension shows what it is before it installs.
+- On a phone or tablet, hold the Zephyr TV icon for **Search** and **Play queue**.
+
 ## 3.4.0-beta.11
 
 - On a phone or tablet, when you come back from the player, the home screen stays as you left it: the page that was open (for example the page of a film) and the app or virtual app you selected. Before, the home screen could start again from the beginning.

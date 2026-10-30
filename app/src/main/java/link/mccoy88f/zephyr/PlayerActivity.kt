@@ -102,6 +102,15 @@ class PlayerActivity : Activity() {
     private var group: String? = null // the bingeGroup of the stream playing: the next episode's like it first
     private var seeking = false // the banner came up for a seek: Left/Right go on seeking, not to its buttons
     private var scrubbing = false // a finger on the progress bar: it shows where the finger is, not where the film is
+    private var locked = false // a finger: the controls locked, taps only bring up the way to unlock them (see lockControls)
+    private var zoomed = false // a finger: the picture fills the screen, cut at its edges, instead of fitting in it (pinch)
+    private var lastSize: VideoSize? = null // the picture's size, to fit it again when zoomed or not
+    private var counting = false // the next episode coming after a countdown (see ended)
+    private var countLeft = 0
+    private var side = 0 // a finger going up or down: -1 on the left third (brightness), +1 on the right (volume), 0 between
+    private var volumeSteps = 0f // a volume swipe's part of a step, until it makes one
+    private lateinit var hint: TextView // brightness, volume, zoom: a moment in the middle
+    private lateinit var unlock: TextView // the way out of locked controls
     // A phone or tablet (touch, no leanback): sound decoded in software, and an X on the panel (see Handheld).
     private val handheld by lazy {
         !packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK) &&
@@ -387,10 +396,47 @@ class PlayerActivity : Activity() {
             visibility = View.GONE
         }
         root.addView(banner, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
+        hint = text(18f).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(18), dp(10), dp(18), dp(10))
+            background = GradientDrawable().apply { cornerRadius = dp(12).toFloat(); setColor(0xB3000000.toInt()) }
+            visibility = View.GONE
+        }
+        root.addView(hint, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        unlock = text(26f).apply {
+            text = "🔓"
+            gravity = Gravity.CENTER
+            contentDescription = getString(R.string.player_unlock)
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0xB3000000.toInt()) }
+            visibility = View.GONE
+            setOnClickListener {
+                locked = false
+                visibility = View.GONE
+                showBanner(at)
+            }
+        }
+        root.addView(unlock, FrameLayout.LayoutParams(dp(64), dp(64), Gravity.TOP or Gravity.START).apply { setMargins(dp(24), dp(24), 0, 0) })
         // A finger (phones and tablets): taps, double taps and swipes on the picture; the banner keeps its own taps,
         // and its bar, too thin for a finger, takes them from a strip around it.
         val gestures = touches()
-        root.setOnTouchListener { _, e -> gestures.onTouchEvent(e) }
+        // Two fingers apart: the picture fills the screen; together: it fits again.
+        var pinch = 1f
+        val scale = android.view.ScaleGestureDetector(this, object : android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScaleBegin(d: android.view.ScaleGestureDetector) = !locked.also { pinch = 1f }
+            override fun onScale(d: android.view.ScaleGestureDetector): Boolean { pinch *= d.scaleFactor; return true }
+            override fun onScaleEnd(d: android.view.ScaleGestureDetector) {
+                val fill = when { pinch > 1.15f -> true; pinch < 0.87f -> false; else -> return }
+                if (fill == zoomed) return
+                zoomed = fill
+                lastSize?.let { fit(it) }
+                flash(getString(if (fill) R.string.player_zoom_fill else R.string.player_zoom_fit))
+            }
+        })
+        root.setOnTouchListener { _, e ->
+            scale.onTouchEvent(e)
+            if (!scale.isInProgress && e.pointerCount == 1) gestures.onTouchEvent(e)
+            true
+        }
         banner.isClickable = true
         // Not a TouchDelegate: one moves a touch beside the view it's for to that view's middle, so the film went to its
         // half wherever the finger was. The strip round the bar, in its box, is read here instead, where the finger is.
@@ -579,9 +625,40 @@ class PlayerActivity : Activity() {
      * before. The banner's buttons and its bar take their own taps (see scrub).
      */
     private fun touches() = android.view.GestureDetector(this, object : android.view.GestureDetector.SimpleOnGestureListener() {
-        override fun onDown(e: android.view.MotionEvent) = true
+        override fun onDown(e: android.view.MotionEvent): Boolean {
+            val w = resources.displayMetrics.widthPixels
+            side = if (!handheld || locked) 0 else if (e.x < w / 3) -1 else if (e.x > w * 2 / 3) 1 else 0
+            volumeSteps = 0f
+            return true
+        }
+
+        /** Up or down on the left third: the screen's brightness; on the right third: the volume. */
+        override fun onScroll(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, dx: Float, dy: Float): Boolean {
+            if (side == 0 || tracksPanel.visibility == View.VISIBLE || Math.abs(dy) <= Math.abs(dx)) return false
+            val height = resources.displayMetrics.heightPixels.coerceAtLeast(1)
+            if (side < 0) {
+                val lp = window.attributes
+                val now = lp.screenBrightness.takeIf { it >= 0 } ?: 0.5f
+                lp.screenBrightness = (now + dy / height).coerceIn(0.01f, 1f)
+                window.attributes = lp
+                flash("☀  ${(lp.screenBrightness * 100).toInt()}%")
+            } else {
+                val audio = getSystemService(android.media.AudioManager::class.java)
+                val max = audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+                volumeSteps += dy / height * max * 1.5f
+                while (Math.abs(volumeSteps) >= 1f) {
+                    val step = if (volumeSteps > 0) 1 else -1
+                    val v = (audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) + step).coerceIn(0, max)
+                    audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, v, 0)
+                    volumeSteps -= step
+                }
+                flash("🔊  ${audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) * 100 / max.coerceAtLeast(1)}%")
+            }
+            return true
+        }
 
         override fun onSingleTapConfirmed(e: android.view.MotionEvent): Boolean {
+            if (locked) return true.also { showUnlock() }
             when {
                 tracksPanel.visibility == View.VISIBLE -> closeTracks()
                 banner.visibility == View.VISIBLE -> hideBanner.run()
@@ -594,13 +671,14 @@ class PlayerActivity : Activity() {
         }
 
         override fun onDoubleTap(e: android.view.MotionEvent): Boolean {
+            if (locked) return true
             if (!vod || tracksPanel.visibility == View.VISIBLE) return false
             seek(if (e.x < resources.displayMetrics.widthPixels / 2) -1 else +1)
             return true
         }
 
         override fun onFling(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, vx: Float, vy: Float): Boolean {
-            if (vod || tracksPanel.visibility == View.VISIBLE || Math.abs(vy) < Math.abs(vx) * 2) return false
+            if (locked || side != 0 || vod || tracksPanel.visibility == View.VISIBLE || Math.abs(vy) < Math.abs(vx) * 2) return false
             zap(if (vy < 0) +1 else -1)
             return true
         }
@@ -703,7 +781,7 @@ class PlayerActivity : Activity() {
         // A season's last episode: the next season's first only if the user wants it; Back leaves it there.
         val now = season(channels[at].id)
         val next = season(channels[at + 1].id)
-        if (now == null || next == null || now == next) return play(at + 1)
+        if (now == null || next == null || now == next) return countdown()
         release()
         openPanel(getString(R.string.player_season_end, now)) { row ->
             row(getString(R.string.player_next_season, next), false, 1) { play(at + 1) }
@@ -1029,6 +1107,7 @@ class PlayerActivity : Activity() {
             if (tracks(C.TRACK_TYPE_AUDIO).size > 1) Triple(R.drawable.ic_audio, R.string.player_audio) { openTracks(C.TRACK_TYPE_AUDIO) } else null,
             if (tracks(C.TRACK_TYPE_TEXT).isNotEmpty()) Triple(R.drawable.ic_subtitles, R.string.player_subtitles) { openTracks(C.TRACK_TYPE_TEXT) } else null,
             if (streams.size > 1) Triple(R.drawable.ic_stream, R.string.player_streams) { openStreams() } else null,
+            if (handheld) Triple(R.drawable.ic_lock, R.string.player_lock) { lockControls() } else null,
         )
         val now = (0 until buttons.childCount).map { buttons.getChildAt(it).tag }
         if (now == list.map { it.second }) return // the same: leave them (and focus) as they are
@@ -1257,8 +1336,33 @@ class PlayerActivity : Activity() {
     }
 
     private fun closeTracks() {
+        counting = false // Back on the countdown, or a row picked: the episode isn't started by it
+        ui.removeCallbacks(countTick)
         tracksPanel.visibility = View.GONE
         tracksList.removeAllViews()
+    }
+
+    /** The next episode in a few seconds, as the panel says, unless it's started now or the player stays. */
+    private fun countdown() {
+        openPanel(getString(R.string.player_next_in, NEXT_IN)) { row ->
+            row(getString(R.string.player_next_now), false, 1) { play(at + 1) }
+            row(getString(R.string.player_stay), false, 1) { }
+        }
+        counting = true
+        countLeft = NEXT_IN
+        ui.postDelayed(countTick, 1000)
+    }
+
+    private val countTick = object : Runnable {
+        override fun run() {
+            if (!counting) return
+            if (--countLeft <= 0) {
+                closeTracks()
+                return play(at + 1)
+            }
+            tracksTitle.text = getString(R.string.player_next_in, countLeft)
+            ui.postDelayed(this, 1000)
+        }
     }
 
     /**
@@ -1811,12 +1915,61 @@ class PlayerActivity : Activity() {
     /** The picture as large as the screen allows, at its own shape (black bars rather than stretched). */
     private fun fit(size: VideoSize) {
         if (size.width == 0 || size.height == 0) return
+        lastSize = size
         val root = surface.parent as View
         val ratio = size.width * size.pixelWidthHeightRatio / size.height
-        val (w, h) = if (root.width.toFloat() / root.height > ratio) (root.height * ratio).toInt() to root.height
-            else root.width to (root.width / ratio).toInt()
+        val wider = root.width.toFloat() / root.height > ratio
+        // Fitting: all of the picture, with bars; zoomed (pinch): all of the screen, the picture cut at its edges.
+        val (w, h) = if (wider != zoomed) (root.height * ratio).toInt() to root.height else root.width to (root.width / ratio).toInt()
         surface.layoutParams = (surface.layoutParams as FrameLayout.LayoutParams).apply { width = w; height = h }
-        subtitles.layoutParams = (subtitles.layoutParams as FrameLayout.LayoutParams).apply { width = w; height = h } // placed over the picture
+        // Placed over the picture, but never past the screen's edges, where they'd be cut.
+        subtitles.layoutParams = (subtitles.layoutParams as FrameLayout.LayoutParams).apply { width = minOf(w, root.width); height = minOf(h, root.height) }
+    }
+
+    /** [text] a moment in the middle of the picture: brightness, volume, zoom. */
+    private fun flash(text: String) {
+        hint.text = text
+        hint.visibility = View.VISIBLE
+        ui.removeCallbacks(hideHint)
+        ui.postDelayed(hideHint, 900)
+    }
+
+    private val hideHint = Runnable { hint.visibility = View.GONE }
+
+    /** A finger: the controls locked, for watching without touching them by mistake; the 🔓 unlocks them. */
+    private fun lockControls() {
+        locked = true
+        hideBanner.run()
+        showUnlock()
+    }
+
+    private fun showUnlock() {
+        unlock.visibility = View.VISIBLE
+        ui.removeCallbacks(hideUnlock)
+        ui.postDelayed(hideUnlock, 3000)
+    }
+
+    private val hideUnlock = Runnable { unlock.visibility = View.GONE }
+
+    /** Leaving the player on a phone or tablet while it plays: it goes on in a small window over the other apps. */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (!handheld || android.os.Build.VERSION.SDK_INT < 26 || player?.isPlaying != true) return
+        val s = lastSize
+        val ratio = s?.let { android.util.Rational((it.width * it.pixelWidthHeightRatio).toInt().coerceAtLeast(1), it.height.coerceAtLeast(1)) }
+            ?.takeIf { it.toFloat() in 0.42f..2.39f } ?: android.util.Rational(16, 9)
+        runCatching { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().setAspectRatio(ratio).build()) }
+            .onFailure { warn("picture in picture: $it") }
+    }
+
+    override fun onPictureInPictureModeChanged(inPip: Boolean, newConfig: android.content.res.Configuration) {
+        super.onPictureInPictureModeChanged(inPip, newConfig)
+        if (inPip) {
+            hideBanner.run()
+            closeTracks()
+            hint.visibility = View.GONE
+            unlock.visibility = View.GONE
+        }
     }
 
     /** The channel that plays, for Continue Playing and the add-on's tile (see Addons.lastAddonChannel): a file both processes read. */
@@ -1899,6 +2052,7 @@ class PlayerActivity : Activity() {
         private const val TEXT_LANG = "text_lang" // "" for off; none for the stream's own choice
         private const val BANNER_MS = 5000L
         private const val HARD_SEEK_MS = 400L // a Dolby or DTS stream's seek, once the keys stop (see hardSeek)
+        private const val NEXT_IN = 10 // seconds before the next episode starts by itself
         private val PASSTHROUGH = setOf(MimeTypes.AUDIO_AC3, MimeTypes.AUDIO_E_AC3, MimeTypes.AUDIO_E_AC3_JOC, MimeTypes.AUDIO_AC4,
             MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_HD, MimeTypes.AUDIO_DTS_EXPRESS, MimeTypes.AUDIO_DTS_X, MimeTypes.AUDIO_TRUEHD)
         private const val BUTTONS_MS = 10_000L // the banner stays up this long after a key on its buttons

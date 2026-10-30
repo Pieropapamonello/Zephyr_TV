@@ -216,6 +216,25 @@ internal fun MainActivity.panelClose() {
         topMargin = dp(8)
         marginEnd = panel.layoutParams.width - size - dp(8)
     })
+    // Beside it, ←: the page before, as Back (and the panel closed from its first page).
+    val left = TextView(this).apply {
+        text = "←"
+        textSize = 18f
+        gravity = android.view.Gravity.CENTER
+        setTextColor(android.graphics.Color.WHITE)
+        contentDescription = getString(R.string.back)
+        background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(0x99000000.toInt())
+        }
+        elevation = dp(12).toFloat()
+        @Suppress("DEPRECATION")
+        setOnClickListener { onBackPressed() }
+    }
+    (settingsScrim as android.view.ViewGroup).addView(left, android.widget.FrameLayout.LayoutParams(size, size, android.view.Gravity.TOP or android.view.Gravity.END).apply {
+        topMargin = dp(8)
+        marginEnd = panel.layoutParams.width - size * 2 - dp(16)
+    })
 }
 
 private const val PANEL_CLOSE = "panel-close"
@@ -235,4 +254,24 @@ internal fun MainActivity.applyStatusBar() {
         window.decorView.systemUiVisibility = if (shown) 0
             else android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
     }
+}
+
+/** Cards across a row: four, as on a TV; more on a tablet, as wide as they are on a TV. */
+internal fun MainActivity.cardsAcross(): Int {
+    val c = resources.configuration
+    return if (handheld() && c.smallestScreenWidthDp >= 600) (c.screenWidthDp / 190).coerceIn(4, 6) else 4
+}
+
+/** Apps that showed no rows under them: on a phone they open with one tap, as there's nothing to select them for. */
+internal fun MainActivity.rowless(pkg: String?): Boolean =
+    pkg != null && (pkg.startsWith(MainActivity.HDMI) || pkg in prefs.getStringSet(K.ROWLESS, emptySet())!!)
+
+/** What [pkg]'s rows turned out to be: kept, and its tile's tap set to match (see refreshApps). */
+internal fun MainActivity.rowsKnown(pkg: String?, has: Boolean) {
+    // Zephyr TV's own apps (Films, an add-on's) always get selected: rows they lack now (offline) come later.
+    if (pkg == null || pkg == CW_PKG || pkg == SEARCH_PKG || pkg.startsWith(STREMIO)) return
+    val set = prefs.getStringSet(K.ROWLESS, emptySet())!!
+    if ((pkg in set) == !has) return
+    prefs.edit().putStringSet(K.ROWLESS, if (has) set - pkg else set + pkg).apply()
+    (0 until appRow.childCount).map { appRow.getChildAt(it) }.firstOrNull { it.tag == pkg }?.isFocusableInTouchMode = has
 }

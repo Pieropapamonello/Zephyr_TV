@@ -349,6 +349,22 @@ The page works only while that screen is open on the TV, and what you send goes 
 | **Guide** | This guide, on the TV, chapter by chapter |
 | **About** | Version, licences, data sources |
 
+## Phones and tablets
+
+Zephyr TV works on Android phones and tablets too, with a finger:
+
+- **Home**: swipe up and down to scroll it, to the side to scroll a row; tap an app to show its rows, and again to
+  open it (an app with no rows opens at once); pull down from the top to read its rows again. Swipe Spotlight to
+  see the title before or after.
+- **Panels**: ✕ closes them, ← goes to the page before; a tap beside a panel closes it too.
+- **Player**: tap for the information and the buttons; double-tap left or right to go back or on 10 seconds; drag
+  the progress bar; swipe up or down on the left for the brightness, on the right for the volume, in the middle to
+  change channel; pinch to fill the screen or fit it; 🔒 locks the controls; leave the player while a video plays
+  and it goes on in a small window.
+- **Share** on a title's page sends a link: Zephyr TV opens it on another phone or tablet. A link shared to Zephyr
+  TV (a Stremio add-on's `manifest.json`, a `stremio://` or `ztv://` link) is added once you confirm it.
+- What a TV does with a QR code and your phone is done on the device itself: its keyboard, its file picker.
+
 ## 23. Questions and answers
 
 <details>

@@ -24,6 +24,7 @@ internal object K {
     const val NIGHT = "night" // night mode on
     const val WARP = "warp" // Cloudflare WARP on, as this app's VPN (see Warp); not in backups
     const val WARP_ACCOUNT = "warp_account" // its WARP account, JSON with its private key: never in backups
+    const val ROWLESS = "rowless" // apps that showed no rows under them: one tap opens them on a phone (see rowless)
     const val STATUS_BAR = "status_bar" // a phone or tablet: its status bar (time, network) shown; hidden by default
     const val NIGHT_FROM = "night_from" // night mode window, minutes after midnight
     const val NIGHT_TO = "night_to"

@@ -310,6 +310,8 @@ class MainActivity : Activity() {
         if (checkSelfPermission(TV_LISTINGS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(TV_LISTINGS), 1)
         }
+        shortcuts() // a phone or tablet: Search and the Play queue on the icon
+        ui.post { handleLink(intent) } // started by a link, a share or a shortcut (see Links)
     }
 
     /**
@@ -461,6 +463,7 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.action == UPDATE_STATUS) return installStatus(intent)
+        if (handleLink(intent)) return // a link, a share or a shortcut: what it asks, not Home's start again
         if (homeTest != 0 && intent.hasCategory(Intent.CATEGORY_HOME)) { // the Home press reached us: setup works
             homeTest = 0
             return donePopup()
@@ -1089,11 +1092,13 @@ class MainActivity : Activity() {
         tiles.forEachIndexed { i, t ->
             t.id = View.generateViewId()
             appRow.addView(t, LinearLayout.LayoutParams(width, dp(76)).apply { if (i > 0) marginStart = gap })
-            // A finger: the first tap selects the app, its rows showing under it, as focus does on a TV; the next opens it.
-            t.isFocusableInTouchMode = true
+            // A finger: the first tap selects the app, its rows showing under it, as focus does on a TV; the next opens
+            // it. An app known to have no rows opens with the first (see rowsKnown).
+            t.isFocusableInTouchMode = !rowless(t.tag as? String)
             val own = t.onFocusChangeListener
             t.setOnFocusChangeListener { v, focused ->
                 own?.onFocusChange(v, focused)
+                if (focused && v.isInTouchMode && handheld()) v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
                 if (focused) {
                     lastApp = v
                     val pkg = v.tag as? String
@@ -1521,6 +1526,7 @@ class MainActivity : Activity() {
     }
 
     internal fun fireHold(v: View) {
+        if (v.isInTouchMode) v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
         holdFired = true
         v.cancelLongPress()
         v.isPressed = false

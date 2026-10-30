@@ -156,6 +156,8 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
         }
     }
 
+    // A phone or tablet: the page shared, as a link that opens it in Zephyr TV (see Links).
+    if (handheld()) rows += page(getString(R.string.share)) { shareTitle(t.type, t.id, t.name) }
     val focus = focusRow ?: if (descView != null) -1 else 0
     val art = if (ref.background != null) Triple(ref.background, ref.logo, ref.poster ?: t.poster) else Triple(t.background, t.logo, ref.poster ?: t.poster)
     titlePage(t.name, art, ref.fallback, t.name, top, rows, focus, icons, holds, descView) { closeLauncherSettings() }
@@ -280,6 +282,7 @@ internal fun MainActivity.showVodEpisode(given: Stremio.TitleMeta, ref: TitleRef
         ref.background != null -> Triple(ref.background, ref.logo, ref.poster ?: t.poster)
         else -> Triple(t.background, t.logo, ref.poster ?: t.poster)
     }
+    if (handheld()) rows += page(getString(R.string.share)) { shareTitle(t.type, t.id, t.name, e.season, e.episode) }
     val targetFocus = if (focus < 0 && descView != null) -1 else if (focus < 0) 0 else focus
     titlePage(title, art, ref.fallback, t.name, top, rows, targetFocus, icons, descView = descView) {
         showVodSeason(meta, ref, e.season, services.known, e.id)

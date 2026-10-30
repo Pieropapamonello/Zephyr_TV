@@ -380,7 +380,7 @@ private fun MainActivity.optionsRows(url: String, s: Nuvio.Scraper, all: List<Nu
 }
 
 /** Adds the repository at [input] once its manifest answers with plugins, telling how it went. */
-private fun MainActivity.addRepo(input: String, adult: Boolean) {
+internal fun MainActivity.addRepo(input: String, adult: Boolean) {
     val url = Nuvio.manifestUrl(input) ?: return Toast.makeText(this, getString(R.string.phone_epg_bad), Toast.LENGTH_LONG).show()
     Toast.makeText(this, getString(R.string.addon_checking), Toast.LENGTH_SHORT).show()
     netIo.execute {

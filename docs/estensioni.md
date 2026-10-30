@@ -460,6 +460,19 @@ pacchetti). Un'estensione nuova nell'elenco compare tra quelle da installare: ne
 compaiono solo con i contenuti 18+ sbloccati. Un'estensione installata da un repository si aggiorna dal suo
 indirizzo, come le altre.
 
+### Link
+
+Un link installa un'estensione con un tocco, su un telefono o su una TV che apre i link:
+
+- `ztv://ext?u=<indirizzo del suo manifest-zephyrtv.json>`
+- oppure, per le chat, che rendono cliccabili solo gli `https`:
+  `https://mccoy88f.github.io/Zephyr_TV/open/#ext?u=<indirizzo del suo manifest-zephyrtv.json>`
+
+L'indirizzo in `u` va codificato per URL. Zephyr TV mostra cos'è l'estensione e chi l'ha fatta prima di installarla.
+Gli stessi link accettano `addon?u=` (il `manifest.json` di un add-on Stremio), `nuvio?u=` (un repository Nuvio) e
+`title/<tipo>/<id>?n=<nome>` (la pagina di un film o di una serie); add-on e repository si aggiungono solo dopo la
+conferma.
+
 ### Aggiornamenti
 
 Zephyr TV legge il `manifest-zephyrtv.json` di un'estensione una volta al giorno: l'indirizzo da cui è stata aggiunta

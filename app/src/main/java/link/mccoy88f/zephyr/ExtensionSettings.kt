@@ -365,7 +365,7 @@ private fun MainActivity.extensionPreview(name: String, author: String, descript
 }
 
 /** The extension published at [input] (a manifest-zephyrtv.json, or its folder): read, then shown before installing. */
-private fun MainActivity.extensionFromAddress(input: String) {
+internal fun MainActivity.extensionFromAddress(input: String) {
     val url = Extensions.publishedUrl(input) ?: return Toast.makeText(this, getString(R.string.ext_err_not), Toast.LENGTH_LONG).show()
     Toast.makeText(this, getString(R.string.ext_reading), Toast.LENGTH_SHORT).show()
     netIo.execute {

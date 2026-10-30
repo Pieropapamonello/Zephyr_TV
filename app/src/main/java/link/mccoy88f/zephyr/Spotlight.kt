@@ -145,7 +145,11 @@ internal fun MainActivity.renderSpotlight() {
     val rating = if (item.voteAverage > 0) "★ %.1f · ".format(item.voteAverage) else ""
     val typeBadge = if (item.mediaType == "tv") getString(R.string.tmdb_badge_tv) else getString(R.string.tmdb_badge_movie)
     val genre = item.genres.firstOrNull()?.let { " · $it" } ?: ""
-    spotlightMeta.text = "$rating$typeBadge$year$genre"
+    // A finger: where it is among the titles, dots for a few (it swipes), a count for more.
+    val n = tmdbTrending.size
+    val dots = if (!handheld() || n < 2) "" else if (n <= 10) (0 until n).joinToString(" ") { if (it == tmdbIndex) "●" else "○" } + "   "
+        else "${tmdbIndex + 1} / $n   "
+    spotlightMeta.text = "$dots$rating$typeBadge$year$genre"
     spotlightTitle.text = item.title
     spotlightOverview.text = item.overview
     spotlightOverview.maxLines = OVERVIEW_LINES // a new title starts closed

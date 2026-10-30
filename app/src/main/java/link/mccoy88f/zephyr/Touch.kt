@@ -22,7 +22,7 @@ internal class HomeDrag {
     var velocity: VelocityTracker? = null
     var hanging: View? = null // the rows hanging below the page that the finger is on (see hanging)
 
-    enum class Mode { UNDECIDED, PAGE, SPOTLIGHT, VIEWS }
+    enum class Mode { UNDECIDED, PAGE, PULL, SPOTLIGHT, VIEWS }
 }
 
 /**
@@ -55,6 +55,8 @@ internal fun MainActivity.homeDrag(e: MotionEvent): Boolean {
             if (d.mode == HomeDrag.Mode.UNDECIDED) {
                 val slop = ViewConfiguration.get(this).scaledTouchSlop
                 d.mode = when {
+                    // Down with the page at its top: the rows of the app selected are read again (pull to refresh).
+                    dy > slop && dy > abs(dx) && content.translationY == 0f -> HomeDrag.Mode.PULL
                     // The page moves while it has room, or when it's still down from rows no longer there.
                     abs(dy) > slop && abs(dy) > abs(dx) -> if (pageRoom() > 0 || content.translationY != 0f) HomeDrag.Mode.PAGE else HomeDrag.Mode.VIEWS
                     abs(dx) > slop && d.onSpotlight -> HomeDrag.Mode.SPOTLIGHT
@@ -76,6 +78,10 @@ internal fun MainActivity.homeDrag(e: MotionEvent): Boolean {
                     cardsOnScreen()
                     true
                 }
+                HomeDrag.Mode.PULL -> {
+                    content.translationY = (dy * 0.35f).coerceIn(0f, dp(64).toFloat()) // the page follows, a little
+                    true
+                }
                 HomeDrag.Mode.SPOTLIGHT -> {
                     spotlightContainer.translationX = dx * 0.6f // the title follows the finger
                     true
@@ -90,6 +96,11 @@ internal fun MainActivity.homeDrag(e: MotionEvent): Boolean {
             val vy = v?.yVelocity ?: 0f
             d.velocity?.recycle()
             d.velocity = null
+            if (mode == HomeDrag.Mode.PULL) {
+                val far = e.actionMasked == MotionEvent.ACTION_UP && e.rawY - d.y > dp(120)
+                content.animate().translationY(0f).setDuration(200).setInterpolator(DECELERATE).start()
+                if (far) refreshRows()
+            }
             if (mode == HomeDrag.Mode.SPOTLIGHT) {
                 val dx = e.rawX - d.x
                 // Far enough: the title after (finger to the left) or before, coming in from that side; else back.
@@ -106,10 +117,10 @@ internal fun MainActivity.homeDrag(e: MotionEvent): Boolean {
                     .setUpdateListener { cardsOnScreen() }
                     .withEndAction { content.animate().setUpdateListener(null) }.start()
             }
-            return mode == HomeDrag.Mode.PAGE || mode == HomeDrag.Mode.SPOTLIGHT
+            return mode == HomeDrag.Mode.PAGE || mode == HomeDrag.Mode.PULL || mode == HomeDrag.Mode.SPOTLIGHT
         }
     }
-    return d.mode == HomeDrag.Mode.PAGE || d.mode == HomeDrag.Mode.SPOTLIGHT
+    return d.mode == HomeDrag.Mode.PAGE || d.mode == HomeDrag.Mode.PULL || d.mode == HomeDrag.Mode.SPOTLIGHT
 }
 
 /**
@@ -197,4 +208,12 @@ internal fun MainActivity.touchSetup() {
             spotlightInfoBox.requestFocus()
         }
     }
+}
+
+/** Pulled down: the rows under the app selected read again (the Play queue's when none is). */
+internal fun MainActivity.refreshRows() {
+    android.widget.Toast.makeText(this, getString(R.string.rows_refreshing), android.widget.Toast.LENGTH_SHORT).show()
+    watchKey = null
+    val app = tmdbLastFocusApp
+    if (app == null) refreshWatchNext() else rowsAgain(app)
 }

@@ -1,0 +1,55 @@
+<!doctype html>
+<!-- Where Zephyr TV's shared links go (https://mccoy88f.github.io/Zephyr_TV/open/#<what>): chats only make https
+     addresses clickable. The part after # is a ztv: link (see app/src/main/java/link/mccoy88f/zephyr/Links.kt). With
+     Zephyr TV installed, Android opens it straight away; otherwise this page opens it, or says where to get it. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zephyr TV</title>
+<style>
+  body{font:17px system-ui,sans-serif;margin:0;padding:40px 22px;background:#f7f8fa;color:#111214;text-align:center}
+  @media (prefers-color-scheme:dark){body{background:#09090b;color:#f5f5f7}}
+  img{width:96px;height:96px} h1{font-size:24px;margin:16px 0 6px} p{opacity:.7;margin:0 0 28px}
+  a.b{display:block;max-width:360px;margin:0 auto 12px;padding:16px;border-radius:14px;text-decoration:none;font-weight:600}
+  a.open{background:#111214;color:#fff} a.get{border:1.5px solid currentColor;color:inherit}
+  @media (prefers-color-scheme:dark){a.open{background:#f5f5f7;color:#111214}}
+  code{font-size:13px;opacity:.6;word-break:break-all}
+</style>
+</head>
+<body>
+<img src="https://raw.githubusercontent.com/mccoy88f/Zephyr_TV/main/docs/logo/zephyrtv-logo.svg" alt="">
+<h1 id="t">Zephyr TV</h1>
+<p id="w"></p>
+<a class="b open" id="o" href="#">Open in Zephyr TV</a>
+<a class="b get" id="g" href="https://github.com/mccoy88f/Zephyr_TV/releases/latest">Get Zephyr TV</a>
+<p><code id="l"></code></p>
+<script>
+  const it = (navigator.language || "").toLowerCase().startsWith("it");
+  const what = location.hash.slice(1);
+  const link = "ztv://" + what;
+  const kind = what.split(/[/?]/)[0];
+  const q = new URLSearchParams(what.split("?")[1] || "");
+  const name = q.get("n");
+  const say = {
+    title: it ? "Da guardare su Zephyr TV" : "To watch on Zephyr TV",
+    ext: it ? "Un'estensione per Zephyr TV" : "An extension for Zephyr TV",
+    addon: it ? "Un add-on Stremio per Zephyr TV" : "A Stremio add-on for Zephyr TV",
+    nuvio: it ? "Plugin Nuvio per Zephyr TV" : "Nuvio plugins for Zephyr TV",
+  };
+  document.getElementById("t").textContent = name || "Zephyr TV";
+  if (q.get("s") && q.get("e")) document.getElementById("t").textContent += " · S" + q.get("s") + " E" + q.get("e");
+  document.getElementById("w").textContent = say[kind] || "";
+  document.getElementById("l").textContent = what ? link : "";
+  document.getElementById("o").textContent = it ? "Apri in Zephyr TV" : "Open in Zephyr TV";
+  document.getElementById("g").textContent = it ? "Scarica Zephyr TV" : "Get Zephyr TV";
+  // Chrome on Android opens an app from intent: links, and goes to the fallback when it isn't installed.
+  const releases = "https://github.com/mccoy88f/Zephyr_TV/releases/latest";
+  const android = /android/i.test(navigator.userAgent);
+  document.getElementById("o").href = !what ? releases : android
+    ? "intent://" + what + "#Intent;scheme=ztv;package=link.mccoy88f.zephyr;S.browser_fallback_url=" + encodeURIComponent(releases) + ";end"
+    : link;
+  if (!what) document.getElementById("o").style.display = "none";
+</script>
+</body>
+</html>

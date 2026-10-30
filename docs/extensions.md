@@ -446,6 +446,18 @@ Zephyr TV reads a repository once a day, with each of its extensions' `manifest-
 An extension new in the list shows among those to install: none is installed by itself. 18+ ones show only while 18+
 is unlocked. An extension installed from a repository updates from its own address, as any other.
 
+### Links
+
+A link installs an extension with one tap, on a phone or a TV that opens links:
+
+- `ztv://ext?u=<address of its manifest-zephyrtv.json>`
+- or, for chats, which only make `https` clickable:
+  `https://mccoy88f.github.io/Zephyr_TV/open/#ext?u=<address of its manifest-zephyrtv.json>`
+
+The address in `u` is URL-encoded. Zephyr TV shows what the extension is and who made it before installing it.
+The same links take `addon?u=` (a Stremio add-on's `manifest.json`), `nuvio?u=` (a Nuvio repository) and
+`title/<type>/<id>?n=<name>` (a film's or series' page); add-ons and repositories are added only once confirmed.
+
 ### Updates
 
 Zephyr TV reads an extension's `manifest-zephyrtv.json` once a day: the address it was added from, or, for one

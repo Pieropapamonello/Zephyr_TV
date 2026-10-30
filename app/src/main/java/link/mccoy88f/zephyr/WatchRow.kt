@@ -203,6 +203,7 @@ internal fun MainActivity.queryAppChannels(pkg: String?) {
         ui.post {
             sectionCache = pkg to all
             sectionCounts[pkg] = shown.size
+            rowsKnown(pkg, shown.isNotEmpty())
             if (tmdbLastFocusApp != pkg) return@post // focus moved on meanwhile: don't show this app's rows under another
             watchApp = pkg
             if (shown.isEmpty()) { // an app with nothing to recommend shows nothing under the row
@@ -532,7 +533,8 @@ internal fun MainActivity.showLoading(pkg: String) {
 /** An empty card the size of [watchCard]'s, pulsing (starting [delay] ms in, so a row ripples) until it's removed. */
 internal fun MainActivity.placeholderCard(gapBefore: Boolean, delay: Long): View {
     val gap = dp(GRID_GAP)
-    val w = (resources.displayMetrics.widthPixels - dp(96) - gap * 3) / 4
+    val n = cardsAcross()
+    val w = (resources.displayMetrics.widthPixels - dp(96) - gap * (n - 1)) / n
     fun shape(color: Int, corner: Int) = GradientDrawable().apply { cornerRadius = dp(corner).toFloat(); setColor(color) }
     val bar = if (dark) 0x33FFFFFF else 0x26000000
     // A text line's height (an invisible label), with a bar across part of it.
@@ -708,7 +710,8 @@ internal fun MainActivity.nearestCard(row: ViewGroup, from: View): View? {
  */
 internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     val gap = dp(GRID_GAP)
-    val w = (resources.displayMetrics.widthPixels - dp(96) - gap * 3) / 4
+    val n = cardsAcross()
+    val w = (resources.displayMetrics.widthPixels - dp(96) - gap * (n - 1)) / n
     // Standard 16:9 aspect ratio prevents cutting off channel numbers and provider badges
     val cardHeight = w * 9 / 16
     val col = LinearLayout(this).apply {

@@ -349,6 +349,24 @@ La pagina funziona solo mentre quella schermata è aperta sul TV, e quello che i
 | **Guida** | Questa guida, sul TV, capitolo per capitolo |
 | **Informazioni** | Versione, licenze, fonti dei dati |
 
+## Telefoni e tablet
+
+Zephyr TV funziona anche su telefoni e tablet Android, con il dito:
+
+- **Home**: scorri su e giù, e di lato per scorrere una riga; tocca un'app per vederne le righe e di nuovo per
+  aprirla (un'app senza righe si apre subito); tira giù dall'alto per rileggere le righe. Scorri Spotlight per il
+  titolo prima o dopo.
+- **Pannelli**: ✕ li chiude, ← torna alla pagina prima; anche un tocco fuori dal pannello lo chiude.
+- **Player**: tocca per le informazioni e i pulsanti; doppio tocco a sinistra o a destra per tornare indietro o
+  andare avanti di 10 secondi; trascina la barra di avanzamento; scorri su e giù a sinistra per la luminosità, a
+  destra per il volume, al centro per cambiare canale; pizzica per riempire lo schermo o adattarlo; 🔒 blocca i
+  comandi; se esci dal player mentre un video va, continua in una finestrella.
+- **Condividi** nella pagina di un titolo manda un link: Zephyr TV lo apre su un altro telefono o tablet. Un link
+  condiviso con Zephyr TV (il `manifest.json` di un add-on Stremio, un link `stremio://` o `ztv://`) viene aggiunto
+  dopo la tua conferma.
+- Quello che una TV fa con un QR code e il telefono si fa direttamente sul dispositivo: la sua tastiera, il suo
+  selettore di file.
+
 ## 23. Domande frequenti
 
 <details>
