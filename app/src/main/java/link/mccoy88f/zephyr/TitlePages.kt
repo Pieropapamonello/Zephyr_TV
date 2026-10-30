@@ -429,7 +429,16 @@ private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, 
     // What holding OK on a row does (see MainActivity.onHold).
     for ((i, hold) in holds) settingsList.getChildAt(1 + i)?.setTag(R.id.settingsList, hold)
     rowIcons(icons, first = 1) // after [top]
-    servicesBar?.let { settingsList.addView(it.apply { setPadding(dp(14), dp(12), dp(14), dp(4)) }) }
+    servicesBar?.let { bar ->
+        settingsList.addView(bar.apply { setPadding(dp(14), dp(12), dp(14), dp(4)) })
+        // showPage keeps Down on the last row from leaving it: here it goes down to the apps, and Up from them back to it;
+        // Down from the apps goes nowhere.
+        val buttons = ((bar as? android.widget.HorizontalScrollView)?.getChildAt(0) as? LinearLayout) ?: return@let
+        val last = settingsList.getChildAt(settingsList.childCount - 2)?.takeIf { rows.isNotEmpty() } ?: return@let
+        if (last.id == View.NO_ID) last.id = View.generateViewId()
+        last.nextFocusDownId = buttons.getChildAt(0).id
+        for (c in 0 until buttons.childCount) buttons.getChildAt(c).let { it.nextFocusUpId = last.id; it.nextFocusDownId = it.id }
+    }
 }
 
 /**
