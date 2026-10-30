@@ -590,6 +590,7 @@
         <item quantity="other">%d épisodes</item>
     </plurals>
     <string name="title_no_streams">Aucune extension n\'a de flux pour ce titre</string>
+    <string name="episode_no_description">Pas encore de description pour cet épisode.</string>
     <string name="title_no_page">Aucune extension n\'a de fiche pour ce titre</string>
     <string name="player_episode">%1$s · S%2$d E%3$d</string>
     <string name="toast_addon_added_vod">%1$s ajoutée : films et séries</string>

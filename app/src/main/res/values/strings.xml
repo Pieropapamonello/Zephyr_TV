@@ -587,6 +587,7 @@
         <item quantity="other">%d episodes</item>
     </plurals>
     <string name="title_no_streams">No add-on has streams for this title</string>
+    <string name="episode_no_description">No description for this episode yet.</string>
     <string name="title_no_page">No add-on has a page for this title</string>
     <string name="player_episode">%1$s · S%2$d E%3$d</string>
     <string name="toast_addon_added_vod">%1$s added: films and series</string>

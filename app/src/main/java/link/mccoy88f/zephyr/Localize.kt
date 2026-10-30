@@ -138,9 +138,16 @@ internal fun MainActivity.localizeMeta(meta: Stremio.TitleMeta): Stremio.TitleMe
     val episodes = if (!l.tv || meta.episodes.isEmpty()) meta.episodes else {
         val seasons = meta.episodes.map { it.season }.distinct().take(40)
         val local = parallel(seasons, 4, 20) { n -> n to runCatching { TmdbClient.seasonEpisodes(key, l.tmdbId, n, lang) }.getOrDefault(emptyMap()) }.toMap()
+        // Episodes TMDB has nothing about in the TV's language, nor the catalog: what TMDB has in English, for those seasons.
+        val bare = meta.episodes.filter { e -> local[e.season]?.get(e.episode)?.overview.isNullOrBlank() && e.overview.isNullOrBlank() }
+            .map { it.season }.distinct().takeIf { !lang.startsWith("en") }.orEmpty()
+        val english = parallel(bare, 4, 20) { n -> n to runCatching { TmdbClient.seasonEpisodes(key, l.tmdbId, n, "en-US") }.getOrDefault(emptyMap()) }.toMap()
         meta.episodes.map { e ->
-            val le = local[e.season]?.get(e.episode) ?: return@map e
-            Stremio.Episode(e.id, e.season, e.episode, le.name.ifBlank { e.name }, e.released, le.still ?: e.thumbnail, le.overview.ifBlank { e.overview.orEmpty() }.ifBlank { null })
+            val le = local[e.season]?.get(e.episode)
+            val en = english[e.season]?.get(e.episode)?.overview.orEmpty()
+            if (le == null) return@map if (e.overview.isNullOrBlank() && en.isNotBlank()) Stremio.Episode(e.id, e.season, e.episode, e.name, e.released, e.thumbnail, en) else e
+            Stremio.Episode(e.id, e.season, e.episode, le.name.ifBlank { e.name }, e.released, le.still ?: e.thumbnail,
+                le.overview.ifBlank { e.overview.orEmpty() }.ifBlank { en }.ifBlank { null })
         }
     }
     return Stremio.TitleMeta(title, l.overview.ifBlank { meta.description.orEmpty() }.ifBlank { null }, l.genres.ifEmpty { meta.genres },

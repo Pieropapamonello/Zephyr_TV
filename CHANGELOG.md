@@ -14,6 +14,13 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.10
+
+- The page of an episode shows what that episode is about. Before, it could show the description of the series.
+- When TMDB has no description of an episode in the language of the TV, and the catalog has none, Zephyr TV shows the English one of TMDB.
+- The pages of a season and of an episode show again when the names and descriptions in your language arrive.
+- When there is no description of an episode, the page says so.
+
 ## 3.4.0-beta.9
 
 - New: **WARP for Zephyr TV**, in **Hide your IP (Cloudflare WARP)**. Zephyr TV, and only Zephyr TV, goes through the free WARP network of Cloudflare: the sites and the servers of the videos see an address of Cloudflare and not yours. The 1.1.1.1 app is not necessary.

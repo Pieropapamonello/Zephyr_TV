@@ -40,7 +40,10 @@ internal fun MainActivity.openTitle(ref: TitleRef) {
         val whole = localizeMeta(raw)
         if (whole === raw) return@execute // nothing TMDB adds
         wholeMeta[wholeKey(whole.title.id)] = whole
-        ui.post { if (pageShowing(known.title.name)) showVodTitle(whole, ref, focusRow = focusedRow()) }
+        ui.post {
+            if (pageShowing(known.title.name)) showVodTitle(whole, ref, focusRow = focusedRow())
+            else if (redrawFor == whole.title.id) redraw?.invoke() // a season's or an episode's page: its names and what each is about
+        }
     }
 }
 
@@ -52,6 +55,10 @@ private fun MainActivity.titleMeta(ref: TitleRef): Stremio.TitleMeta? = addonMet
 
 /** Titles' pages in the TV's language as last had whole (see openTitle), by id: a page drawn again keeps them. */
 private val wholeMeta = java.util.concurrent.ConcurrentHashMap<String, Stremio.TitleMeta>()
+
+/** The season's or episode's page on show, drawn again once its title's whole page is in (see openTitle). */
+private var redraw: (() -> Unit)? = null
+private var redrawFor: String? = null
 
 /** Its key: in this language, and whether TMDB completes titles (either changed, it's had again). */
 private fun MainActivity.wholeKey(id: String) = "${tmdbLang()}|${tmdbEnrich()}|$id"
@@ -159,8 +166,9 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
 /**
  * A series' season page: with Left/Right (sx / dx) you move between seasons, and below it the list of episodes.
  */
-internal fun MainActivity.showVodSeason(meta: Stremio.TitleMeta, ref: TitleRef, season: Int, available: Set<String>? = null,
+internal fun MainActivity.showVodSeason(given: Stremio.TitleMeta, ref: TitleRef, season: Int, available: Set<String>? = null,
                                         episode: String? = null, focusRow: Int? = null) {
+    val meta = wholeMeta[wholeKey(given.title.id)] ?: given // the episodes in the TV's language once they're in
     val t = meta.title
     val seasons = meta.episodes.map { it.season }.distinct()
     val shown = season.takeIf { it in seasons } ?: seasons.first()
@@ -210,6 +218,8 @@ internal fun MainActivity.showVodSeason(meta: Stremio.TitleMeta, ref: TitleRef, 
     focusRow?.let { focus = it }
     val art = if (ref.background != null) Triple(ref.background, ref.logo, ref.poster ?: t.poster) else Triple(t.background, t.logo, ref.poster ?: t.poster)
     val pageTitle = "${t.name} · ${seasonName(shown)}"
+    redrawFor = t.id
+    redraw = { if (pageShowing(pageTitle)) showVodSeason(meta, ref, shown, available, episode, focusedRow() ?: focusRow) }
     titlePage(pageTitle, art, ref.fallback, t.name, top, rows, focus, icons, holds) {
         showVodTitle(meta, ref, services.known)
     }
@@ -221,10 +231,15 @@ internal fun MainActivity.showVodSeason(meta: Stremio.TitleMeta, ref: TitleRef, 
  * An episode's page, from its row on its season's page: its still (else the series' art) across the top, its season,
  * number and name, when it came out, what it's about; then Watch (or Resume).
  */
-internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef, e: Stremio.Episode, available: Set<String>? = null,
+internal fun MainActivity.showVodEpisode(given: Stremio.TitleMeta, ref: TitleRef, picked: Stremio.Episode, available: Set<String>? = null,
                                          found: Map<String, Int>? = null, focus: Int = -1) {
+    // The episode as the whole page has it, once in: its name and what it's about in the TV's language.
+    val meta = wholeMeta[wholeKey(given.title.id)] ?: given
+    val e = meta.episodes.firstOrNull { it.id == picked.id } ?: picked
     val t = meta.title
     val title = getString(R.string.player_episode, t.name, e.season, e.episode)
+    redrawFor = t.id
+    redraw = { if (pageShowing(title)) showVodEpisode(meta, ref, e, available, found, focusedRow() ?: focus) }
     val released = e.released?.take(10)?.let { d -> runCatching { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).parse(d) }.getOrNull() }
         ?.let { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(it) }
     val mark = VodWatched.all(vodDir())[e.id]
@@ -232,7 +247,9 @@ internal fun MainActivity.showVodEpisode(meta: Stremio.TitleMeta, ref: TitleRef,
     val seenLine = mark?.let { m -> watchedOn(m.at)?.let { getString(R.string.title_watched_on, it) } ?: getString(R.string.title_watched) }
 
     val (servicesBar, services) = serviceBar(t, available)
-    val (top, descView) = titleTop(listOfNotNull(episodeLine(e), released).joinToString(" · "), e.name.takeIf { it.isNotBlank() }, e.overview ?: meta.description, seenLine, servicesBar)
+    // What this episode is about; the series' description isn't its own, so none says so.
+    val about = e.overview?.takeIf { it.isNotBlank() } ?: getString(R.string.episode_no_description)
+    val (top, descView) = titleTop(listOfNotNull(episodeLine(e), released).joinToString(" · "), e.name.takeIf { it.isNotBlank() }, about, seenLine, servicesBar)
 
     val sources = streamSources(t.type, e.id)
     val rows = ArrayList<Triple<String, String, () -> Unit>>()
