@@ -14,6 +14,14 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.5.4
+
+- The player plays Blu-ray files (.m2ts). Before, it showed "The device can't play this format" for them.
+- On a TV, the player decodes the sound formats that the TV can't decode, for example Dolby TrueHD. Before, these videos played without sound.
+- In the list of streams in the player, the group "Quality not stated" is last.
+- When you choose the stream yourself, the list shows the streams in groups by quality, as the player does. The group "Quality not stated" is last.
+- On the page of a film, series or episode, the trailer and the buttons of the apps are at the bottom, after the other rows.
+
 ## 3.5.3
 
 - On a phone or tablet, the ← and ✕ buttons of the side panels have their arrow and cross in the middle.
