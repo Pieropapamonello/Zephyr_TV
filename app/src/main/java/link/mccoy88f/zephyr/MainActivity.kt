@@ -248,6 +248,7 @@ class MainActivity : Activity() {
         applyClock()
         setupSpotlight() // after applyTheme: its veil and arrow discs use the theme's colours
         touchSetup() // phones and tablets: the page and Spotlight with a finger
+        warpAgain() // WARP on before: up again
         loadWallpaper()
 
         // Top bar: users, search, network, All apps, TV inputs, Android settings, launcher settings. Round, lit on focus.
@@ -385,6 +386,7 @@ class MainActivity : Activity() {
     @Deprecated("Only used for the default-home role request")
     override fun onActivityResult(code: Int, result: Int, data: Intent?) {
         if (code == FILE_REQUEST) return fileResult(result, data)
+        if (code == VPN_REQUEST) return vpnAnswer(result == RESULT_OK)
         if (code == ROLE_REQUEST) refreshSettings(DEFAULT_HOME_ROW)
         if (code == ROLE_REQUEST && setupStep == 1) {
             setupStep = 0
@@ -808,6 +810,7 @@ class MainActivity : Activity() {
 
     internal var upload: PhoneLink? = null
     internal var fileDone: ((android.net.Uri?) -> Unit)? = null // the file picker or Save dialog open (see Handheld)
+    internal var warpBack: (() -> Unit)? = null // the WARP page's Back, to show it again once WARP is up (see Privacy)
 
     // ---------- launcher settings panel (top-bar button; the Settings tile is Android's) ----------
 
@@ -2055,6 +2058,7 @@ class MainActivity : Activity() {
         const val ROLE_REQUEST = 2
         const val MIC_REQUEST = 4
         const val FILE_REQUEST = 5 // a file picked, or saved, on a phone or tablet (see Handheld)
+        const val VPN_REQUEST = 6 // Android's permission for WARP's VPN (see Privacy)
         const val SPOTLIGHT_IDLE_MS = 15 * 60_000L // Spotlight stops turning after this long without a key press
         const val TMDB_FRESH_MS = 3 * 3600_000L // how long a trending list is kept before it's fetched again
         val SPOTLIGHT_PKGS = listOf("com.nuvio.tv", "com.nuvio.app", "com.stremio.one", "com.netflix.ninja", "com.google.android.youtube.tv", "com.amazon.amazonvideo.livingroom")

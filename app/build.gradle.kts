@@ -15,8 +15,8 @@ android {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         targetSdk = 36
-        versionCode = 56
-        versionName = "3.4.0-beta.8"
+        versionCode = 57
+        versionName = "3.4.0-beta.9"
         // What's new: only this version's section of CHANGELOG.md ships, one entry per line, without ** marks.
         val notes = rootProject.file("CHANGELOG.md").readText().replace("\r", "")
             .substringAfter("\n## $versionName\n", "").substringBefore("\n## ")
@@ -57,7 +57,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
@@ -94,6 +94,8 @@ dependencies {
     // pass on to a receiver. Without it their sound is left out. Jellyfin's build of Media3's FFmpeg decoder (GPL-3.0).
     implementation("androidx.media3:media3-decoder:$media3")
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")
+    // WARP for Zephyr TV alone: WireGuard's own Android library (Apache-2.0), its tunnel as this app's VPN (see Warp).
+    implementation("com.wireguard.android:tunnel:1.0.20260102")
     // The second exception: QuickJS, the JavaScript engine Nuvio's plugins run in (see NuvioPlugins).
     implementation("io.github.dokar3:quickjs-kt:$QUICKJS")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2") // what it runs on; used directly too

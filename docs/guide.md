@@ -223,11 +223,15 @@ trust.** **OMG Premium TV** is suggested in the list: OK installs it. Add your M
 ### Hiding your IP
 
 Add-ons, plugins and extensions ask the sites they read from your connection, so those sites see your IP, and so
-does the server of each video. **Cloudflare WARP**, in the free **1.1.1.1** app, sends all the traffic of the device
-through Cloudflare: the sites see one of its addresses instead. Zephyr TV needs nothing else.
+does the server of each video. **Settings → Extra features → Hide your IP (Cloudflare WARP)**:
 
-**Settings → Extra features → Hide your IP (Cloudflare WARP)** says whether a VPN is on, and opens WARP (or its
-Play Store page). Some sites refuse VPN addresses: if one stops working, turn WARP off for a moment.
+- **WARP for Zephyr TV**: all of what Zephyr TV does (the add-ons, plugins and extensions, and the player) goes through
+  Cloudflare's free WARP network, and the sites see one of its addresses instead. Only Zephyr TV: the other apps stay
+  as they are. Android asks once to allow the VPN and shows its key icon while it's on; another VPN can't be on at the
+  same time.
+- **The whole device: the 1.1.1.1 app**: Cloudflare's own app, for WARP on every app.
+
+Some sites refuse VPN addresses: if one stops working, turn WARP off for a moment.
 
 ## 13. Where channels, films and adult content show
 

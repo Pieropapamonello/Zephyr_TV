@@ -648,7 +648,7 @@ internal fun MainActivity.pickStream(ref: TitleRef, meta: Stremio.TitleMeta, epi
     val found = java.util.Collections.synchronizedList(ArrayList<Stremio.Stream>())
     var left = sources.size
     var shown = false
-    // Each stream on two lines: what it is on top (scrolling when it's long), where it's from under it, in violet.
+    // Each stream on two lines: what it is on top (scrolling when it's long), where it's from under it, in italics.
     fun show() {
         val keep = if (shown) focusedRow() ?: 0 else 0
         val list = found.toList().distinctBy { it.url }

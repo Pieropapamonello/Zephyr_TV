@@ -14,9 +14,16 @@ Write every entry in ASD-STE100 Simplified Technical English:
 Put changes that are not released under `## Unreleased`. Rename that heading to the version number when you release.
 
 
+## 3.4.0-beta.9
+
+- New: **WARP for Zephyr TV**, in **Hide your IP (Cloudflare WARP)**. Zephyr TV, and only Zephyr TV, goes through the free WARP network of Cloudflare: the sites and the servers of the videos see an address of Cloudflare and not yours. The 1.1.1.1 app is not necessary.
+- Android asks one time to allow the VPN. When you start Zephyr TV again, WARP starts again.
+- In the lists of streams, the source of each stream is in italics, not in violet.
+- On a phone or tablet, Dolby and DTS sound plays in the versions downloaded from the releases too. Before, the decoder could be left out of them.
+
 ## 3.4.0-beta.8
 
-- In the list of streams (with **Stream choice** set to **Manual**, and in the player), each stream has two lines. The top line tells what the stream is, and it scrolls when it is too long. The bottom line tells its source, in violet.
+- In the list of streams (with **Stream choice** set to **Manual**, and in the player), each stream has two lines. The top line tells what the stream is, and it scrolls when it is too long. The bottom line tells its source, in italics.
 
 ## 3.4.0-beta.7
 

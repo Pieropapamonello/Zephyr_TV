@@ -223,12 +223,15 @@ account Xtream, e i canali, i film e le serie compaiono nella sua app.
 ### Nascondere il tuo IP
 
 Add-on, plugin ed estensioni interrogano i siti dalla tua connessione, quindi quei siti vedono il tuo IP, e lo vede
-anche il server di ogni video. **Cloudflare WARP**, nell'app gratuita **1.1.1.1**, fa passare tutto il traffico del
-dispositivo da Cloudflare: i siti vedono un suo indirizzo al posto del tuo. A Zephyr TV non serve altro.
+anche il server di ogni video. **Impostazioni → Funzioni aggiuntive → Nascondi il tuo IP (Cloudflare WARP)**:
 
-**Impostazioni → Funzioni aggiuntive → Nascondi il tuo IP (Cloudflare WARP)** dice se una VPN è attiva e apre WARP (o la
-sua pagina sul Play Store). Alcuni siti rifiutano gli indirizzi delle VPN: se uno smette di funzionare, spegni WARP
-per un momento.
+- **WARP per Zephyr TV**: tutto quello che fa Zephyr TV (add-on, plugin, estensioni e player) passa dalla rete WARP
+  gratuita di Cloudflare, e i siti vedono un suo indirizzo al posto del tuo. Solo Zephyr TV: le altre app restano come
+  sono. Android chiede una volta di permettere la VPN e mostra l'icona della chiave finché è attiva; un'altra VPN non
+  può essere attiva insieme.
+- **Tutto il dispositivo: l'app 1.1.1.1**: l'app di Cloudflare, per WARP su tutte le app.
+
+Alcuni siti rifiutano gli indirizzi delle VPN: se uno smette di funzionare, spegni WARP per un momento.
 
 ## 13. Dove compaiono canali, film e contenuti per adulti
 

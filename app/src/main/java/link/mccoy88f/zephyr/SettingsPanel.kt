@@ -982,12 +982,9 @@ internal fun MainActivity.pickSpotlightSource() {
 }
 
 
-/** A stream's source, in violet: dark on a light ground, light on a dark one (see twoLineRow). */
-internal fun violet(onLight: Boolean) = if (onLight) 0xFF6A1B9A.toInt() else 0xFFC4A1FF.toInt()
-
 /**
  * A row of two lines, for a stream: [info] (its name, quality, size) on top, scrolling when it's too long, and
- * [source] (the add-on, plugin or extension it's from) under it, in violet. Lit with focus as a settings row is.
+ * [source] (the add-on, plugin or extension it's from) under it, in italics. Lit with focus as a settings row is.
  */
 internal fun MainActivity.twoLineRow(info: String, source: String, action: () -> Unit): View {
     val bg = GradientDrawable().apply { cornerRadius = dp(8).toFloat() }
@@ -997,7 +994,7 @@ internal fun MainActivity.twoLineRow(info: String, source: String, action: () ->
         isSingleLine = true
         isSelected = handheld() // a finger gives no focus: every row scrolls
     }
-    val under = label(source, 12f).apply { setTextColor(violet(!dark)); setPadding(0, dp(2), 0, 0) }
+    val under = label(source, 12f).apply { setTypeface(typeface, android.graphics.Typeface.ITALIC); alpha = 0.75f; setPadding(0, dp(2), 0, 0) }
     return LinearLayout(this).apply {
         id = View.generateViewId()
         orientation = LinearLayout.VERTICAL
@@ -1012,7 +1009,7 @@ internal fun MainActivity.twoLineRow(info: String, source: String, action: () ->
             bg.setColor(if (focused) fg else 0)
             top.setTextColor(if (focused) onFg else fg)
             top.isSelected = focused || handheld()
-            under.setTextColor(violet(if (focused) dark else !dark)) // fg is light on a dark theme: the lit row is light
+            under.setTextColor(if (focused) onFg else fg)
         }
     }
 }
