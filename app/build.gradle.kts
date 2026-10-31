@@ -41,6 +41,9 @@ android {
     val keys = rootProject.file("keystore.properties").takeIf { it.exists() }
         ?.let { f -> Properties().apply { f.inputStream().use { load(it) } } }
     signingConfigs {
+        System.getenv("NELLO_KEYSTORE_PATH")?.let { path ->
+            getByName("debug") { storeFile = file(path) }
+        }
         if (keys != null) create("release") {
             storeFile = file(keys.getProperty("storeFile"))
             storePassword = keys.getProperty("storePassword")

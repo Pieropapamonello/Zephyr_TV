@@ -1,4 +1,4 @@
-﻿name: Nello upstream releases
+name: Nello upstream releases
 on:
   schedule:
     - cron: '7,22,37,52 * * * *'
@@ -72,6 +72,7 @@ jobs:
           p=pathlib.Path.home()/'.android/debug.keystore'
           p.parent.mkdir(parents=True,exist_ok=True)
           p.write_bytes(base64.b64decode(raw,validate=True));p.chmod(0o600)
+          with open(os.environ["GITHUB_ENV"],"a") as env: env.write("NELLO_KEYSTORE_PATH="+str(p)+"\n")
           PY
       - name: Test, compile, lint and audit Nello features
         if: steps.plan.outputs.needed == 'true'
@@ -83,6 +84,7 @@ jobs:
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n1)
           actual=$("$signer" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | sed -n 's/Signer #1 certificate SHA-256 digest: //p')
           expected=$(python -c 'import json;print(json.load(open("automation/nello-contract.json",encoding="utf-8-sig"))["certificateSha256"])')
+          echo "APK certificate SHA-256: $actual"
           test "$actual" = "$expected" || { echo '::error::Signing identity differs; publishing stopped'; exit 1; }
           cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/ZephyrTV-Nello-Android7.apk"
       - name: Save verified sources and publish the personalized APK
