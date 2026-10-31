@@ -25,7 +25,7 @@ internal object MatchPoster {
         val time = args.optString("time").trim().take(32)
         val homeBadge = args.optString("homeBadge")
         val awayBadge = args.optString("awayBadge")
-        val key = JSONObject().put("v",2).put("home",home).put("away",away).put("time",time)
+        val key = JSONObject().put("v",3).put("home",home).put("away",away).put("time",time)
             .put("homeBadge",homeBadge).put("awayBadge",awayBadge).toString()
         val cache = caches.computeIfAbsent(File(data,"match-posters").path) { BackdropCache(File(it),120,BackdropCache::artName) }
         val file = cache.get(key) {
@@ -63,6 +63,7 @@ internal object MatchPoster {
                     fun lines(): List<String> {
                         val out=ArrayList<String>();var current=""
                         val words=name.split(' ').flatMap { word ->
+                            if(paint.textSize>40f) return@flatMap listOf(word)
                             val pieces=ArrayList<String>();var piece=""
                             for(ch in word) { if(paint.measureText(piece+ch)>390f && piece.isNotEmpty()) { pieces+=piece;piece="" };piece+=ch }
                             if(piece.isNotEmpty())pieces+=piece;pieces
