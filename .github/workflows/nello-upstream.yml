@@ -82,7 +82,9 @@ jobs:
           ./gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug
           python scripts/nello_sync.py audit
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n1)
-          actual=$("$signer" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | sed -n 's/Signer #1 certificate SHA-256 digest: //p')
+          certs=$("$signer" verify --print-certs app/build/outputs/apk/debug/app-debug.apk)
+          printf '%s\n' "$certs"
+          actual=$(printf '%s\n' "$certs" | sed -n 's/.*certificate SHA-256 digest: //p' | sort -u)
           expected=$(python -c 'import json;print(json.load(open("automation/nello-contract.json",encoding="utf-8-sig"))["certificateSha256"])')
           echo "APK certificate SHA-256: $actual"
           test "$actual" = "$expected" || { echo '::error::Signing identity differs; publishing stopped'; exit 1; }
