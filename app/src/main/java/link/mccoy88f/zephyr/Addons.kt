@@ -193,12 +193,12 @@ internal fun MainActivity.addonSections(pkg: String, hidden: Set<String>): List<
     }
     urls.forEach { if (Stremio.due(filesDir, it)) updateAddon(it, pkg) }
     val listings = urls.mapNotNull { url -> Stremio.saved(filesDir, url)?.let { url to it } }
+    val extGuides = listings.associate { (url, _) -> url to extensionGuides(url, pkg) }
     // The same add-ons, guide and hidden channels as last time, in the same few minutes: the same rows (the same
     // cards, so showSections keeps them on screen as they are).
     val from = listOf(pkg, addonsTv(), listings.joinToString { (u, l) -> "$u@${l.at}" }, System.identityHashCode(guide),
-        hidden.hashCode(), System.currentTimeMillis() / GUIDE_MS).joinToString("|")
+        extGuides.values.flatten().map { System.identityHashCode(it) }, hidden.hashCode(), System.currentTimeMillis() / GUIDE_MS).joinToString("|")
     built[pkg]?.takeIf { it.from == from }?.let { return it.sections }
-    val extGuides = listings.associate { (url, _) -> url to extensionGuides(url, pkg) }
     // Which of an add-on's rows show here, by their catalog's type: in the Radio collector its radio stations given to
     // it; in an extension's own app those not given to a collector; elsewhere TV channels (an extension's given to them).
     val radio = COLLECTOR_PKGS[pkg] == "radio"

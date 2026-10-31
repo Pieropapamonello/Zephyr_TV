@@ -235,10 +235,11 @@ internal fun MainActivity.titleApps(): List<App> {
  */
 internal fun MainActivity.renderSpotlightActions() {
     spotlightActions.removeAllViews()
-    val targetApps = titleApps()
+    val preferred=preferredWatchApp()
+    val targetApps = if(preferred!=null)emptyList() else titleApps()
     spotlightApps = targetApps
     val streamers = shownAddonUrls().mapNotNull { Stremio.saved(filesDir, it)?.addon }.filter { it.streamsVod }
-    val watch = if (streamers.isEmpty()) emptyList() else listOf(MainActivity.App(WATCH_ACTION, getString(R.string.title_watch),
+    val watch = if (streamers.isEmpty() && preferred==null) emptyList() else listOf(MainActivity.App(WATCH_ACTION, getString(R.string.title_watch),
         android.content.Intent(), watchIcon(streamers.singleOrNull())))
     // Watch's icon is Zephyr TV's play mark (no add-on's logo): coloured as the text, so it shows on the focused button too.
     val markOnWatch = streamers.singleOrNull()?.let { addonIcon(it) } == null

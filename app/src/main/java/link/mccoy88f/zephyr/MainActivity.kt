@@ -321,6 +321,8 @@ class MainActivity : Activity() {
         shortcuts() // a phone or tablet: Search and the Play queue on the icon
         ui.post { if (!handleVoiceSearchIntent(intent)) handleLink(intent) } // a search, link, share or shortcut
         ui.post { refreshStartupCatalogs() }
+        // Fire OS 6 may keep a dead notification-listener binding after an APK update.
+        ui.post { if(listenerAllowed()) runCatching { android.service.notification.NotificationListenerService.requestRebind(listenerComponent()) } }
     }
 
     /**

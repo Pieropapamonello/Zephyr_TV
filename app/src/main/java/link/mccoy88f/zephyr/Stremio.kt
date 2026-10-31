@@ -286,7 +286,7 @@ internal object Stremio {
         for (page in 0 until MAX_PAGES) {
             val extra = listOfNotNull(genre?.let { "genre=${enc(it)}" }, if (out.isEmpty()) null else "skip=${out.size}").joinToString("&")
             val path = "${addon.base}/catalog/${enc(c.type)}/${enc(c.id)}" + (if (extra.isEmpty()) "" else "/$extra") + ".json"
-            val metas = items(get(path))
+            val metas = items(get(path), ExtensionCalls.idOf(addon.url))
             val before = out.size
             for (it in metas) out.putIfAbsent(it.id, it)
             // A short page is the last; one with nothing new means the add-on ignores "skip".
@@ -296,7 +296,7 @@ internal object Stremio {
     }
 
     /** The channels in a catalog page. */
-    internal fun items(page: JSONObject): List<Item> {
+    internal fun items(page: JSONObject, extensionId: String? = null): List<Item> {
         val metas = page.optJSONArray("metas") ?: return emptyList()
         return (0 until metas.length()).mapNotNull { metas.optJSONObject(it) }.mapNotNull { m ->
             val id = m.optString("id").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
@@ -304,7 +304,7 @@ internal object Stremio {
             // "LIVE" is what some add-ons say when they have no guide for the channel: nothing to show.
             val now = text(m, "releaseInfo")?.takeIf { !it.equals("LIVE", ignoreCase = true) }
             val genres = (m.optJSONArray("genre") ?: m.optJSONArray("genres"))?.let { g -> (0 until g.length()).map { g.optString(it) } }.orEmpty()
-            Item(m.optString("type").ifBlank { "tv" }, id, name, logo(text(m, "logo") ?: text(m, "poster")), now, genres, text(m, "epgId"))
+            Item(m.optString("type").ifBlank { "tv" }, id, name, logo(text(m, "logo") ?: text(m, "poster"), extensionId), now, genres, text(m, "epgId"))
         }
     }
 
@@ -312,7 +312,10 @@ internal object Stremio {
      * The add-on's logo for a channel, its own placeholder too (it chose it): null only when it isn't a web address
      * or it's cut short ("…/images?q"). Zephyr TV's own (see ChannelLogos) is the fallback, for none or one that won't load.
      */
-    internal fun logo(url: String?): String? {
+    internal fun logo(url: String?, extensionId: String? = null): String? {
+        // Only the producing native extension may publish its generated local fixture artwork.
+        if (url != null && extensionId != null && Regex("^file:///data/(?:user/[0-9]+|data)/[^/]+/files/extension-data/" +
+                Regex.escape(extensionId) + "/match-posters/a[0-9a-f]{24}$").matches(url)) return url
         if (url == null || !(url.startsWith("http://") || url.startsWith("https://"))) return null
         val query = url.substringAfter('?', "")
         if (url.contains('?') && (query.isEmpty() || !query.contains('='))) return null

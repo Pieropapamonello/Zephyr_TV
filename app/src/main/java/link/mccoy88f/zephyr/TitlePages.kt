@@ -83,6 +83,14 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
     // Drawn again by what was started with an earlier version of it (the streams counted): the whole one, once in.
     val meta = wholeMeta[wholeKey(given.title.id)] ?: given
     val t = meta.title
+    if (preferredWatchApp()!=null) {
+        val (top,_) = titleTop(listOfNotNull(t.year,meta.genres.firstOrNull(),meta.runtime).joinToString(" · "),null,meta.description)
+        val art=Triple(ref.background ?: t.background,ref.logo ?: t.logo,ref.poster ?: t.poster)
+        titlePage(t.name,art,ref.fallback,t.name,top,
+            listOf(page(getString(R.string.title_watch)) { watchPreferred(TitleRef(ref.type,ref.id,t.name,ref.poster,ref.background)) }),0,
+            emptyMap(),emptyMap(),null) { closeLauncherSettings() }
+        return
+    }
     val kind = getString(if (t.type == "series") R.string.tmdb_badge_tv else R.string.tmdb_badge_movie)
     markWhole(meta)
     // Watched (by the user in use): a film when, a series its last episode watched and when.

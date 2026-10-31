@@ -129,6 +129,7 @@ internal object ExtensionCalls {
             globalThis.zephyr = $zephyr;
             zephyr.has = function (name) { return ${JSONArray(Extensions.FEATURES.toList())}.indexOf(name) >= 0; };
             zephyr.asset = function (path) { return __zephyr("asset", { path: path }); };
+            zephyr.matchPoster = function (o) { return __zephyr("match.poster", o || {}); };
             zephyr.m3u = {
               load: function (name, o) { o = o || {}; return __zephyr("m3u.load", { name: name, url: o.url || "", text: o.text || "", headers: o.headers || {}, maxAge: o.maxAge == null ? 86400 : o.maxAge }); },
               channels: function (name, o) { o = o || {}; return __zephyr("m3u.channels", { name: name, kind: o.kind || "", group: o.group || "", search: o.search || "", skip: o.skip || 0, limit: o.limit || 100 }); },

@@ -13,7 +13,7 @@ internal fun MainActivity.smartTubeSearchPackage(): String? = smartTubePackages.
     packageManager.resolveContentProvider(pkg, 0)?.let { it.packageName == pkg && it.exported } == true
 }
 
-private fun smartTubeIntent(pkg: String, uri: Uri) = Intent(Intent.ACTION_VIEW, uri)
+internal fun smartTubeIntent(pkg: String, uri: Uri) = Intent(Intent.ACTION_VIEW, uri)
     .setComponent(ComponentName(pkg, "com.liskovsoft.smartyoutubetv2.tv.ui.main.SplashActivity"))
     .setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 

@@ -239,3 +239,53 @@ posto dell'inglese quando dichiarato; selezione manuale rispettata. Su un altro
 manifest con otto audio è stata selezionata la settima traccia (codice `qak`).
 Rinnovo della cache M3U verificato all'avvio del launcher. Queste prove non
 certificano lingue, qualità o disponibilità di ogni sorgente esterna.
+
+### Copertine delle partite — Nello.6
+
+Le estensioni possono usare `zephyr.has("match-posters")` e
+`await zephyr.matchPoster({home, away, time, homeBadge, awayBadge})`.
+Zephyr compone localmente un PNG 960×540 con i due stemmi, i nomi e l'orario.
+Le immagini dei club vengono scaricate da URL HTTPS, ridimensionate e conservate
+nella cartella privata dell'estensione (massimo 120 copertine). Una modifica a
+nomi, stemmi o orario produce una nuova immagine. Non viene usato un servizio
+esterno per comporre le copertine; nomi e orario non sono inviati a un renderer.
+Se uno stemma non è disponibile, compaiono le iniziali della squadra.
+
+L'estensione fornisce nomi, orari e indirizzi degli stemmi: il renderer non
+sceglie un fuso orario e non modifica gli orari della sorgente.
+
+### Schermate semplificate — Nello.6
+
+Quando Nuvio TV è installato, la scheda di film e serie e i comandi Spotlight
+mostrano un solo «Guarda». Il collegamento `nuvio://detail/<tipo>/<id>` apre quel
+titolo in Nuvio; riproduzione, scelta della sorgente e ripresa seguono le opzioni
+di Nuvio. Non è una promessa di avvio automatico del film senza una sorgente.
+
+«Continua a guardare» esclude i canali live e le altre app. Conserva localmente
+solo filmati non completati di Nuvio TV e SmartTube con durata e posizione
+pubblicate nelle sessioni multimediali: almeno 10 secondi, meno del 95%.
+Il listener già autorizzato registra i progressi anche mentre il launcher è in
+secondo piano, senza leggere il contenuto delle notifiche. Il permesso non viene
+concesso dall'app. Dopo un aggiornamento Fire OS può richiedere la riconnessione
+del listener: Zephyr la richiede solo se l'utente lo ha già autorizzato.
+
+I dati vengono salvati solo sul dispositivo. Non si importa la cronologia
+privata precedente delle app; dati mancanti non vengono inventati. SmartTube
+si riapre sul video e sul tempo salvato quando è disponibile il suo identificatore.
+Per Nuvio viene usato il collegamento al titolo noto; per sessioni prive di
+collegamenti si riapre la sessione ancora attiva o l'app, che gestisce la ripresa.
+Le sessioni finite vengono rimosse dalla riga, non dalla cronologia dell'app.
+
+Le estensioni con guida XMLTV possono indicare il programma in onda sulle
+anteprime dei canali. Gli aggiornamenti della guida invalidano ora anche la
+cache delle sezioni: un nuovo palinsesto compare senza aspettare cinque minuti.
+La disponibilità delle partite dipende dai dati della guida del fornitore.
+
+Verifiche Nello.6: build e lint completati con avvisi; 131 test JVM eseguiti,
+130 superati e un controllo remoto Nuvio saltato; regressione Node del bridge
+M3U superata. Sulla Fire TV API 25: test del renderer a due stemmi e invalidazione
+per cambio orario superato; scrittura/sostituzione dei progressi in una cartella
+isolata superata. La scheda Inception mostra solo «Guarda» e apre il titolo in
+Nuvio. Un video SmartTube realmente interrotto è comparso nella riga ed è stato
+riaperto a 457 secondi. La cronologia privata precedente delle app e ogni
+possibile flusso/Nuvio player non sono coperti da queste prove.

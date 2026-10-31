@@ -50,7 +50,7 @@ internal fun MainActivity.refreshWatchNext() {
         } catch (e: Exception) {
             emptyList()
         }
-        val playing = nowPlaying()
+        val playing = emptyList<Prog>() // persisted unfinished Nuvio/SmartTube sessions are in queryWatchNext
         ui.post {
             if (tmdbLastFocusApp != null) return@post // focus moved on to an app meanwhile: its rows, not these
             watchTitle.text = getString(R.string.continue_watching)
@@ -85,10 +85,11 @@ internal fun MainActivity.queryWatchNext(): List<Prog> {
                 watchNext + channels
             } else emptyList()
         },
-        local = { listOfNotNull(lastChannelCard(hidden)) + titleProgressCards(hidden) })
+        local = { externalResumeCards(hidden) })
     publishingPkgs = all.mapNotNull { it.second.pkg }.toSet()
     val off = prefs.getStringSet(K.CW_OFF, emptySet())!!
-    return newestPerApp(all.filter { it.second.pkg !in off }.distinctBy { it.second.intent ?: it.second.title }, PER_APP) { it.pkg }
+    return newestPerApp(all.filter { it.second.pkg !in off && ExternalResume.allowed(it.second.pkg) && it.second.progress in 1..94 }
+        .distinctBy { "${it.second.pkg}/${it.second.title}/${it.second.sub}" }, 12) { it.pkg }
         .take(20)
 }
 
@@ -768,6 +769,11 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
         listOfNotNull(p.image, p.channelId?.let { id -> logo(id) }, ChannelLogos.match(channelLogoTable(), p.title)).distinct()
     }
     if (p.vod != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title, p.vod.fallback)
+    if(p.addon!=null && p.sub.isNotBlank()) frame.addView(TextView(this).apply {
+        text=p.sub;textSize=13f;setTextColor(Color.WHITE);maxLines=2
+        ellipsize=TextUtils.TruncateAt.END;setPadding(dp(10),dp(6),dp(10),dp(6))
+        setBackgroundColor(0xDD0B1424.toInt())
+    },FrameLayout.LayoutParams(MATCH_PARENT,FrameLayout.LayoutParams.WRAP_CONTENT,Gravity.BOTTOM))
     // A film still only in cinemas (see Releases): a small rounded tag in the bottom right corner.
     if (p.cinema) frame.addView(TextView(this).apply {
         text = getString(R.string.badge_cinema)
@@ -845,15 +851,26 @@ internal fun MainActivity.channelArt(frame: FrameLayout, w: Int, h: Int, number:
     posterIo.execute {
         // Looked up here, off the UI thread, and tried in turn: the first that loads is the one.
         // Kept on disk (see Images) and in memory: a logo is downloaded once, not each time its card is.
-        val bmp = logo().firstNotNullOfOrNull { uri ->
-            posters.get(uri) ?: try {
+        val (uri, bmp) = logo().firstNotNullOfOrNull { uri ->
+            (posters.get(uri) ?: try {
                 val file = Images.file(uri, Images.Kind.LOGO)
                 decode(android.net.Uri.fromFile(file).toString(), alpha = true)?.also { posters.put(uri, it) }
             } catch (e: Exception) {
                 warn("channel logo failed: $uri ($e)")
                 null
-            }
+            })?.let { uri to it }
         } ?: return@execute
+        // A composed fixture is already a complete 16:9 card, not an individual channel crest.
+        if (uri.startsWith("file:///") && "/match-posters/" in uri) {
+            ui.post {
+                text.visibility = View.GONE
+                frame.addView(ImageView(this).apply {
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    setImageBitmap(bmp)
+                }, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+            }
+            return@execute
+        }
         val blur = softBlur(bmp)
         ui.post {
             text.visibility = View.GONE
@@ -989,6 +1006,17 @@ internal fun MainActivity.progressBarDrawable(): Drawable {
 internal fun MainActivity.open(p: Prog) {
     prefs.edit().putLong("t_${p.pkg}", System.currentTimeMillis()).apply()
     try {
+        if(ExternalResume.allowed(p.pkg) && p.progress>0) {
+            val session=mediaSessions().firstOrNull { it.packageName==p.pkg &&
+                it.metadata?.getString(android.media.MediaMetadata.METADATA_KEY_TITLE)==p.title }
+            val saved=ExternalResume.all(filesDir).firstOrNull { it.pkg==p.pkg && it.title==p.title }
+            if(saved?.uri==null && session?.sessionActivity!=null) { session.sessionActivity!!.send();return }
+        }
+        if(p.pkg?.startsWith("org.smarttube")==true) {
+            val uri=runCatching { Intent.parseUri(p.intent.orEmpty(),Intent.URI_INTENT_SCHEME).data }.getOrNull()
+            if(uri?.host=="www.youtube.com" && uri.path=="/watch" && Regex("[A-Za-z0-9_-]{11}").matches(uri.getQueryParameter("v").orEmpty()))
+                ExternalResume.rememberLink(filesDir,p.title,uri.toString())
+        }
         startActivity(programIntent(p) ?: throw IllegalArgumentException("unsafe or missing intent"))
     } catch (e: Exception) {
         p.pkg?.let { packageManager.getLeanbackLaunchIntentForPackage(it) }?.let { startActivity(it) }
