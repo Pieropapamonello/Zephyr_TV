@@ -238,6 +238,14 @@ internal fun MainActivity.panelClose() {
     }
 }
 
+/** The ← button at the top left of a panel [width] wide (null: the side panel's own), as a whole page needs it. */
+internal fun MainActivity.panelButtonsAt(width: Int?) {
+    val left = (settingsScrim as android.view.ViewGroup).findViewWithTag<android.view.View>(PANEL_BACK) ?: return
+    val lp = left.layoutParams as android.widget.FrameLayout.LayoutParams
+    lp.marginEnd = (width ?: dp(380)) - lp.width - dp(8) // dp(380): the side panel's width (activity_main.xml)
+    left.layoutParams = lp
+}
+
 private const val PANEL_CLOSE = "panel-close"
 private const val PANEL_BACK = "panel-back"
 

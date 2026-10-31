@@ -445,17 +445,11 @@ internal fun MainActivity.showChannelDetails(id: Long) = io.execute {
 }
 
 /**
- * A channel's page in the side panel, like a film's: its logo across the top (on a blur of itself), what's on with
+ * A channel's page, as a whole page like a film's (see DetailPage): its logo large on the right (on a blur of itself), what's on with
  * its time and what it's about, what follows, and Watch on TV.
  */
 internal fun MainActivity.showChannel(d: ChannelDetail) {
     if (settingsScrim.visibility != View.VISIBLE) showPanel()
-    val panel = findViewById<LinearLayout>(R.id.settingsPanel)
-    val panelWidth = dp(380) // the panel's width (activity_main.xml)
-    val picture = FrameLayout(this).apply { setBackgroundColor(artGround()) }
-    channelArt(picture, panelWidth, panelWidth * 9 / 16, d.number, d.name) {
-        listOfNotNull(d.logo, d.addon?.let { ChannelLogos.match(channelLogoTable(), d.name) })
-    }
     val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT)
     fun hours(s: Epg.Show) = if (s.start > 0) "${time.format(java.util.Date(s.start))} – ${time.format(java.util.Date(s.stop))}" else null
     val top = LinearLayout(this).apply {
@@ -493,14 +487,13 @@ internal fun MainActivity.showChannel(d: ChannelDetail) {
         if (d.addon != null) playAddonChannel(p) else open(p)
     })
     showPage(d.name, rows, top = top, back = { closeLauncherSettings() }, panes = glass)
-    // Over the panel's padding, so it reaches its edges and the top of the screen; gone with the page.
-    panel.addView(picture, 0, LinearLayout.LayoutParams(panelWidth, panelWidth * 9 / 16).apply {
-        setMargins(-panel.paddingStart, -panel.paddingTop, -panel.paddingEnd, dp(20))
-    })
-    panel.clipToPadding = false
-    pageExit = {
-        panel.removeView(picture)
-        panel.clipToPadding = true
+    // A whole page: the channel's logo large on the right half, on a blur of itself (see DetailPage).
+    detailPage("channel|${d.name}|${d.number}", emptyList()) { frame, w, h ->
+        val half = FrameLayout(this)
+        frame.addView(half, FrameLayout.LayoutParams(w / 2, h, android.view.Gravity.END))
+        channelArt(half, w / 2, h, d.number, d.name) {
+            listOfNotNull(d.logo, d.addon?.let { ChannelLogos.match(channelLogoTable(), d.name) })
+        }
     }
     val icon = (d.pkg ?: tile?.pkg?.takeIf { !it.startsWith(STREMIO) })?.let { pkg -> runCatching { packageManager.getApplicationIcon(pkg) }.getOrNull() }
         ?: tile?.icon?.constantState?.newDrawable(resources)?.mutate()

@@ -104,11 +104,12 @@ Gli **stream**, cioè i link da riprodurre, arrivano dagli **add-on Stremio** ([
 
 ## 7. La pagina di un titolo
 
-OK su una scheda di film o serie apre la sua pagina. In alto ci sono l'immagine e il logo, sotto:
+OK su una scheda di film o serie apre la sua pagina, a tutto schermo: l'immagine riempie lo schermo; a sinistra ci sono il logo, le informazioni, la descrizione, la regia e il cast; a destra i pulsanti delle azioni:
 
 - **Informazioni**: valutazione, tipo, anno, genere, durata, e se l'hai già visto.
 - **Descrizione**: compare subito, prima del resto.
-- **Barra delle app**: il trailer e le app di streaming che hanno il titolo nel tuo paese (serve la chiave TMDB).
+- **Regia e Cast**: il regista e gli attori principali del titolo.
+- **Barra delle app**: in fondo a destra, il trailer e le app di streaming che hanno il titolo nel tuo paese (serve la chiave TMDB).
 - **Film**: **Guarda** (o **Riprendi da…**) e **Segna come visto**.
 - **Serie**: le stagioni, con quanti episodi hai visto. In una stagione, sinistra e destra passano alla stagione accanto. Ogni episodio ha la sua pagina con **Guarda** e **Segna come visto**.
 
@@ -158,6 +159,7 @@ Come vengono riconosciute **qualità** e **lingua**:
 - **Il primo è il principale.** Dà dettagli, descrizioni, immagini e ricerca dei titoli. Se non conosce un titolo, Zephyr TV chiede ai cataloghi successivi.
 - **Gli altri** aggiungono le loro righe a Film e Serie TV, nell'ordine della lista. Le copertine dei titoli che il principale conosce sono le sue, anche nelle righe degli add-on e nei risultati della ricerca: un titolo appare uguale ovunque.
 - **Selezionando un catalogo** puoi spostarlo su o giù, o rimuoverlo. Ne resta sempre almeno uno.
+- **Righe visibili**, nella pagina di un catalogo, elenca le sue righe (per esempio "Film · Popolari"): attiva o disattiva ognuna. Una riga disattivata non compare in Film, in Serie TV né nell'app del catalogo.
 - **Aggiungi un catalogo** propone Cinemeta, Nuvio Catalog, i cataloghi usati in passato, oppure un **Nuovo indirizzo** (il manifest di un add-on con cataloghi).
 
 Sotto la lista, le impostazioni TMDB:

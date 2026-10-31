@@ -103,7 +103,8 @@ internal object Stremio {
 
     /** A title's page: what it's about and, for a series, its episodes in order (specials, season 0, last). */
     internal class TitleMeta(val title: Title, val description: String?, val genres: List<String>, val rating: String?,
-                             val runtime: String?, val episodes: List<Episode>)
+                             val runtime: String?, val episodes: List<Episode>,
+                             val cast: List<String> = emptyList(), val director: List<String> = emptyList())
 
     /** A channel in a catalog: what to ask the streams for, its name and logo, what's on (if the add-on says), its categories. */
     internal class Item(val type: String, val id: String, val name: String, val logo: String?, val now: String?, val genres: List<String> = emptyList(),
@@ -418,6 +419,12 @@ internal object Stremio {
         val title = title(m, type) ?: return null
         val genres = (m.optJSONArray("genres") ?: m.optJSONArray("genre"))?.let { g -> (0 until g.length()).map { g.optString(it) } }.orEmpty()
             .filter { it.isNotBlank() }
+        val cast = (m.optJSONArray("cast") ?: m.optJSONArray("actors"))?.let { a ->
+            (0 until a.length()).mapNotNull { a.optString(it).trim().takeIf { s -> s.isNotEmpty() } }
+        }.orEmpty()
+        val director = (m.optJSONArray("director") ?: m.optJSONArray("directors"))?.let { d ->
+            (0 until d.length()).mapNotNull { d.optString(it).trim().takeIf { s -> s.isNotEmpty() } }
+        } ?: text(m, "director")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
         val list = m.optJSONArray("videos") ?: JSONArray()
         val episodes = if (type != "series") emptyList() else (0 until list.length()).mapNotNull { list.optJSONObject(it) }.mapNotNull { v ->
             val id = v.optString("id").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
@@ -426,7 +433,7 @@ internal object Stremio {
             Episode(id, season, episode, (text(v, "name") ?: text(v, "title")).orEmpty(), text(v, "released"), logo(text(v, "thumbnail")),
                 text(v, "overview") ?: text(v, "description"))
         }.distinctBy { it.id }.sortedWith(compareBy({ if (it.season == 0) Int.MAX_VALUE else it.season }, { it.episode }))
-        return TitleMeta(title, text(m, "description"), genres, text(m, "imdbRating"), text(m, "runtime"), episodes)
+        return TitleMeta(title, text(m, "description"), genres, text(m, "imdbRating"), text(m, "runtime"), episodes, cast, director)
     }
 
     /**
@@ -588,8 +595,11 @@ internal object Stremio {
         return Probe(false, null)
     }
 
-    /** "hls", "dash", "ts" or null (let the player work it out), from an answer's type, address and first bytes. */
+    /** "hls", "dash", "ts", "m2ts" or null (let the player work it out), from an answer's type, address and first bytes. */
     internal fun format(contentType: String?, url: String, head: ByteArray): String? {
+        // A Blu-ray's MPEG-TS (see M2ts): packets of 192 bytes, each a time of 4 bytes then 0x47; whatever its type says.
+        if (head.size > 196 && head[4] == 0x47.toByte() && head[196] == 0x47.toByte() && (head.size <= 388 || head[388] == 0x47.toByte())
+            && !(head[0] == 0x47.toByte() && head[188] == 0x47.toByte())) return "m2ts"
         val type = contentType?.lowercase().orEmpty()
         when {
             "mpegurl" in type -> return "hls"

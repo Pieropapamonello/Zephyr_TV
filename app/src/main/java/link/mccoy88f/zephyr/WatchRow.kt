@@ -716,7 +716,8 @@ internal fun MainActivity.nearestCard(row: ViewGroup, from: View): View? {
  */
 internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     val gap = dp(GRID_GAP)
-    val n = cardsAcross()
+    val fixture=MatchCardLayout.isFixture(p.image)
+    val n = MatchCardLayout.columns(p.image,cardsAcross())
     val w = (resources.displayMetrics.widthPixels - dp(96) - gap * (n - 1)) / n
     // Standard 16:9 aspect ratio prevents cutting off channel numbers and provider badges
     val cardHeight = w * 9 / 16
@@ -732,7 +733,7 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
         setBackgroundColor(if (dark) 0xFF18181A.toInt() else 0xFFDDE1E5.toInt())
     }
     // Long titles scroll while their poster is focused instead of staying cut off.
-    val title = label(p.title, 14f).apply {
+    val title = label(p.title, if(fixture)20f else 14f).apply {
         setPadding(0, dp(6), 0, 0)
         isSingleLine = true
         ellipsize = TextUtils.TruncateAt.MARQUEE
@@ -765,11 +766,12 @@ internal fun MainActivity.watchCard(p: Prog, gapBefore: Boolean): View {
     // middle on a blur of itself (its name and number are under the card); with no logo, or until it's in, the
     // number and name instead.
     // The logos to try in turn: the card's own (an add-on's), the TV's, then Zephyr TV's own by name.
-    if (p.badge != null) channelArt(frame, w, cardHeight, p.badge, p.title) {
+    if(fixture) fillArt(frame,w,cardHeight,p.image,null,null,p.title)
+    else if (p.badge != null) channelArt(frame, w, cardHeight, p.badge, p.title) {
         listOfNotNull(p.image, p.channelId?.let { id -> logo(id) }, ChannelLogos.match(channelLogoTable(), p.title)).distinct()
     }
     if (p.vod != null) fillArt(frame, w, cardHeight, p.image, p.logo, p.poster, p.title, p.vod.fallback)
-    if(p.addon!=null && p.sub.isNotBlank()) frame.addView(TextView(this).apply {
+    if(!fixture && p.addon!=null && p.sub.isNotBlank()) frame.addView(TextView(this).apply {
         text=p.sub;textSize=13f;setTextColor(Color.WHITE);maxLines=2
         ellipsize=TextUtils.TruncateAt.END;setPadding(dp(10),dp(6),dp(10),dp(6))
         setBackgroundColor(0xDD0B1424.toInt())
@@ -1133,7 +1135,8 @@ internal fun MainActivity.decode(uri: String, alpha: Boolean = false): Bitmap? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
     var sample = 1
-    while (bounds.outWidth / (sample * 2) >= dp(220)) sample *= 2
+    val readableWidth=if(MatchCardLayout.isFixture(uri))960 else dp(220)
+    while (bounds.outWidth / (sample * 2) >= readableWidth) sample *= 2
     val opts = BitmapFactory.Options().apply {
         inSampleSize = sample
         inPreferredConfig = if (alpha) Bitmap.Config.ARGB_8888 else Bitmap.Config.RGB_565

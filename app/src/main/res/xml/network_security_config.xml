@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The device's own certificates, and Let's Encrypt's roots (ISRG Root X1 and X2): Android 7.0 doesn't have them, and
+     many add-ons', plugins' and extensions' servers use its certificates. Later Androids have them already.
+     Plain http stays allowed, as android:usesCleartextTraffic said: with this file, that attribute is not read. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/isrg_root_x1" />
+            <certificates src="@raw/isrg_root_x2" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

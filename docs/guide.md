@@ -104,11 +104,12 @@ The **streams**, the links that play, come from **Stremio add-ons** ([chapter 11
 
 ## 7. A title's page
 
-OK on a film or series card opens its page. At the top are its picture and logo; below:
+OK on a film or series card opens its page, over the whole screen: its picture fills the screen; on the left are its logo, details, description, director and cast; on the right are its action buttons:
 
 - **Details**: rating, kind, year, genre, length, and whether you watched it.
 - **Description**: shows at once, before the rest.
-- **App bar**: the trailer and the streaming apps that have the title in your country (needs the TMDB key).
+- **Director and Cast**: director and main cast of the title.
+- **App bar**: at the bottom right, the trailer and the streaming apps that have the title in your country (needs the TMDB key).
 - **Films**: **Watch** (or **Resume from…**) and **Mark as watched**.
 - **Series**: the seasons, with how many episodes you watched. In a season, Left and Right go to the season beside it. Each episode has its page with **Watch** and **Mark as watched**.
 
@@ -158,6 +159,7 @@ How **quality** and **language** are recognised:
 - **The first is the main one.** It gives the titles' details, descriptions, pictures and search. When it doesn't know a title, Zephyr TV asks the next catalogs.
 - **The others** add their rows to Films and TV Series, in the list's order. The cards of titles the main one knows have its pictures, in the add-ons' rows and the search results too: a title looks the same everywhere.
 - **Select a catalog** to move it up or down, or to remove it. One always stays.
+- **Visible rows**, on a catalog's page, lists its rows (for example "Films · Popular"): turn each one on or off. A row turned off does not show under Films, TV Series or the catalog's own app.
 - **Add a catalog** offers Cinemeta, Nuvio Catalog, catalogs you used before, or a **New address** (the manifest of an add-on with catalogs).
 
 Under the list, the TMDB settings:

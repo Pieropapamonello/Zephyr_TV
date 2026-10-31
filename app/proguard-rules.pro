@@ -1,6 +1,6 @@
 # Kept whole in release builds, as R8 can't see how they're reached.
 
-# Media3's FFmpeg decoder (phones and tablets: Dolby and DTS sound): DefaultRenderersFactory makes it by reflection,
+# Media3's FFmpeg decoder (the sound the device has no decoder for): DefaultRenderersFactory makes it by reflection,
 # and its native code calls back into it.
 -keep class androidx.media3.decoder.ffmpeg.** { *; }
 

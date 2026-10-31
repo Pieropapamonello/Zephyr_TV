@@ -136,6 +136,12 @@ internal fun MainActivity.installUpdate(ver: String) {
         Toast.makeText(this, getString(R.string.toast_update_permission), Toast.LENGTH_LONG).show()
         return openSettings(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
     }
+    // Android 7: one switch for all apps, Unknown sources, in Security.
+    @Suppress("DEPRECATION") val unknownSources = Settings.Secure.INSTALL_NON_MARKET_APPS
+    if (android.os.Build.VERSION.SDK_INT < 26 && Settings.Secure.getInt(contentResolver, unknownSources, 0) != 1) {
+        Toast.makeText(this, getString(R.string.toast_update_permission), Toast.LENGTH_LONG).show()
+        return openSettings(Settings.ACTION_SECURITY_SETTINGS, null)
+    }
     updating = true
     if (isShowingUpdates()) showUpdates()
     refreshSettings(UPDATE_ROW)

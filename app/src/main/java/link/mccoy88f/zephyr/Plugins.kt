@@ -155,6 +155,16 @@ internal fun streamQuality(title: String): Int {
 /** A stream that says no quality ranks as this: after the full HD ones, before the plain HD ones. */
 internal const val UNKNOWN_QUALITY = 900
 
+/**
+ * A stream's group in the stream lists (the player's panel, the manual choice): its height, the highest first; 0, the
+ * last group, when it says no quality.
+ */
+internal fun qualityGroup(title: String) = streamQuality(title).let { if (it == UNKNOWN_QUALITY) 0 else it }
+
+/** The heading over a [qualityGroup]'s streams. */
+internal fun android.content.Context.qualityHeading(group: Int) =
+    if (group == 0) getString(R.string.player_quality_unknown) else if (group >= 2160) "${group}p · 4K" else "${group}p"
+
 /** The qualities Content → Preferred quality offers, by height; 0 is the highest there is. */
 internal val QUALITIES = listOf(0, 2160, 1440, 1080, 720, 480)
 

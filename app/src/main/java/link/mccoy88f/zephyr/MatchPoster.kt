@@ -25,7 +25,7 @@ internal object MatchPoster {
         val time = args.optString("time").trim().take(32)
         val homeBadge = args.optString("homeBadge")
         val awayBadge = args.optString("awayBadge")
-        val key = JSONObject().put("v",1).put("home",home).put("away",away).put("time",time)
+        val key = JSONObject().put("v",2).put("home",home).put("away",away).put("time",time)
             .put("homeBadge",homeBadge).put("awayBadge",awayBadge).toString()
         val cache = caches.computeIfAbsent(File(data,"match-posters").path) { BackdropCache(File(it),120,BackdropCache::artName) }
         val file = cache.get(key) {
@@ -37,41 +37,46 @@ internal object MatchPoster {
                 canvas.drawRect(0f,0f,960f,540f,paint)
                 paint.shader = null
                 paint.color = Color.rgb(255,201,91)
-                canvas.drawRoundRect(RectF(332f,24f,628f,104f),24f,24f,paint)
+                canvas.drawRoundRect(RectF(280f,16f,680f,112f),24f,24f,paint)
                 paint.typeface = Typeface.create("sans-serif",Typeface.BOLD)
                 paint.textAlign = Paint.Align.CENTER
                 paint.color = Color.rgb(11,20,36)
-                paint.textSize = if(time.length>12) 28f else 44f
-                canvas.drawText(time.ifEmpty { "ORARIO DA DEFINIRE" },480f,79f,paint)
+                paint.textSize = if(time.length>12 || time.isEmpty()) 32f else 64f
+                canvas.drawText(time.ifEmpty { "ORARIO DA DEFINIRE" },480f,87f,paint)
                 paint.color = Color.rgb(160,178,206)
                 paint.textSize = 48f
                 canvas.drawText("VS",480f,241f,paint)
                 fun team(name: String, url: String, cx: Float) {
                     paint.color = Color.rgb(246,248,255)
-                    canvas.drawRoundRect(RectF(cx-98,125f,cx+98,321f),24f,24f,paint)
+                    canvas.drawRoundRect(RectF(cx-110,122f,cx+110,342f),24f,24f,paint)
                     val logo = if(url.startsWith("https://")) runCatching { loadBadge(url) }.getOrNull() else null
                     if(logo!=null) {
-                        val scale = minOf(164f/logo.width,164f/logo.height)
+                        val scale = minOf(202f/logo.width,202f/logo.height)
                         val w=logo.width*scale;val h=logo.height*scale
-                        canvas.drawBitmap(logo,null,RectF(cx-w/2,223f-h/2,cx+w/2,223f+h/2),paint)
+                        canvas.drawBitmap(logo,null,RectF(cx-w/2,232f-h/2,cx+w/2,232f+h/2),paint)
                         logo.recycle()
                     } else {
                         paint.color=Color.rgb(29,45,70);paint.textSize=68f
                         canvas.drawText(name.split(' ').filter { it.isNotBlank() }.take(2).map { it.first().uppercaseChar() }.joinToString(""),cx,246f,paint)
                     }
-                    paint.color=Color.WHITE;paint.textSize=44f
+                    paint.color=Color.WHITE;paint.textSize=62f
                     fun lines(): List<String> {
                         val out=ArrayList<String>();var current=""
-                        for(word in name.split(' ')) {
+                        val words=name.split(' ').flatMap { word ->
+                            val pieces=ArrayList<String>();var piece=""
+                            for(ch in word) { if(paint.measureText(piece+ch)>390f && piece.isNotEmpty()) { pieces+=piece;piece="" };piece+=ch }
+                            if(piece.isNotEmpty())pieces+=piece;pieces
+                        }
+                        for(word in words) {
                             val joined=if(current.isEmpty())word else "$current $word"
                             if(current.isNotEmpty() && paint.measureText(joined)>390f) { out+=current;current=word } else current=joined
                         }
                         if(current.isNotEmpty())out+=current
                         return out
                     }
-                    while((lines().size>2 || lines().any { paint.measureText(it)>390f }) && paint.textSize>24f) paint.textSize-=2f
+                    while((lines().size>2 || lines().any { paint.measureText(it)>390f }) && paint.textSize>40f) paint.textSize-=2f
                     val text=lines().take(2)
-                    text.forEachIndexed { i,line -> canvas.drawText(line,cx,if(text.size==1)411f else 384f+i*54f,paint) }
+                    text.forEachIndexed { i,line -> canvas.drawText(line,cx,if(text.size==1)432f else 407f+i*70f,paint) }
                 }
                 team(home,homeBadge,250f);team(away,awayBadge,710f)
                 val bytes=ByteArrayOutputStream().also { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }.toByteArray()

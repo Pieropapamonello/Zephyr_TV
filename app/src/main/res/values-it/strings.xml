@@ -578,6 +578,7 @@
     <string name="catalog_add">Aggiungi un catalogo</string>
     <string name="catalog_in_use">In uso</string>
     <string name="catalog_use">Usa questo catalogo</string>
+    <string name="catalog_rows">Righe visibili</string>
     <string name="catalog_add_intro">L\'indirizzo di un add-on Stremio con cataloghi di film o serie. Finisce con manifest.json.</string>
     <string name="toast_catalog_no_vod">Questo add-on non ha cataloghi di film o serie.</string>
     <string name="title_watch">Guarda</string>
@@ -610,6 +611,8 @@
     <string name="title_no_streams">Nessun addon ha stream per questo titolo</string>
     <string name="episode_no_description">Nessuna descrizione per questo episodio.</string>
     <string name="title_no_page">Nessun addon ha la scheda di questo titolo</string>
+    <string name="title_director">Regia: %1$s</string>
+    <string name="title_cast">Cast: %1$s</string>
     <string name="player_episode">%1$s · S%2$d E%3$d</string>
     <string name="toast_addon_added_vod">%1$s aggiunto: film e serie</string>
     <string name="toast_addon_added_both">%1$s aggiunto: %2$d canali, film e serie</string>
