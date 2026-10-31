@@ -97,8 +97,9 @@ internal fun MainActivity.showVodTitle(given: Stremio.TitleMeta, ref: TitleRef, 
     } else mine[t.id]?.let { m -> watchedOn(m.at)?.let { getString(R.string.title_watched_on, it) } ?: getString(R.string.title_watched) }
 
     val (servicesBar, services) = serviceBar(t, available)
-    val (top, descView) = titleTop(listOfNotNull((meta.rating ?: ref.rating)?.let { "★ $it" }, kind, t.year, meta.genres.firstOrNull(), meta.runtime)
-        .joinToString(" · "), null, meta.description, seenLine)
+    val genresText = meta.genres.take(3).joinToString(" · ").takeIf { it.isNotBlank() }
+    val (top, descView) = titleTop(listOfNotNull((meta.rating ?: ref.rating)?.let { "★ $it" }, kind, t.year, genresText, meta.runtime)
+        .joinToString(" · "), null, meta.description, seenLine, director = meta.director, cast = meta.cast)
 
     val sources = streamSources(t.type, meta.episodes.firstOrNull()?.id ?: t.id)
     val rows = ArrayList<Triple<String, String, () -> Unit>>()
@@ -184,8 +185,8 @@ internal fun MainActivity.showVodSeason(given: Stremio.TitleMeta, ref: TitleRef,
     val seenLine = if (watchedCount == inSeason.size) "✓ " + getString(R.string.title_watched) else if (watchedCount > 0) "$watchedCount / ${inSeason.size} " + getString(R.string.title_watched) else null
 
     val (servicesBar, services) = serviceBar(t, available)
-    val (top, _) = titleTop(listOfNotNull(t.name, seasonName(shown), resources.getQuantityString(R.plurals.title_episodes, inSeason.size, inSeason.size))
-        .joinToString(" · "), null, null, seenLine)
+    val (top, descView) = titleTop(listOfNotNull(t.name, seasonName(shown), resources.getQuantityString(R.plurals.title_episodes, inSeason.size, inSeason.size))
+        .joinToString(" · "), null, meta.description, seenLine, director = meta.director, cast = meta.cast)
 
     val rows = ArrayList<Triple<String, String, () -> Unit>>()
     val icons = HashMap<Int, android.graphics.drawable.Drawable>()
@@ -222,7 +223,7 @@ internal fun MainActivity.showVodSeason(given: Stremio.TitleMeta, ref: TitleRef,
     val pageTitle = "${t.name} · ${seasonName(shown)}"
     redrawFor = t.id
     redraw = { if (pageShowing(pageTitle)) showVodSeason(meta, ref, shown, available, episode, focusedRow() ?: focusRow) }
-    titlePage(pageTitle, art, ref.fallback, t.name, top, rows, focus, icons, holds, servicesBar = servicesBar) {
+    titlePage(pageTitle, art, ref.fallback, t.name, top, rows, focus, icons, holds, descView = descView, servicesBar = servicesBar) {
         showVodTitle(meta, ref, services.known)
     }
     pageSides = sides
@@ -251,7 +252,8 @@ internal fun MainActivity.showVodEpisode(given: Stremio.TitleMeta, ref: TitleRef
     val (servicesBar, services) = serviceBar(t, available)
     // What this episode is about; the series' description isn't its own, so none says so.
     val about = e.overview?.takeIf { it.isNotBlank() } ?: getString(R.string.episode_no_description)
-    val (top, descView) = titleTop(listOfNotNull(episodeLine(e), released).joinToString(" · "), e.name.takeIf { it.isNotBlank() }, about, seenLine)
+    val (top, descView) = titleTop(listOfNotNull(episodeLine(e), released).joinToString(" · "), e.name.takeIf { it.isNotBlank() }, about, seenLine,
+        director = meta.director, cast = meta.cast)
 
     val sources = streamSources(t.type, e.id)
     val rows = ArrayList<Triple<String, String, () -> Unit>>()
@@ -349,21 +351,22 @@ private fun MainActivity.watchLabel(sole: Stremio.Addon?, at: Long?, seen: Boole
 internal fun MainActivity.episodeLine(e: Stremio.Episode) =
     if (e.season == 0) getString(R.string.title_special_n, e.episode) else getString(R.string.title_season_episode, e.season, e.episode)
 
-/** Under a title's art: its [info] line, a [name] (an episode's), when the user [seen] it, and what it's about. */
-private fun MainActivity.titleTop(info: String, name: String?, about: String?, seen: String? = null): Pair<View, View?> {
+/** Under a title's art: its [info] line, a [name] (an episode's), when the user [seen] it, what it's about, [director] and [cast]. */
+private fun MainActivity.titleTop(info: String, name: String?, about: String?, seen: String? = null,
+                                  director: List<String> = emptyList(), cast: List<String> = emptyList()): Pair<View, View?> {
     var descView: View? = null
     val root = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(14), 0, dp(14), dp(12)) // in line with the page title and the rows' names
-        name?.let { addView(label(it, 15f).apply { setPadding(0, 0, 0, dp(4)) }) }
+        name?.let { addView(label(it, 16f).apply { setPadding(0, 0, 0, dp(4)) }) }
         addView(label(info, 13f).apply { alpha = 0.7f })
         seen?.let { addView(label("✓  $it", 13f).apply { setPadding(0, dp(4), 0, 0) }) }
         about?.let { d ->
-            val v = label(d, 13f).apply {
+            val v = label(d, 13.5f).apply {
                 id = View.generateViewId()
                 maxLines = 10
-                setLineSpacing(0f, 1.15f)
-                setPadding(0, dp(6), 0, dp(6)) // no box: in line with the lines above it
+                setLineSpacing(0f, 1.2f)
+                setPadding(0, dp(8), 0, dp(8)) // no box: in line with the lines above it
                 isFocusable = true
                 isClickable = true
                 nextFocusUpId = id
@@ -375,14 +378,29 @@ private fun MainActivity.titleTop(info: String, name: String?, about: String?, s
             descView = v
             addView(v)
         }
+        if (director.isNotEmpty()) {
+            addView(label(getString(R.string.title_director, director.joinToString(", ")), 13f).apply {
+                alpha = 0.75f
+                setLineSpacing(0f, 1.15f)
+                setPadding(0, dp(6), 0, dp(2))
+            })
+        }
+        if (cast.isNotEmpty()) {
+            addView(label(getString(R.string.title_cast, cast.take(6).joinToString(", ")), 13f).apply {
+                alpha = 0.75f
+                maxLines = 3
+                setLineSpacing(0f, 1.15f)
+                setPadding(0, dp(2), 0, dp(4))
+            })
+        }
     }
     return root to descView
 }
 
 /**
- * A title's page, as a whole page (see detailPage): [art] (backdrop, logo, poster) over the screen; [top] under its
- * title or logo, then [rows], each with its icon from [icons] by its index, then
- * [servicesBar] (the trailer and the apps that have it), last.
+ * A title's page, as a whole page (see detailPage): [art] (backdrop, logo, poster) over the screen;
+ * on wide screens, [top] (details, description, director, cast) is placed in a left column and [rows]
+ * in the right panel; then [servicesBar] (trailer and external apps) at the bottom of the buttons.
  */
 private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, String?>, fallback: Triple<String?, String?, String?>?, name: String, top: View,
                                    rows: List<Triple<String, String, () -> Unit>>, focus: Int,
@@ -390,28 +408,33 @@ private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, 
                                    descView: View? = null, servicesBar: View? = null,
                                    back: () -> Unit) {
     if (settingsScrim.visibility != View.VISIBLE) showPanel()
-    showPage(title, rows, focus, top = top, back = back, panes = glass)
-    // A whole page: the art over the screen, its logo over the page (see DetailPage).
-    detailPage("$name|${art.first}|${art.third}", listOfNotNull(art.second, fallback?.second).distinct()) { frame, w, h ->
-        fillArt(frame, w, h, art.first, null, art.third, name, fallback?.let { Triple(it.first, null, it.third) })
-        sharpBackdrop(frame, w, listOfNotNull(art.first, fallback?.first).distinct())
+    val scrim = settingsScrim as FrameLayout
+    val w = scrim.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
+    val wide = w > dp(720)
+    showPage(title, rows, focus, top = if (wide) null else top, back = back, panes = glass)
+    // A whole page: the art over the screen, its logo and details on the left, buttons on the right.
+    detailPage("$name|${art.first}|${art.third}", listOfNotNull(art.second, fallback?.second).distinct(), title = name, infoView = top) { frame, fw, fh ->
+        fillArt(frame, fw, fh, art.first, null, art.third, name, fallback?.let { Triple(it.first, null, it.third) })
+        sharpBackdrop(frame, fw, listOfNotNull(art.first, fallback?.first).distinct())
     }
+    val firstIndex = if (wide) 0 else 1
     // If starting on description, focus it and scroll to top
     if (focus < 0 && descView != null) {
         descView.post {
             descView.requestFocus()
-            val scroll = settingsList.parent as? android.widget.ScrollView
+            val scroll = (descView.parent?.parent as? android.widget.ScrollView) ?: (settingsList.parent as? android.widget.ScrollView)
             scroll?.scrollTo(0, 0)
         }
     }
     descView?.setOnFocusChangeListener { _, focused ->
+        descView.alpha = if (focused) 1f else 0.85f
         if (focused) {
-            val scroll = settingsList.parent as? android.widget.ScrollView
+            val scroll = (descView.parent?.parent as? android.widget.ScrollView) ?: (settingsList.parent as? android.widget.ScrollView)
             scroll?.post { scroll.smoothScrollTo(0, 0) }
         }
     }
     // Back up on the first row, the page scrolls back up: nothing above it takes focus to pull it there (unless top has focusables).
-    settingsList.getChildAt(1)?.let { first ->
+    settingsList.getChildAt(firstIndex)?.let { first ->
         val own = first.onFocusChangeListener
         first.setOnFocusChangeListener { v, focused ->
             own?.onFocusChange(v, focused)
@@ -419,9 +442,22 @@ private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, 
             if (focused) scroll.post { scroll.smoothScrollTo(0, (v.bottom + dp(8) - scroll.height).coerceAtLeast(0)) }
         }
     }
+    // Remote navigation: left from buttons goes to description/info, right from description goes back to buttons.
+    if (descView != null && wide) {
+        if (descView.id == View.NO_ID) descView.id = View.generateViewId()
+        for (i in 0 until rows.size) {
+            val row = settingsList.getChildAt(firstIndex + i) ?: continue
+            row.nextFocusLeftId = descView.id
+        }
+        val targetRow = settingsList.getChildAt(firstIndex + focus.coerceIn(0, (rows.size - 1).coerceAtLeast(0)))
+        if (targetRow != null) {
+            if (targetRow.id == View.NO_ID) targetRow.id = View.generateViewId()
+            descView.nextFocusRightId = targetRow.id
+        }
+    }
     // What holding OK on a row does (see MainActivity.onHold).
-    for ((i, hold) in holds) settingsList.getChildAt(1 + i)?.setTag(R.id.settingsList, hold)
-    rowIcons(icons, first = 1) // after [top]
+    for ((i, hold) in holds) settingsList.getChildAt(firstIndex + i)?.setTag(R.id.settingsList, hold)
+    rowIcons(icons, first = firstIndex)
     servicesBar?.let { bar ->
         settingsList.addView(bar.apply { setPadding(dp(14), dp(12), dp(14), dp(4)) })
         // showPage keeps Down on the last row from leaving it: here it goes down to the apps, and Up from them back to it;
@@ -430,7 +466,11 @@ private fun MainActivity.titlePage(title: String, art: Triple<String?, String?, 
         val last = settingsList.getChildAt(settingsList.childCount - 2)?.takeIf { rows.isNotEmpty() } ?: return@let
         if (last.id == View.NO_ID) last.id = View.generateViewId()
         last.nextFocusDownId = buttons.getChildAt(0).id
-        for (c in 0 until buttons.childCount) buttons.getChildAt(c).let { it.nextFocusUpId = last.id; it.nextFocusDownId = it.id }
+        for (c in 0 until buttons.childCount) buttons.getChildAt(c).let {
+            it.nextFocusUpId = last.id
+            it.nextFocusDownId = it.id
+            if (descView != null && wide) it.nextFocusLeftId = descView.id
+        }
     }
 }
 

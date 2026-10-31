@@ -12,29 +12,40 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 // The page of a film, series, season, episode or channel as a whole page, not the side panel: its art over the
-// whole screen, shaded on the left, and the page (logo or title, what it is, the rows) in a column on that side.
-// It is the panel itself, made as wide as the screen while the page shows: its rows, focus, Back and the way back
-// from the player stay as they are. Functions of MainActivity, kept here by topic; their state lives in MainActivity.
+// whole screen, shaded on the left and right, and on wide screens: details (logo, metadata, synopsis, director,
+// actors) in a column on the left and action buttons on the right.
+// Functions of MainActivity, kept here by topic; their state lives in MainActivity.
 
 /** The art behind the page on show, and what it shows: a page drawn again with the same art keeps it, unloaded. */
 private var detailArt: FrameLayout? = null
 private var detailKey: String? = null
 private var detailHeld = false
 private var detailLogo: Pair<String, android.graphics.Bitmap>? = null // the page's logo, by its key: drawn again, at once
+private var detailLeftScroll: View? = null
 
 /** How the panel was before the page took it over, given back when the page goes. */
-private class PanelWas(val width: Int, val gravity: Int, val padding: IntArray, val background: Drawable?, val titleSize: Float)
+private class PanelWas(val width: Int, val gravity: Int, val padding: IntArray, val background: Drawable?, val titleSize: Float, val titleVisibility: Int)
 
 /**
  * The page just shown (see showPage) as a whole page: [paint] draws its art into a frame as big as the screen
  * ([key] names that art: the same key keeps it); [logo] stands for the page's title when it loads.
+ * On wide screens, [infoView] (if given) is presented on the left alongside the logo/title, while the action buttons
+ * remain in the right panel.
  */
-internal fun MainActivity.detailPage(key: String, logo: List<String>, paint: (FrameLayout, Int, Int) -> Unit) {
+internal fun MainActivity.detailPage(
+    key: String,
+    logo: List<String>,
+    title: String = "",
+    infoView: View? = null,
+    paint: (FrameLayout, Int, Int) -> Unit
+) {
     val scrim = settingsScrim as FrameLayout
     val panel = findViewById<LinearLayout>(R.id.settingsPanel)
-    val title = findViewById<TextView>(R.id.settingsTitle)
+    val titleView = findViewById<TextView>(R.id.settingsTitle)
     val w = scrim.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
     val h = scrim.height.takeIf { it > 0 } ?: resources.displayMetrics.heightPixels
+    val wide = w > dp(720)
+    val ground = if (glass || dark) 0x000000 else 0xF7F8FA
 
     // The art: kept when it's the same (the page drawn again as its streams or names come in), else drawn anew.
     detailHeld = true
@@ -47,35 +58,32 @@ internal fun MainActivity.detailPage(key: String, logo: List<String>, paint: (Fr
         art.addView(View(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(detailShade()[0], 0))
         }, FrameLayout.LayoutParams(MATCH_PARENT, h / 3, Gravity.BOTTOM))
+        if (wide && infoView != null) {
+            art.addView(View(this).apply {
+                background = GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT, intArrayOf(0x99000000.toInt() or ground, 0))
+            }, FrameLayout.LayoutParams(dp(440), MATCH_PARENT, Gravity.END))
+        }
         scrim.addView(art, 0, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         detailArt = art
         detailKey = key
     }
 
-    // The panel, as wide as the screen, its page in a column on the left: about half of a wide screen.
+    // Clean up any previously added left info view
+    detailLeftScroll?.let { scrim.removeView(it) }
+    detailLeftScroll = null
+
     val lp = panel.layoutParams as FrameLayout.LayoutParams
     val was = PanelWas(lp.width, lp.gravity, intArrayOf(panel.paddingStart, panel.paddingTop, panel.paddingEnd, panel.paddingBottom),
-        panel.background, title.textSize)
-    val wide = w > dp(720)
-    lp.width = MATCH_PARENT
-    lp.gravity = Gravity.START
-    panel.layoutParams = lp
-    panel.setPadding(if (wide) dp(56) else dp(20), dp(36), if (wide) w * 48 / 100 else dp(20), dp(24))
-    panel.background = null
-    title.textSize = 30f
-    panelButtonsAt(w)
+        panel.background, titleView.textSize, titleView.visibility)
 
-    // The logo over the column, for the title, once it loads; the title stays written until then (and without one).
     val logoView = ImageView(this).apply {
         scaleType = ImageView.ScaleType.FIT_START
         adjustViewBounds = true
         visibility = View.GONE
     }
-    panel.addView(logoView, 0, LinearLayout.LayoutParams(WRAP_CONTENT, dp(96)).apply { marginStart = dp(14); bottomMargin = dp(8) })
     fun showLogo(bmp: android.graphics.Bitmap) {
         logoView.setImageBitmap(bmp)
         logoView.visibility = View.VISIBLE
-        title.visibility = View.GONE
     }
     val had = detailLogo?.takeIf { it.first == key }?.second
     if (had != null) showLogo(had)
@@ -87,12 +95,75 @@ internal fun MainActivity.detailPage(key: String, logo: List<String>, paint: (Fr
         }
     }
 
+    if (wide && infoView != null) {
+        // Wide screen: two columns. Action buttons on the right, info (logo, description, director, actors) on the left.
+        lp.width = dp(380)
+        lp.gravity = Gravity.END
+        panel.layoutParams = lp
+        panel.setPadding(dp(16), dp(40), dp(40), dp(24))
+        panel.background = null
+        titleView.visibility = View.GONE
+
+        val leftTitle = label(title, 26f).apply {
+            setPadding(dp(14), 0, dp(14), dp(8))
+        }
+        val leftCol = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, 0, dp(16), 0)
+            addView(logoView, LinearLayout.LayoutParams(WRAP_CONTENT, dp(96)).apply { marginStart = dp(14); bottomMargin = dp(8) })
+            addView(leftTitle)
+            (infoView.parent as? android.view.ViewGroup)?.removeView(infoView)
+            addView(infoView)
+        }
+        val leftScroll = android.widget.ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(leftCol)
+        }
+        if (had != null) leftTitle.visibility = View.GONE
+        else if (logo.isNotEmpty()) {
+            logoView.viewTreeObserver.addOnPreDrawListener {
+                if (logoView.visibility == View.VISIBLE) leftTitle.visibility = View.GONE
+                true
+            }
+        }
+        val infoWidth = (w - dp(380) - dp(80)).coerceIn(dp(440), dp(720))
+        val leftLp = FrameLayout.LayoutParams(infoWidth, MATCH_PARENT, Gravity.START).apply {
+            marginStart = dp(56)
+            topMargin = dp(40)
+            bottomMargin = dp(24)
+        }
+        scrim.addView(leftScroll, 1.coerceAtMost(scrim.childCount), leftLp)
+        detailLeftScroll = leftScroll
+        panelButtonsAt(w)
+    } else {
+        // Single column (phone or channel detail)
+        lp.width = MATCH_PARENT
+        lp.gravity = Gravity.START
+        panel.layoutParams = lp
+        panel.setPadding(if (wide) dp(56) else dp(20), dp(36), if (wide) w * 48 / 100 else dp(20), dp(24))
+        panel.background = null
+        titleView.textSize = 30f
+        panelButtonsAt(w)
+
+        panel.addView(logoView, 0, LinearLayout.LayoutParams(WRAP_CONTENT, dp(96)).apply { marginStart = dp(14); bottomMargin = dp(8) })
+        if (had != null) titleView.visibility = View.GONE
+        else if (logo.isNotEmpty()) {
+            logoView.viewTreeObserver.addOnPreDrawListener {
+                if (logoView.visibility == View.VISIBLE) titleView.visibility = View.GONE
+                true
+            }
+        }
+    }
+
     val own = pageExit
     pageExit = {
         own?.invoke()
+        detailLeftScroll?.let { scrim.removeView(it) }
+        detailLeftScroll = null
         panel.removeView(logoView)
-        title.visibility = View.VISIBLE
-        title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, was.titleSize)
+        titleView.visibility = was.titleVisibility
+        titleView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, was.titleSize)
         lp.width = was.width
         lp.gravity = was.gravity
         panel.layoutParams = lp

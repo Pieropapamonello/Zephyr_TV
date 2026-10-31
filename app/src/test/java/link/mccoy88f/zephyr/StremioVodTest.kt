@@ -86,6 +86,13 @@ class StremioVodTest {
         assertNull(Stremio.titleMeta(JSONObject("{}"), "movie"))
     }
 
+    @Test fun readsCastAndDirector() {
+        val meta = Stremio.titleMeta(JSONObject("""{"meta":{"id":"tt1375666","type":"movie","name":"Inception",
+            "cast":["Leonardo DiCaprio","Joseph Gordon-Levitt"],"director":["Christopher Nolan"]}}"""), "movie")!!
+        assertEquals(listOf("Leonardo DiCaprio", "Joseph Gordon-Levitt"), meta.cast)
+        assertEquals(listOf("Christopher Nolan"), meta.director)
+    }
+
     @Test fun readsAFilmsStreamsDirectLinksOnly() {
         val streams = Stremio.streams(JSONObject("""{"streams":[
             {"name":"Example\n1080p","description":"Big.Buck.Bunny.2008.1080p.mkv\n💾 1.2 GB","url":"https://cdn.example/play.php?id=7",

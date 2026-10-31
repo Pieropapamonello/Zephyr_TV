@@ -104,11 +104,12 @@ The **streams**, the links that play, come from **Stremio add-ons** ([chapter 11
 
 ## 7. A title's page
 
-OK on a film or series card opens its page, over the whole screen: its picture fills the screen, and on the left are its logo and, below it:
+OK on a film or series card opens its page, over the whole screen: its picture fills the screen; on the left are its logo, details, description, director and cast; on the right are its action buttons:
 
 - **Details**: rating, kind, year, genre, length, and whether you watched it.
 - **Description**: shows at once, before the rest.
-- **App bar**: the trailer and the streaming apps that have the title in your country (needs the TMDB key).
+- **Director and Cast**: director and main cast of the title.
+- **App bar**: at the bottom right, the trailer and the streaming apps that have the title in your country (needs the TMDB key).
 - **Films**: **Watch** (or **Resume from…**) and **Mark as watched**.
 - **Series**: the seasons, with how many episodes you watched. In a season, Left and Right go to the season beside it. Each episode has its page with **Watch** and **Mark as watched**.
 

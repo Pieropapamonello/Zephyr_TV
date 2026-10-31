@@ -118,7 +118,8 @@ internal fun MainActivity.localizeKnown(meta: Stremio.TitleMeta): Stremio.TitleM
     Local.use(filesDir, tmdbLang())
     val l = Local.get(meta.title.id) ?: return meta
     return Stremio.TitleMeta(localize(meta.title) ?: meta.title, l.overview.ifBlank { meta.description.orEmpty() }.ifBlank { null },
-        l.genres.ifEmpty { meta.genres }, meta.rating ?: l.rating(), meta.runtime, meta.episodes)
+        l.genres.ifEmpty { meta.genres }, meta.rating ?: l.rating(), meta.runtime, meta.episodes,
+        cast = meta.cast, director = meta.director)
 }
 
 /**
@@ -151,5 +152,5 @@ internal fun MainActivity.localizeMeta(meta: Stremio.TitleMeta): Stremio.TitleMe
         }
     }
     return Stremio.TitleMeta(title, l.overview.ifBlank { meta.description.orEmpty() }.ifBlank { null }, l.genres.ifEmpty { meta.genres },
-        meta.rating ?: l.rating(), meta.runtime, episodes)
+        meta.rating ?: l.rating(), meta.runtime, episodes, cast = meta.cast, director = meta.director)
 }

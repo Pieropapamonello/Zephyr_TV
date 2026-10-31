@@ -104,11 +104,12 @@ Gli **stream**, cioè i link da riprodurre, arrivano dagli **add-on Stremio** ([
 
 ## 7. La pagina di un titolo
 
-OK su una scheda di film o serie apre la sua pagina, a tutto schermo: l'immagine riempie lo schermo e a sinistra ci sono il logo e, sotto:
+OK su una scheda di film o serie apre la sua pagina, a tutto schermo: l'immagine riempie lo schermo; a sinistra ci sono il logo, le informazioni, la descrizione, la regia e il cast; a destra i pulsanti delle azioni:
 
 - **Informazioni**: valutazione, tipo, anno, genere, durata, e se l'hai già visto.
 - **Descrizione**: compare subito, prima del resto.
-- **Barra delle app**: il trailer e le app di streaming che hanno il titolo nel tuo paese (serve la chiave TMDB).
+- **Regia e Cast**: il regista e gli attori principali del titolo.
+- **Barra delle app**: in fondo a destra, il trailer e le app di streaming che hanno il titolo nel tuo paese (serve la chiave TMDB).
 - **Film**: **Guarda** (o **Riprendi da…**) e **Segna come visto**.
 - **Serie**: le stagioni, con quanti episodi hai visto. In una stagione, sinistra e destra passano alla stagione accanto. Ogni episodio ha la sua pagina con **Guarda** e **Segna come visto**.
 
