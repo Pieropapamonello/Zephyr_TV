@@ -1,7 +1,8 @@
-﻿{
-  "upstreamTag": "v3.5.3",
-  "customTag": "v3.5.3-nello.6",
-  "build": 6,
-  "versionCode": 65,
-  "asset": "ZephyrTV-Nello-Android7.apk"
+{
+  "upstreamTag": "v3.6.0-beta.3",
+  "customTag": "v3.6.0-beta.3-nello.7",
+  "build": 7,
+  "versionCode": 71,
+  "asset": "ZephyrTV-Nello-Android7.apk",
+  "prerelease": true
 }
